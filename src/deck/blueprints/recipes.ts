@@ -54,7 +54,7 @@ export interface Blueprint {
   recipes: Recipe[]
 }
 
-export const ALL_BUT_EXEC: Audience[] = ['practitioner', 'peers', 'partners', 'mixed']
+export const ALL_BUT_EXEC: Audience[] = ['practitioner', 'peers', 'partners', 'external', 'mixed']
 
 /** 항목마다 다른 안내 문구 */
 function rows(key: ItemKey, hints: string[]): Record<string, string> {

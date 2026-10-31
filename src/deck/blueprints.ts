@@ -1,6 +1,5 @@
 /*
- * 사내 발표의 골격. 윗분께 결정을 받는 보고만이 아니라 동료와 나누는 주간 보고, 다른 부서에 하는 팀 소개,
- * 사내 교육까지, 회사에서 PPT를 만드는 흔한 자리마다 하나씩 둔다.
+ * 발표의 골격. 결정을 받는 보고뿐 아니라 동료와 나누는 주간 보고, 사외 제안과 교육까지 담는다.
  * 어느 구성이든 결론을 먼저 말하고(표지 다음에 한 장 요약이나 한 문장 메시지), 마지막 장에서 받을 것이나 남길 것을 분명히 한다.
  *
  * 장 안내(guide)는 편집기에서 장 옆에 짧게 보인다. 한 문장으로, 그 장을 채울 때 꼭 필요한 요령만 적는다.
@@ -17,6 +16,7 @@ import { intro } from './blueprints/intro'
 import { issue } from './blueprints/issue'
 import { kickoff } from './blueprints/kickoff'
 import { plan } from './blueprints/plan'
+import { proposal } from './blueprints/proposal'
 import type { Blueprint, Focus } from './blueprints/recipes'
 import { report } from './blueprints/report'
 import { research } from './blueprints/research'
@@ -32,6 +32,7 @@ export const BLUEPRINTS: Record<DeckType, Blueprint> = {
   improve,
   decide,
   deal,
+  proposal,
   plan,
   weekly,
   report,
@@ -45,12 +46,11 @@ export const BLUEPRINTS: Record<DeckType, Blueprint> = {
 }
 
 /**
- * 마법사에서 고르는 묶음. 회사에서 PPT를 만드는 자리를 셋으로 나눴다:
- * 윗분께 결정을 받는 자리, 한 일을 알리는 자리, 알고 있는 것을 나누는 자리.
+ * 마법사에서 고르는 묶음: 제안하는 자리, 한 일을 알리는 자리, 알고 있는 것을 나누는 자리.
  * 묶음 안은 자주 쓰는 순서.
  */
 export const DECK_GROUPS: { name: string; types: DeckType[] }[] = [
-  { name: '제안하고 결정받기', types: ['business', 'improve', 'decide', 'deal', 'plan'] },
+  { name: '제안하고 결정받기', types: ['business', 'improve', 'decide', 'deal', 'proposal', 'plan'] },
   { name: '진행과 결과 보고하기', types: ['weekly', 'report', 'result', 'issue'] },
   { name: '알리고 나누기', types: ['kickoff', 'research', 'study', 'intro'] },
 ]
@@ -75,6 +75,7 @@ export const AUDIENCES: { id: Audience; name: string; description: string; up?: 
   { id: 'practitioner', name: '팀장', description: '근거와 실행 계획까지 자세히', up: ['detail'] },
   { id: 'peers', name: '팀 동료', description: '할 일과 진행 방법을 자세히', up: ['detail'], down: ['numbers'] },
   { id: 'partners', name: '다른 부서', description: '배경을 먼저 풀고, 부탁을 분명히', up: ['context'] },
+  { id: 'external', name: '사외 참석자', description: '배경과 핵심을 알기 쉽게', up: ['context'] },
   { id: 'mixed', name: '여러 분이 함께', description: '요약을 먼저, 자세한 내용은 뒤에' },
 ]
 

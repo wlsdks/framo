@@ -81,6 +81,17 @@ describe('planRecipes', () => {
     expect(manager.some((r) => r.purpose === '제안할 솔루션')).toBe(true)
   })
 
+  it('대외 제안은 짧아도 상대를 위한 제안과 범위, 다음 단계를 담는다', () => {
+    for (const { minutes } of DURATIONS) {
+      const plan = planRecipes('proposal', 'external', minutes)
+      expect(plan.map((r) => r.purpose)).toEqual(expect.arrayContaining(['표지', '한 장 요약', '제안 내용', '제공 범위', '다음 단계']))
+      expect(plan.at(-1)?.purpose).toBe('다음 단계')
+      expect(JSON.stringify(plan)).not.toMatch(/이익률|수주|내부 승인/)
+    }
+    expect(asksDecision('proposal')).toBe(false)
+    expect(BLUEPRINTS.proposal.defaults.audience).toBe('external')
+  })
+
   it('섹션 구분 장은 모두 들어가거나 모두 빠진다', () => {
     for (const type of DECK_TYPES) {
       const total = BLUEPRINTS[type].recipes.filter((r) => r.layout === 'section').length
@@ -152,7 +163,7 @@ describe('createDeck', () => {
 
   it('결정을 받지 않는 발표의 표지는 결정 요청 자리가 없는 아래 띠 모양으로 만든다', () => {
     const plain = DECK_TYPES.filter((t) => !asksDecision(t))
-    expect(plain).toEqual(['weekly', 'kickoff', 'study', 'intro'])
+    expect(plain).toEqual(['proposal', 'weekly', 'kickoff', 'study', 'intro'])
     for (const type of DECK_TYPES) {
       const cover = createDeck({ ...input, type, ask: '', lead: '' }).slides[0]
       expect(cover.variant, type).toBe(asksDecision(type) ? undefined : 'band')

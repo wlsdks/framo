@@ -29,7 +29,7 @@ export type LayoutId =
   | 'compose'
 
 /**
- * 사내 발표의 종류. 보고 구성(src/deck/blueprints.ts)이 종류마다 하나씩 있다.
+ * 발표의 종류. 구성(src/deck/blueprints.ts)이 종류마다 하나씩 있다.
  * 값은 저장 파일과 AI에게 보이는 모양에 그대로 들어가서, 이름이 바뀌어도 id는 바꾸지 않는다.
  * 예전 앱은 모르는 종류를 '빈 발표'처럼 다루고 값은 그대로 둔다(잃는 것이 없어서 compat.ts가 세지 않는다).
  */
@@ -38,6 +38,7 @@ export type DeckType =
   | 'improve'
   | 'decide'
   | 'deal'
+  | 'proposal'
   | 'plan'
   | 'weekly'
   | 'report'
@@ -50,9 +51,9 @@ export type DeckType =
   | 'blank'
 /**
  * 듣는 사람. 윗분만이 아니라 동료나 다른 부서 앞에서도 발표한다. 'practitioner'는 팀장이다(예전 이름 그대로 둔다).
- * 고객은 듣는 사람이 아니다: 사내 발표만 만든다.
+ * 사외 참석자도 발표를 듣는다.
  */
-export type Audience = 'exec' | 'practitioner' | 'peers' | 'partners' | 'mixed'
+export type Audience = 'exec' | 'practitioner' | 'peers' | 'partners' | 'external' | 'mixed'
 export type Method = 'live' | 'remote' | 'send'
 export type ThemeId = 'white' | 'navy' | 'serif'
 /** 발표할 때의 움직임. 레이아웃마다 미리 짜 둔 순서로 움직이고, 사용자는 정도만 고른다. */
