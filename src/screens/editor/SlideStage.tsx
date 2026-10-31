@@ -232,11 +232,14 @@ function useOverflow(ref: RefObject<HTMLDivElement | null>, slide: Slide, look: 
     const root = ref.current?.querySelector<HTMLElement>('.slide')
     if (!root) return
     let wait = 0
+    let active = true
     const check = () => {
-      // 칸 너비나 줄 높이를 끄는 동안에는 바뀐 너비에 맞춰 다시 맞추기 전의 모습이 잠깐 넘쳐 보인다. 손을 뗀 뒤에 본다
-      if (document.body.matches('.is-block-resizing, .is-block-dragging')) {
+      if (!active) return
+      // 끌거나 컴포넌트가 새 자리로 움직이는 동안에는 들어갈 글도 잠깐 넘쳐 보인다. 움직임이 끝난 자리를 잰다
+      const moving = slide.layout === 'compose' && [...root.querySelectorAll<HTMLElement>('.bk')].some((cell) => cell.getAnimations().some((a) => a.playState === 'running'))
+      if (document.body.matches('.is-block-resizing, .is-block-dragging') || moving) {
         window.clearTimeout(wait)
-        wait = window.setTimeout(check, 300)
+        wait = window.setTimeout(check, 120)
         return
       }
       const now = overflowAt(root)
@@ -255,6 +258,7 @@ function useOverflow(ref: RefObject<HTMLDivElement | null>, slide: Slide, look: 
     // 부품 장에서 부품이 자리를 옮기는 동안(움직임 중)에는 넘쳐 보일 수 있어서, 다 움직인 뒤에 한 번 더 본다
     const t = window.setTimeout(check, 800)
     return () => {
+      active = false
       window.clearTimeout(t)
       window.clearTimeout(wait)
     }
