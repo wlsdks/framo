@@ -330,8 +330,16 @@ function Lines({ gutters, blocks, live }: { gutters: Gutter[]; blocks: Block[]; 
             aria-valuemax={12}
             aria-valuenow={g.at}
             aria-valuetext={`격자 ${g.at}칸 위치`}
+            data-gutter={`${g.dir}:${g.depth}:${g.key}`}
             title={g.dir === 'h' ? '끌거나 좌우 화살표로 너비 바꾸기' : '끌거나 위아래 화살표로 높이 바꾸기'}
-            onPointerDown={(e) => live.onGutterPointerDown(e, g)}
+            onPointerDown={(e) => {
+              // 여러 조각으로 나뉜 선도 키보드에서는 한 선이다. 누른 뒤 방향키가 바로 그 선을 움직이게 한다.
+              const line = e.currentTarget
+              const focus = e.button === 0 && [...(line.parentElement?.querySelectorAll<HTMLElement>('.bk-line[role="separator"]') ?? [])]
+                .find((el) => el.dataset.gutter === line.dataset.gutter)
+              live.onGutterPointerDown(e, g)
+              if (focus) focus.focus({ preventScroll: true })
+            }}
             onKeyDown={(e) => live.onGutterKeyDown(e, g)}
           >
             <span className="bk-line-grip" />
