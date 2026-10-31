@@ -115,6 +115,16 @@
   display: none;
 }
 
+/* 요청을 비운 옆 면에는 나눌 대상이 없으므로 선을 빼고 발표자 정보를 면 가운데에 둔다. */
+.l-cover.va-base .cv-side.no-ask {
+  justify-content: center;
+}
+
+.l-cover.va-base .cv-side.no-ask .cv-meta {
+  padding-top: 0;
+  border-top: 0;
+}
+
 /* 모양: 아래 띠. 제목은 위에 넓게, 결정 요청과 발표자는 아래 색 띠에 한 줄로 */
 .l-cover:is(.va-band, .va-full) {
   flex-direction: column;
