@@ -43,6 +43,17 @@ function pairChart(look?: Look): Slide {
   return { ...slide, blocks: slide.blocks!.map((b, i) => ({ ...b, at: positions[i] })) }
 }
 
+/** 큰 글자로 점 목록의 칸을 조금 넓히면 읽기 어려운 두 단으로 바뀌던 장 */
+function pairChartWide(look?: Look): Slide {
+  const slide = pairChart(look)
+  const positions = [
+    { x: 0, y: 0, w: 7, h: 6 },
+    { x: 7, y: 0, w: 5, h: 6 },
+    { x: 0, y: 6, w: 12, h: 6 },
+  ]
+  return { ...slide, id: 'review-pair-chart-wide', fields: { title: '다음 할 일을 살펴봐요' }, blocks: slide.blocks!.map((b, i) => ({ ...b, at: positions[i] })) }
+}
+
 /** 나란한 글의 보이는 여백을 맞출 때 왼쪽 입력 칸이 오른쪽까지 넘어가던 장 */
 function messageList(look?: Look): Slide {
   const slide = scene('message-list', { title: '주간 보고를 간결하게 바꿔요' }, [
@@ -215,6 +226,7 @@ export function reviewSlides(look?: Look): Slide[] {
     scene('pareto-number', { title: '불량 원인을 우선순위대로 개선해요' }, [{ type: 'pareto', variant: 'rows', n: 4, fields: { heading: '9월 불량 원인 (830건)' } }, { type: 'number', fields: { label: '연간 예상 절감액' } }], look),
     // 전체 너비 차트가 아래에 있어도 위의 짧은 두 글은 바깥과 사이 여백을 고르게
     pairChart(look),
+    pairChartWide(look),
     messageList(look),
     marketLong(look),
     funnelStat(),

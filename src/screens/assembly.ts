@@ -329,13 +329,20 @@ function inside(area: HTMLElement, k: number): string[] {
       const cell = list.closest<HTMLElement>('.bk')
       const inner = cell?.querySelector<HTMLElement>(':scope > .bk-in')
       if (cell && inner) {
-        const ls = getComputedStyle(list)
-        const rowGap = parseFloat(ls.rowGap) || 0
         const cs = getComputedStyle(inner)
         const ir = inner.getBoundingClientRect()
-        // 한 단으로 쌓을 때의 높이: 칸 위에서 목록 위까지(소제목) + 항목 높이의 합 + 항목 사이
+        // 두 단에서 잰 항목은 좁아서 줄이 더 꺾일 수 있다. 그 높이를 더하면 한 단이 들어갈 자리가 있어도 놓치므로,
+        // 같은 글꼴과 폭에서 한 단으로 쌓은 복사본을 화면에 보이지 않게 재고 바로 뺀다.
         const above = (list.getBoundingClientRect().top - ir.top) / k - parseFloat(cs.paddingTop)
-        const one = above + items.reduce((sum, it) => sum + it.getBoundingClientRect().height / k, 0) + rowGap * (items.length - 1)
+        const copy = list.cloneNode(true) as HTMLElement
+        const gap = items.length >= 5 ? '7px' : '10px'
+        Object.assign(copy.style, { position: 'absolute', visibility: 'hidden', width: `${list.offsetWidth}px`, height: 'auto', display: 'flex', flexDirection: 'column', gap: `calc(${gap} + var(--bk-air, 0px) / 2)` })
+        for (const [i, item] of [...copy.children].entries()) {
+          ;(item as HTMLElement).style.paddingTop = i ? `calc(${gap} + var(--bk-air, 0px) / 2)` : '0px'
+        }
+        list.parentElement!.append(copy)
+        const one = above + copy.getBoundingClientRect().height / k
+        copy.remove()
         const room = ir.height / k - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
         // 한 단으로 겨우 들어가는 경우는 글꼴과 줄바꿈에 대비할 여유가 없다. 실제로 여유가 있을 때만 단 나누기를 지적한다.
         if (one + 16 <= room) out.push(`${cell.dataset.type}: 높이가 넉넉한데 목록을 ${cols.size}단으로 나눴어요(한 단 ${Math.round(one)}px, 칸 ${Math.round(room)}px)`)

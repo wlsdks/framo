@@ -323,10 +323,26 @@
 /* 3분의 2 칸(900~1300px)에서 낮은 줄: 넷 이상을 한 단에 두면 줄이 칸 높이에 들지 않아 글자를 한 단계 줄이고(26 → 22),
    오른쪽 3분의 2가 통째로 비었다(1096×344에 여섯 줄). 글자를 줄이지 않고 두 단으로 흘린다(짜임 바꾸기).
    바꾸는 높이는 항목 수마다 한 단이 보통 글자로 들어가는 가장 낮은 높이 바로 위: 그보다 높으면 한 단이 읽기 쉽다.
-   큰 글자에서는 셋도 같은 문제가 생겨 두 단으로 둔다. 이 너비에서 단 사이를 두 배로 두면 단마다 글자 자리가 좁아져
+   큰 글자에서는 셋도 높이가 더 낮으면 같은 문제가 생겨 두 단으로 둔다. 이 너비에서 단 사이를 두 배로 두면 단마다 글자 자리가 좁아져
    짧은 항목도 꺾이므로 한 칸 간격으로 둔다. */
 @container bk (900px <= width < 1300px) and (height < 380px) {
-  .bk-list[data-n='4'],
+  .bk-list[data-n='4'] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    gap: calc(10px + var(--bk-air, 0px) / 2) var(--bk-col-gap);
+  }
+
+  .bk-list[data-n='4'] > .bk-li {
+    padding-top: calc(10px + var(--bk-air, 0px) / 2);
+    border-top: 0;
+  }
+}
+
+/* 큰 글자 셋은 320px 이상이면 한 단으로 읽을 자리가 있다. 380px까지 두 단으로 나누면
+   칸을 넓혔는데도 각 단이 좁아져 짧은 문장까지 꺾이고, 소제목과 목록이 흩어져 보였다. */
+@container bk (900px <= width < 1300px) and (height < 320px) {
   .sz-large .bk-list[data-n='3'] {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, max-content));
@@ -335,7 +351,6 @@
     gap: calc(10px + var(--bk-air, 0px) / 2) var(--bk-col-gap);
   }
 
-  .bk-list[data-n='4'] > .bk-li,
   .sz-large .bk-list[data-n='3'] > .bk-li {
     padding-top: calc(10px + var(--bk-air, 0px) / 2);
     border-top: 0;

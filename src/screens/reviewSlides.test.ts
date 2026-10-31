@@ -18,6 +18,7 @@ describe('대표 조합', () => {
       'timeline-facts': ['timeline', 'facts'],
       'pareto-number': ['pareto', 'number'],
       'pair-chart': ['bullets', 'callout', 'trend'],
+      'pair-chart-wide': ['bullets', 'callout', 'trend'],
       'message-list': ['message', 'bullets'],
       'market-long': ['market', 'text'],
       'funnel-stat': ['funnel', 'stat', 'text'],
