@@ -52,6 +52,16 @@ function messageList(look?: Look): Slide {
   return { ...slide, blocks: slide.blocks!.map((b, i) => ({ ...b, at: { x: i * 6, y: 0, w: 6, h: 12 } })) }
 }
 
+/** 낮고 넓은 시장 규모에서 긴 숫자가 바로 옆 숫자와 겹치던 장 */
+function marketLong(look?: Look): Slide {
+  const slide = scene('market-long', {}, [{ type: 'market', n: 3 }, { type: 'text' }], look)
+  const [market, text] = slide.blocks!
+  return { ...slide, blocks: [
+    { ...market, items: market.items.map((item, i) => ({ ...item, value: i === 0 ? '999,999,999억 원' : i === 1 ? '123,456,789억 원' : item.value, body: '' })), at: { x: 0, y: 0, w: 12, h: 8 } },
+    { ...text, at: { x: 0, y: 8, w: 12, h: 4 } },
+  ] }
+}
+
 /** 높이가 긴 단계 차트 옆에 숫자와 글을 쌓은 장 */
 function funnelStat(): Slide {
   const puts: Put[] = [
@@ -206,6 +216,7 @@ export function reviewSlides(look?: Look): Slide[] {
     // 전체 너비 차트가 아래에 있어도 위의 짧은 두 글은 바깥과 사이 여백을 고르게
     pairChart(look),
     messageList(look),
+    marketLong(look),
     funnelStat(),
     chartSummary(),
     goalStack(),

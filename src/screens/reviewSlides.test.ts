@@ -19,6 +19,7 @@ describe('대표 조합', () => {
       'pareto-number': ['pareto', 'number'],
       'pair-chart': ['bullets', 'callout', 'trend'],
       'message-list': ['message', 'bullets'],
+      'market-long': ['market', 'text'],
       'funnel-stat': ['funnel', 'stat', 'text'],
       'chart-summary': ['diverge', 'summary'],
       'goal-stack': ['ring', 'stat', 'goal', 'stack'],
