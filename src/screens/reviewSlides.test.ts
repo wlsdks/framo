@@ -4,6 +4,8 @@ import { reviewSlides } from './reviewSlides'
 describe('대표 조합', () => {
   it('테마와 글자 크기가 달라도 의도한 컴포넌트를 모두 담는다', () => {
     const expected: Record<string, string[]> = {
+      'list-note-short': ['bullets', 'note'],
+      'list-note-long': ['bullets', 'note'],
       user: ['message', 'quote'],
       text: ['message', 'text', 'text'],
       number: ['number', 'number', 'text'],

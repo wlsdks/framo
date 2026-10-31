@@ -108,6 +108,7 @@
   --fs: var(--t-body);
   font-weight: 500;
   line-height: 1.45;
+  text-wrap: pretty;
 }
 
 .bk-li-b {
@@ -283,6 +284,14 @@
   }
 }
 
+/* 두 항목 이하가 넓은 칸의 왼쪽에만 몰리면 옆 컴포넌트와 멀어진다. 높이가 충분할 때는
+   소제목과 목록을 나란히 두어 공간을 나누고, 제목 없는 목록은 그대로 한 단으로 둔다. */
+@container bk (900px <= width < 1300px) and (min-height: 190px) {
+  .bk-look-plain > .bk-in:has(> .bk-bl > .bk-h + .bk-list:is([data-n='1'], [data-n='2'])) {
+    --bl-one: 1;
+  }
+}
+
 @container style(--bl-one: 1) {
   .bk-bl > .bk-list {
     display: flex;
@@ -317,6 +326,13 @@
 
   .bk-bl:has(> .bk-h) > .bk-h {
     margin-bottom: 0;
+  }
+}
+
+/* 두 칸보다 조금 넓은 자리에서는 소제목에 반 칸을 고정하면 오히려 목록과 멀어진다. */
+@container bk (900px <= width < 1300px) and (min-height: 190px) {
+  .bk-look-plain > .bk-in > .bk-bl:has(> .bk-h + .bk-list:is([data-n='1'], [data-n='2'])) {
+    grid-template-columns: fit-content(30%) minmax(0, 1fr);
   }
 }
 

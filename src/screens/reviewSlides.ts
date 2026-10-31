@@ -54,6 +54,24 @@ function pairChartWide(look?: Look): Slide {
   return { ...slide, id: 'review-pair-chart-wide', fields: { title: '다음 할 일을 살펴봐요' }, blocks: slide.blocks!.map((b, i) => ({ ...b, at: positions[i] })) }
 }
 
+/** 넓은 목록 옆 주석이 멀어 보이던 경우. 짧은 글과 긴 글을 같이 견준다. */
+function shortListNote(long: boolean): Slide {
+  const list = block({ type: 'bullets', n: 2 }, `list-note-${long}-list`)
+  const note = block({ type: 'note' }, `list-note-${long}-note`)
+  const items = long ? list.items.map((item, i) => ({
+    ...item,
+    title: i === 0 ? '매달 처리 시간을 살펴보고 늦어진 원인을 함께 확인해요' : '담당자에게 결과를 공유하고 다음 분기 계획에 반영해요',
+  })) : list.items
+  return {
+    ...makeSlide('compose'), id: `review-list-note-${long ? 'long' : 'short'}`,
+    fields: { title: '다음에 할 일과 확인 기준' },
+    blocks: [
+      { ...list, items, at: { x: 0, y: 0, w: 8, h: 12 } },
+      { ...note, at: { x: 8, y: 0, w: 4, h: 12 } },
+    ],
+  }
+}
+
 /** 나란한 글의 보이는 여백을 맞출 때 왼쪽 입력 칸이 오른쪽까지 넘어가던 장 */
 function messageList(look?: Look): Slide {
   const slide = scene('message-list', { title: '주간 보고를 간결하게 바꿔요' }, [
@@ -187,6 +205,8 @@ function stackedChecks(): Slide {
 /** look: 갤러리의 테마(글꼴)와 글자 크기. 판을 그 본문 높이로 짠다 */
 export function reviewSlides(look?: Look): Slide[] {
   return [
+    shortListNote(false),
+    shortListNote(true),
     // 예시 발표의 '지금의 문제' + 핵심 한 줄 + 인용 (말한 사람 없이)
     scene(
       'user',
