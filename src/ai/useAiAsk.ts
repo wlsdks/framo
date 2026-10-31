@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Deck, Slide } from '../deck/types'
 import type { AskError, AskId, AskRun } from './asks'
-import { askRun, cancelAsk, publishShape, startAsk } from './client'
-import { shapeDeckId, shapeSlideId, toShape } from './share'
+import { askRun, cancelAsk } from './client'
+import { startSharedAsk } from './askStart'
+import { shapeSlideId, toShape } from './share'
 
 const POLL_MS = 900
 
@@ -46,8 +47,8 @@ export function useAiAsk(deck: Deck, share: () => void): AiAsk {
     setJob({ ...base, id: '', state: 'running', step: 'starting' })
     // AI가 부탁을 들어주려면 모양을 봐야 한다. 부탁을 누른 것이 보여 주겠다는 뜻이라 공유를 켠다 (끄기는 위쪽 AI 단추에서)
     if (!d.aiShare) shareRef.current()
-    if (!(await publishShape(toShape(d)))) return void fail('not_shared')
-    const run = await startAsk(ask, shapeDeckId(d), slide ? shapeSlideId(slide) : null)
+    const run = await startSharedAsk(toShape(d), ask, slide ? shapeSlideId(slide) : null, () => mine === turn.current)
+    if (!run) return
     if (typeof run === 'string') return void fail(run)
     if (mine !== turn.current) return void cancelAsk(run.id)
     setJob({ ...base, ...run })
