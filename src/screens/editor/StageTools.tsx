@@ -116,9 +116,11 @@ function OverflowNote({ slide, overflow, side }: { slide: Slide; overflow: Overf
             {over ? (
               <>
                 <p className="warn-pop-h">
-                  {pushed
-                    ? `${name(fields[0])}의 글이 길어 아래 칸이 슬라이드 밖으로 밀렸어요`
-                    : fields.length > 1
+                  {pushed && fields.length > 1
+                    ? '여러 칸의 글이 길어 내용이 슬라이드 안에 다 들어가지 않아요'
+                    : pushed
+                      ? `${name(fields[0])}의 글이 길어 아래 칸이 슬라이드 밖으로 밀렸어요`
+                      : fields.length > 1
                       ? `${name(fields[0])} 등 ${fields.length}곳이 슬라이드 안에 다 들어가지 않아요`
                       : fields.length
                         ? `${name(fields[0])}의 글이 슬라이드 밖으로 넘쳤어요`
@@ -127,7 +129,7 @@ function OverflowNote({ slide, overflow, side }: { slide: Slide; overflow: Overf
                 <p className="warn-pop-p">
                   {slide.layout === 'compose'
                     ? '슬라이드 위에 점선으로 보이는 칸이에요. 컴포넌트 크기를 늘리거나 글을 줄여 보세요.'
-                    : pushed
+                    : pushed && fields.length === 1
                       ? '슬라이드 위에 점선으로 보이는 칸이에요. 그 칸의 글을 줄이거나, 글이 더 들어가는 레이아웃으로 바꿔 보세요.'
                       : '슬라이드 위에 점선으로 보이는 칸이에요. 글을 줄이거나, 글이 더 들어가는 레이아웃으로 바꿔 보세요.'}
                 </p>
@@ -164,7 +166,7 @@ function OverflowNote({ slide, overflow, side }: { slide: Slide; overflow: Overf
                     at.current = (at.current + 1) % fields.length
                   }}
                 >
-                  {pushed ? '그 칸 고치기' : fields.length > 1 ? `넘친 칸 고치기 (${(at.current % fields.length) + 1}/${fields.length})` : '넘친 칸 고치기'}
+                  {fields.length > 1 ? `${pushed ? '긴 칸 살펴보기' : '넘친 칸 고치기'} (${(at.current % fields.length) + 1}/${fields.length})` : pushed ? '그 칸 고치기' : '넘친 칸 고치기'}
                 </button>
               )}
             </div>

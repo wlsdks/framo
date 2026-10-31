@@ -24,7 +24,7 @@ function grown(input: HTMLElement, r: DOMRect): number {
  * 장의 글이 넘쳤는지와 짚을 칸들. 넘친 상자의 아래 끝(장 전체는 오른쪽 끝도) 밖으로 나간 글 칸을 찾고,
  * 그 상자 안에서 글이 가장 길게 늘어난 칸이 따로 있으면 그 칸을 짚는다(pushed): 진행 현황에서 1번 과제 이름을 세 줄로 쓰면
  * 밖으로 나가는 것은 맨 아래 5번 과제라, 나간 칸만 짚던 때는 '나는 1번을 썼는데?' 하고 헷갈렸다.
- * 늘어난 칸이 나간 칸이기도 하면(한 칸 안에서 잘림) 그 칸을 넘친 칸으로 짚는다.
+ * 같은 높이로 늘어난 칸이 여럿이면 함께 짚고, 한 칸만 늘어났고 그 칸이 나간 칸이기도 하면 넘친 칸으로 짚는다.
  * 예전에는 넘쳤다는 것만 알려서, 어느 칸을 줄여야 하는지 장을 뒤져 찾아야 했다
  */
 export function overflowAt(root: HTMLElement): { over: boolean; fields: OverField[]; pushed: boolean } {
@@ -47,20 +47,23 @@ export function overflowAt(root: HTMLElement): { over: boolean; fields: OverFiel
       if (!r.width && !r.height) continue
       if ((wide && r.right > right + 1) || bottoms.some(([b, bottom]) => b.contains(input) && r.bottom > bottom + 1)) out.push(input)
     }
-    // 밀어낸 칸: 첫 나간 칸이 든 가장 안쪽의 넘친 상자에서, 글이 한 줄의 반 넘게 늘어난 칸 가운데 가장 많이 늘어난 칸
+    // 밀어낸 칸: 첫 나간 칸이 든 가장 안쪽의 넘친 상자에서, 글이 한 줄의 반 넘게 늘어난 칸 가운데 가장 많이 늘어난 칸들
     const box = out.length ? tall.filter((b) => b.contains(out[0])).sort((x, y) => (x.contains(y) ? 1 : y.contains(x) ? -1 : 0))[0] : undefined
-    let top: { input: HTMLElement; by: number } | null = null
+    const grownFields: { input: HTMLElement; by: number }[] = []
     for (const input of box ? inputs.filter((i) => box.contains(i)) : []) {
       const r = input.parentElement!.getBoundingClientRect()
       const by = grown(input, r)
       const half = (Number.parseFloat(getComputedStyle(input).fontSize) || 16) * 0.6 * (r.height / (input.offsetHeight || 1))
-      if (by > half && (!top || by > top.by)) top = { input, by }
+      if (by > half) grownFields.push({ input, by })
     }
     // 늘어난 칸이 나간 칸이기도 하면 그 칸 하나만: 그 칸에 밀려 나간 아래 줄까지 짚으면 '7곳'처럼 고칠 곳이 많아 보였다.
     // 늘어난 칸이 없으면(줄 수가 고르게 많은 장) 나간 칸들을 짚는다
-    if (top) {
-      fields = [field(top.input)]
-      pushed = !out.includes(top.input)
+    if (grownFields.length) {
+      const max = Math.max(...grownFields.map((f) => f.by))
+      // 같은 높이로 늘어난 줄이 여럿이면 하나만 고쳐서는 해결되지 않을 수 있다. 화면의 소수점 반올림 차이만 허용한다.
+      const longest = grownFields.filter((f) => max - f.by < 1)
+      fields = longest.map((f) => field(f.input))
+      pushed = longest.length > 1 || !out.includes(longest[0].input)
     } else fields = out.map(field)
   }
   root.classList.remove('is-measuring')
