@@ -65,6 +65,20 @@ describe('움직임 엔진', () => {
     expect(people).not.toMatch(/grow\(el, at, ["']x["'], ["']::before["']\)/)
   })
 
+  it('추이는 바닥줄이 왼쪽부터 그어지고 달 이름은 선이 그 달에 닿을 때 하나씩 나온다 (빈 축과 달 이름을 먼저 깔지 않는다)', () => {
+    const src = motionEngine.toString()
+    const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))
+    const i = choreo.search(/case ["']trend["']/)
+    const trend = choreo.slice(i, choreo.indexOf('break', i))
+    // 달 이름을 한꺼번에(30ms 차이로) 흐리게 들이면 선이 그려지기 전에 빈 축 아래 달 이름이 다 깔려 있었다
+    expect(trend).not.toMatch(/items\(["']\.tn-col["']/)
+    // 바닥줄은 그림 상자(.tn-plot)의 아래 선이라 상자를 표의 줄 선처럼 왼쪽부터 걷어 연다
+    expect(trend).toMatch(/sweep\(one\(["']\.tn-plot["']\)/)
+    // 달마다의 때는 점과 같은 칸 가운데((i + 0.5) / n)에 선이 닿는 때에서 잰다
+    expect(trend).toMatch(/\$\(["']\.tn-col["']\)/)
+    expect(trend).toMatch(/\(i \+ 0?\.5\) \/ \w+\.length\)? \* draw/)
+  })
+
   it('레이아웃마다 짠 연출이 있다 (없으면 소리 없이 기본 연출로 떨어진다)', () => {
     const src = motionEngine.toString()
     const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))
