@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { asCompose, cleanDeckBlocks, copyBlocks, mapBlock, settleDeck, tidyLinks, withLayout } from '../deck/blocks'
+import { asCompose, boardSig, cleanDeckBlocks, copyBlocks, mapBlock, settleDeck, tidyLinks, withLayout } from '../deck/blocks'
 import { unknownParts } from '../deck/compat'
 import { withOneMore } from '../deck/edits'
 import { makeSlide, uid } from '../deck/generate'
@@ -56,8 +56,12 @@ interface DeckState {
   /** 덱을 통째로 바꾼다 (AI 제안 적용). 되돌리기 한 번으로 돌아온다. */
   replaceDeck(next: Deck): void
 
-  /** 부품 장: 판을 통째로 (끌어다 놓기, 선 끌기). key가 같으면 되돌리기 한 단계로 묶는다 */
-  setBlocks(slideId: string, blocks: Block[], key?: string): void
+  /**
+   * 부품 장: 판을 통째로 (끌어다 놓기, 선 끌기). key가 같으면 되돌리기 한 단계로 묶는다.
+   * auto: 알아서 짠 판(눌러 넣기, 빼기, 복제, 자동 배치)이면 참. 판의 자리를 표시로 남겨(Slide.arranged) 짜임 규칙이 바뀌어도
+   * 다음에 넣고 뺄 때 판을 다시 고른다. 사람이 옮기거나 선을 끈 판은 주지 않는다: 표시와 자리가 달라져 사람이 짠 판이 된다
+   */
+  setBlocks(slideId: string, blocks: Block[], key?: string, auto?: boolean): void
   /** 부품 장: 부품 하나를 고친다 (칸의 글, 바탕, 움직임) */
   updateBlock(slideId: string, blockId: string, fn: (b: Block) => Block, key?: string): void
   /** 이 장을 같은 내용의 부품 장으로. 이미 부품 장이거나 바꿀 수 없는 장이면 그대로 */
@@ -319,9 +323,10 @@ export const useDeck = create<DeckState>((set, get) => {
       commit((d) => mapSlide(d, slideId, (s) => (variantOf({ ...s, variant }) === variantOf(s) ? s : { ...s, variant })), key)
     },
 
-    setBlocks(slideId, blocks, key) {
+    setBlocks(slideId, blocks, key, auto) {
       // 부품을 옮기거나 빼서 설 자리가 없어진 이음표(판 끝)는 뺀다
-      commit((d) => mapSlide(d, slideId, (s) => ({ ...s, blocks: tidyLinks(blocks) })), key)
+      const tidy = tidyLinks(blocks)
+      commit((d) => mapSlide(d, slideId, (s) => ({ ...s, blocks: tidy, ...(auto ? { arranged: boardSig(tidy) } : {}) })), key)
     },
     updateBlock(slideId, blockId, fn, key) {
       commit((d) => mapSlide(d, slideId, (s) => ({ ...s, blocks: mapBlock(s.blocks ?? [], blockId, fn) })), key)

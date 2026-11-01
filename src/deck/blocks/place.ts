@@ -7,6 +7,7 @@ import {
   autoInsert,
   BOARD_COLS,
   BOARD_ROWS,
+  boardSig,
   byReading,
   type Fit,
   type Gutter,
@@ -19,6 +20,7 @@ import {
   needRows,
   needWith,
   rebuild,
+  sameArea,
   sameSpot,
   settle,
   type Side,
@@ -144,13 +146,14 @@ export function groupIssue(blocks: Block[], add: Block[], areaH?: number): NoRoo
 
 /**
  * 부품을 뺀 판. 옆 부품들이 그 자리를 넓혀 덮고, 뺀 부품에 닿아 있던 이음표는 뗀다.
- * 판에 이미지가 있으면 그 이미지에 다시 맞춘다(장 높이를 알 때): 똑같이 나눈 너비로 돌아가면 화면 캡처가 반 칸에 눌렸다
+ * 판에 이미지가 있으면 그 이미지에 다시 맞춘다(장 높이를 알 때): 똑같이 나눈 너비로 돌아가면 화면 캡처가 반 칸에 눌렸다.
+ * auto: 지금 판이 알아서 짠 판인지(autoArranged). 주지 않으면 지금 규칙의 판과 견줘 본다
  */
-export function removeBlock(blocks: Block[], blockId: string, areaH?: number): Block[] {
+export function removeBlock(blocks: Block[], blockId: string, areaH?: number, auto?: boolean): Block[] {
   const next = dropBlock(blocks, blockId, fitFor(blocks, areaH))
   if (areaH === undefined) return next
   // 알아서 짠 판(짜임 틀 고르기)에서 빼면 남은 부품들로 다시 고른다: 넣을 때와 같은 규칙이라 넣고 빼면 원래 판으로 돌아간다
-  if (next.length >= 2 && blocks.length <= ARRANGE_MAX && isArranged(blocks, fitFor(blocks, areaH), areaH, aspectOf)) {
+  if (next.length >= 2 && blocks.length <= ARRANGE_MAX && (auto ?? autoArranged(blocks, undefined, areaH))) {
     const best = arrangeBest(arrangeOrder(next), fitFor(next, areaH), areaH, aspectOf)
     if (best) {
       const byId = new Map(best.blocks.map((b) => [b.id, b]))
@@ -250,22 +253,38 @@ export function placeIssue(blocks: Block[], block: Block, areaH?: number): NoRoo
 }
 
 /**
- * 눌러서 넣은 판: 판이 알아서 고른 자리(board.ts의 autoInsert)에. 이미지가 든 이미지 부품(붙여 넣은 이미지)은
- * 이미지 비율에 가장 잘 맞는 자리(imagePlace). 넣을 수 없으면 null (까닭은 placeIssue)
+ * 이 판이 알아서 짠 판인지 (사람이 옮기거나 선을 끌지 않았는지). 넣고 뺄 때 판을 다시 고를지 정한다(autoPlace, removeBlock의 auto).
+ * 장에 남긴 표시(mark: 마지막으로 알아서 짰을 때의 boardSig)가 있으면 지금 판이 그 자리 그대로인지로 본다. 표시가 없는 장(표시를 남기기
+ * 전에 만든 장)은 지금 규칙이 고를 판과 같은지로 본다(isArranged): 그래서 짜임 규칙을 고치면 예전 규칙으로 짠 판이 사람이 짠 판으로 보여,
+ * 컴포넌트를 넣어도 판을 다시 고르지 않고 끼우기만 했다. 컴포넌트가 하나 이하면 늘 참 (판 전체를 덮어 옮길 데가 없다)
  */
-export function autoPlace(blocks: Block[], block: Block, areaH?: number): Block[] | null {
+export function autoArranged(blocks: Block[], mark: string | undefined, areaH?: number): boolean {
+  if (blocks.length <= 1) return true
+  if (mark !== undefined) return mark === boardSig(blocks)
+  return areaH !== undefined && isArranged(blocks, fitFor(blocks, areaH), areaH, aspectOf)
+}
+
+/**
+ * 눌러서 넣은 판: 판이 알아서 고른 자리(board.ts의 autoInsert)에. 이미지가 든 이미지 부품(붙여 넣은 이미지)은
+ * 이미지 비율에 가장 잘 맞는 자리(imagePlace). 넣을 수 없으면 null (까닭은 placeIssue).
+ * auto: 지금 판이 알아서 짠 판인지(autoArranged). 참이면 컴포넌트가 넷까지일 때 판을 다시 고른다. 주지 않으면 지금 규칙의 판과 견줘 본다
+ */
+export function autoPlace(blocks: Block[], block: Block, areaH?: number, auto?: boolean): Block[] | null {
   if (crowdIssue(blocks, [block])) return null
   if (areaH !== undefined && aspectOf(block)) {
     const t = imagePlace(blocks, block, areaH)
     return t?.kind === 'spot' ? insertAt(blocks, t.spot, block, areaH) : null
   }
-  return remember(AUTO, blocks, block, { at: null, side: 'below' }, areaH, () => {
+  return remember(auto === undefined ? AUTO : auto ? AUTO_ARRANGED : AUTO_MANUAL, blocks, block, { at: null, side: 'below' }, areaH, () => {
     const next = slotIn(blocks, block, areaH)
-    return next && areaH !== undefined ? arranged(blocks, next, areaH, block) : next
+    return next && areaH !== undefined ? arranged(blocks, next, areaH, block, auto) : next
   })
 }
 
+// 알아서 짠 판인지에 따라 결과가 달라서 따로 기억한다
 const AUTO: Memo<Block[] | null> = new WeakMap()
+const AUTO_ARRANGED: Memo<Block[] | null> = new WeakMap()
+const AUTO_MANUAL: Memo<Block[] | null> = new WeakMap()
 
 /** 사람이 요청했을 때 지금 내용으로 다시 배치한다. 연결 기호나 소제목은 묶음의 뜻을 자동으로 알 수 없어 그대로 둔다. */
 export function rearrangeBlocks(blocks: Block[], areaH: number): Block[] | null {
@@ -291,15 +310,28 @@ export function rearrangeBlocks(blocks: Block[], areaH: number): Block[] | null 
 }
 
 /**
- * 짜임 틀 고르기(arrange.ts): 컴포넌트가 넷까지인 장에서, 지금 판이 알아서 고른 판 그대로면(사람이 옮기거나 선을 끌지 않았으면)
+ * '자동으로 다시 배치'를 누른 결과: 다시 짠 판, 판이 바뀌었는지(moved), 그 판을 알아서 짠 판으로 새로 남길지(mark).
+ * 들어가는 배치를 찾지 못하면 null. 지금 판보다 나은 판이 없으면 판은 그대로 두지만, 사람이 짠 판이었으면 알아서 짠 판으로 남긴다:
+ * 사람이 자동 배치를 고른 것이다. 예전 규칙으로 짜 지금 규칙의 판과 점수가 거의 같은 판은 다시 짤 것이 없다고만 하고 표시를 남기지 않아,
+ * 그 뒤에도 컴포넌트를 넣으면 판을 다시 고르지 않고 끼우기만 했다
+ */
+export function arrangeRequest(blocks: Block[], mark: string | undefined, areaH: number): { blocks: Block[]; moved: boolean; mark: boolean } | null {
+  const next = rearrangeBlocks(blocks, areaH)
+  if (!next) return null
+  const moved = !next.every((b, i) => b.at && blocks[i].at && sameArea(b.at, blocks[i].at))
+  return { blocks: next, moved, mark: moved || !autoArranged(blocks, mark, areaH) }
+}
+
+/**
+ * 짜임 틀 고르기(arrange.ts): 컴포넌트가 넷까지인 장에서, 지금 판이 알아서 짠 판이면(auto, 사람이 옮기거나 선을 끌지 않았으면)
  * 끼워 넣은 판(next) 대신 같은 부품들로 짤 수 있는 틀 가운데 가장 보기 좋은 판. 끼운 판이 더 나으면 그대로.
  * 읽는 차례는 끼운 판의 것을 따른다(결론은 근거 위, 소제목은 그 아래 부품 위).
  * 장의 첫 결론(added가 핵심 한 줄, 강조 상자)은 끼운 자리가 어디든 맨 앞에 두고 짠다: 긴 목록 아래에 차트를 쌓은 장은 맨 위에도
  * 첫 부품 왼쪽에도 높이나 너비가 모자라(slotFirst) 판이 맨 아래나 옆에 끼웠고, 틀도 그 차례대로 골라 결론이 근거 밑에 깔렸다.
  * 목록과 차트를 나란히 두면 결론이 위에 들어간다. 그런 틀이 있으면 끼운 판보다 점수가 나빠도 그것을 쓴다(결론부터)
  */
-function arranged(blocks: Block[], next: Block[], areaH: number, added: Block): Block[] {
-  if (next.length > ARRANGE_MAX || !isArranged(blocks, fitFor(blocks, areaH), areaH, aspectOf)) return next
+function arranged(blocks: Block[], next: Block[], areaH: number, added: Block, auto?: boolean): Block[] {
+  if (next.length > ARRANGE_MAX || !(auto ?? autoArranged(blocks, undefined, areaH))) return next
   const fit = fitFor(next, areaH)
   const lead = LEADS.has(added.type) && !blocks.some((b) => LEADS.has(b.type)) && byReading(next)[0].id !== added.id ? next.find((b) => b.id === added.id) : undefined
   const order = arrangeOrder(next)

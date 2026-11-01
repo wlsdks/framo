@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import type { AiAsk } from '../../ai/useAiAsk'
 import type { AiShare } from '../../ai/useAiShare'
-import { boardAreaH, boardTight, withImage } from '../../deck/blocks'
+import { autoArranged, boardAreaH, boardTight, withImage } from '../../deck/blocks'
 import { pageInfo } from '../../deck/fields'
 import { motionOf } from '../../deck/themes'
 import type { Deck, LayoutId, Slide } from '../../deck/types'
@@ -68,7 +68,8 @@ export function SlideStage({
         const st = useDeck.getState()
         const cur = st.deck?.slides.find((s) => s.id === slide.id)
         if (!cur || !st.deck) return
-        st.setBlocks(cur.id, withImage(cur.blocks ?? [], blockId, url, boardAreaH(cur, st.deck)))
+        const h = boardAreaH(cur, st.deck)
+        st.setBlocks(cur.id, withImage(cur.blocks ?? [], blockId, url, h), undefined, autoArranged(cur.blocks ?? [], cur.arranged, h))
       },
     }),
     [slide.id],

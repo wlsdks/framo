@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { boardAreaH, imageBlock, withImage } from '../../deck/blocks'
+import { autoArranged, boardAreaH, imageBlock, withImage } from '../../deck/blocks'
 import { LAYOUTS } from '../../deck/layouts'
 import { imageToDataUrl } from '../../lib/imageFile'
 import { useDeck } from '../../store/deckStore'
@@ -51,7 +51,8 @@ export function useImageInput(blocks: BlockEditing, toast: Toast): boolean {
         // 놓은 자리가 있으면 그 자리에 새로: 빈 이미지 칸을 채우는 것은 붙여 넣기와 칸 위에 놓기(칸이 스스로 받는다)뿐
         const target = all.find((b) => b.id === blocks.selected && b.type === 'image') ?? (at ? undefined : all.find((b) => b.type === 'image' && !b.fields.image?.trim()))
         if (target) {
-          st.setBlocks(s.id, withImage(s.blocks ?? [], target.id, url, boardAreaH(s, deck)))
+          const h = boardAreaH(s, deck)
+          st.setBlocks(s.id, withImage(all, target.id, url, h), undefined, autoArranged(all, s.arranged, h))
           blocks.select(target.id)
           return
         }

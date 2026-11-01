@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ARRANGE_MAX, boardAreaH, rearrangeBlocks, sameArea } from '../../deck/blocks'
+import { ARRANGE_MAX, arrangeRequest, boardAreaH } from '../../deck/blocks'
 import { missingFields, optionalBlanks, unshownCount, visibleItems, type Missing } from '../../deck/fields'
 import { emptyItem } from '../../deck/generate'
 import { highlightOf, LAYOUTS, LAYOUT_GROUPS, panesOf, placeOf, sideOf, variantOf } from '../../deck/layouts'
@@ -131,17 +131,20 @@ function ArrangeSection({ deck, slide, areaHeight }: { deck: Deck; slide: Slide;
       ? '‘소제목’ 컴포넌트나 연결 기호가 있으면 직접 배치해 주세요.'
       : ''
   const arrange = () => {
-    const next = rearrangeBlocks(blocks, areaHeight() ?? boardAreaH(slide, deck))
-    if (!next) {
+    const r = arrangeRequest(blocks, slide.arranged, areaHeight() ?? boardAreaH(slide, deck))
+    if (!r) {
       setMessage('이 슬라이드에 들어가는 배치를 찾지 못했어요. 컴포넌트를 나누거나 제목을 줄여 주세요.')
       return
     }
-    if (next.every((b, i) => b.at && blocks[i].at && sameArea(b.at, blocks[i].at!))) {
-      setMessage('지금보다 나은 자동 배치를 찾지 못했어요. 직접 옮길 수도 있어요.')
-      return
-    }
-    useDeck.getState().setBlocks(slide.id, next)
-    setMessage('자동으로 배치했어요. 되돌리기로 이전 배치로 돌아갈 수 있어요.')
+    // 알아서 짠 판으로 남긴다: 다음에 컴포넌트를 넣고 뺄 때도 판을 다시 고른다. 판이 그대로여도 사람이 자동 배치를 고른 것이다
+    if (r.mark) useDeck.getState().setBlocks(slide.id, r.blocks, undefined, true)
+    setMessage(
+      r.moved
+        ? '자동으로 배치했어요. 되돌리기로 이전 배치로 돌아갈 수 있어요.'
+        : r.mark
+          ? '지금 배치를 그대로 두었어요. 이제부터 컴포넌트를 넣거나 빼면 자동으로 다시 배치해요.'
+          : '지금보다 나은 자동 배치를 찾지 못했어요. 직접 옮길 수도 있어요.',
+    )
   }
   return (
     <section className="ins-sec">

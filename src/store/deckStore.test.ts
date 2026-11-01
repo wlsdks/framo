@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDeck, emptyItem, makeSlide } from '../deck/generate'
 import { sampleBlock } from '../deck/blockSamples'
-import { autoPlace, boardAreaH, boardTight, playOrder, rearrangeBlocks, removeBlock } from '../deck/blocks'
+import { autoArranged, autoPlace, boardAreaH, boardSig, boardTight, moveAt, playOrder, rearrangeBlocks, removeBlock } from '../deck/blocks'
 import { LAYOUTS, variantOf } from '../deck/layouts'
 import { gestureKey } from '../lib/pointerSession'
-import type { Slide } from '../deck/types'
+import type { Block, Slide } from '../deck/types'
 import { undoLast, useDeck } from './deckStore'
 
 const deck = () =>
@@ -401,5 +401,36 @@ describe('고친 때', () => {
     useDeck.getState().setTitle('바꾼 제목')
     expect(useDeck.getState().past).toHaveLength(1)
     expect(updatedAt()).toBe(5_000_500)
+  })
+})
+
+describe('알아서 짠 판의 표시', () => {
+  beforeEach(() => {
+    const d = deck()
+    useDeck.getState().open({ ...d, slides: d.slides.map((s, i) => (i === 1 ? { ...s, layout: 'compose', blocks: [] } : s)) })
+  })
+  const slide = () => useDeck.getState().deck!.slides[1]
+
+  it('알아서 짠 판이라고 알리면 자리를 표시로 남기고, 손으로 옮긴 판은 표시와 달라져 사람이 짠 판이 된다', () => {
+    const h = boardAreaH(slide(), useDeck.getState().deck!)
+    const put = (bs: Block[], b: Block) => autoPlace(bs, b, h, autoArranged(bs, slide().arranged, h)) ?? bs
+    for (const type of ['number', 'bullets', 'trend'] as const) useDeck.getState().setBlocks(slide().id, put(slide().blocks!, { ...sampleBlock(type), id: type }), undefined, true)
+    expect(slide().arranged).toBe(boardSig(slide().blocks!))
+    const moved = moveAt(slide().blocks!, 'number', { kind: 'spot', spot: { at: null, side: 'right' } }, h)!
+    useDeck.getState().setBlocks(slide().id, moved)
+    expect(autoArranged(slide().blocks!, slide().arranged, h)).toBe(false)
+    // 되돌리면 표시도 함께 돌아와 다시 알아서 짠 판
+    useDeck.getState().undo()
+    expect(autoArranged(slide().blocks!, slide().arranged, h)).toBe(true)
+  })
+
+  it('표시는 장을 복제해도 따라간다', () => {
+    const h = boardAreaH(slide(), useDeck.getState().deck!)
+    const bs = [{ ...sampleBlock('number'), id: 'n' }, { ...sampleBlock('bullets'), id: 'l' }].reduce<Block[]>((out, b) => autoPlace(out, b, h) ?? out, [])
+    useDeck.getState().setBlocks(slide().id, bs, undefined, true)
+    useDeck.getState().duplicateSlide(slide().id)
+    const copy = useDeck.getState().deck!.slides[2]
+    expect(autoArranged(copy.blocks!, copy.arranged, h)).toBe(true)
+    expect(copy.arranged).toBe(slide().arranged)
   })
 })

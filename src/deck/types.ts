@@ -279,6 +279,13 @@ export interface Slide {
    * (부품 장으로 되돌리면 다시 보이게). 예전 파일의 줄(rows)은 열 때 판으로 바꾼다(blocks/legacy.ts)
    */
   blocks?: Block[]
+  /**
+   * 판을 마지막으로 알아서 짰을 때의 자리(blocks/place.ts의 boardSig). 지금 판이 이 자리 그대로면 사람이 옮기거나 선을 끌지 않은
+   * 판이라서, 컴포넌트를 넣고 뺄 때 판을 지금 규칙으로 다시 고른다(autoArranged). 짜임 규칙이 바뀌어도 그대로 따른다.
+   * 없으면(이 표시를 남기기 전의 장) 지금 규칙이 고를 판과 같은지로 본다. 예전 버전은 이 값을 모르고 그대로 두므로,
+   * 거기서 옮긴 판은 자리가 달라져 사람이 짠 판이 된다. 그래서 저장 형식의 version은 그대로다
+   */
+  arranged?: string
 }
 
 export interface DeckMeta {

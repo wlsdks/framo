@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { BLOCKS, canCompose, tiles } from '../deck/blocks'
+import { autoArranged, autoPlace, BLOCKS, boardAreaH, boardSig, canCompose, makeBlock, resizeBlock, tiles } from '../deck/blocks'
 import { createSampleDeck } from '../deck/sample'
-import type { Block, Deck, Item, LayoutId } from '../deck/types'
+import type { Block, Deck, Item, LayoutId, Slide } from '../deck/types'
 import { applyOps, parseOp, parseRequest, REQUEST_FORMAT, slideEmpty, type Op } from './ops'
 import { REQUEST_VERSION } from './protocol'
 import { checkShape, shapeSlideId, toShape } from './share'
@@ -559,5 +559,32 @@ describe('부품 장', () => {
     const { deck: next, results } = applyOps(d, [{ op: 'remove_slide', slide: id }])
     expect(results[0]).toEqual({ ok: false, code: 'has_content' })
     expect(next.slides).toHaveLength(d.slides.length)
+  })
+})
+
+describe('알아서 짠 판의 표시', () => {
+  // 예전 규칙으로 알아서 짠 판(숫자 칸 4): 지금 규칙(숫자 칸 3)과 달라 표시가 없으면 사람이 짠 판으로 보인다
+  const i = deck.slides.findIndex((s) => canCompose(s.layout))
+  const s0: Slide = { ...deck.slides[i], layout: 'compose', blocks: [] }
+  const h = boardAreaH(s0, deck)
+  const now = (['number', 'bullets', 'trend'] as const).reduce<Block[]>((out, type) => autoPlace(out, { ...makeBlock(type), id: type }, h) ?? out, [])
+  const old = resizeBlock(now, 'number', 'w', 4, h)!
+  const withBoard = (arranged?: string): Deck => ({ ...deck, slides: deck.slides.map((s, j) => (j === i ? { ...s0, blocks: old, ...(arranged ? { arranged } : {}) } : s)) })
+  const ats = (d: Deck) => d.slides[i].blocks!.map((b) => b.at)
+
+  it('자리를 정하지 않고 넣으면, 표시가 맞는 판은 지금 규칙으로 다시 고르고 표시를 남긴다. 빼면 원래 판으로', () => {
+    expect(autoArranged(old, undefined, h)).toBe(false)
+    const marked = withBoard(boardSig(old))
+    const slide = toShape(marked).slides[i].id
+    const add = applyOps(marked, [{ op: 'add_block', slide, type: 'text', as: 'p1' }])
+    expect(add.results[0]).toEqual({ ok: true, code: 'applied' })
+    const legacy = applyOps(withBoard(), [{ op: 'add_block', slide, type: 'text' }]).deck
+    expect(ats(add.deck)).not.toEqual(ats(legacy))
+    expect(add.deck.slides[i].arranged).toBe(boardSig(add.deck.slides[i].blocks!))
+    expect(legacy.slides[i].arranged).toBeUndefined()
+    const back = applyOps(marked, [{ op: 'add_block', slide, type: 'text', as: 'p1' }, { op: 'remove_block', slide, block: 'p1' }])
+    expect(back.results.map((r) => r.code)).toEqual(['applied', 'applied'])
+    expect(ats(back.deck)).toEqual(now.map((b) => b.at))
+    expect(back.deck.slides[i].arranged).toBe(boardSig(back.deck.slides[i].blocks!))
   })
 })

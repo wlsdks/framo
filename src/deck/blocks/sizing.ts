@@ -6,7 +6,7 @@ import { hintFor, logoColumns } from '../layouts'
 import { laneRows } from '../status'
 import { type Glyphs, headLook } from '../themes'
 import type { Block, BlockAt, BlockLook, BlockType, Deck, Slide } from '../types'
-import { BOARD_COLS, BOARD_ROWS, type Fit, needRows, settle } from './board'
+import { BOARD_COLS, BOARD_ROWS, boardSig, type Fit, needRows, settle } from './board'
 import { BLOCK_GROUPS, BLOCKS } from './catalog'
 import { blockItems, mapBlock, variantOfBlock } from './cells'
 import { LINK_PAD } from './links'
@@ -387,7 +387,9 @@ export function settleDeck(next: Deck, prev?: Deck): Deck {
     const out = settle(s.blocks, fit)
     if (!out || out.every((b, i) => b === s.blocks![i])) return s
     changed = true
-    return { ...s, blocks: out }
+    // 알아서 짠 판을 다시 맞춘 자리도 알아서 짠 판이다(사람이 옮긴 것이 아니다): 표시가 자리를 따라가야 다음에 넣을 때 판을 다시 고른다
+    const auto = s.arranged !== undefined && s.arranged === boardSig(s.blocks)
+    return { ...s, blocks: out, ...(auto ? { arranged: boardSig(out) } : {}) }
   })
   return changed ? { ...next, slides } : next
 }
