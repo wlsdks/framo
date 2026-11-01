@@ -11,13 +11,14 @@ import {
   trashDeckInFolder,
   trashedDeckIds,
   writeDeckToFolder,
+  writeVersionToFolder,
   type FolderStatus,
 } from './folder'
 import { deleteDeck, listDecks, loadDeck, saveDeck } from './library'
 import { reconcile } from './reconcile'
 import { unshareDeck } from '../ai/client'
 import { uid } from '../deck/generate'
-import { deckSignature, deleteDeckVersions, listVersions, saveVersion } from './versions'
+import { deckSignature, deleteDeckVersions, keepVersion } from './versions'
 
 /*
  * 저장은 두 곳에 한다.
@@ -99,6 +100,15 @@ export async function persistNow(deck: Deck): Promise<boolean> {
 }
 
 /**
+ * 보관 폴더의 더 새 발표로 덮기 전에 이 브라우저의 것을 버전으로 남긴다. 이 브라우저의 기록에 남기지 못하면(저장 공간이
+ * 모자랄 때) 보관 폴더의 '버전 기록'에라도 남긴다(파일 열기로 다시 열 수 있다). 어디에도 남기지 못하면 false: 덮지 않는다
+ */
+async function backupBeforeTake(local: Deck): Promise<boolean> {
+  if (await keepVersion(local, { reason: 'file' })) return true
+  return writeVersionToFolder(local, { createdAt: Date.now(), name: '', named: false })
+}
+
+/**
  * 폴더와 브라우저를 맞춘다. 더 최근에 고친 쪽을 남기고,
  * 브라우저 쪽을 덮어쓸 때는 덮이기 전 상태를 버전으로 남긴다.
  */
@@ -114,7 +124,7 @@ export async function syncWithFolder(): Promise<void> {
     const local = editing?.id === fileDeck.id ? editing : await loadDeck(fileDeck.id)
     const r = reconcile(local, fileDeck)
     if (r.action === 'take') {
-      if (local && r.backup) await saveVersion(local, { reason: 'file' })
+      if (local && r.backup && !(await backupBeforeTake(local))) continue
       await saveDeck(fileDeck)
       if (editing?.id === fileDeck.id) useDeck.getState().open(fileDeck)
     } else if (r.action === 'write' && local) await writeDeckToFolder(local)
@@ -139,7 +149,7 @@ export async function loadBestDeck(id: string): Promise<Deck | undefined> {
   const fileDeck = await readFolderDeck(id)
   const r = reconcile(local, fileDeck)
   if (r.action === 'take' && fileDeck) {
-    if (local && r.backup) await saveVersion(local, { reason: 'file' })
+    if (local && r.backup && !(await backupBeforeTake(local))) return local
     await saveDeck(fileDeck)
     return fileDeck
   }
@@ -169,10 +179,7 @@ export async function importDeck(deck: Deck): Promise<Imported> {
   let replaced = false
   let copied = false
   if (local && deckSignature(local) !== deckSignature(deck)) {
-    await saveVersion(local, { reason: 'file' })
-    // 같은 내용의 버전이 이미 있으면 saveVersion이 건너뛰므로, 남겼는지가 아니라 기록에 있는지를 본다
-    const signature = deckSignature(local)
-    if ((await listVersions(local.id)).some((v) => v.signature === signature)) replaced = true
+    if (await keepVersion(local, { reason: 'file' })) replaced = true
     else {
       next = { ...next, id: uid(), title: `${deck.title} 사본`, createdAt: now }
       copied = true

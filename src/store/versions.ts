@@ -175,6 +175,17 @@ async function saveVersionNow(deck: Deck, { name, reason }: SaveOptions): Promis
   return version
 }
 
+/**
+ * 덮기 전의 발표를 버전으로 남기고, 기록에 남았는지 알려 준다(남겼거나 같은 내용이 이미 있으면 true).
+ * saveVersion은 같은 내용이 있어 건너뛴 것과 쓰지 못한 것을 둘 다 null로 돌려주어서, 되돌리기와 폴더의 새 발표 가져오기가
+ * 남기지 못했는데도(저장 공간이 모자랄 때) 지금 발표를 덮었다
+ */
+export async function keepVersion(deck: Deck, options: SaveOptions = {}): Promise<boolean> {
+  if (await saveVersion(deck, options)) return true
+  const signature = deckSignature(deck)
+  return (await listVersions(deck.id)).some((v) => v.signature === signature)
+}
+
 async function pruneAuto(versions: DeckVersion[]) {
   const autos = versions.filter((v) => !v.named)
   for (const v of autos.slice(AUTO_KEEP)) await deleteVersion(v.id)

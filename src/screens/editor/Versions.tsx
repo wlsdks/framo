@@ -12,6 +12,7 @@ import { persistNow, useStorage } from '../../store/persist'
 import {
   deckSignature,
   deleteVersion,
+  keepVersion,
   listVersions,
   loadVersionDeck,
   onVersionsChange,
@@ -87,7 +88,7 @@ export function VersionPanel({ deck, onClose, notify }: { deck: Deck; onClose: (
     const v = await saveVersion(deck, { name: label })
     setNaming(false)
     setName('')
-    notify(v ? `‘${label}’ 버전을 남겼어요` : '버전을 남기지 못했어요. 다시 시도해 주세요.')
+    notify(v ? `‘${label}’ 버전을 남겼어요` : `버전을 남기지 못했어요. ${SAVE_HELP}`)
   }
 
   // 버전 내용을 읽지 못했을 때: 다른 창에서 지웠거나 브라우저 저장소가 지워졌을 수 있다. 보관 폴더에 같은 때의 파일이 있으면 그것으로 연다
@@ -110,7 +111,11 @@ export function VersionPanel({ deck, onClose, notify }: { deck: Deck; onClose: (
       notify(loadFailed())
       return
     }
-    await saveVersion(deck, { reason: 'restore' })
+    // 되돌리기 전 상태를 기록에 남기지 못하면 되돌리지 않는다: 남기지 못한 채 되돌리면 지금 발표로 돌아갈 길이 없다
+    if (!(await keepVersion(deck, { reason: 'restore' }))) {
+      notify(`지금 발표를 버전 기록에 남기지 못해서 되돌리지 않았어요. ${SAVE_HELP}`)
+      return
+    }
     // AI 공유는 버전에 딸린 내용이 아니라 지금 켜 둔 설정이다. 예전 버전이 켜져 있었다고 꺼 둔 공유를 다시 켜지 않는다
     const next: Deck = { ...d, id: deck.id, updatedAt: Date.now(), aiShare: useDeck.getState().deck?.aiShare ?? deck.aiShare }
     const was = useDeck.getState().selectedId
