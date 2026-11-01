@@ -371,11 +371,18 @@ export const useDeck = create<DeckState>((set, get) => {
       const { deck } = get()
       const source = deck?.slides.find((s) => s.id === slideId)
       if (!source) return
+      const blocks = source.blocks && copyBlocks(source.blocks)
       const copy: Slide = {
         ...structuredClone(source),
         id: uid(),
         items: source.items.map((it) => ({ ...it, id: uid() })),
-        ...(source.blocks ? { blocks: copyBlocks(source.blocks) } : {}),
+        ...(blocks ? { blocks } : {}),
+      }
+      // 컴포넌트가 나오는 차례(options.order)는 컴포넌트 id로 적는다. 복제한 장의 컴포넌트는 새 id라서 옛 id를 그대로 두면
+      // 차례가 아무것도 가리키지 않아, 복제한 장만 정해 둔 차례 대신 읽는 차례로 나왔다. 같은 자리의 새 id로 바꾼다
+      if (source.blocks && blocks && source.options.order) {
+        const ids = new Map(source.blocks.map((b, i) => [b.id, blocks[i].id]))
+        copy.options = { ...copy.options, order: source.options.order.flatMap((id) => ids.get(id) ?? []) }
       }
       commit((d) => {
         const slides = [...d.slides]

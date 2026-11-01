@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDeck, emptyItem, makeSlide } from '../deck/generate'
 import { sampleBlock } from '../deck/blockSamples'
-import { autoPlace, boardAreaH, boardTight, rearrangeBlocks, removeBlock } from '../deck/blocks'
+import { autoPlace, boardAreaH, boardTight, playOrder, rearrangeBlocks, removeBlock } from '../deck/blocks'
 import { LAYOUTS, variantOf } from '../deck/layouts'
 import { gestureKey } from '../lib/pointerSession'
 import type { Slide } from '../deck/types'
@@ -365,5 +365,16 @@ describe('항목 빼기와 복제, 장 복제', () => {
     useDeck.getState().duplicateItem(id, 0)
     expect(titles()).toEqual(['가', '가', '나'])
     expect(new Set(slide().items.map((it) => it.id)).size).toBe(3)
+  })
+
+  it('장을 복제하면 정해 둔 컴포넌트 나오는 차례도 복제한 장의 컴포넌트를 따른다', () => {
+    const places = [{ x: 0, y: 0, w: 4, h: 12 }, { x: 4, y: 0, w: 4, h: 12 }, { x: 8, y: 0, w: 4, h: 12 }]
+    const blocks = (['number', 'message', 'quote'] as const).map((type, i) => ({ ...sampleBlock(type), id: `b${i}`, at: places[i] }))
+    const id = open({ ...makeSlide('compose'), blocks, options: { order: ['b2', 'b0'] } })
+    useDeck.getState().duplicateSlide(id)
+    const [source, copy] = [slide(1), slide(2)]
+    expect(copy.blocks!.map((b) => b.id).some((b) => source.blocks!.some((s) => s.id === b))).toBe(false)
+    expect(playOrder(copy).map((b) => b.type)).toEqual(['quote', 'number', 'message'])
+    expect(playOrder(source).map((b) => b.type)).toEqual(['quote', 'number', 'message'])
   })
 })
