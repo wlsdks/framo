@@ -91,6 +91,17 @@ describe('바깥 연결', () => {
     expect(used).toEqual(['server/update.ts'])
   })
 
+  it('로컬 주소는 이 PC 자신만 받는다', () => {
+    const ok = (url: string) => ALLOWED.some((re) => re.test(url))
+    for (const url of ['http://127.0.0.1', 'http://127.0.0.1:41580', 'http://127.0.0.1:41580/__html-maker', 'http://${HOST}:${PORT}', 'http://${req.headers.host}']) {
+      expect(ok(url)).toBe(true)
+    }
+    // 127.0.0.1로 시작하지만 다른 곳으로 가는 주소: 이름을 이어 붙이거나, 앞을 사용자 정보로 만든 것
+    for (const url of ['http://127.0.0.1.evil.example/', 'http://127.0.0.1@evil.example/', 'http://127.0.0.1:80@evil.example/', 'http://${HOST}.evil.example/']) {
+      expect(ok(url)).toBe(false)
+    }
+  })
+
   it('허락 목록은 이 저장소의 릴리스만 받는다', () => {
     const ok = (url: string) => ALLOWED.some((re) => re.test(url))
     expect(ok('https://api.github.com/repos/wlsdks/gyeol/releases/latest')).toBe(true)
