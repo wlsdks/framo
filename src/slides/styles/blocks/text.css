@@ -173,8 +173,10 @@
 }
 
 /* 아주 낮고 넓은 줄에서 두 항목과 소제목을 위아래로 쌓으면 큰 글자도 출처 크기까지 줄어든다.
-   한 줄에 함께 두어 읽는 크기를 지키고, 긴 글은 실제 너비와 높이에 맞춘다. */
-@container bk (min-width: 1300px) and (height < 160px) {
+   한 줄에 함께 두어 읽는 크기를 지키고, 긴 글은 실제 너비와 높이에 맞춘다.
+   두 항목이 소제목 옆에 한 단으로 드는 높이(아래의 120px)부터는 한 단이다: 160px 밑을 모두 눕히던 때는 편집 화면(빈 칸 안내만큼
+   줄이 낮다)의 140px 줄에서 두 항목이 01 … 02로 한 문장처럼 늘어서, 같은 장의 발표 화면(한 단)과 짜임이 달랐다 */
+@container bk (min-width: 1300px) and (height < 120px) {
   .bk-look-plain > .bk-in > .bk-bl:has(> .bk-h + .bk-list[data-n='2']) {
     flex-direction: row;
     align-items: baseline;
@@ -278,6 +280,14 @@
    문장 하나처럼 읽혔다(소제목은 왼쪽 위에 혼자). 그 높이면 소제목 옆에 한 단으로 세워도 넉넉하다 */
 @container bk (min-width: 1300px) and (min-height: 160px) {
   .bk-look-plain > .bk-in:has(> .bk-bl > .bk-list[data-n='2']) {
+    --bl-one: 1;
+  }
+}
+
+/* 소제목이 있으면 소제목이 옆(왼쪽 30%)에 서서 한 단에 드는 높이가 더 낮다: 두 항목이면 편집 화면의 손잡이(44px)까지 2 × 44 + 10 = 98px.
+   그래서 120px부터 한 단으로 세운다(위의 눕히는 짜임과 맞닿게). 소제목이 없는 두 항목은 160px까지 나란히 둔다(한 단이면 넓은 칸의 왼쪽에만 몰린다) */
+@container bk (min-width: 1300px) and (min-height: 120px) {
+  .bk-look-plain > .bk-in:has(> .bk-bl > .bk-h + .bk-list[data-n='2']) {
     --bl-one: 1;
   }
 }

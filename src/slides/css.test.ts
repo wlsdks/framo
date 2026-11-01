@@ -125,3 +125,25 @@ describe('컴포넌트 칸의 숫자 하나', () => {
     expect(padded.map((x) => x.s)).toEqual([])
   })
 })
+
+describe('넓은 칸의 두 항목 목록', () => {
+  /** @container 묶음마다 { 조건, 안의 규칙 } */
+  const containers = [...blocks.matchAll(/@container ([^{]+)\{((?:[^{}]*\{[^{}]*\})*\s*)\}/g)].map((m) => ({ cond: m[1].trim(), body: m[2] }))
+  const px = (cond: string, key: string) => Number(new RegExp(`\\(${key} ?(?:<|:) ?(\\d+)px\\)`).exec(cond)?.[1])
+
+  it('소제목이 있으면 한 단이 드는 높이부터 한 단(소제목은 옆에): 편집 화면처럼 낮은 줄에서도 발표 화면과 짜임이 같다', () => {
+    // 편집 화면(빈 칸 안내만큼 줄이 낮다)의 140px 줄에서 두 항목이 소제목 옆에 01 … 02로 늘어서, 같은 장의 발표 화면(한 단)과 짜임이 달랐다
+    // (갤러리 combos seed 2 편집 화면의 87, 99번). 두 항목의 한 단은 편집 화면의 손잡이(44px)까지 2 × 44 + 10 = 98px이라 그보다 조금 높으면 든다
+    const wide = containers.filter((c) => c.cond.includes('(min-width: 1300px)'))
+    // 소제목과 두 항목을 한 줄에 눕히는 짜임이 서는 높이 (그보다 낮은 줄)
+    const row = wide.find((c) => c.body.includes(".bk-h + .bk-list[data-n='2']") && /flex-direction:\s*row/.test(c.body))
+    expect(row).toBeDefined()
+    const rowBelow = px(row!.cond, 'height')
+    // 소제목이 있는 바탕 없는 두 항목 목록이 한 단(--bl-one)이 되는 가장 낮은 높이
+    const one = wide.filter((c) => /\.bk-look-plain > \.bk-in:has\(> \.bk-bl > (?:\.bk-h \+ )?\.bk-list\[data-n='2'\]\)/.test(c.body) && /--bl-one:\s*1/.test(c.body))
+    const oneFrom = Math.min(...one.map((c) => px(c.cond, 'min-height')))
+    expect(oneFrom).toBeLessThanOrEqual(120)
+    // 둘 사이에 비는 높이가 없다: 비면 그 높이에서는 소제목 아래에 두 항목이 나란히 서서 낮은 줄에 글자가 줄어든다
+    expect(rowBelow).toBe(oneFrom)
+  })
+})
