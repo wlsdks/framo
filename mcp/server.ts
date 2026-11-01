@@ -11,8 +11,8 @@
 // 바꾸는 것은 제안(requests)으로만 남기고, 사람이 앱에서 보고 적용하거나 거절한다.
 
 import { spawn } from 'node:child_process'
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve, sep } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, realpathSync, renameSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
 import { version } from '../package.json'
@@ -40,6 +40,7 @@ import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LINK_IDS, BLOCK_LOOK_IDS, BLOCK
 import { LAYOUT_ORDER } from '../src/deck/layouts'
 import { SCENE_IDS } from '../src/deck/scenes'
 import { FONTS, FOOTERS, MOTIONS, PLACES, TEXT_SIZES, THEME_ORDER, TONES, TRANSITIONS } from '../src/deck/themes'
+import { readJson, realDir } from '../server/shareFiles'
 
 // 판 번호는 package.json에서 빌드할 때 넣는다. 예전에는 따로 적어 두어 0.1.0에 멈춰 있었다
 const VERSION = version
@@ -111,28 +112,12 @@ const PROTOCOL_WORDS = [
 
 type Dirs = Record<ShareSubdir, string>
 
-/**
- * 폴더 안의 진짜 파일만 읽는다. 심볼릭 링크, 하드 링크(다른 이름이 또 있는 파일), 실제 위치가
- * 폴더 밖인 파일은 읽지 않는다. 권한 모델이 링크를 따라가는 것을 여기서 막는다.
- */
-function readJson(file: string): unknown {
-  try {
-    const st = lstatSync(file)
-    if (!st.isFile() || st.nlink > 1 || st.size > 2 * 1024 * 1024) return undefined
-    if (!realpathSync.native(file).startsWith(realpathSync.native(dirname(file)) + sep)) return undefined
-    return JSON.parse(readFileSync(file, 'utf8'))
-  } catch {
-    return undefined
-  }
-}
+// 파일은 readJson(server/shareFiles.ts)으로만 읽는다. 링크, 하드 링크, 실제 위치가 폴더 밖인 파일은
+// 읽지 않는다. 권한 모델이 링크를 따라가는 것을 거기서 막는다. 로컬 서버도 같은 규칙으로 읽는다.
 
 /** 공유 폴더의 하위 폴더가 링크면 다른 곳을 읽고 쓰게 되므로 시작하지 않는다 */
 function checkDirs(dirs: Dirs): boolean {
-  try {
-    return Object.values(dirs).every((d) => lstatSync(d).isDirectory())
-  } catch {
-    return false
-  }
+  return Object.values(dirs).every(realDir)
 }
 
 function readShape(dirs: Dirs, deck: string): ShapeDeck | null {
