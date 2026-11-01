@@ -15,8 +15,15 @@ import { readPercent } from '../percent'
 import { BOARD_COLS, byReading, type Fit, layTree, leaf, sameArea, split, type Tree, treeOf } from './board'
 import { blockItems, variantOfBlock } from './cells'
 import { aspectOf, fitImage } from './images'
-import { isAlone, isSolo, shownLook } from './rules'
+import { BLOCK_COL_GAP, isAlone, isSolo, shownLook } from './rules'
 import { AREA_W, atRect, blockMinH, isStretchy, widthOf } from './sizing'
+
+/**
+ * 글 끝이 들쭉날쭉한 부품(글이 칸 너비가 아니라 제 길이나 글 폭에서 끝난다). 이것이 옆 칸 앞에 서면 칸이 넓을수록 글 끝과 옆 칸 사이가 빈다
+ */
+const RAGGED = new Set<BlockType>(['bullets', 'text', 'message', 'callout', 'facts', 'quote', 'points'])
+/** 나란한 칸 사이가 옆 칸 사이(BLOCK_COL_GAP)보다 본문 너비의 이만큼 넘게 비면 남는 너비를 한 칸이 다 받은 것 */
+const HOLE = 0.2
 
 /** 틀을 견주는 가장 많은 부품 수. 더 많으면 사람이 짠 차례가 짜임의 뜻이라 판에 맡긴다 */
 export const ARRANGE_MAX = 4
@@ -303,7 +310,8 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
     else if (new Set(nums.map((b) => laid.get(b.id)!.at!.w)).size > 1) cost += 15
   }
   // 가로로 빈 곳: 그려진 것의 오른쪽 끝(naturalSpan). 본문 오른쪽이 20% 넘게 비면 판이 너비를 고르게 나누지 못한 것(screens/assembly.ts의 sides)
-  const right = Math.max(...all.map((b) => {
+  /** 그려진 것의 오른쪽 끝 (캔버스 px) */
+  const inkRight = (b: Block): number => {
     const r = rect(b)
     const img = picture(laid.get(b.id)!, r)
     // 칸보다 좁은 이미지는 칸 가운데에 선다
@@ -336,9 +344,38 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
     }
     const w = isStretchy(b.type) ? r.w : Math.min(atRect({ x: 0, y: 0, w: naturalSpan(laid.get(b.id)!), h: 1 }, size).w, measureW(b, r.w))
     return r.x + Math.min(r.w, w)
-  }))
+  }
+  const right = Math.max(...all.map(inkRight))
   const empty = 1 - right / AREA_W
   if (empty > 0.2) cost += (empty - 0.2) * 400
+  // 나란한 칸 사이의 구멍: 오른쪽 끝의 빈 곳만 세면, 짧은 목록 옆의 숫자를 오른쪽 끝으로 밀고 남는 너비를 목록 칸에 다 주는 판(9 : 3)이
+  // 가장 좋았다. 빈 곳이 오른쪽 끝에서 목록 글과 숫자 사이로 옮겨 갈 뿐이라, 핵심 한 줄 아래 목록 글은 본문의 3분의 1에서 끝나고 숫자는
+  // 오른쪽 끝에 붙어 둘 사이가 본문의 절반 가까이 비었다(docs/VISUAL-RULES.md 6: 남는 너비는 양 끝과 칸 사이에 고르게).
+  // 같은 띠에 선(위아래가 겹치는) 글 끝이 들쭉날쭉한 부품과 그 오른쪽 칸 사이마다 본다. 면이 있는 부품은 면이 칸 끝까지 그려져 빠진다.
+  // 숫자끼리는 같은 너비가 먼저라(같은 말투) 숫자 뒤의 빈 곳은 세지 않는다
+  const inkLeft = (b: Block): number => {
+    const r = rect(b)
+    const img = picture(laid.get(b.id)!, r)
+    return img ? r.x + (r.w - img.w) / 2 : r.x
+  }
+  const ragged = (b: Block) => RAGGED.has(b.type) && shownLook(laid.get(b.id)!, isAlone(laid.get(b.id)!)) === 'plain'
+  const holes = (n: Tree) => {
+    if (n.kind === 'leaf') return
+    if (n.dir === 'h')
+      for (let i = 1; i < n.kids.length; i++) {
+        let worst = 0
+        for (const a of leaves(n.kids[i - 1]).filter(ragged))
+          for (const b of leaves(n.kids[i])) {
+            const ra = laid.get(a.id)!.at!
+            const rb = laid.get(b.id)!.at!
+            if (ra.y >= rb.y + rb.h || rb.y >= ra.y + ra.h) continue
+            worst = Math.max(worst, (inkLeft(b) - inkRight(a) - BLOCK_COL_GAP) / AREA_W)
+          }
+        if (worst > HOLE) cost += (worst - HOLE) * 200
+      }
+    n.kids.forEach(holes)
+  }
+  holes(t)
   // 소제목이 그 아래 부품 위에 서지 않은 판 (사람이 끌어다 놓은 판을 견줄 때)
   if (!headsOk(t, last)) cost += 100
   // 숫자가 로고 모음 아래에 깔리면 답이 근거 밑으로 간다 (answersFirst)
