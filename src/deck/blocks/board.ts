@@ -122,16 +122,29 @@ export function treeOf(blocks: Block[]): Tree | null {
 /** 판을 덮는 꼴로 바로잡은 부품들: 이미 맞으면 그대로, 아니면 읽는 차례(위에서 아래, 왼쪽에서 오른쪽)대로 하나씩 다시 넣는다 */
 export function normalize(blocks: Block[], fit: Fit): Block[] {
   if (!blocks.length || treeOf(blocks)) return blocks
+  // 어디에도 들어가지 않으면(예전 파일에 더 높아진 부품) 크기를 따지지 않고라도 넣는다: 글을 버리지 않는다
+  return refill(blocks, fit, true)!
+}
+
+/**
+ * 처음부터 다시 놓은 판: 읽는 차례대로 하나씩, 눌러서 넣을 때처럼(autoInsert) 넣는다. 자리는 새로, 차례는 그대로.
+ * 크기 규칙대로 들어가지 않는 부품이 있으면 null (loose면 그 부품은 크기를 따지지 않고 넣는다)
+ */
+function refill(blocks: Block[], fit: Fit, loose: boolean): Block[] | null {
   let placed: Block[] = []
   for (const b of byReading(blocks)) {
     const bare: Block = { ...b, at: undefined }
-    // 어디에도 들어가지 않으면(예전 파일에 더 높아진 부품) 크기를 따지지 않고라도 넣는다: 글을 버리지 않는다
-    placed = autoInsert(placed, bare, fit) ?? autoInsert(placed, bare, LOOSE) ?? placed
+    const next = autoInsert(placed, bare, fit) ?? (loose ? (autoInsert(placed, bare, LOOSE) ?? placed) : null)
+    if (!next) return null
+    placed = next
   }
   // 자리를 다시 정했어도 차례는 파일 그대로
   const byId = new Map(placed.map((p) => [p.id, p]))
   return blocks.map((b) => byId.get(b.id)).filter((b): b is Block => !!b)
 }
+
+/** 부품들을 처음부터 다시 놓은 판(refill). 크기 규칙대로 모두 들어가지 않으면 null. 빼고 난 판이 들어가지 않을 때(place.ts의 removeBlock) */
+export const rebuild = (blocks: Block[], fit: Fit): Block[] | null => refill(blocks, fit, false)
 
 const leaves = (t: Tree): Block[] => (t.kind === 'leaf' ? [t.block] : t.kids.flatMap(leaves))
 
@@ -558,7 +571,11 @@ export function needWith(blocks: Block[], block: Block, spot: Spot, fit: Fit): n
   return t ? new Measure(fit).least(t, 'v', BOARD_COLS, 60) : null
 }
 
-/** 부품을 뺀 판: 옆 부품들이 그 자리를 바라는 크기의 비율대로 나눠 덮는다(차트처럼 커지는 부품이 있으면 그것이 먼저) */
+/**
+ * 부품을 뺀 판: 옆 부품들이 그 자리를 바라는 크기의 비율대로 나눠 덮는다(차트처럼 커지는 부품이 있으면 그것이 먼저).
+ * 나무는 그대로라 옮기기(moveBlock)는 이 판에서 다시 넣을 자리를 찾는다. 남은 부품이 이 나무로는 들어가지 않으면(넓어진 부품이
+ * 글자가 커져 더 높아질 때, 더 높아진 부품이 있던 예전 파일) 크기를 따지지 않고 자리만 넓힌다. 빼기는 그런 판을 다시 놓는다(place.ts의 removeBlock)
+ */
 export function removeFromBoard(blocks: Block[], id: string, fit: Fit): Block[] {
   const left = blocks.filter((b) => b.id !== id)
   if (left.length === blocks.length) return blocks
@@ -569,7 +586,6 @@ export function removeFromBoard(blocks: Block[], id: string, fit: Fit): Block[] 
   const path = pathTo(t, id)!
   const parent = path.at(-2) as Split
   parent.kids = parent.kids.filter((k) => k !== path.at(-1))
-  // 남은 부품이 어떻게 나눠도 들어가지 않으면(더 높아진 부품이 있던 예전 파일) 크기를 따지지 않고 자리만 넓힌다
   return place(left, tidy(t), fit) ?? place(left, tidy(t), LOOSE) ?? left
 }
 

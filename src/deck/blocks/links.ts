@@ -182,17 +182,24 @@ export function dropBlock(blocks: Block[], id: string, fit: Fit): Block[] {
     }
     return out
   })
-  let out = tidyLinks(removeFromBoard(cut, id, fit))
-  // 다른 칸을 뺀 뒤 이웃이 넓어지면 직접 닿지 않았던 연결도 새 대상을 가리킬 수 있다.
-  // 같은 종류의 칸이라도 다른 내용을 뜻하므로, 이전 대상과 달라진 연결은 남겨 두지 않는다.
-  for (const t of linkTargets(blocks)) {
-    const link = linkAt(blocks, t)
-    if (!link || linkIssue(blocks, t, link) || !linkAt(out, t)) continue
-    const from = blocks.find((b) => b.id === t.id)
+  return keepLinkEnds(blocks, removeFromBoard(cut, id, fit))
+}
+
+/**
+ * 판을 다시 나눈 뒤(빼기, 다시 놓기) 건너편이 달라진 이음표를 뗀 판. 다른 부품을 뺀 뒤 이웃이 넓어지거나 판을 다시 놓으면
+ * 직접 닿지 않았던 이음표도 새 부품을 가리킬 수 있다. 같은 종류의 부품이라도 다른 내용을 뜻하므로, 예전 판(before)에서 잇던
+ * 부품과 달라진 이음표는 남겨 두지 않는다. 판 바깥 선에 서게 된 이음표도 뗀다(tidyLinks)
+ */
+export function keepLinkEnds(before: readonly Block[], after: Block[]): Block[] {
+  let out = tidyLinks(after)
+  for (const t of linkTargets(before)) {
+    const link = linkAt(before, t)
+    if (!link || linkIssue(before, t, link) || !linkAt(out, t)) continue
+    const from = before.find((b) => b.id === t.id)
     const next = out.find((b) => b.id === t.id)
     if (!from || !next) continue
     const ends = (bs: readonly Block[], b: Block) => across(bs, b, t.dir).filter((x) => !isLinkCompanion(x.type)).map((x) => x.id).sort()
-    const oldEnds = ends(blocks, from)
+    const oldEnds = ends(before, from)
     const newEnds = ends(out, next)
     if (oldEnds.length !== newEnds.length || oldEnds.some((end, i) => end !== newEnds[i])) out = withLink(out, t, null)
   }
@@ -201,7 +208,9 @@ export function dropBlock(blocks: Block[], id: string, fit: Fit): Block[] {
 
 /**
  * 발표할 때 그리는 판: 비워 둔 부품은 빼고, 옆 부품이 그 자리를 넓혀 덮는다. 편집할 때 옆에 둔 빈 부품이
- * 발표 화면에 구멍으로 남지 않게. 자리만 넓히므로(남은 부품은 커지기만 한다) 크기 규칙 없이 나눈다
+ * 발표 화면에 구멍으로 남지 않게. 크기 규칙 없이 자리만 넓힌다. 넓어진 부품이 글자가 커져 더 높아지면(숫자 카드처럼)
+ * 그리는 쪽(slides/fitBlocks.ts)이 장의 글자를 한 단계 줄여 맞춘다. 빈 부품의 자리를 비워 두거나 편집할 때와 다르게
+ * 판을 다시 놓는 것보다 이쪽이 낫다(편집기 미리 보기에서 세 가지를 견주어 보았다)
  */
 export function shownBlocks(blocks: Block[]): Block[] {
   if (!blocks.some(blockIsBlank)) return blocks
