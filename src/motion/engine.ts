@@ -87,6 +87,32 @@ export function motionEngine(): MotionEngine {
   let still = false
   let pace = 1
 
+  // 낱말 나누기와 숫자 굴리기가 DOM에 쓰는 일. play가 한 묶음을 짜는 동안은 쓰지 않고 모았다가, 다 짠 뒤 모든 칸이 같이
+  // 한 단계씩 쓴다(flushJobs: 쓰기 → 재기 → 쓰기). 칸마다 쓰고 바로 다시 재면 그때마다 장 전체를 다시 배치해서, 장을 넘기는
+  // 순간 한 프레임이 42~77ms였다(핵심 숫자 셋과 점 목록이 든 컴포넌트 장, 144Hz 맥. 윈도우 노트북은 그 3~4배).
+  // 짜는 동안 재는 일은 나누기 전의 글로 한다: 나눈 낱말과 감싼 숫자는 글자 모양을 바꾸지 않아 자리가 같다.
+  // 움직임은 아직 장에 넣지 않은 낱말에도 미리 건다(넣는 때가 같은 일 안이라 첫 화면부터 시작 모습이다)
+  type Job = { write: () => void; read?: () => void; after?: () => void; done?: boolean; dead?: boolean }
+  let jobs: Job[] | null = null
+  function defer(job: Job) {
+    if (jobs) jobs.push(job)
+    else runJobs([job])
+  }
+  function runJobs(list: Job[]) {
+    for (const j of list) {
+      j.write()
+      j.done = true
+    }
+    for (const j of list) if (j.read) j.read()
+    for (const j of list) if (j.after) j.after()
+  }
+  function flushJobs() {
+    if (!jobs || !jobs.length) return
+    const list = jobs.filter((j) => !j.dead)
+    jobs = []
+    runJobs(list)
+  }
+
   function run(
     out: Animation[],
     el: Element,
@@ -127,9 +153,9 @@ export function motionEngine(): MotionEngine {
     for (let n = walker.nextNode(); n; n = walker.nextNode()) if (!(n.parentElement && n.parentElement.closest('svg'))) texts.push(n as Text)
     const seg = chars && typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('ko', { granularity: 'grapheme' }) : null
     const pieces = (word: string) => (!chars ? [word] : seg ? Array.from(seg.segment(word), (g) => g.segment) : Array.from(word))
-    // 나누기 전에 낱말(글자)마다 원래 글에서의 자리를 잰다(아래에서 나눈 뒤의 자리와 맞춘다)
+    // 나누기 전에 낱말(글자)마다 원래 글에서의 자리를 잰다(아래에서 나눈 뒤의 자리와 맞추고, 줄 올라오기가 줄을 가른다)
     const range = document.createRange()
-    const was: { left: number; top: number }[] = []
+    const was: { left: number; top: number; height: number }[] = []
     for (const node of texts) {
       let i = 0
       for (const part of (node.nodeValue || '').split(/(\s+)/)) {
@@ -139,13 +165,15 @@ export function motionEngine(): MotionEngine {
             range.setStart(node, j)
             range.setEnd(node, j + piece.length)
             const r = range.getClientRects()[0]
-            was.push(r ? { left: r.left, top: r.top } : { left: NaN, top: NaN })
+            was.push(r ? { left: r.left, top: r.top, height: r.height } : { left: NaN, top: NaN, height: NaN })
             j += piece.length
           }
         }
         i += part.length
       }
     }
+    // 낱말 상자는 여기서 만들기만 하고 장에 넣는 것은 모아 둔 일(defer)에서
+    const swaps: { node: Text; made: Node[] }[] = []
     for (const node of texts) {
       const parts = (node.nodeValue || '').split(/(\s+)/)
       if (parts.every((p) => !p.trim())) continue
@@ -182,42 +210,61 @@ export function motionEngine(): MotionEngine {
           boxes.push(n === list.length - 1 ? outer : c)
         })
       }
-      const parent = node.parentNode
-      if (!parent) continue
-      for (const m of made) parent.insertBefore(m, node)
-      parent.removeChild(node)
-      undo.push(() => {
-        if (!made[0].parentNode) return
-        made[0].parentNode.insertBefore(node, made[0])
-        for (const m of made) m.parentNode?.removeChild(m)
-      })
+      swaps.push({ node, made })
     }
-    // 낱말 사이를 원래 글과 같게. 낱말을 상자(inline-block)로 감싸면 상자 밖의 띄어쓰기와 짝을 이룬 자간(쉼표 뒤 같은)이
-    // 빠져서 낱말이 조금 넓어진다. 녹화해 보니 '사업, 12월'에서 쉼표 뒤가 3px 벌어져 있다가, 움직임이 끝나 원래 글로
-    // 돌아올 때 그 뒤의 낱말이 모두 왼쪽으로 튀었다. 같은 줄의 이웃 낱말 사이가 원래와 다르면 앞 낱말의 오른쪽 여백으로 맞춘다.
-    // 글자로 나눌 때도 같다: 글자 상자 사이에서는 글꼴의 짝 자간(kerning)이 빠진다
+    // 장을 줄여 그린 비율. 나누어도 장의 크기는 그대로라 나누기 전에 잰다
     const box = el.getBoundingClientRect()
     const k = (el as HTMLElement).offsetWidth ? box.width / (el as HTMLElement).offsetWidth : 0
-    if (k && was.length === words.length) {
-      const now = words.map((o) => o.getBoundingClientRect())
-      for (let i = 0; i + 1 < words.length; i++) {
-        const a = was[i]
-        const b = was[i + 1]
-        if (!(Math.abs(a.top - b.top) < 1 && Math.abs(now[i].top - now[i + 1].top) < 1)) continue
-        const gap = b.left - a.left - (now[i + 1].left - now[i].left)
-        if (Math.abs(gap) > 0.05 * k) boxes[i].style.marginRight = gap / k + 'px'
-      }
-    }
-    // 글자로 나눈 동안 화면 읽기 프로그램은 낱낱의 글자를 읽지 않고 원래 글을 한 번 읽는다
     const label = el.getAttribute('aria-label')
-    if (chars && words.length) {
-      if (label === null) el.setAttribute('aria-label', (el.textContent || '').replace(/\s+/g, ' ').trim())
-      for (const b of boxes) if (b.classList.contains('mo-w')) b.setAttribute('aria-hidden', 'true')
+    let now: DOMRect[] = []
+    const job: Job = {
+      write: () => {
+        for (const { node, made } of swaps) {
+          const parent = node.parentNode
+          if (!parent) continue
+          for (const m of made) parent.insertBefore(m, node)
+          parent.removeChild(node)
+          undo.push(() => {
+            if (!made[0].parentNode) return
+            made[0].parentNode.insertBefore(node, made[0])
+            for (const m of made) m.parentNode?.removeChild(m)
+          })
+        }
+        // 글자로 나눈 동안 화면 읽기 프로그램은 낱낱의 글자를 읽지 않고 원래 글을 한 번 읽는다
+        if (chars && words.length) {
+          if (label === null) el.setAttribute('aria-label', (el.textContent || '').replace(/\s+/g, ' ').trim())
+          for (const b of boxes) if (b.classList.contains('mo-w')) b.setAttribute('aria-hidden', 'true')
+        }
+      },
+      read: () => {
+        if (k && was.length === words.length) now = words.map((o) => o.getBoundingClientRect())
+      },
+      // 낱말 사이를 원래 글과 같게. 낱말을 상자(inline-block)로 감싸면 상자 밖의 띄어쓰기와 짝을 이룬 자간(쉼표 뒤 같은)이
+      // 빠져서 낱말이 조금 넓어진다. 녹화해 보니 '사업, 12월'에서 쉼표 뒤가 3px 벌어져 있다가, 움직임이 끝나 원래 글로
+      // 돌아올 때 그 뒤의 낱말이 모두 왼쪽으로 튀었다. 같은 줄의 이웃 낱말 사이가 원래와 다르면 앞 낱말의 오른쪽 여백으로 맞춘다.
+      // 글자로 나눌 때도 같다: 글자 상자 사이에서는 글꼴의 짝 자간(kerning)이 빠진다
+      after: () => {
+        for (let i = 0; i + 1 < now.length; i++) {
+          const a = was[i]
+          const b = was[i + 1]
+          if (!(Math.abs(a.top - b.top) < 1 && Math.abs(now[i].top - now[i + 1].top) < 1)) continue
+          const gap = b.left - a.left - (now[i + 1].left - now[i].left)
+          if (Math.abs(gap) > 0.05 * k) boxes[i].style.marginRight = gap / k + 'px'
+        }
+      },
     }
+    defer(job)
     return {
       words,
       marks,
+      /** 낱말(글자)마다 나누기 전의 자리 */
+      was,
       restore: () => {
+        // 아직 장에 넣지 않았으면 넣지 않는다 (한 글자씩에서 낱말로 다시 나눌 때)
+        if (!job.done) {
+          job.dead = true
+          return
+        }
         undo.forEach((u) => u())
         if (chars && label === null) el.removeAttribute('aria-label')
       },
@@ -291,6 +338,16 @@ export function motionEngine(): MotionEngine {
     // 발표 화면은 장을 줄여 그린다. 잰 값을 장의 px로 되돌린다
     const k = parent.offsetWidth ? base.width / parent.offsetWidth : 0
     if (!k) return false
+    // 굴릴 수 있는지(자리마다 글자 상자가 보이는지)는 감싸기 전의 글에서 잰다. 감싼 것은 글자 모양을 바꾸지 않는 보통 span이라
+    // 자리가 같고, 감싸고 바로 재면 숫자마다 장 전체를 다시 배치했다
+    const range = document.createRange()
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] < '0' || text[i] > '9') continue
+      range.setStart(node, i)
+      range.setEnd(node, i + 1)
+      const b = range.getBoundingClientRect()
+      if (!b.width || !b.height) return false
+    }
     // 숫자마다 감싼다. 감싼 것은 글자 모양을 바꾸지 않는 보통 span이라 줄과 폭이 그대로다
     const frag = document.createDocumentFragment()
     const cells: HTMLElement[] = []
@@ -308,63 +365,93 @@ export function motionEngine(): MotionEngine {
     if (plain) frag.appendChild(document.createTextNode(plain))
     const parts = Array.prototype.slice.call(frag.childNodes) as Node[]
     const original = node
-    parent.replaceChild(frag, original)
     const covers: HTMLElement[] = []
     const position = parent.style.position
     // 원래 style 속성이 없었으면 되돌릴 때도 없게 (빈 style=""이 남으면 끝 모습의 DOM이 원래와 달라진다)
     const styled = parent.hasAttribute('style')
-    // 나눈 조각과 덮은 창을 걷고 원래 글 하나로
-    const undo = () => {
+    const statics = getComputedStyle(parent).position === 'static'
+    // 창과 띠는 모아 둔 쓰기 때 만든다. 그때의 빠르기가 아니라 이 칸의 빠르기로
+    const speed = pace
+    let boxes: DOMRect[] = []
+    let heights: number[] = []
+    let at0 = base
+    let edge = { left: 0, top: 0 }
+    // 같은 묶음에서 먼저 쓴 일이 이 글을 이미 바꿨으면(낱말로 나눈 글 안의 숫자) 굴리지 않는다. 없는 자리에 넣으면 장 전체의 움직임이 멈춘다
+    let lost = false
+    const job: Job = {
+      write: () => {
+        if (original.parentNode !== parent) {
+          lost = true
+          return
+        }
+        parent.replaceChild(frag, original)
+        if (statics) parent.style.position = 'relative'
+      },
+      read: () => {
+        if (lost) return
+        at0 = parent.getBoundingClientRect()
+        edge = { left: parent.clientLeft, top: parent.clientTop }
+        boxes = cells.map((c) => c.getBoundingClientRect())
+        // 창 높이(=띠의 줄 높이)는 글자 상자의 높이 그대로. 잰 높이를 줄인 비율로 되돌리면 127.92처럼 조금 모자라서, 줄 높이가
+        // 글자 상자보다 작아지고 글자가 줄 안에서 1px 위로 맞춰졌다. offsetHeight는 줄이기와 상관없는 장의 px다
+        heights = cells.map((c, i) => c.offsetHeight || boxes[i].height / k)
+      },
+      after: () => {
+        if (lost) return
+        const was = pace
+        pace = speed
+        const n = cells.length
+        cells.forEach((c, i) => {
+          const b = boxes[i]
+          const h = heights[i]
+          const digit = Number(c.textContent)
+          const strip = document.createElement('span')
+          strip.className = 'mo-odr'
+          const seq: string[] = []
+          // 0부터 한 바퀴(0~9) 돈 뒤 그 숫자에서 멈춘다. 마지막 칸이 꼭 그 숫자여야 한다(9 + digit까지만 넣으면 하나 모자라
+          // 3.7에서 멈췄다가 원래 글자로 돌아올 때 4.8로 튄다)
+          for (let d = 0; d <= 10 + digit; d++) seq.push(String(d % 10))
+          const stop = seq.length - 1
+          strip.textContent = seq.join('\n')
+          strip.style.lineHeight = h + 'px'
+          // 멈춘 자리는 translate가 아니라 margin으로 둔다. 글자 높이는 px 소수라서, 소수 translate로 옮긴 글자는 원래 글자와
+          // 다른 자리에 맞춰 그려진다(녹화해 보니 멈춘 숫자가 1px 가까이 아래에 있다가, 움직임이 다 끝나 창을 걷을 때 위로 튀었다).
+          // 움직임은 그 자리에서 아래로 내려간 데서 출발해 0(옮기지 않음)으로 끝난다
+          strip.style.marginTop = -stop * h + 'px'
+          const cover = document.createElement('span')
+          cover.className = 'mo-od'
+          cover.setAttribute('aria-hidden', 'true')
+          cover.style.left = (b.left - at0.left) / k - edge.left + 'px'
+          cover.style.top = (b.top - at0.top) / k - edge.top + 'px'
+          cover.style.width = b.width / k + 'px'
+          cover.style.height = h + 'px'
+          cover.appendChild(strip)
+          parent.appendChild(cover)
+          covers.push(cover)
+          c.className = 'mo-odc'
+          // 왼쪽 자리가 먼저 멈추고 오른쪽으로 갈수록 조금씩 늦게
+          const time = duration + (n > 1 ? (i / (n - 1)) * duration * 0.25 : 0)
+          // 지나쳤다 돌아오지 않는다. 예전 생동감은 끝 숫자를 창 높이의 16%만큼 지나쳤다 돌아왔는데, 녹화해 보니 자리마다
+          // 따로 지나쳐서 0.4초쯤 숫자가 들쭉날쭉 어긋나 보였다. 생동감도 같은 감속 곡선으로, 조금 더 길게 굴러 천천히 멈춘다
+          run(anims, strip, [{ translate: `0 ${stop * h}px` }], at, { easing: lively ? 'cubic-bezier(0.2, 0.75, 0.1, 1)' : 'cubic-bezier(0.25, 0.8, 0.15, 1)', duration: time })
+        })
+        pace = was
+      },
+    }
+    defer(job)
+    // 나눈 조각과 덮은 창을 걷고 원래 글 하나로 (아직 쓰지 않았으면 쓰지 않는다)
+    restores.push(() => {
+      if (!job.done) {
+        job.dead = true
+        return
+      }
+      if (lost) return
       covers.forEach((c) => c.remove())
       if (parts[0].parentNode === parent) parent.insertBefore(original, parts[0])
       parts.forEach((p) => p.parentNode === parent && parent.removeChild(p))
       parent.style.position = position
       if (!styled && !parent.getAttribute('style')) parent.removeAttribute('style')
-    }
-    const boxes = cells.map((c) => c.getBoundingClientRect())
-    if (boxes.some((b) => !b.width || !b.height)) {
-      undo()
-      return false
-    }
-    if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative'
-    const n = cells.length
-    cells.forEach((c, i) => {
-      const b = boxes[i]
-      // 창 높이(=띠의 줄 높이)는 글자 상자의 높이 그대로. 잰 높이를 줄인 비율로 되돌리면 127.92처럼 조금 모자라서, 줄 높이가
-      // 글자 상자보다 작아지고 글자가 줄 안에서 1px 위로 맞춰졌다. offsetHeight는 줄이기와 상관없는 장의 px다
-      const h = c.offsetHeight || b.height / k
-      const digit = Number(c.textContent)
-      const strip = document.createElement('span')
-      strip.className = 'mo-odr'
-      const seq: string[] = []
-      // 0부터 한 바퀴(0~9) 돈 뒤 그 숫자에서 멈춘다. 마지막 칸이 꼭 그 숫자여야 한다(9 + digit까지만 넣으면 하나 모자라
-      // 3.7에서 멈췄다가 원래 글자로 돌아올 때 4.8로 튄다)
-      for (let d = 0; d <= 10 + digit; d++) seq.push(String(d % 10))
-      const stop = seq.length - 1
-      strip.textContent = seq.join('\n')
-      strip.style.lineHeight = h + 'px'
-      // 멈춘 자리는 translate가 아니라 margin으로 둔다. 글자 높이는 px 소수라서, 소수 translate로 옮긴 글자는 원래 글자와
-      // 다른 자리에 맞춰 그려진다(녹화해 보니 멈춘 숫자가 1px 가까이 아래에 있다가, 움직임이 다 끝나 창을 걷을 때 위로 튀었다).
-      // 움직임은 그 자리에서 아래로 내려간 데서 출발해 0(옮기지 않음)으로 끝난다
-      strip.style.marginTop = -stop * h + 'px'
-      const cover = document.createElement('span')
-      cover.className = 'mo-od'
-      cover.setAttribute('aria-hidden', 'true')
-      cover.style.left = (b.left - base.left) / k - parent.clientLeft + 'px'
-      cover.style.top = (b.top - base.top) / k - parent.clientTop + 'px'
-      cover.style.width = b.width / k + 'px'
-      cover.style.height = h + 'px'
-      cover.appendChild(strip)
-      parent.appendChild(cover)
-      covers.push(cover)
-      c.className = 'mo-odc'
-      // 왼쪽 자리가 먼저 멈추고 오른쪽으로 갈수록 조금씩 늦게
-      const time = duration + (n > 1 ? (i / (n - 1)) * duration * 0.25 : 0)
-      // 지나쳤다 돌아오지 않는다. 예전 생동감은 끝 숫자를 창 높이의 16%만큼 지나쳤다 돌아왔는데, 녹화해 보니 자리마다
-      // 따로 지나쳐서 0.4초쯤 숫자가 들쭉날쭉 어긋나 보였다. 생동감도 같은 감속 곡선으로, 조금 더 길게 굴러 천천히 멈춘다
-      run(anims, strip, [{ translate: `0 ${stop * h}px` }], at, { easing: lively ? 'cubic-bezier(0.2, 0.75, 0.1, 1)' : 'cubic-bezier(0.25, 0.8, 0.15, 1)', duration: time })
     })
-    restores.push(undo)
     return true
   }
 
@@ -564,17 +651,18 @@ export function motionEngine(): MotionEngine {
       const split = splitWords(el)
       if (!split.words.length) return at
       restores.push(split.restore)
-      // 같은 줄: 낱말 상자(.mo-w)는 줄의 위에 맞춰 서서 한 줄의 상자는 윗변이 같다
+      // 같은 줄: 나누기 전 글자 상자의 윗변으로 가른다(한 줄의 글은 윗변이 같다). 나눈 낱말 상자를 다시 재면 칸마다
+      // 장 전체를 다시 배치했다(낱말 상자는 아직 장에 넣지 않았다: 모아 둔 쓰기)
       const rows: HTMLElement[][] = []
       let top = NaN
-      for (const w of split.words) {
-        const b = (w.parentElement ?? w).getBoundingClientRect()
+      split.words.forEach((w, i) => {
+        const b = split.was[i] || { top: NaN, height: NaN }
         if (!rows.length || Math.abs(b.top - top) > b.height / 2) {
           rows.push([])
           top = b.top
-        }
+        } else if (Number.isNaN(top)) top = b.top
         rows[rows.length - 1].push(w)
-      }
+      })
       const lively = levelName === 'lively'
       const gap = Math.min(lively ? 130 : 90, (lively ? 900 : 700) / rows.length)
       const ripple = lively ? 12 : 8
@@ -2515,9 +2603,13 @@ export function motionEngine(): MotionEngine {
       waits = []
       root.setAttribute('data-mo-play', String(Number(root.getAttribute('data-mo-play') || 0) + 1))
       still = quiet
+      const outer = jobs
+      jobs = []
       try {
         make()
+        flushJobs()
       } finally {
+        jobs = outer
         still = false
         pace = 1
       }
@@ -2545,6 +2637,8 @@ export function motionEngine(): MotionEngine {
       // 장면: 움직이기 전에 자리를 재 두고(prepare), 레이아웃의 연출을 건 뒤 그 움직임을 다시 짜고 층을 얹는다
       const after = sceneName && !still ? scene(sceneName) : null
       choreo(layout, slideVariant)
+      // 장면은 모아 둔 쓰기를 한 뒤에 다시 짠다: 나눈 낱말이 장 안에 있어야 어느 묶음의 움직임인지 안다
+      flushJobs()
       if (after) after()
     })
 
