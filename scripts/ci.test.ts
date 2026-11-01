@@ -15,4 +15,17 @@ describe('검수의 점검', () => {
     expect(handler).toMatch(/failed = true/)
     expect(smoke).toMatch(/\['msedge', 'chrome'\]/)
   })
+
+  it('배포본이 바깥 Host를 받지 않는지는 403으로 확인한다 (아무 오류나 통과로 보지 않는다)', () => {
+    // 오류를 모두 통과로 보면 머리글을 바꾸지 못하거나(윈도우 PowerShell 5.1은 Host를 못 바꿔 오류를 낸다) 연결이 끊겨도 통과한다
+    const checks = read('.github/workflows/ci.yml')
+      .split('\n')
+      .filter((line) => line.includes("Host = 'evil.example'"))
+    expect(checks.length).toBe(2)
+    for (const line of checks) {
+      expect(line).not.toMatch(/catch/)
+      expect(line).toMatch(/-SkipHttpErrorCheck/)
+      expect(line).toMatch(/StatusCode -ne 403/)
+    }
+  })
 })
