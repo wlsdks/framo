@@ -280,7 +280,8 @@ export const useDeck = create<DeckState>((set, get) => {
           const max = LAYOUTS[s.layout].items?.max ?? 0
           if (Math.min(s.items.length, max) >= max || !s.items[index]) return s
           const items = [...s.items]
-          items.splice(index + 1, 0, { ...s.items[index] })
+          // 새 id로: 항목 id는 장을 그릴 때 항목을 가려내는 열쇠(React key)라, 같은 id가 둘이면 화면이 두 항목을 가려내지 못한다
+          items.splice(index + 1, 0, { ...s.items[index], id: uid() })
           // 강조는 원래 항목에 그대로 둔다 (뒤의 항목을 강조했으면 한 칸 밀린다)
           const h = s.options.highlight
           const highlight = typeof h === 'number' && h > index ? h + 1 : h

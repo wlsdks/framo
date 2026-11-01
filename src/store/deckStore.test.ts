@@ -359,4 +359,11 @@ describe('항목 빼기와 복제, 장 복제', () => {
     expect(titles()).toEqual(['나', '라'])
     expect(slide().options.highlight).toBe(-1)
   })
+
+  it('항목을 복제하면 바로 뒤에 새 id로 (같은 id가 둘이면 화면과 AI가 두 항목을 하나로 여긴다)', () => {
+    const id = open({ ...makeSlide('process'), items: ['가', '나'].map(item) })
+    useDeck.getState().duplicateItem(id, 0)
+    expect(titles()).toEqual(['가', '가', '나'])
+    expect(new Set(slide().items.map((it) => it.id)).size).toBe(3)
+  })
 })
