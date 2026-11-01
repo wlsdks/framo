@@ -38,7 +38,7 @@ if (only && only !== 'mac' && only !== 'windows') {
 }
 
 /** 배포본에 넣는 Node.js. LTS 중에서 고르고, 바꿀 때는 docs/OPEN-SOURCE.md도 고친다. */
-const NODE_VERSION = 'v24.16.0'
+const NODE_VERSION = 'v24.22.2'
 
 // 사내에서 써도 되는 라이선스가 아니면 여기서 멈춘다. 나눠 줄 파일에 넣을 라이선스 전문도 이때 같이 모은다.
 // 경로는 셸을 거치지 않고 인자로 넘긴다(빈칸과 한글이 든 경로에서도 그대로 간다)
