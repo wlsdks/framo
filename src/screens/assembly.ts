@@ -1,6 +1,6 @@
 import { isLink, linkFits } from '../deck/blocks'
 import type { BlockType } from '../deck/types'
-import { blockDrawn, blockFigures, blockTextLines } from '../slides/fitBlocks'
+import { blockDrawn, blockEdgeSeen, blockFigures, blockTextLines } from '../slides/fitBlocks'
 
 /*
  * 개발용: 부품 장이 '사람이 짠 것처럼' 보이는지 보는 검사. checkCombos(combos.ts)는 잘리거나 겹치는 것만 봐서,
@@ -589,7 +589,7 @@ function inkX(cell: HTMLElement): { l: number; r: number } | null {
     if (cs.visibility === 'hidden' || cs.opacity === '0') continue
     const bg = cs.backgroundColor
     // 그림자로 테를 두른 상자(흐름의 단계 상자)도 그려진 것이다
-    if ((!bg || bg === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(bg)) && cs.backgroundImage === 'none' && cs.boxShadow === 'none' && !(parseFloat(cs.borderTopWidth) > 0) && !(parseFloat(cs.borderBottomWidth) > 0) && !(parseFloat(cs.borderLeftWidth) > 0) && !(parseFloat(cs.borderRightWidth) > 0)) continue
+    if ((!bg || bg === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(bg)) && cs.backgroundImage === 'none' && cs.boxShadow === 'none' && !(['Top', 'Bottom', 'Left', 'Right'] as const).some((side) => blockEdgeSeen(cs, side))) continue
     const q = el.getBoundingClientRect()
     if (!q.width || !q.height) continue
     l = Math.min(l, q.left)
@@ -643,7 +643,7 @@ function withRules(cell: HTMLElement, x: { l: number; r: number } | null): { l: 
       if (ps.content === 'none' || ps.content === 'normal' || ps.display === 'none' || ps.position !== 'absolute' || ps.visibility === 'hidden') continue
       const bg = ps.backgroundColor
       const clear = !bg || bg === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(bg)
-      if (clear && ps.backgroundImage === 'none' && !(parseFloat(ps.borderTopWidth) > 0) && !(parseFloat(ps.borderLeftWidth) > 0)) continue
+      if (clear && ps.backgroundImage === 'none' && !blockEdgeSeen(ps, 'Top') && !blockEdgeSeen(ps, 'Left')) continue
       const px = parseFloat(ps.left)
       const pw = parseFloat(ps.width)
       if (!Number.isFinite(px) || !(pw > 0)) continue
