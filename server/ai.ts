@@ -10,7 +10,7 @@
 //
 // 이 창구도 모양 파일을 받을 때 checkShape로 다시 확인한다. 글이 섞인 파일은 쓰지 않는다.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readdirSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { dirname, join } from 'node:path'
 import { validAsk, type AskError } from '../src/ai/asks'
@@ -20,6 +20,7 @@ import { AI_PREFIX, DECK_ID, deckOfFile, REQUEST_ID, RESULT_FORMAT, SHARE_SUBDIR
 import { checkShape } from '../src/ai/share'
 import { ASK_RUN_ID, createAgent, type AgentCommand } from './agent'
 import { fromApp } from './guard'
+import { readJson, realDir } from './shareFiles'
 
 const MAX_BODY = 512 * 1024
 const KEEP_RESULTS_MS = 7 * 24 * 60 * 60 * 1000
@@ -42,11 +43,31 @@ export function shareDirs(root: string): ShareDirs {
 
 export function ensureShareDir(root: string): ShareDirs {
   const dirs = shareDirs(root)
-  for (const d of SHARE_SUBDIRS) mkdirSync(dirs[d], { recursive: true })
+  for (const d of SHARE_SUBDIRS) realFolder(dirs[d])
   const readme = join(root, '읽어 주세요.txt')
   // 윈도우 메모장이 한글을 바로 알아보게 BOM과 CRLF로 쓴다
   if (!existsSync(readme)) writeFileSync(readme, '\uFEFF' + README.replace(/\n/g, '\r\n'))
   return dirs
+}
+
+/**
+ * 하위 폴더를 진짜 폴더로 만든다. 그 자리에 링크가 있으면 링크만 지운다(가리키던 곳은 그대로 둔다).
+ * 링크를 따라 쓰면 폴더 밖에 파일이 생기고, 따라 지우면 밖의 파일이 지워진다(shareFiles.ts).
+ * 그 자리에 파일이 있으면 지우지 않고 던진다. 처리기가 정해진 500으로 답한다.
+ */
+function realFolder(dir: string) {
+  try {
+    if (lstatSync(dir).isSymbolicLink()) unlinkSync(dir)
+  } catch {
+    // 없으면 아래에서 만든다. 링크를 지우지 못했으면 아래의 확인에서 걸린다
+  }
+  mkdirSync(dir, { recursive: true })
+  if (!realDir(dir)) throw new Error('not a folder')
+}
+
+/** 폴더 안의 파일 하나를 지운다. 폴더가 링크면 따라가 밖의 파일을 지우게 되므로 지우지 않는다 */
+function removeShared(file: string) {
+  if (realDir(dirname(file))) rmSync(file, { force: true })
 }
 
 /**
@@ -55,7 +76,7 @@ export function ensureShareDir(root: string): ShareDirs {
  * 파일을 열고 있으면 EPERM) 임시 파일을 치우고 오류를 그대로 던진다. 처리기가 정해진 500으로 답한다.
  */
 export function writeJsonAtomic(file: string, value: unknown) {
-  mkdirSync(dirname(file), { recursive: true })
+  realFolder(dirname(file))
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`
   writeFileSync(tmp, JSON.stringify(value, null, 2))
   try {
@@ -66,20 +87,13 @@ export function writeJsonAtomic(file: string, value: unknown) {
   }
 }
 
-function readJson(file: string): unknown {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8'))
-  } catch {
-    return undefined
-  }
-}
-
 export function pruneResults(dirs: ShareDirs, now = Date.now()) {
-  if (!existsSync(dirs.results)) return
+  // 폴더가 링크면 따라가 밖의 오래된 파일을 모두 지우게 된다
+  if (!realDir(dirs.results)) return
   for (const name of readdirSync(dirs.results)) {
     const file = join(dirs.results, name)
     try {
-      if (now - statSync(file).mtimeMs > KEEP_RESULTS_MS) rmSync(file, { force: true })
+      if (now - statSync(file).mtimeMs > KEEP_RESULTS_MS) removeShared(file)
     } catch {
       // 다른 쪽이 먼저 지웠으면 그만
     }
@@ -88,6 +102,7 @@ export function pruneResults(dirs: ShareDirs, now = Date.now()) {
 
 /** 모양 파일이 있는 발표. 폴더를 읽지 못하면 없는 것으로 친다 (앱은 공유가 꺼진 것으로 본다) */
 function sharedDecks(dirs: ShareDirs): string[] {
+  if (!realDir(dirs.decks)) return []
   try {
     return readdirSync(dirs.decks)
       .map(deckOfFile)
@@ -99,7 +114,8 @@ function sharedDecks(dirs: ShareDirs): string[] {
 
 /** 기다리는 제안. 꼴이 맞지 않는 파일은 지우고 거절 기록을 남긴다. */
 export function pendingRequests(dirs: ShareDirs): ChangeRequest[] {
-  if (!existsSync(dirs.requests)) return []
+  // 폴더가 링크면 읽지도 지우지도 않는다. 따라가면 밖의 JSON 파일을 꼴이 맞지 않는다며 지운다
+  if (!realDir(dirs.requests)) return []
   const out: ChangeRequest[] = []
   for (const name of readdirSync(dirs.requests)) {
     if (!name.endsWith('.json')) continue
@@ -110,7 +126,12 @@ export function pendingRequests(dirs: ShareDirs): ChangeRequest[] {
       out.push(request)
       continue
     }
-    rmSync(file, { force: true })
+    // 지우지 못하는 것(같은 이름의 폴더)은 두고 넘어간다. 예전에는 여기서 던져 제안 목록이 늘 오류였다
+    try {
+      removeShared(file)
+    } catch {
+      continue
+    }
     if (REQUEST_ID.test(id)) writeResult(dirs, id, 'invalid', [])
   }
   return out.sort((a, b) => a.createdAt - b.createdAt)
@@ -265,11 +286,11 @@ export function createAiHandler(shareRoot: string, setup: AiSetup) {
   }
 
   function unshare(res: ServerResponse, deck: string) {
-    rmSync(join(dirs.decks, `${deck}.json`), { force: true })
+    removeShared(join(dirs.decks, `${deck}.json`))
     // 공유를 끄면 그 발표에 온 제안도 거절로 정리한다
     for (const r of pendingRequests(dirs)) {
       if (r.deck !== deck) continue
-      rmSync(join(dirs.requests, `${r.id}.json`), { force: true })
+      removeShared(join(dirs.requests, `${r.id}.json`))
       writeResult(dirs, r.id, 'rejected', r.ops.map(() => ({ ok: false, code: 'not_reviewed' as const })))
     }
     empty(res, 204)
@@ -282,7 +303,7 @@ export function createAiHandler(shareRoot: string, setup: AiSetup) {
     if (!parsed) return empty(res, 400)
     if (!existsSync(file)) return empty(res, 404)
     writeResult(dirs, id, parsed.status, parsed.results)
-    rmSync(file, { force: true })
+    removeShared(file)
     empty(res, 204)
   }
 

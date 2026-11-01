@@ -75,6 +75,7 @@
 | 컴포넌트를 놓을 자리(끌어 놓기, 눌러 넣기, 넣을 수 없음) | `src/screens/editor/planDrop.ts`의 `planDrop` |
 | 파일 이름 | `src/store/deckFile.ts`의 `safeFileName` |
 | CSP | `server/csp.ts`, 내보낸 HTML은 `src/export/exportHtml.tsx`의 `exportCsp` |
+| ‘AI 공유’ 폴더의 파일 읽기(링크, 하드 링크, 큰 파일, 링크인 하위 폴더 거르기) | `server/shareFiles.ts`. 로컬 서버와 MCP 서버가 같이 쓴다 |
 
 ## 4. 파일 나누기
 
@@ -132,7 +133,7 @@
 | `src/ai/share.test.ts` | 모양에 사람이 적은 글이 한 글자도 없다(비밀 심기). 장 역할 이름이 몰래 바뀌지 않는다(스냅숏, 바꾸면 `migrate.ts`) |
 | `src/ai/ops.test.ts` | 칸의 글을 쓰는 제안이 없다. 내용이 있는 장, 항목, 부품은 지우지 못한다 |
 | `mcp/server.test.ts` | MCP 서버를 실제로 띄워 도구, 권한 모델, 내보내는 글자가 정해진 말뿐인지 본다 |
-| `server/serve.test.ts`, `server/agent.test.ts` | `127.0.0.1`, Host 검사, CSP, AI 창구, Claude Code를 띄우는 인자 |
+| `server/serve.test.ts`, `server/agent.test.ts`, `server/ai.test.ts` | `127.0.0.1`, Host 검사, CSP, AI 창구, Claude Code를 띄우는 인자. ‘AI 공유’ 폴더 안의 링크를 따라가 밖의 파일을 읽거나 지우지 않는다 |
 | `src/export/exportHtml.test.ts` | 내보낸 HTML의 CSP, 다시 열기 |
 | `src/deck/blocks.test.ts`, `src/deck/blocks/board.test.ts` | 부품 장으로 바꿔도 글을 잃지 않는다. 판이 늘 빈틈없이 덮이고 넣고 빼고 옮겨도 잘리지 않는다. 모든 부품의 높이를 쟀다 |
 | `src/deck/frame.test.ts`, `src/slides/css.test.ts` | TS의 값과 CSS의 값이 같다(틀, 글자 칸 목록, 부품 간격) |
