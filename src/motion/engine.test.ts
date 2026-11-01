@@ -79,6 +79,24 @@ describe('움직임 엔진', () => {
     expect(trend).toMatch(/\(i \+ 0?\.5\) \/ \w+\.length\)? \* draw/)
   })
 
+  it('이미지는 걷히는 쪽에서 당겨지고 차분하게면 더 옅게 더 오래, 설명은 줄마다 가림막 뒤에서 올라온다', () => {
+    // 차분하게도 생동감과 똑같이 1.12배에서 2.2초에 당겨져 두 단계가 다르지 않았고(단계 표는 생동감만 '천천히 당겨짐'), 설명은 흐리게만 들어왔다
+    const src = motionEngine.toString()
+    const native = src.slice(src.indexOf('function nativeAuto'))
+    const image = native.slice(native.search(/case ["']image["']/), native.search(/case ["']decision["']/))
+    expect(image).not.toMatch(/fade\(one\(["']\.bk-img-c["']\)/)
+    expect(image).toMatch(/lines\(one\(["']\.bk-img-c["']\)/)
+    // 이미지 컴포넌트와 이미지 장이 같은 당기기를 쓴다: 단계마다의 크기와 시간을 한 곳에서 정한다
+    expect(image).toMatch(/pull\(/)
+    const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))
+    const i = choreo.search(/case ["']imageText["']/)
+    expect(choreo.slice(i, choreo.indexOf('break', i))).toMatch(/pull\(/)
+    const j = src.search(/const pull = /)
+    expect(j).toBeGreaterThan(0)
+    // 당기기의 몸(다음 도움 함수의 설명 주석 전까지)이 단계를 본다
+    expect(src.slice(j, src.indexOf('/**', j))).toMatch(/levelName === ["']lively["']/)
+  })
+
   it('레이아웃마다 짠 연출이 있다 (없으면 소리 없이 기본 연출로 떨어진다)', () => {
     const src = motionEngine.toString()
     const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))
