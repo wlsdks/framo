@@ -1237,10 +1237,10 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'bullets':
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           items('.bk-li', 160, (el, at) => {
             fade(el.querySelector('.bk-dot'), at, 400)
-            rise(el.querySelector('.bk-li-text'), at + 40, L.y * 0.5)
+            lines(el.querySelector('.bk-li-text'), at + 40)
           })
           break
         case 'quote': {
@@ -1327,7 +1327,7 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'facts':
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           items('.bk-fc-row', 160, (el, at) => {
             grow(el, at, 'x', '::before')
             rise(el.querySelector('.bk-fc-k'), at + 80, L.y * 0.4)
@@ -1335,7 +1335,7 @@ export function motionEngine(): MotionEngine {
           })
           break
         case 'risks':
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           fade(one('.bk-rk-head'), 120, 500)
           items('.bk-rk-row', 220, (el, at) => {
             ruled(el, at)
@@ -1346,7 +1346,7 @@ export function motionEngine(): MotionEngine {
           }, L.step * 1.8)
           break
         case 'faq':
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           items('.bk-qa-item', 160, (el, at) => {
             ruled(el, at)
             pop(el.querySelector('.bk-qa-k'), at)
@@ -1355,7 +1355,7 @@ export function motionEngine(): MotionEngine {
           }, L.step * 1.8)
           break
         case 'checks':
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           fade(one('.bk-ck-sum'), 160, 500)
           items('.bk-ck-row', 200, (el, at) => {
             ruled(el, at)
@@ -1366,7 +1366,7 @@ export function motionEngine(): MotionEngine {
           break
         case 'swot':
           // 네 칸이 읽는 차례(강점, 약점, 기회, 위협)로: 글자가 맺히고 이름과 내용이 따라 올라온다
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           items('.bk-sw-q', 140, (el, at) => {
             ruled(el, at)
             pop(el.querySelector('.bk-sw-k'), at)
@@ -1376,7 +1376,7 @@ export function motionEngine(): MotionEngine {
           break
         case 'gantt':
           // 기간 칸과 지금 띠가 먼저 깔리고, 할 일마다 이름이 올라오며 막대가 시작 칸에서 끝 칸으로 그어진다
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           fade(one('.bk-gt-cols'), 120, 500)
           fade(one('.bk-gt-now'), 160, 800)
           items('.bk-gt-row', 240, (el, at) => {
@@ -1386,7 +1386,7 @@ export function motionEngine(): MotionEngine {
           })
           break
         case 'people': {
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           const tree = one('.va-tree .bk-pp-list')
           if (tree) {
             // 체계도: 이끄는 사람이 먼저 올라오고, 그 아래 선이 내려와 가운데에서 양옆으로 퍼진 뒤,
@@ -1414,7 +1414,7 @@ export function motionEngine(): MotionEngine {
         case 'rating':
           // 안 이름과 추천 띠가 먼저 깔리고, 기준마다 줄이 올라오며 표시가 안 차례로 찍힌다.
           // 줄은 선까지 통째로: 선만 먼저 보이면 빈 표가 깔려 있다가 채워지는 것처럼 보인다
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           fade(one('.bk-ev-lg'), 120, 500)
           fade(one('.bk-ev-cols'), 120, 500)
           fade(one('.bk-ev-band'), 160, 800)
@@ -1425,7 +1425,7 @@ export function motionEngine(): MotionEngine {
           break
         case 'market':
           // 큰 원부터 바닥에서 부풀어 겹치고, 원마다 그 이름과 규모가 함께 들어온다
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           $('.bk-mk-c').forEach((c, i) =>
             run(anims, c, [{ scale: '0', transformOrigin: '50% 100%' }, { scale: '1', transformOrigin: '50% 100%' }], s(120 + i * 220), L.grow),
           )
@@ -1441,7 +1441,7 @@ export function motionEngine(): MotionEngine {
           // 막대가 바닥에서 차례로 자라고 숫자가 따라 올라온다. 달성은 막대 뒤에 목표 줄이 그어진다.
           // 쌓은 막대는 칸마다 키우면 칸 사이가 벌어진 채 떠 보여서, 막대 하나를 바닥부터 드러내 아래 칸이 먼저 차오르게 한다.
           // 원인 순위는 막대가 다 선 뒤에 누적 비율 선이 왼쪽부터 그어지고, 선이 닿는 점마다 맺힌다
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           fade(one('.bk-cc-key'), 120, 500)
           if (one('.bk-tg-text')) {
             fade(one('.bk-tg-text-head'), 120, 400)
@@ -1493,7 +1493,7 @@ export function motionEngine(): MotionEngine {
         }
         case 'diverge':
           // 가운데 선이 먼저 서고, 막대가 그 선에서 늘어난 쪽은 오른쪽으로, 줄어든 쪽은 왼쪽으로 뻗는다
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           fade(one('.bk-cc-key'), 120, 500)
           $('.bk-dv-axis').forEach((a) => grow(a, 120, 'down'))
           items('.bk-dv-row', 220, (el, at) => {
@@ -1508,7 +1508,7 @@ export function motionEngine(): MotionEngine {
         case 'heat': {
           // 칸이 왼쪽 위 모서리부터 비스듬한 물결로 물든다(줄 + 칸이 같은 칸이 함께). 칸이 많아도 1초 안에 다 물들게.
           // 다 물든 뒤 가장 높은 칸과 낮은 칸에 고리가 맺힌다
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           fade(one('.bk-cc-key'), 120, 500)
           fade(one('.bk-hm-head'), 120, 500)
           const rows = $('.bk-hm-row')
@@ -1524,7 +1524,7 @@ export function motionEngine(): MotionEngine {
         }
         case 'sparks':
           // 줄마다 이름이 올라오고 흐름 선이 왼쪽부터 같은 빠르기로 그어진다. 선이 끝에 닿을 때 지금 점이 맺히고 지금 값이 굴러간다
-          rise(one('.bk-h'), 60, L.y * 0.5)
+          lines(one('.bk-h'), 60)
           // 넓은 칸에서 두 단으로 흘리면 머리도 둘이다
           $('.bk-sx-head').forEach((el) => fade(el, 120, 500))
           items('.bk-sx-row', 180, (el, at) => {

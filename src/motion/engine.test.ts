@@ -30,6 +30,15 @@ describe('움직임 엔진', () => {
     for (const t of TRANSITIONS.filter((t) => t.id !== 'auto' && t.id !== 'none')) expect(src, t.id).toMatch(new RegExp(`name !== ["']${t.id}["']`))
   })
 
+  it('컴포넌트의 소제목과 목록 글은 상자째 띄우지 않고 줄마다 가림막 뒤에서 올린다', () => {
+    const src = motionEngine.toString()
+    const native = src.slice(src.indexOf('function nativeAuto'))
+    // 상자째 올리면 몇 줄인지, 어디서 끊기는지가 움직임에 드러나지 않는다 (docs/MOTION.md의 '줄 올라오기')
+    expect(native).not.toMatch(/rise\(one\(["']\.bk-h["']\)/)
+    expect(native).not.toMatch(/rise\(el\.querySelector\(["']\.bk-li-text["']\)/)
+    expect(native).toMatch(/lines\(one\(["']\.bk-h["']\)/)
+  })
+
   it('레이아웃마다 짠 연출이 있다 (없으면 소리 없이 기본 연출로 떨어진다)', () => {
     const src = motionEngine.toString()
     const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))
