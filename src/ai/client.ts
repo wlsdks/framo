@@ -90,8 +90,8 @@ export async function startAsk(ask: AskId, deck: string, slide: string | null): 
   }
 }
 
-export async function askRun(id: string): Promise<AskRun | null> {
-  const res = await call(`asks/${id}`)
+export async function askRun(id: string, signal?: AbortSignal): Promise<AskRun | null> {
+  const res = await call(`asks/${id}`, { signal })
   if (!res?.ok) return null
   try {
     return (await res.json()) as AskRun
