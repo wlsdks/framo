@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ARRANGE_MAX, boardAreaH, rearrangeBlocks, sameArea } from '../../deck/blocks'
 import { missingFields, optionalBlanks, unshownCount, visibleItems, type Missing } from '../../deck/fields'
 import { emptyItem } from '../../deck/generate'
 import { highlightOf, LAYOUTS, LAYOUT_GROUPS, panesOf, placeOf, sideOf, variantOf } from '../../deck/layouts'
@@ -31,11 +32,14 @@ export function openLayoutPicker() {
 export function Inspector({
   deck,
   slide,
+  areaHeight,
   onFocusField,
   onPeekLayout,
 }: {
   deck: Deck
   slide: Slide
+  /** 컴포넌트 편집기에서 잰 현재 본문 높이. 아직 그리지 않았으면 어림값을 쓴다. */
+  areaHeight: () => number | undefined
   onFocusField: (m: Missing) => void
   /** 레이아웃 그림에 마우스를 올리면 슬라이드 자리에 그 레이아웃으로 미리 보인다 (null이면 그만) */
   onPeekLayout: (layout: LayoutId | null) => void
@@ -107,10 +111,45 @@ export function Inspector({
         <Optional deck={deck} slide={slide} />
         <Unshown slide={slide} />
       </section>
+      <ArrangeSection deck={deck} slide={slide} areaHeight={areaHeight} />
       <ShapeSection slide={slide} shown={shown} look={look} />
       <LookSection deck={deck} slide={slide} />
       <FrameSection slide={slide} />
     </div>
+  )
+}
+
+/** 사용자가 이미 만든 슬라이드도 글을 지우지 않고 지금 내용에 맞게 다시 놓을 수 있다. */
+function ArrangeSection({ deck, slide, areaHeight }: { deck: Deck; slide: Slide; areaHeight: () => number | undefined }) {
+  const [message, setMessage] = useState('')
+  useEffect(() => setMessage(''), [slide.id])
+  const blocks = slide.blocks ?? []
+  if (slide.layout !== 'compose' || blocks.length < 2) return null
+  const reason = blocks.length > ARRANGE_MAX
+    ? `컴포넌트 ${ARRANGE_MAX}개까지 자동으로 배치할 수 있어요.`
+    : blocks.some((b) => b.link || b.linkBelow || b.type === 'heading')
+      ? '‘소제목’ 컴포넌트나 연결 기호가 있으면 직접 배치해 주세요.'
+      : ''
+  const arrange = () => {
+    const next = rearrangeBlocks(blocks, areaHeight() ?? boardAreaH(slide, deck))
+    if (!next) {
+      setMessage('이 슬라이드에 들어가는 배치를 찾지 못했어요. 컴포넌트를 나누거나 제목을 줄여 주세요.')
+      return
+    }
+    if (next.every((b, i) => b.at && blocks[i].at && sameArea(b.at, blocks[i].at!))) {
+      setMessage('지금보다 나은 자동 배치를 찾지 못했어요. 직접 옮길 수도 있어요.')
+      return
+    }
+    useDeck.getState().setBlocks(slide.id, next)
+    setMessage('자동으로 배치했어요. 되돌리기로 이전 배치로 돌아갈 수 있어요.')
+  }
+  return (
+    <section className="ins-sec">
+      <h2 className="ins-h">컴포넌트 배치</h2>
+      <button type="button" className="btn btn-ghost btn-sm" disabled={!!reason} title={reason || '작성한 글과 읽는 순서를 유지하며 다시 배치해요'} onClick={arrange}>자동으로 다시 배치</button>
+      <Info label="자동 배치 설명" align="start">지금 내용에 맞춰 위치와 너비를 다시 정해요. 작성한 글과 읽는 순서는 그대로 두며 되돌리기로 이전 배치로 돌아갈 수 있어요.</Info>
+      {(reason || message) && <p className="ins-optional" role="status">{reason || message}</p>}
+    </section>
   )
 }
 

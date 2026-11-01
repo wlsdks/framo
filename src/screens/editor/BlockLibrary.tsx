@@ -304,6 +304,10 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
     const why = issues.get(t)
     return why?.kind === 'height' && why.already
   })
+  const noBody = TYPES.some((t) => {
+    const why = issues.get(t)
+    return why?.kind === 'height' && why.noBody
+  })
   // 알림은 상자 없이 한 줄로 (목록이 위에서부터 바로 보이게). 무엇이 어디에 들어가는지만 말한다
   const note = closed
     ? '표지와 섹션 슬라이드에는 컴포넌트를 넣지 않아요'
@@ -311,6 +315,8 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
       ? full
         ? counted
           ? `슬라이드 하나에는 ${MAX_BLOCKS}개까지 넣어요. 하나를 빼면 더 넣을 수 있어요`
+          : noBody
+            ? '본문을 넣을 높이가 없어요. 제목이나 부제를 줄여 주세요'
           : over
             ? '이 슬라이드는 이미 넘쳤어요. 항목이나 컴포넌트를 줄이면 더 넣을 수 있어요'
             : '이 슬라이드는 자리가 다 찼어요. 하나를 빼면 더 넣을 수 있어요'

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDeck } from '../deck/generate'
+import { sampleBlock } from '../deck/blockSamples'
+import { autoPlace, boardAreaH, boardTight, rearrangeBlocks, removeBlock } from '../deck/blocks'
 import { LAYOUTS, variantOf } from '../deck/layouts'
 import { gestureKey } from '../lib/pointerSession'
 import { undoLast, useDeck } from './deckStore'
@@ -39,6 +41,23 @@ describe('되돌리기', () => {
     expect(useDeck.getState().deck?.slides.some((s) => s.id === id)).toBe(false)
   })
 
+  it('컴포넌트를 빼며 연결이 달라졌을 때 알림의 되돌리기로 연결까지 복원한다', () => {
+    const current = useDeck.getState().deck!
+    const slide = current.slides[1]
+    const places = [
+      { x: 0, y: 0, w: 6, h: 6 }, { x: 6, y: 0, w: 6, h: 6 },
+      { x: 0, y: 6, w: 7, h: 6 }, { x: 7, y: 6, w: 5, h: 6 },
+    ]
+    const blocks = ['a', 'b', 'c', 'd'].map((id, i) => ({ ...sampleBlock('number'), id, at: places[i], ...(i === 0 ? { linkBelow: 'arrow' as const } : {}) }))
+    useDeck.getState().open({ ...current, slides: current.slides.map((s) => s.id === slide.id ? { ...s, layout: 'compose', blocks } : s) })
+    const original = useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!.blocks!
+    const next = removeBlock(original, 'b', 800)
+    expect(next.find((b) => b.id === 'a')?.linkBelow).toBeUndefined()
+    useDeck.getState().setBlocks(slide.id, next)
+    expect(undoLast()()).toBe(true)
+    expect(useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!.blocks).toEqual(original)
+  })
+
   it('알림의 되돌리기는 기록에 남지 않는 설정이 바뀌어도 방금 바꾼 것을 되돌린다', () => {
     const id = useDeck.getState().deck!.slides[1].id
     useDeck.getState().removeSlide(id)
@@ -54,6 +73,59 @@ describe('되돌리기', () => {
     useDeck.getState().setAiShare(true)
     useDeck.getState().undo()
     expect(useDeck.getState().deck?.aiShare).toBe(true)
+  })
+
+  it('자동으로 다시 배치한 슬라이드는 한 번에 원래 자리로 되돌린다', () => {
+    const current = useDeck.getState().deck!
+    const slide = current.slides[1]
+    const blocks = [
+      { ...sampleBlock('message'), id: 'message', at: { x: 0, y: 0, w: 12, h: 6 } },
+      { ...sampleBlock('bullets'), id: 'list', at: { x: 0, y: 6, w: 12, h: 6 } },
+    ]
+    useDeck.getState().open({ ...current, slides: current.slides.map((s) => s.id === slide.id ? { ...s, layout: 'compose', blocks } : s) })
+    const original = useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!
+    const next = rearrangeBlocks(original.blocks!, boardAreaH(original, current))!
+    expect(next.map((b) => b.at)).not.toEqual(original.blocks!.map((b) => b.at))
+    useDeck.getState().setBlocks(slide.id, next)
+    expect(useDeck.getState().past).toHaveLength(1)
+    useDeck.getState().undo()
+    expect(useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!.blocks).toEqual(original.blocks)
+    useDeck.getState().redo()
+    expect(useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!.blocks?.map((b) => b.at)).toEqual(next.map((b) => b.at))
+  })
+
+  it('긴 제목으로 넘친 슬라이드도 다시 배치한 뒤 한 번에 되돌린다', () => {
+    const current = useDeck.getState().deck!
+    const slide = current.slides[1]
+    const first = autoPlace([], { ...sampleBlock('message'), id: 'message' }, 705)!
+    const blocks = autoPlace(first, { ...sampleBlock('facts'), id: 'facts' }, 705)!
+    const title = '가상의 긴 제목을 확인해요 '.repeat(25)
+    useDeck.getState().open({ ...current, slides: current.slides.map((s) => s.id === slide.id ? { ...s, layout: 'compose', fields: { title }, blocks } : s) })
+    const original = useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!
+    const look = useDeck.getState().deck!
+    expect(boardTight(original, look)).toBe(true)
+    const next = rearrangeBlocks(original.blocks!, boardAreaH(original, look))!
+    expect(next).not.toBeNull()
+    useDeck.getState().setBlocks(slide.id, next)
+    expect(boardTight(useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!, look)).toBe(false)
+    useDeck.getState().undo()
+    expect(useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!.blocks).toEqual(original.blocks)
+    useDeck.getState().redo()
+    expect(useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!.blocks?.map((b) => b.at)).toEqual(next.map((b) => b.at))
+  })
+
+  it('제목과 아래 표시를 감추고 다시 켜도 작성한 글은 남는다', () => {
+    const current = useDeck.getState().deck!
+    const id = current.slides[1].id
+    const fields = { ...current.slides[1].fields, title: '가상의 제목', lead: '가상의 부제', source: '가상의 출처' }
+    useDeck.getState().open({ ...current, slides: current.slides.map((s) => s.id === id ? { ...s, fields } : s) })
+    useDeck.getState().setOptions(id, { hideHead: true, hideFoot: true })
+    expect(useDeck.getState().deck!.slides.find((s) => s.id === id)!.fields).toEqual(fields)
+    useDeck.getState().setOptions(id, { hideHead: undefined, hideFoot: undefined })
+    const slide = useDeck.getState().deck!.slides.find((s) => s.id === id)!
+    expect(slide.fields).toEqual(fields)
+    expect(slide.options.hideHead).toBeUndefined()
+    expect(slide.options.hideFoot).toBeUndefined()
   })
 })
 

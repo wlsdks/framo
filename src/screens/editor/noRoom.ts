@@ -43,6 +43,8 @@ export function noRoomText(r: NoRoom, type: BlockType, where: 'here' | 'move' | 
         why: `작은 컴포넌트가 아닌 것은 슬라이드 하나에 ${MAX_LARGE}개까지 넣어요. 더 많으면 어디를 봐야 할지 흐려져요.`,
         fix: '컴포넌트를 하나 빼거나 새 슬라이드에 넣어 주세요. 소제목, 숫자 한 줄 같은 작은 컴포넌트는 더 넣을 수 있어요.',
       }
+    case 'link':
+      return { why: '기존 연결 기호의 대상을 유지하며 컴포넌트를 넣을 자리가 없어요.', fix: '연결 기호를 조정하거나 새 슬라이드에 넣어 주세요.' }
     case 'narrow':
       return {
         why: `${josa(name, '은', '는')} ${needWidth(r.span)} 해서, 여기에 끼우면 너무 좁아져요.`,
@@ -72,6 +74,8 @@ export function noRoomText(r: NoRoom, type: BlockType, where: 'here' | 'move' | 
       return { why: `${josa(pair, '은', '는')} 크기가 맞지 않아 자리를 맞바꿀 수 없어요.`, fix: '옆이나 위아래에 놓아 보세요.' }
     }
     case 'height': {
+      if (r.noBody)
+        return { why: '이 슬라이드에는 본문을 넣을 높이가 없어요.', fix: '제목이나 부제를 줄이거나 새 슬라이드에 넣어 주세요.' }
       // 넣기 전부터 넘친 장: '넣으면 장 높이를 넘어서'라고 하면 지금은 들어가는 줄 안다
       if (r.already)
         return {

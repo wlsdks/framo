@@ -790,10 +790,14 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
   const update = (id: string, fn: (b: Block) => Block) => store.updateBlock(slideRef.current.id, id, fn)
   const remove = (b: Block) => {
     const s = slideRef.current
-    store.setBlocks(s.id, removeBlock(s.blocks ?? [], b.id, measureArea(areaEl.current)?.size.h))
+    const before = s.blocks ?? []
+    const next = removeBlock(before, b.id, measureArea(areaEl.current)?.size.h)
+    const links = (bs: Block[]) => bs.reduce((n, block) => n + Number(!!block.link) + Number(!!block.linkBelow), 0)
+    store.setBlocks(s.id, next)
     setSelected(null)
     removed.current = { slide: s.id, id: b.id }
-    toast.show(`${BLOCKS[b.type].name} 컴포넌트를 뺐어요`, undoAction(toast))
+    const notice = links(next) < links(before) ? ' 영향을 받은 연결 기호도 지웠어요.' : ''
+    toast.show(`${BLOCKS[b.type].name} 컴포넌트를 뺐어요.${notice}`, undoAction(toast), notice ? 8000 : undefined)
   }
   const duplicate = (b: Block) => {
     const s = slideRef.current
@@ -801,7 +805,9 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
     const area = measureArea(areaEl.current)
     const next = autoPlace(s.blocks ?? [], copy, area?.size.h)
     if (!next) {
-      toast.show('이 슬라이드에는 더 넣을 자리가 없어요. 컴포넌트를 빼거나 다음 슬라이드에 넣어 주세요.')
+      const reason = placeIssue(s.blocks ?? [], copy, area?.size.h)
+      const text = reason && noRoomText(reason, copy.type, 'slide')
+      toast.show(text ? `${text.why} ${text.fix}` : '이 슬라이드에는 더 넣을 자리가 없어요. 컴포넌트를 빼거나 다음 슬라이드에 넣어 주세요.')
       return
     }
     store.setBlocks(s.id, next)

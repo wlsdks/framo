@@ -1,6 +1,7 @@
 import { BLOCK_HEIGHTS } from './blockHeights'
 import { describe, expect, it } from 'vitest'
 import {
+  across,
   autoPlace,
   bandOf,
   byReading,
@@ -10,6 +11,7 @@ import {
   blockMinH,
   blockMissing,
   blockNames,
+  blockSlide,
   boardAreaH,
   boardFit,
   boardFromRows,
@@ -71,7 +73,7 @@ import { sampleBlock } from './blockSamples'
 import { followIndex, moveIn } from './fields'
 import { FRAME } from './frame'
 import { makeSlide } from './generate'
-import { LAYOUT_ORDER } from './layouts'
+import { hintFor, LAYOUT_ORDER } from './layouts'
 import { showcaseSlides } from './showcase'
 import { transitionOf } from './themes'
 import type { Block, BlockType, Slide } from './types'
@@ -121,6 +123,17 @@ describe('부품 목록', () => {
       expect(spec.prefSpan).toBeLessThanOrEqual(12)
       expect(blockMinH(makeBlock(type), spec.prefSpan)).toBeGreaterThan(0)
     }
+  })
+
+  it('조건별 흐름은 각 경로의 다른 예시를 보여 주고 사용자가 바꾼 안내를 우선한다', () => {
+    const outer = makeSlide('compose')
+    const base = makeBlock('decision')
+    const slide = blockSlide(outer, base)
+    expect(hintFor(slide.layout, slide.hints, 'title', 'title', 0)).toBe('준비됐어요')
+    expect(hintFor(slide.layout, slide.hints, 'title', 'title', 1)).toBe('아직 없어요')
+    expect(hintFor(slide.layout, slide.hints, 'body', 'body', 1)).toBe('입고 날짜를 알려 드려요')
+    const edited = blockSlide(outer, { ...base, hints: { 'items.title': '확인 결과' } })
+    expect(hintFor(edited.layout, edited.hints, 'title', 'title', 1)).toBe('확인 결과')
   })
 
   it("'칸 더하기'로 꺼내는 칸마다 무엇에 쓰는 칸인지 적혀 있고, 한 부품 안에서 겹치지 않는다", () => {
@@ -249,7 +262,8 @@ describe('자리 정하기', () => {
   })
 
   it('눌러서 넣을 자리가 없는 것과 카드에 보이는 까닭이 늘 같다', () => {
-    // 부품 고르기의 카드 표시(placeIssue)와 누를 때(autoPlace)가 다르면, 표가 없는 카드를 눌렀는데 다음 장이 생기거나 그 반대가 된다
+    // 부품 고르기의 카드 표시(placeIssue)와 누를 때(autoPlace)가 다르면, 표가 없는 카드를 눌렀는데 다음 장이 생기거나 그 반대가 된다.
+    // 모든 종류와 높이를 대조해 병렬 검사의 느린 환경에서도 5초 안에 끝난다고 가정하지 않는다.
     const areaH = 1080 - FRAME.y - FRAME.bottom
     const boards: Block[][] = [
       [],
@@ -264,7 +278,7 @@ describe('자리 정하기', () => {
           const b = block(type, 'new')
           expect([type, h, autoPlace(bs, b, h) === null]).toEqual([type, h, placeIssue(bs, b, h) !== null])
         }
-  })
+  }, 15000)
 
   it('넣기 전부터 장보다 높은 판이면 까닭에 그렇다고 적는다 (넣어서 넘는 것과 따로)', () => {
     // 제목이 두 줄이 되거나 글자를 키워 본문이 낮아지면, 넣기 전부터 장 높이를 넘는다
@@ -707,6 +721,70 @@ describe('이음표', () => {
     expect(next.map((b) => b.id)).toContain('r')
     expect(linkAt(next, { id: 'p', dir: 'v' })).toBe('equals')
     expect(linkIssue(next, { id: 'p', dir: 'v' }, 'equals')).toBeNull()
+  })
+
+  it('같은 종류를 자동으로 더 넣어도 기존 결과의 대상이 바뀌지 않는다', () => {
+    const before = withLink(board({ ...sampleBlock('facts'), id: 'a' }, { ...sampleBlock('number'), id: 'b' }), { id: 'a', dir: 'v' }, 'equals')
+    const target = { id: 'a', dir: 'v' as const }
+    expect(linkAt(before, target)).toBe('equals')
+    expect(linkIssue(before, target, 'equals')).toBeNull()
+    const after = autoPlace(before, { ...sampleBlock('number'), id: 'c' }, H)!
+    expect(after.map((b) => b.id)).toContain('c')
+    expect(linkAt(after, target)).toBe('equals')
+    expect(across(after, after.find((b) => b.id === 'a')!, 'v').map((b) => b.id)).toEqual(['b'])
+  })
+
+  it('이미지를 자동으로 넣어도 기존에 연결한 컴포넌트는 그대로 이어진다', () => {
+    const before = withLink(board({ ...sampleBlock('number'), id: 'a' }, { ...sampleBlock('number'), id: 'b' }), { id: 'a', dir: 'h' }, 'arrow')
+    const target = { id: 'a', dir: 'h' as const }
+    expect(linkAt(before, target)).toBe('arrow')
+    const source = before.find((b) => b.id === 'a')!
+    const ends = across(before, source, 'h').map((b) => b.id).sort()
+    const image = { ...block('image', 'img'), fields: { image: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 100"></svg>')}` } }
+    const after = autoPlace(before, image, H)!
+    expect(after.map((b) => b.id)).toContain('img')
+    expect(linkAt(after, target)).toBe('arrow')
+    expect(linkIssue(after, target, 'arrow')).toBeNull()
+    expect(across(after, after.find((b) => b.id === 'a')!, 'h').map((b) => b.id).sort()).toEqual(ends)
+  })
+
+  it('기존 연결을 유지할 자리가 없으면 자동 삽입을 멈추고 이유를 알려 준다', () => {
+    const before = withLink(board({ ...sampleBlock('trend'), id: 'a' }, { ...sampleBlock('number'), id: 'b' }), { id: 'a', dir: 'v' }, 'arrow')
+    const target = { id: 'a', dir: 'v' as const }
+    expect(linkAt(before, target)).toBe('arrow')
+    expect(linkIssue(before, target, 'arrow')).toBeNull()
+    const image = { ...block('image', 'img'), fields: { image: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 100"></svg>')}` } }
+    expect(validTargets(before, image, H).length).toBeGreaterThan(0)
+    const original = structuredClone(before)
+    expect(autoPlace(before, image, H)).toBeNull()
+    expect(placeIssue(before, image, H)).toEqual({ kind: 'link' })
+    const number = { ...sampleBlock('number'), id: 'another-number' }
+    expect(validTargets(before, number, H).length).toBeGreaterThan(0)
+    expect(autoPlace(before, number, H)).toBeNull()
+    expect(placeIssue(before, number, H)).toEqual({ kind: 'link' })
+    expect(before).toEqual(original)
+  })
+
+  it('같은 이미지끼리 이어져도 새 이미지가 기존 연결 대상으로 바뀌지 않는다', () => {
+    const image = (id: string) => ({ ...block('image', id), fields: { image: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 100"></svg>')}` } })
+    const first = board(image('a'))
+    const pair = insertAt(first, { at: 'a', side: 'right' }, image('b'), H)!
+    const target = { id: 'a', dir: 'h' as const }
+    const before = withLink(pair, target, 'arrow')
+    expect(linkIssue(before, target, 'arrow')).toBeNull()
+    const after = autoPlace(before, image('c'), H)!
+    expect(after.map((b) => b.id)).toContain('c')
+    expect(across(after, after.find((b) => b.id === 'a')!, 'h').map((b) => b.id)).toEqual(['b'])
+  })
+
+  it('연결 대상에 딸린 주석은 기존 연결을 바꾸지 않고 자동으로 넣을 수 있다', () => {
+    const before = withLink(board({ ...sampleBlock('trend'), id: 'a' }, { ...sampleBlock('number'), id: 'b' }), { id: 'a', dir: 'v' }, 'arrow')
+    const target = { id: 'a', dir: 'v' as const }
+    const after = autoPlace(before, { ...sampleBlock('note'), id: 'note' }, H)
+    expect(after).not.toBeNull()
+    expect(linkAt(after!, target)).toBe('arrow')
+    expect(linkIssue(after!, target, 'arrow')).toBeNull()
+    expect(across(after!, after!.find((b) => b.id === 'a')!, 'v').filter((b) => b.type !== 'note').map((b) => b.id)).toEqual(['b'])
   })
 
   it('설 데가 없어진 이음표는 빠진다: 건너편 부품을 빼면', () => {
