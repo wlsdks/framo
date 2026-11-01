@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BLOCKS, canCompose, tiles } from '../deck/blocks'
 import { createSampleDeck } from '../deck/sample'
-import type { Block, Deck, Item } from '../deck/types'
+import type { Block, Deck, Item, LayoutId } from '../deck/types'
 import { applyOps, parseOp, parseRequest, REQUEST_FORMAT, slideEmpty, type Op } from './ops'
 import { REQUEST_VERSION } from './protocol'
 import { checkShape, shapeSlideId, toShape } from './share'
@@ -284,6 +284,17 @@ describe('부품 장', () => {
     // 부품이 더 있으면 되돌리면서 그 부품을 버리게 되므로 하지 않는다
     const more = applyOps(composed, [{ op: 'add_block', slide: cshape().id, type: 'callout', edge: 'bottom' }]).deck
     expect(applyOps(more, [{ op: 'set_layout', slide: cshape().id, layout }]).results[0]).toEqual({ ok: false, code: 'not_for_layout' })
+  })
+
+  it('어느 레이아웃을 거쳐 부품 장으로 바꿨다가 되돌려도 가려 둔 글까지 하나도 잃지 않는다', () => {
+    // 요약 → 핵심 한 줄 → 부품 장: 핵심 한 줄이 가려 둔 요약의 항목을 부품 장으로 옮기지 않고 버렸다
+    for (let i = 0; i < deck.slides.length; i++) {
+      for (const via of ['statement', 'imageText', 'case', 'closing', 'table'] as const) {
+        let d = deck
+        for (const layout of [via, 'compose', deck.slides[i].layout] as LayoutId[]) d = applyOps(d, [{ op: 'set_layout', slide: sid(i), layout }]).deck
+        expect(allText(d), `${deck.slides[i].layout} → ${via} → 부품 장 → ${deck.slides[i].layout}`).toEqual(allText(deck))
+      }
+    }
   })
 
   it('빈 부품을 넣고 같은 제안 안에서 이름으로 가리켜 모양, 크기, 자리를 바꾼다. 글은 그대로', () => {

@@ -545,7 +545,8 @@ function prefilledWords(): Set<string> {
 }
 
 const blank = (v: string | undefined) => !(v ?? '').trim() || prefilledWords().has(v!.trim())
-const itemEmpty = (it: Item) => (['title', 'body', 'value', 'meta', 'image'] as ItemKey[]).every((k) => blank(it[k]))
+const ITEM_KEYS: ItemKey[] = ['title', 'body', 'value', 'meta', 'image']
+const itemEmpty = (it: Item) => ITEM_KEYS.every((k) => blank(it[k]))
 /** 사람이 적은 것이 하나도 없는 부품인지. 숨은 항목(최대 개수 뒤)도 본다 */
 const blockEmpty = (b: Block) => Object.values(b.fields).every(blank) && b.items.every(itemEmpty)
 const blockVariantIds = (type: BlockType) => (BLOCKS[type].variants ?? [{ id: 'base' }]).map((v) => v.id)
@@ -554,6 +555,27 @@ function grows(before: Block[], after: Block[], areaH: number): boolean {
   const need = needRows(after, boardFit(areaH, after))
   return need > BOARD_ROWS && need > needRows(before, boardFit(areaH, before))
 }
+
+/** 발표에 사람이 적은 글: 장과 부품의 칸, 항목, 노트. 가려 둔 칸과 항목도 넣는다. 미리 넣은 이름표는 빈 것으로 친다(blank) */
+function writtenText(slides: Slide[]): Map<string, number> {
+  const out = new Map<string, number>()
+  const add = (v: string | undefined) => {
+    if (!blank(v)) out.set(v!, (out.get(v!) ?? 0) + 1)
+  }
+  const take = (fields: Record<string, string>, items: Item[]) => {
+    Object.values(fields).forEach(add)
+    for (const it of items) ITEM_KEYS.forEach((k) => add(it[k]))
+  }
+  for (const s of slides) {
+    take(s.fields, s.items)
+    for (const b of s.blocks ?? []) take(b.fields, b.items)
+    add(s.notes)
+  }
+  return out
+}
+
+/** 앞의 글이 뒤에 하나도 빠짐없이 남았는지 (같은 글이 둘이면 둘 다) */
+const keepsText = (before: Map<string, number>, after: Map<string, number>) => [...before].every(([v, n]) => (after.get(v) ?? 0) >= n)
 
 /** 사람이 적은 것이 하나도 없는 장인지. 노트도 내용이다. */
 export function slideEmpty(slide: Slide): boolean {
@@ -621,7 +643,7 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
   // 부품 장의 본문 높이: 잴 수 없으니 제목, 부제 길이와 발표 설정(글자 크기, 보내는 자료)으로 어림한다 (편집기와 같은 높이)
   const areaOf = (s: Slide) => boardAreaH(s, { meta: deck.meta, theme })
 
-  const results = ops.map((op): OpResult => {
+  const step = (op: Op): OpResult => {
     const fail = (code: OpCode): OpResult => ({ ok: false, code })
     const done: OpResult = { ok: true, code: 'applied' }
 
@@ -934,6 +956,21 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
         return done
       }
     }
+  }
+
+  // 마지막 그물: 어느 제안도 사람이 적은 글을 지우지 못한다. 모양만 바꾸는 동작이 글을 잃으면(레이아웃을 바꾸며 가려 둔 칸을
+  // 부품 장으로 옮기지 않고 버리던 것처럼) 그 동작만 되돌리고 적용하지 않는다
+  const results = ops.map((op): OpResult => {
+    const before = { slides, theme, motion, touched: new Set(touched) }
+    const text = writtenText(slides)
+    const result = step(op)
+    if (!result.ok || keepsText(text, writtenText(slides))) return result
+    slides = before.slides
+    theme = before.theme
+    motion = before.motion
+    touched.clear()
+    before.touched.forEach((id) => touched.add(id))
+    return { ok: false, code: 'has_content' }
   })
 
   // 글자 크기나 보내는 자료를 바꾸면 본문 높이가 달라져서 모든 부품 장을 다시 맞춘다 (편집기와 같은 규칙)

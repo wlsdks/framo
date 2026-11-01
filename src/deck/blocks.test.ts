@@ -66,6 +66,7 @@ import {
   whenOf,
   whyNot,
   withItem,
+  withLayout,
   withLink,
   withLook,
 } from './blocks'
@@ -194,6 +195,37 @@ describe('장을 부품 장으로', () => {
     expect(canCompose('cover')).toBe(false)
     expect(canCompose('section')).toBe(false)
     expect(canCompose('compose')).toBe(false)
+  })
+
+  it('어느 레이아웃을 거쳐 부품 장으로 바꿨다가 되돌려도 가려 둔 칸과 항목까지 글이 하나도 빠지지 않는다', () => {
+    // 레이아웃을 바꾸면 새 레이아웃에 없는 칸과 항목은 지우지 않고 가려 둔다(relayout). 그 장을 부품 장으로 바꾸면
+    // 핵심 한 줄, 이미지와 설명, 사례, 마지막 장은 쓰는 칸만 옮기고 가려 둔 글을 버렸다 (요약 → 핵심 한 줄 → 부품 장)
+    for (const s of showcaseSlides()) {
+      for (const via of LAYOUT_ORDER) {
+        let cur = s
+        for (const next of [via, 'compose', s.layout] as const) {
+          cur = withLayout(cur, next)
+          expect(texts(cur), `${s.layout} → ${via} → 부품 장 → ${s.layout}: ${next}에서`).toEqual(texts(s))
+        }
+      }
+    }
+  })
+
+  it('가려 둔 글이 있는 부품 장은 부품을 레이아웃으로 풀지 않는다 (풀면 가려 둔 글을 부품의 글로 덮는다)', () => {
+    // 목록 → 부품 장 → 표(표를 채움) → 부품 장 → 목록: 표에 적은 글이 목록 부품의 글로 덮여 사라졌다
+    const points = showcaseSlides().find((s) => s.layout === 'points')!
+    const table = withLayout(withLayout(points, 'compose'), 'table')
+    const filled = { ...table, items: table.items.map((it, i) => (i === 0 ? { ...it, title: '표에 적은 글', body: '표의 둘째 칸' } : it)) }
+    const back = withLayout(withLayout(filled, 'compose'), 'points')
+    expect(texts(back)).toEqual(texts(filled))
+    expect(unwrapCompose(withLayout(filled, 'compose'), 'points')).toBeNull()
+  })
+
+  it('부품 장으로 바꿔도 머리와 아래 표시를 감춘 것, 고른 화면 전환은 그대로다', () => {
+    for (const s of showcaseSlides().filter((x) => canCompose(x.layout))) {
+      const composed = composeFrom({ ...s, options: { ...s.options, hideHead: true, hideFoot: true, transition: 'fade' } })
+      expect(composed.options, s.layout).toMatchObject({ hideHead: true, hideFoot: true, transition: 'fade' })
+    }
   })
 })
 
