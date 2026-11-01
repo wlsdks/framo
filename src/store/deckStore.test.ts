@@ -378,3 +378,28 @@ describe('항목 빼기와 복제, 장 복제', () => {
     expect(playOrder(source).map((b) => b.type)).toEqual(['quote', 'number', 'message'])
   })
 })
+
+describe('고친 때', () => {
+  beforeEach(() => useDeck.getState().open(deck()))
+  afterEach(() => vi.restoreAllMocks())
+  const updatedAt = () => useDeck.getState().deck!.updatedAt
+
+  it('되돌리거나 다시 해도 고친 때는 지금 (예전 때로 돌아가면 보관 폴더에 먼저 써 둔 것이 더 새것으로 보여 되돌린 것을 덮는다)', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(2_000_000)
+    useDeck.getState().setTitle('바꾼 제목')
+    expect(updatedAt()).toBe(2_000_000)
+    now.mockReturnValue(3_000_000)
+    useDeck.getState().undo()
+    expect(updatedAt()).toBe(3_000_000)
+    now.mockReturnValue(4_000_000)
+    useDeck.getState().redo()
+    expect(updatedAt()).toBe(4_000_000)
+    // 쓴 글을 곧바로 지워 그 단계가 없어질 때도
+    now.mockReturnValue(5_000_000)
+    useDeck.getState().setTitle('바꾼 제목 더')
+    now.mockReturnValue(5_000_500)
+    useDeck.getState().setTitle('바꾼 제목')
+    expect(useDeck.getState().past).toHaveLength(1)
+    expect(updatedAt()).toBe(5_000_500)
+  })
+})

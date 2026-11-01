@@ -156,7 +156,7 @@ export const useDeck = create<DeckState>((set, get) => {
     if (past.length && sameDeck(next, deck, true)) {
       const top = past[past.length - 1]
       if (!future.length && sameDeck(next, top)) {
-        set({ deck: { ...top, aiShare: deck.aiShare }, past: past.slice(0, -1), lastKey: null, lastTime: now })
+        set({ deck: { ...top, aiShare: deck.aiShare, updatedAt: now }, past: past.slice(0, -1), lastKey: null, lastTime: now })
         edits++
         return
       }
@@ -170,7 +170,7 @@ export const useDeck = create<DeckState>((set, get) => {
     if (coalesce && top && sameDeck(next, top)) {
       // 한 단계로 묶이는 고침이 처음 모습으로 돌아왔으면(끌다가 제자리에 놓거나 Esc로 그만두거나, 쓴 글을 곧바로 지우면) 그 단계를 지운다.
       // 바뀐 것 없는 단계가 남아 Ctrl+Z가 아무 일도 하지 않는 것처럼 보였다
-      set({ deck: { ...top, aiShare: deck.aiShare }, past: past.slice(0, -1), lastKey: null, lastTime: now })
+      set({ deck: { ...top, aiShare: deck.aiShare, updatedAt: now }, past: past.slice(0, -1), lastKey: null, lastTime: now })
       edits++
       return
     }
@@ -212,14 +212,16 @@ export const useDeck = create<DeckState>((set, get) => {
     undo() {
       const { deck, past, future } = get()
       if (!deck || !past.length) return
-      // AI 공유는 되돌리기 기록에 없는 설정이라 지금 값을 그대로 둔다. 끈 공유가 되돌리기로 다시 켜지면 모양이 몰래 다시 올라간다
-      const prev = { ...past[past.length - 1], aiShare: deck.aiShare }
+      // AI 공유는 되돌리기 기록에 없는 설정이라 지금 값을 그대로 둔다. 끈 공유가 되돌리기로 다시 켜지면 모양이 몰래 다시 올라간다.
+      // 고친 때는 지금으로: 되돌리는 것도 고치는 것이다. 예전 때로 돌아가면 보관 폴더에 먼저 써 둔(되돌리기 전) 파일이 더 새것으로
+      // 보여 다음에 열 때 되돌린 것을 덮었고(reconcile.ts), 홈 목록에도 오래전에 고친 발표로 보였다
+      const prev = { ...past[past.length - 1], aiShare: deck.aiShare, updatedAt: Date.now() }
       set({ deck: prev, past: past.slice(0, -1), future: [deck, ...future], lastKey: null, selectedId: shownAfter(deck, prev, get().selectedId) })
     },
     redo() {
       const { deck, past, future } = get()
       if (!deck || !future.length) return
-      const next = { ...future[0], aiShare: deck.aiShare }
+      const next = { ...future[0], aiShare: deck.aiShare, updatedAt: Date.now() }
       set({ deck: next, past: [...past, deck], future: future.slice(1), lastKey: null, selectedId: shownAfter(deck, next, get().selectedId) })
     },
 
