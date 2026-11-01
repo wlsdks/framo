@@ -22,7 +22,7 @@ import { pageProps, SLIDE_H, SLIDE_W, SlideCanvas } from '../slides/SlideCanvas'
 import slidesCss from '../slides/slides.css?inline'
 import blocksCss from '../slides/blocks.css?inline'
 import { codePointsOf, cssGlyphs, embedFonts, fontFamiliesOf, rangeHits } from './fonts'
-import { pptxSlidesOf } from './pptx'
+import { pptxSlidesOf, xmlChars } from './pptx'
 
 const XHTML = 'http://www.w3.org/1999/xhtml'
 const SLIDE_CSS = `${slidesCss}\n${blocksCss}`
@@ -94,8 +94,10 @@ async function inlineImages(root: Element): Promise<void> {
 }
 
 function svgOf(slide: HTMLElement, css: string): string {
-  // HTML로 옮기면(outerHTML) <br>, <img>처럼 닫지 않은 태그가 남아 XML로 읽히지 않는다. XMLSerializer는 XHTML로 옮긴다
-  const body = new XMLSerializer().serializeToString(slide)
+  // HTML로 옮기면(outerHTML) <br>, <img>처럼 닫지 않은 태그가 남아 XML로 읽히지 않는다. XMLSerializer는 XHTML로 옮긴다.
+  // XMLSerializer는 XML에 쓸 수 없는 글자(붙여 넣은 세로 탭 같은)를 그대로 두어서, 글에 하나만 있어도 장 그림이 그려지지 않고
+  // PPT 내보내기가 늘 실패했다. 그 글자만 뺀다
+  const body = xmlChars(new XMLSerializer().serializeToString(slide))
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${SLIDE_W}" height="${SLIDE_H}" viewBox="0 0 ${SLIDE_W} ${SLIDE_H}">` +
     `<foreignObject x="0" y="0" width="${SLIDE_W}" height="${SLIDE_H}">` +

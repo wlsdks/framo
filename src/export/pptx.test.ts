@@ -3,7 +3,7 @@ import { posix } from 'node:path'
 import { deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import { createDeck } from '../deck/generate'
-import { buildPptx, deckToPptx, notesParagraphs, pptxParts, relsPathOf, xmlText, type PptxInput } from './pptx'
+import { buildPptx, deckToPptx, notesParagraphs, pptxParts, relsPathOf, xmlChars, xmlText, type PptxInput } from './pptx'
 import { crc32 } from './zip'
 import { readZip } from './zipReader'
 
@@ -181,6 +181,20 @@ describe('발표자 노트', () => {
     // 짝 없는 서로게이트는 빼고, 짝이 맞는 것(그림 문자)은 둔다
     expect(xmlText('a\ud800b\udc00c 👍')).toBe('abc 👍')
     expect(xmlText('탭\t그대로')).toBe('탭\t그대로')
+  })
+
+  it('XML에 쓸 수 없는 글자만 빼는 것(xmlChars)은 이미 XML로 옮긴 글에도 쓴다: 그림이 든 큰 글도 빠르게', () => {
+    expect(xmlChars('<p class="a">제어\u000b\u000c\u0000글 &amp; 👍\ud800</p>')).toBe('<p class="a">제어글 &amp; 👍</p>')
+    const big = `<img src="data:image/png;base64,${'A'.repeat(4_000_000)}"/>`
+    const t = performance.now()
+    expect(xmlChars(big)).toBe(big)
+    expect(performance.now() - t).toBeLessThan(500)
+  })
+
+  it('노트의 PowerPoint 줄 나눔(세로 탭)도 줄로 나눈다', () => {
+    const paras = [...notesParagraphs('첫 줄\u000b둘째 줄').matchAll(/<a:p>(.*?)<\/a:p>/g)].map((m) => m[1])
+    expect(paras).toHaveLength(2)
+    expect(paras[1]).toContain('<a:t>둘째 줄</a:t>')
   })
 
   it('줄마다 문단, 빈 줄은 빈 문단, 끝의 빈 줄은 뺀다', () => {

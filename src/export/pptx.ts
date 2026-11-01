@@ -39,26 +39,29 @@ export interface PptxInput {
 
 // ---------- XML 글 ----------
 
+/** XML 1.0에 쓸 수 없는 글자: 탭과 줄바꿈 말고의 제어 문자, U+FFFE/FFFF, 짝 없는 서로게이트(u 플래그라 하나짜리로 걸린다) */
+const NOT_XML = /[^\t\n\r\u0020-\ud7ff\ue000-\ufffd\u{10000}-\u{10ffff}]/gu
+
 /**
- * XML 1.0에 넣을 수 있는 글로. 쓸 수 없는 글자(제어 문자, 짝 없는 서로게이트, U+FFFE/FFFF)는 빼고 &, <, >, "는 바꾼다.
- * 노트는 사람이 적은 글이라 무엇이든 들어올 수 있다. 하나라도 남으면 PowerPoint가 파일 전체를 열지 못한다
+ * XML에 쓸 수 없는 글자만 뺀다. 사람이 적은 글은 무엇이든 들어올 수 있어서(PowerPoint에서 복사한 세로 탭 같은) 하나라도 남으면
+ * PowerPoint가 파일 전체를 열지 못하고, 장 그림(SVG)은 그려지지 않는다. 이미 XML로 옮긴 글(rasterize.tsx의 장 그림)에도 쓴다
  */
+export const xmlChars = (text: string) => text.replace(NOT_XML, '')
+
+/** XML 1.0에 넣을 수 있는 글로: 쓸 수 없는 글자는 빼고(xmlChars) &, <, >, "는 바꾼다 */
 export function xmlText(text: string): string {
-  let safe = ''
-  // 글자(코드 포인트)마다 본다. 짝 없는 서로게이트는 하나짜리로 나와서 아래 범위에 들지 않는다
-  for (const ch of text) {
-    const c = ch.codePointAt(0)!
-    if (c === 0x9 || c === 0xa || c === 0xd || (c >= 0x20 && c <= 0xd7ff) || (c >= 0xe000 && c <= 0xfffd) || c >= 0x10000) safe += ch
-  }
-  return safe.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
+  return xmlChars(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 }
 
 const RUN_PR = '<a:rPr lang="ko-KR" altLang="en-US" dirty="0"/>'
 const END_PR = '<a:endParaRPr lang="ko-KR" altLang="en-US" dirty="0"/>'
 
-/** 노트 글을 문단으로. 줄마다 한 문단이고, 빈 줄은 빈 문단이다. 끝의 빈 줄은 뺀다 */
+/**
+ * 노트 글을 문단으로. 줄마다 한 문단이고, 빈 줄은 빈 문단이다. 끝의 빈 줄은 뺀다.
+ * PowerPoint와 Word에서 Shift+Enter로 나눈 줄(세로 탭), 쪽 나눔, 줄 구분 문자도 줄로 나눈다 (빼면 두 줄이 붙었다)
+ */
 export function notesParagraphs(notes: string): string {
-  const lines = notes.replace(/\r\n?/g, '\n').replace(/\s+$/, '').split('\n')
+  const lines = notes.replace(/\r\n?|[\v\f\u0085\u2028\u2029]/g, '\n').replace(/\s+$/, '').split('\n')
   return lines
     .map((line) => {
       const t = xmlText(line)

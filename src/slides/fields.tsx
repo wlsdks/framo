@@ -215,8 +215,17 @@ interface FieldProps extends TextProps {
   optional?: boolean
 }
 
+/**
+ * 줄을 나누는 제어 문자(PowerPoint와 Word에서 Shift+Enter로 나눈 줄인 세로 탭 U+000B, 쪽 나눔, 줄 구분 문자)는 줄바꿈으로,
+ * 그 밖의 제어 문자는 뺀다. 세로 탭이 그대로 들어가면 줄이 붙어 보였고, 장 그림(SVG)이 XML로 읽히지 않아 PPT 내보내기가 늘 실패했다
+ */
+function plainLines(text: string): string {
+  return text.replace(/\r\n?|[\v\f\u0085\u2028\u2029]/g, '\n').replace(/[\u0000-\u0008\u000e-\u001f\u007f-\u009f]/g, '')
+}
+
+/** 칸에서 읽은 글: 붙여 넣기를 거치지 않고 끌어다 놓은 글에도 제어 문자가 있을 수 있다 */
 function clean(text: string, multiline?: boolean): string {
-  const t = text.replace(/ /g, ' ')
+  const t = plainLines(text).replace(/\u00a0/g, ' ')
   if (!t.trim()) return ''
   return multiline ? t : t.replace(/\s*\n\s*/g, ' ')
 }
@@ -363,18 +372,23 @@ function Editable({
         onDoubleClick={(e) => selectWord(e.currentTarget, e.clientX, e.clientY)}
         onPaste={(e) => {
           e.preventDefault()
-          // 서식 없이 글만. 윈도우의 줄 끝(\r\n), 엑셀 칸 사이의 탭, 붙지 않는 빈칸은 보통 글로 바꾸고 앞뒤의 빈 줄은 뺀다:
-          // 탭은 칸에서 넓은 빈칸으로 벌어졌고, 엑셀 칸 하나를 복사하면 끝에 줄바꿈이 붙어 와서 글 가운데에 붙이면 거기서 줄이 갈렸다
-          const text = e.clipboardData
-            .getData('text/plain')
-            .replace(/\r\n?/g, '\n')
-            .replace(/[\t\u00a0]/g, ' ')
-            .replace(/^\n+|\n+$/g, '')
-          document.execCommand('insertText', false, multiline ? text : text.replace(/\s*\n\s*/g, ' '))
+          document.execCommand('insertText', false, pastedText(e.clipboardData.getData('text/plain'), !!multiline))
         }}
       />
     </Tag>
   )
+}
+
+/**
+ * 칸에 붙여 넣을 글. 서식 없이 글만 받고, 윈도우의 줄 끝(\r\n), 엑셀 칸 사이의 탭, 붙지 않는 빈칸은 보통 글로 바꾸고 앞뒤의
+ * 빈 줄은 뺀다: 탭은 칸에서 넓은 빈칸으로 벌어졌고, 엑셀 칸 하나를 복사하면 끝에 줄바꿈이 붙어 와서 글 가운데에 붙이면 거기서
+ * 줄이 갈렸다. 제어 문자는 plainLines가 줄바꿈으로 바꾸거나 뺀다. 한 줄 칸이면 줄바꿈을 빈칸으로
+ */
+export function pastedText(raw: string, multiline: boolean): string {
+  const text = plainLines(raw)
+    .replace(/[\t\u00a0]/g, ' ')
+    .replace(/^\n+|\n+$/g, '')
+  return multiline ? text : text.replace(/\s*\n\s*/g, ' ')
 }
 
 /**
