@@ -470,6 +470,22 @@ export function motionEngine(): MotionEngine {
       run(anims, el, [{ clipPath: inset }, { clipPath: 'inset(0 0 0 0)' }], s(at), { easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)', duration: d(duration) })
     }
     /**
+     * 이미지 당기기: 가림막이 걷히는 동안 그림이 조금 크게, 걷히는 쪽으로 조금 비켜 있다가 제자리로 다가앉는다(걷히는 가림막에 끌려
+     * 들어오듯). 비키는 거리는 커진 만큼의 4분의 1이라 그림 끝이 칸 안으로 들어오지 않는다(커진 만큼의 절반이 양쪽으로 넘친다).
+     * 생동감은 천천히(big배에서), 차분하게는 커지는 만큼을 반으로 줄이고 1.4배 오래: 차분하게도 생동감과 똑같이 당겨서 두 단계가
+     * 다르지 않았다. 옅게 오래 다가앉아 다 보인 뒤에도 눈에 걸리지 않는다
+     */
+    const pull = (img: Element | null, big: number, duration: number, from: 'left' | 'right') => {
+      if (!img) return
+      const k = levelName === 'lively' ? 1 : 0.5
+      const grow = (big - 1) * k
+      const dx = (from === 'left' ? -25 : 25) * grow
+      run(anims, img, [{ scale: String(1 + grow), translate: `${dx}% 0` }, { scale: '1', translate: '0 0' }], s(0), {
+        easing: 'cubic-bezier(0.2, 0.6, 0.2, 1)',
+        duration: k === 1 ? duration : duration * 1.4,
+      })
+    }
+    /**
    * 낱말마다 아래에서 올라오는 제목. 생동감은 번진 먹이 가라앉듯 조금 흐린 데서 또렷해지며 선다(L.ink).
    * 예전에는 기울었다가(3도) 바로 섰는데, 낱말마다 고개를 까딱여서 흔한 프레젠테이션 효과처럼 보였다
    */
@@ -819,8 +835,7 @@ export function motionEngine(): MotionEngine {
       case 'imageText': {
         const flip = !!one('.ix.is-flip')
         wipe(one('.ix-img'), 0, flip ? 'right' : 'left', 1100)
-        const img = one('.ix-img img')
-        if (img) run(anims, img, [{ scale: '1.16' }, { scale: '1' }], s(0), { easing: 'cubic-bezier(0.2, 0.6, 0.2, 1)', duration: 2600 })
+        pull(one('.ix-img img'), 1.16, 2600, flip ? 'right' : 'left')
         const t = words(one('.ix-title'), 380)
         rise(one('.ix-body'), Math.min(t, 760), L.y * 0.6)
         break
@@ -1600,9 +1615,9 @@ export function motionEngine(): MotionEngine {
           // 전체 보이기(비율대로 그린 이미지)는 이미지 자리만 걷는다. 화면 캡처는 당겨 보이면 글씨가 흔들려 보여서 키우지 않는다
           const fit = !!one('.bk-img.is-fit')
           wipe(one(fit ? '.bk-img-i > img' : '.bk-img-i'), 0, 'left', 1000)
-          const img = one('.bk-img-i img')
-          if (img && !fit) run(anims, img, [{ scale: '1.12' }, { scale: '1' }], s(0), { easing: 'cubic-bezier(0.2, 0.6, 0.2, 1)', duration: 2200 })
-          fade(one('.bk-img-c'), 600, 500)
+          if (!fit) pull(one('.bk-img-i img'), 1.12, 2200, 'left')
+          // 설명은 가림막이 거의 다 걷혔을 때 줄마다 가림막 뒤에서 (흐리게만 들이면 글 컴포넌트와 말투가 달랐다)
+          lines(one('.bk-img-c'), 600)
           break
         }
         case 'decision':
