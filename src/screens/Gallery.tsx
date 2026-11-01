@@ -39,6 +39,7 @@ import { dirSlides } from './dirSlides'
 // set=stress&type=bullets 는 부품 하나를 항목 수, 칸 너비, 칸 높이마다 (stress.ts의 checkStress). type=many 는 부품 하나부터 여섯까지.
 // set=dirs 는 컴포넌트의 모양을 고칠 때 전과 후를 견줄 장(dirSlides.ts: 빽빽한 장, 듬성한 장, 지표 줄, 단계, 비교, 인용, 이음표).
 // set=combos&seed=1&n=60 은 규칙이 받아들인 부품 조합을 seed마다 정해진 차례로 만들어 본다 (combos.ts의 checkCombos).
+// &blank=1이면 부품마다 반쯤은 첫 항목만 채운 채로 발표하는 모습(빈 항목이 빠진다).
 
 /** set=edge: 차트 장이 무너지기 쉬운 값들 (음수, 빈 값, 많은 항목, 모두 같은 값, 긴 이름) */
 function edgeSlides(): Slide[] {
@@ -209,7 +210,7 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
   }
   if (set === 'scenarios') return { ...deck, title: '가상의 발표 예시', theme: { id: theme }, slides: scenarioSlides(look) }
   if (set === 'dirs') return { ...deck, theme: { id: theme }, slides: dirSlides(look) }
-  if (set === 'combos') return { ...deck, theme: { id: theme }, slides: comboSlides(Number(params.get('seed')) || 1, Number(params.get('n')) || 40, look, params.get('mode') === 'edit').map((c) => c.slide) }
+  if (set === 'combos') return { ...deck, theme: { id: theme }, slides: comboSlides(Number(params.get('seed')) || 1, Number(params.get('n')) || 40, look, params.get('mode') === 'edit', params.get('blank') === '1').map((c) => c.slide) }
   return { ...deck, theme: { id: theme }, slides: [...deck.slides, ...extraSlides()] }
 }
 

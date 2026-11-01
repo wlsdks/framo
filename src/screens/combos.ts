@@ -149,10 +149,24 @@ export interface Combo {
 }
 
 /**
- * 규칙이 받아들인 조합 n개. 제목이 있는 장과 없는 장을 섞는다.
- * edit면 편집 화면의 본문 높이(비운 제목과 부제의 안내까지)로 놓는다: 편집 화면에서 잘리거나 겹치는지 볼 때
+ * 항목을 다 채우지 않고 발표하는 장: 부품마다 반쯤은 첫 항목만 남기고 나머지 항목의 글을 비운다. 판은 편집할 때처럼 비운 항목까지 세어
+ * 짜여 있고, 발표할 때는 빈 항목이 빠진다(핵심 숫자 셋 가운데 하나만 채우면 숫자 하나가 높은 칸 가운데에 떴다). 조합의 차례(seed)를
+ * 바꾸지 않게 따로 된 난수로 고른다
  */
-export function comboSlides(seed: number, n: number, look?: Parameters<typeof composeAreaH>[1], edit?: boolean): Combo[] {
+function blankSome(blocks: Block[], seed: number, k: number): Block[] {
+  const rand = random(seed * 7919 + k)
+  return blocks.map((b) => {
+    if (b.items.length < 2 || rand() < 0.5) return b
+    return { ...b, items: b.items.map((it, i) => (i === 0 ? it : { ...it, title: '', body: '', value: '', meta: '', image: '' })) }
+  })
+}
+
+/**
+ * 규칙이 받아들인 조합 n개. 제목이 있는 장과 없는 장을 섞는다.
+ * edit면 편집 화면의 본문 높이(비운 제목과 부제의 안내까지)로 놓는다: 편집 화면에서 잘리거나 겹치는지 볼 때.
+ * blank면 부품마다 반쯤은 첫 항목만 채운 채로 둔다(blankSome)
+ */
+export function comboSlides(seed: number, n: number, look?: Parameters<typeof composeAreaH>[1], edit?: boolean, blank?: boolean): Combo[] {
   const rand = random(seed)
   return Array.from({ length: n }, (_, k) => {
     const title = rand() < 0.7 ? `조합 ${seed}-${k + 1}` : ''
@@ -221,6 +235,7 @@ export function comboSlides(seed: number, n: number, look?: Parameters<typeof co
     }
     // 편집기가 고칠 때마다 하듯 판을 다시 맞춘다: 면을 바꾸거나 이음표를 끼워 커진 부품이 옆에서 자리를 받는다
     blocks = settle(blocks, boardFit(areaH, blocks)) ?? blocks
+    if (blank) blocks = blankSome(blocks, seed, k)
     return { slide: { ...base, blocks }, refused }
   })
 }
