@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { autoPlace, makeBlock, withLayout } from '../deck/blocks'
 import { emptyItem, makeSlide } from '../deck/generate'
 import { createSampleDeck } from '../deck/sample'
-import { deckData, exportCsp, fontText, parseDeckData } from './exportHtml'
+import type { Deck } from '../deck/types'
+import { isDeck } from '../store/deckFile'
+import { deckData, exportCsp, fontText, parseDeckData, picturesIn } from './exportHtml'
 import { VIEWER_JS } from './viewer'
 
 // 시험에서는 CSS를 읽지 않아(빈 글) 장 CSS 대신 content로 글자를 그리는 규칙 하나를 둔다
@@ -106,6 +108,64 @@ describe('HTML 파일에서 덱 되살리기', () => {
     for (const raw of ['', '{', 'null', '5', '"deck"', '[]', '{}', JSON.stringify({ ...deck, slides: {} }), JSON.stringify({ ...deck, meta: null }), JSON.stringify({ ...deck, theme: undefined }), JSON.stringify({ ...deck, id: 7 })]) {
       expect(parseDeckData(raw), raw.slice(0, 40)).toBeNull()
     }
+  })
+})
+
+describe('내보낸 HTML의 이미지는 한 번만', () => {
+  // 이미지는 장 그림(<img>)에 이미 들어 있다. 다시 열기용 데이터에도 통째로 넣던 때는 사진이 든 발표의 파일이 두 배로 컸다
+  const png = (text: string) => `data:image/png;base64,${btoa(text)}`
+  const LOGO = png('logo-bytes')
+  const PHOTO = png('photo-bytes')
+  const SHOT = png('screen-bytes')
+  const withImages = () => {
+    const deck = createSampleDeck()
+    deck.meta = { ...deck.meta, logo: LOGO }
+    const picture = { ...makeBlock('image'), fields: { image: SHOT, caption: '화면' } }
+    const logos = { ...makeSlide('logos'), fields: { title: '함께하는 곳' }, items: [{ ...emptyItem(), title: '가', image: LOGO }, { ...emptyItem(), title: '나', image: PHOTO }] }
+    deck.slides = [makeSlide('cover'), { ...makeSlide('imageText'), fields: { title: '사진', image: PHOTO } }, logos, { ...makeSlide('compose'), fields: { title: '화면' }, blocks: autoPlace([], picture)! }]
+    return deck
+  }
+  /** 장 그림에 든 이미지: 처음 나온 차례로 한 번씩 */
+  const pictures = [LOGO, PHOTO, SHOT]
+  const same = (d: Deck | null) => d && { ...d, id: '', updatedAt: 0 }
+
+  it('데이터에는 장 그림의 몇 번째 이미지인지만 적고, 다시 열면 그 자리에 되살린다', () => {
+    const deck = withImages()
+    const data = deckData(deck, pictures)
+    for (const bytes of ['bG9nby1ieXRlcw', 'cGhvdG8tYnl0ZXM', 'c2NyZWVuLWJ5dGVz']) expect(data, bytes).not.toContain(bytes)
+    expect(same(parseDeckData(data, pictures))).toEqual(same(parseDeckData(deckData(deck))))
+    expect(parseDeckData(data, pictures)!.slides[3].blocks![0].fields.image).toBe(SHOT)
+  })
+
+  it('예전 버전은 이미지를 뺀 데이터를 열지 않는다 (그림이 빈 채로 열리지 않게). 이미지가 없으면 예전 꼴 그대로', () => {
+    // 예전 버전의 parseDeckData는 데이터가 곧 덱인지(isDeck)만 본다
+    expect(isDeck(JSON.parse(deckData(withImages(), pictures)))).toBe(false)
+    const plain = createSampleDeck()
+    plain.slides = plain.slides.filter((s) => !JSON.stringify(s).includes('data:'))
+    plain.meta = { ...plain.meta, logo: '' }
+    expect(isDeck(JSON.parse(deckData(plain, pictures)))).toBe(true)
+    // 장 그림에 없는 이미지(그려지지 않는 자리)는 데이터에 그대로 둔다
+    expect(deckData(withImages(), [PHOTO])).toContain('bG9nby1ieXRlcw')
+  })
+
+  it('받은 파일의 자리 목록이 이상해도 덱 밖을 건드리지 않고, 장 그림이 모자라면 빈 그림으로 연다', () => {
+    const plain = parseDeckData(deckData(createSampleDeck()))!
+    const bad = [[['__proto__', 'polluted'], 0], [['constructor', 'prototype', 'polluted'], 0], [['slides', 0, 'fields'], 0], [[], 0], ['meta', 0], [['meta', 'logo'], -1], [['meta', 'logo'], 0.5], [['meta', 'logo'], 7], [['meta', 'nope'], 0], null, 5]
+    const raw = JSON.stringify({ format: 'html-maker/html-deck', version: 1, deck: { ...plain, meta: { ...plain.meta, logo: '' } }, images: bad })
+    const back = parseDeckData(raw, [LOGO])!
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
+    expect(back.slides[0].fields).toEqual(plain.slides[0].fields)
+    expect(back.meta.logo).toBe('')
+    expect('nope' in back.meta).toBe(false)
+    // 장 그림이 없으면(누가 HTML을 고쳐 지웠으면) 그 자리는 빈 그림
+    expect(parseDeckData(deckData(withImages(), pictures), [])!.meta.logo).toBe('')
+    // 더 새 꼴은 열지 않는다
+    expect(parseDeckData(raw.replace('"version":1', '"version":2'), [LOGO])).toBeNull()
+  })
+
+  it('장 그림의 이미지를 처음 나온 차례로 한 번씩 모은다 (내보낼 때와 다시 열 때가 같은 함수)', () => {
+    const imgs = [LOGO, PHOTO, LOGO, 'blob:x', SHOT, PHOTO].map((src) => ({ getAttribute: () => src }))
+    expect(picturesIn({ querySelectorAll: () => imgs } as unknown as ParentNode)).toEqual([LOGO, PHOTO, SHOT])
   })
 })
 
