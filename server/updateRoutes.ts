@@ -76,6 +76,8 @@ export function createUpdateHandler(setup: UpdateSetup) {
 
   function run(force: boolean): Promise<void> {
     if (checking) return checking
+    // 받는 동안에는 묻지 않는다. 더 새 버전을 알게 되면 알림은 그 버전인데 받은 파일은 앞 버전이 된다(이름이 같다)
+    if (download.state === 'downloading') return Promise.resolve()
     // 실패도 한 번 확인한 것으로 센다. 막힌 회사 네트워크에서 홈을 열 때마다 두드리지 않게
     if (!force && 'checkedAt' in check && now() - check.checkedAt < DAY_MS) return Promise.resolve()
     const before = check
@@ -83,6 +85,8 @@ export function createUpdateHandler(setup: UpdateSetup) {
     checking = updater
       .latest()
       .then((r) => {
+        // 묻는 사이에 받기를 시작했으면 이 답은 쓰지 않는다. 위와 같은 까닭
+        if (download.state === 'downloading') return void (check = before)
         const checkedAt = now()
         if (!r) {
           // 이미 새 버전을 알고 있었으면 그대로 둔다. 잠깐 끊긴 것으로 알림이 사라지지 않게
@@ -95,7 +99,7 @@ export function createUpdateHandler(setup: UpdateSetup) {
           return
         }
         // 받은 뒤에 더 새 버전이 나왔으면 받기를 처음부터
-        if (release?.version !== r.version && download.state !== 'downloading') download = { state: 'idle' }
+        if (release?.version !== r.version) download = { state: 'idle' }
         release = r
         check = { state: 'available', checkedAt, version: r.version, page: r.page, download: !!(r.asset && file) }
       })
