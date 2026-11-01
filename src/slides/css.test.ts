@@ -93,3 +93,35 @@ describe('목록의 첫 항목 위', () => {
     expect(zero).toContain(".bk-qa-list[data-n='3'] > .bk-qa-item:nth-child(-n + 3)")
   })
 })
+
+/** 선택자의 세기(클래스, 속성, 가상 클래스의 수). :is(), :not(), :has()는 안의 가장 센 것, :where()는 0. 이 파일의 선택자에는 id가 없다 */
+function specificity(selector: string): number {
+  let n = 0
+  const rest = selector.replace(/:(is|not|has|where)\(((?:[^()]|\([^()]*\))*)\)/g, (_, fn: string, inner: string) => {
+    if (fn !== 'where') n += Math.max(...split(inner, ',').map(specificity))
+    return ''
+  })
+  return n + (rest.match(/\.[A-Za-z][\w-]*|\[[^\]]*\]|:(?!:)[\w-]+/g) ?? []).length
+}
+
+describe('컴포넌트 칸의 숫자 하나', () => {
+  it('바탕 없는 칸에서는 칸 위에서부터: 빈 숫자가 빠져 하나만 남아도 옆 칸의 첫 줄과 윗선이 같다 (docs/VISUAL-RULES.md 5)', () => {
+    // 칸 가운데에 두던 때는 발표할 때 빈 숫자 둘이 빠지면 숫자 셋을 넣으려고 잡은 높은 칸 가운데에 남은 하나가 떠서, 옆 예상 질문의
+    // 첫 줄보다 300px 남짓 아래에서 시작했다(804×842 칸에서 554, 255). 장(레이아웃)과 면이 있는 칸은 가운데에 두어도 된다
+    const all = [...rules(slides), ...rules(blocks)].flatMap((r) => split(r.selector, ',').map((s) => ({ s, body: r.body })))
+    for (const subject of [/\.kp\[data-n='1'\]$/, /\.kp\[data-n='1'\] (> )?\.kp-item$/]) {
+      const top = all.filter((x) => subject.test(x.s) && /\.bk-look-plain\b/.test(x.s) && /align-content:\s*start\s*;/.test(x.body))
+      expect(top.length, String(subject)).toBeGreaterThan(0)
+      // 가운데에 두는 규칙 가운데 바탕 없는 컴포넌트 칸에도 걸리는 것(:not() 밖에 장이나 면을 가리키지 않는 것)은 위의 규칙보다 약해야 한다
+      const centers = all.filter(
+        (x) => subject.test(x.s) && /align-content:\s*(safe\s+)?center\s*;/.test(x.body) && !/\.l-kpi\b|\.bk-look-(card|bold)\b/.test(x.s.replace(/:not\([^)]*\)/g, '')),
+      )
+      expect(centers.length, String(subject)).toBeGreaterThan(0)
+      const strongest = Math.max(...top.map((x) => specificity(x.s)))
+      for (const c of centers) expect(specificity(c.s), c.s).toBeLessThan(strongest)
+    }
+    // 좁은 칸에서 맨 위에 서는 이름 위에도 여백이 없다: 이름 위 선을 지운 뒤에도 선과 글 사이의 28px가 남아, 옆 칸의 첫 줄보다 그만큼 아래에 섰다
+    const padded = all.filter((x) => /\.kp\[data-n='1'\].* \.kp-label$/.test(x.s) && /padding(-top)?:\s*[1-9]/.test(x.body))
+    expect(padded.map((x) => x.s)).toEqual([])
+  })
+})
