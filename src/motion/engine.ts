@@ -434,6 +434,19 @@ export function motionEngine(): MotionEngine {
      * 줄마다 글이 채워져서 빈 표처럼 보였다(녹화해 보니 예상 질문의 마지막 줄은 선만 0.4초 보였다)
      */
     const ruled = (el: Element | null, at: number) => fade(el, at, 280)
+    /**
+     * 줄 선 긋기(표와 비교의 줄): 줄을 왼쪽에서부터 걷어 열어 줄 선이 그어지는 것처럼 보인다. 칸의 글은 따로 가림막 뒤에서
+     * 올라온다(lines). 위아래는 넉넉히 열어 두어 올라오는 글의 위아래가 걷는 창에 잘리지 않는다. 처음에 빨리 열리고 끝에서
+     * 천천히 멈춰서(감속), 줄의 오른쪽 칸 글이 올라오기 시작할 때는 선이 이미 거기까지 와 있다. 줄째 흐리게 들이던 때는
+     * 머리줄이 장 제목이 올라오는 동안 옅게 먼저 깔렸고, 칸 글이 한 덩어리로 떠서 표의 짜임(줄과 열)이 움직임에 드러나지 않았다
+     */
+    const sweep = (el: Element | null, at: number) => {
+      if (!el) return
+      run(anims, el, [{ clipPath: 'inset(-40px 100% -40px 0)' }, { clipPath: 'inset(-40px 0 -40px 0)' }], s(at), {
+        easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
+        duration: d(levelName === 'lively' ? 760 : 600),
+      })
+    }
     /** 가는 꺾쇠(slides/arrow.tsx): 가리키는 쪽으로 조금 밀려 나온다. 튀어나오게(크기) 하면 가는 획이 굵어 보였다 */
     const nudge = (el: Element | null, at: number) => {
       if (el) run(anims, el, [{ opacity: 0, translate: `${-L.y * 0.6}px 0` }], s(at), L.move)
@@ -739,11 +752,18 @@ export function motionEngine(): MotionEngine {
       }
       case 'compare': {
         const t = head()
-        rise(one('.cp-headrow'), t + 80, L.y * 0.5)
+        // 두 쪽 이름이 앞 쪽부터 가림막 뒤에서 올라오고, 줄마다 앞 글의 선이 그어지며 글이 올라온 뒤 꺾쇠가 밀려 나오고
+        // 뒤 글의 선과 글이 따른다. 머리줄을 통째로 띄우던 때는 두 이름이 한 덩어리로 떠서 '지금 → 바뀐 뒤'의 차례가 없었다
+        lines(one('.cp-hl'), t + 80)
+        lines(one('.cp-hr'), t + 200)
         items('.cp-row.it', t + 200, (el, at) => {
-          rise(el.querySelector('.cp-l'), at, L.y * 0.6)
+          const l = el.querySelector('.cp-l')
+          const r = el.querySelector('.cp-r')
+          sweep(l, at)
+          lines(l, at + 40)
           nudge(el.querySelector('.cp-arrow'), at + 160)
-          rise(el.querySelector('.cp-r'), at + 240, L.y * 0.6)
+          sweep(r, at + 240)
+          lines(r, at + 280)
         })
         // 두 쪽 사이의 꺾쇠는 앞 쪽에서 뒤 쪽으로 조금 밀려 나온다(compare.css): 첫 줄의 앞 글 다음, 뒤 글 앞에
         nudge(one('.cp > .cp-arrow'), t + 200 + 160)
@@ -779,9 +799,15 @@ export function motionEngine(): MotionEngine {
       }
       case 'pricing': {
         const t = head()
+        // 안마다 이름, 값, 덧붙임, 설명이 차례로: 글은 가림막 뒤에서 올라오고 값은 나타나며 자리마다 굴러 맞춰진다(countIn).
+        // 표 모양은 안 사이의 줄 선이 왼쪽부터 그어진다. 안째 카드처럼 띄우던 때는 이름과 설명이 한 덩어리로 떠올라
+        // 무엇이 이름이고 값인지가 움직임에 드러나지 않았다
         const end = items('.pr-plan', t, (el, at) => {
-          card(el, at)
-          count(el.querySelector('.pr-price'), at + 120)
+          if (variant === 'rows') sweep(el, at)
+          lines(el.querySelector('.pr-name'), at + 40)
+          countIn(el.querySelector('.pr-price'), at + 120)
+          lines(el.querySelector('.pr-meta'), at + 200)
+          lines(el.querySelector('.pr-body'), at + 260)
         })
         const hl = one('.pr-plan.is-hl')
         if (hl) {
@@ -1048,8 +1074,19 @@ export function motionEngine(): MotionEngine {
       }
       case 'table': {
         const t = head()
-        fade(one('.tb-headrow'), t, 500)
-        const end = items('.tb-row.it', t + 120, (el, at) => rise(el, at, L.y * 0.5), L.step * 0.8)
+        // 칸마다 물결: 줄 선이 왼쪽부터 그어지고(sweep) 그 줄의 칸 글이 왼쪽 칸부터 차례로 가림막 뒤에서 올라온다(lines).
+        // 다음 줄은 앞 줄의 첫 칸이 올라온 뒤에 시작해 줄과 열의 차례가 비스듬한 물결로 읽힌다. 머리줄이 먼저, 그 아래 줄마다.
+        // 줄이 많아도 마지막 줄이 0.6초(생동감 0.8초) 안에 시작하게 줄 사이를 좁힌다
+        const col = levelName === 'lively' ? 70 : 50
+        const wave = (row: HTMLElement, at: number) => {
+          sweep(row, at)
+          Array.from(row.children).forEach((cell, j) => lines(cell, at + 40 + j * col))
+        }
+        const head0 = one('.tb-headrow')
+        if (head0) wave(head0, t)
+        const rows = $('.tb-row.it')
+        const gap = Math.min(levelName === 'lively' ? 120 : 90, (levelName === 'lively' ? 800 : 600) / Math.max(1, rows.length))
+        const end = items('.tb-row.it', t + gap + 60, wave, gap)
         fade(one('.s-source'), end + 200)
         break
       }
