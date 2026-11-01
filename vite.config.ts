@@ -56,6 +56,9 @@ export default defineConfig({
   // 지켜보지 않을 .claude는 이 저장소 바로 아래 것만이다. 예전처럼 '**/.claude/**'로 두면, 작업 폴더 안에서 띄운 개발 서버는
   // 자기 경로가 .claude/worktrees/… 라서 제 소스까지 지켜보지 않아 고쳐도 화면이 그대로였다
   server: { watch: { ignored: [`${join(import.meta.dirname, '.claude')}/**`, '**/.playwright-mcp/**'] } },
-  // 그 폴더의 시험 사본도 돌리지 않는다
-  test: { exclude: ['**/node_modules/**', '**/.git/**', '.claude/**'] },
+  // 그 폴더의 시험 사본도 돌리지 않는다.
+  // 시험 하나의 제한 시간은 20초: 검수(CI)의 윈도우 기계는 여러 시험 파일을 함께 돌리며(MCP 서버를 빌드해 띄우는 시험도 같이 돈다)
+  // 몇 초씩 멈출 때가 있어, 이 PC에서 16ms인 시험이 7.4초 걸려 기본 5초에 걸려 실패했다(고친 것과 상관없이 main이 빨개진다).
+  // 끝나지 않는 시험은 20초에 그대로 실패한다. 무거운 시험은 따로 더 긴 시간을 적어 둔다
+  test: { exclude: ['**/node_modules/**', '**/.git/**', '.claude/**'], testTimeout: 20_000 },
 })
