@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const ROOT = join(import.meta.dirname, '..')
-const read = (p: string) => readFileSync(join(ROOT, p), 'utf8')
+// 윈도우 검수는 저장소를 CRLF로 받는다: 줄 끝을 맞춰 두고 줄을 걸쳐 본다
+const read = (p: string) => readFileSync(join(ROOT, p), 'utf8').replace(/\r\n/g, '\n')
 
 describe('검수의 점검', () => {
   it('엣지나 크롬을 열지 못하면 화면 점검이 실패한다 (건너뛰고 통과하지 않는다)', () => {
