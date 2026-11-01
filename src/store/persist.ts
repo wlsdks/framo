@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Deck } from '../deck/types'
+import { heldElsewhere } from './deckLock'
 import { useDeck } from './deckStore'
 import {
   allowFolder,
@@ -70,6 +71,8 @@ function askPersistent() {
 
 /** 브라우저에 저장. 편집 중에는 자주 부른다. */
 export async function saveToBrowser(deck: Deck): Promise<boolean> {
+  // 다른 창이 넘겨받아 고치는 발표는 이 창이 들고 있던 것으로 덮지 않는다 (deckLock.ts)
+  if (heldElsewhere(deck.id)) return false
   askPersistent()
   useStorage.setState({ browser: 'saving' })
   const ok = await saveDeck(deck)
@@ -79,6 +82,7 @@ export async function saveToBrowser(deck: Deck): Promise<boolean> {
 
 /** 보관 폴더에 저장. 폴더가 준비되지 않았으면 아무것도 하지 않는다. */
 export async function saveToFolder(deck: Deck): Promise<boolean> {
+  if (heldElsewhere(deck.id)) return false
   const folder = useStorage.getState().folder ?? (await useStorage.getState().refresh())
   if (folder.kind !== 'ready') return false
   useStorage.setState({ folderWrite: 'saving' })

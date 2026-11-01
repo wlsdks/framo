@@ -14,6 +14,7 @@ import { useAutosave } from '../../store/autosave'
 import { copyDeck } from '../../store/copy'
 import { useDeck, useSelectedSlide } from '../../store/deckStore'
 import { loadBestDeck, persistNow } from '../../store/persist'
+import { useEditLock } from '../../store/useEditLock'
 import { Present } from '../Present'
 import { BackIcon, CloseIcon, HistoryIcon, Info, RedoIcon, SAVE_HELP, takeNotice, undoAction, UndoIcon, useToast } from '../ui'
 import { ASK_ERROR, AiInbox, AiMenu, AiReview, AskStatus } from './AiShare'
@@ -38,13 +39,17 @@ export function Editor({ id }: { id: string }) {
   const newer = useDeck((s) => s.newer)
   const open = useDeck((s) => s.open)
   const [notFound, setNotFound] = useState(false)
+  // 한 발표는 한 창에서만 고친다 (store/deckLock.ts). 다른 창에서 넘겨받으면 저장소가 비워져 아래에서 다시 읽는다
+  const lock = useEditLock(id)
 
   useEffect(() => {
+    if (lock.state !== 'mine') return
     const now = useDeck.getState()
     if (now.deck?.id === id || now.newer?.id === id) return
     loadBestDeck(id).then((d) => (d ? open(d) : setNotFound(true)))
-  }, [id, open])
+  }, [id, open, lock.state, lock.taken])
 
+  if (lock.state === 'other' || lock.state === 'lost') return <Elsewhere lost={lock.state === 'lost'} onTake={lock.take} />
   if (notFound) {
     return (
       <div className="center-msg newer-deck">
@@ -57,8 +62,41 @@ export function Editor({ id }: { id: string }) {
     )
   }
   if (newer?.id === id) return <NewerDeck deck={newer} />
-  if (!deck || deck.id !== id) return <div className="center-msg">불러오는 중</div>
+  if (lock.state !== 'mine' || !deck || deck.id !== id) return <div className="center-msg">불러오는 중</div>
   return <EditorBody deck={deck} />
+}
+
+/**
+ * 같은 발표를 다른 창에서 고치는 중. 두 창에서 같이 고치면 나중에 저장한 창이 다른 창에서 고친 글을 말없이 덮어서
+ * 한 창에서만 고친다. '이 창에서 고치기'를 누르면 고치던 창은 고친 것을 저장하고 이 화면으로 바뀐다
+ */
+function Elsewhere({ lost, onTake }: { lost: boolean; onTake: () => void }) {
+  const [asking, setAsking] = useState(false)
+  return (
+    <div className="center-msg newer-deck">
+      <h1 className="newer-h">{lost ? '다른 창에서 이 발표를 이어서 고치고 있어요' : '다른 창에서 이 발표를 고치고 있어요'}</h1>
+      <p>
+        {lost ? '이 창에서 고친 것은 저장했어요. ' : ''}한 발표는 한 창에서만 고칠 수 있어요. 두 창에서 같이 고치면 나중에 저장한 창이 다른
+        창에서 고친 글을 덮어써요.
+      </p>
+      <div className="newer-actions">
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={asking}
+          onClick={() => {
+            setAsking(true)
+            onTake()
+          }}
+        >
+          {asking ? '가져오는 중' : '이 창에서 고치기'}
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={() => go({ name: 'home' })}>
+          내 발표로 가기
+        </button>
+      </div>
+    </div>
+  )
 }
 
 /**
