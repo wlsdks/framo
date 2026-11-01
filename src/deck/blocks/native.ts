@@ -344,7 +344,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
   people: {
     name: '맡은 사람',
     description: '누가 무엇을 맡는지 (추진 체계)',
-    motion: '사람마다 차례로 나타나요',
+    motion: '사람마다 이름부터 차례로 올라오고, 체계도는 선이 뻗어 이어져요',
     variants: [
       { id: 'row', name: '나란히' },
       { id: 'list', name: '목록' },
