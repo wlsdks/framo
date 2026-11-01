@@ -142,7 +142,8 @@
   }
 }
 
-@container bk (600px < width <= 900px) and (min-height: 850px) {
+/* 세 숫자와 설명을 위아래로 놓으면 긴 숫자의 단위와 설명이 겹칠 수 있다. 실제 슬라이드 높이에서는 숫자 옆에 설명을 둔다. */
+@container bk (600px < width <= 900px) and (min-height: 950px) {
   :is(.va-base, .va-cards) > .bk-in:has(> .kp[data-n='3'] .kp-body) {
     --kp-tall: 1;
   }
@@ -189,6 +190,15 @@
 @container bk (max-width: 1200px) and (min-height: 440px) {
   .va-cards > .bk-in:has(> .kp[data-n='3'] .kp-body) {
     --kp-stack: 1;
+  }
+}
+
+/* 넓은 숫자 칸 옆에 다른 컴포넌트가 있으면 둘을 나란히 놓는다. 두 숫자를 높이 전체에 쌓으면 옆의 짧은 목록은 위에만 남고
+   숫자 사이와 두 컴포넌트 사이에 큰 빈 공간이 생겨 한 묶음으로 보이지 않는다. 좁은 칸은 읽을 너비를 지키도록 계속 쌓는다. */
+@container bk (min-width: 1000px) {
+  :is(.va-base, .va-cards).is-shared > .bk-in:has(> .kp[data-n='2']) {
+    --kp-stack: 0;
+    --kp-tall: 0;
   }
 }
 

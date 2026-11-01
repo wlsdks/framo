@@ -5,7 +5,7 @@ import { highlightOf, hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
 import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
-import { formatNumber, seriesIn } from '../numbers'
+import { formatNumber, seriesIn, unitAfter } from '../numbers'
 import { Head, useItems } from './parts'
 
 /** 비율을 읽기 좋게: 10% 미만은 소수 한 자리, 1% 미만은 두 자리까지 (0%로 뭉개지지 않게) */
@@ -31,27 +31,31 @@ export function Funnel() {
     unit,
   )
   const values = series.values.map((v) => Math.max(0, v ?? 0))
+  // 다른 단위나 음수를 같은 축의 길이로 견주면 비율을 숨겨도 막대 자체가 잘못된 비교가 된다.
+  const comparable = series.ok && series.values.every((v) => v === null || v >= 0)
   const top = Math.max(0, ...values)
-  const widths = values.map((v) => (top > 0 ? Math.max(3, (v / top) * 100) : 0))
+  const widths = values.map((v) => (comparable && top > 0 ? Math.max(3, (v / top) * 100) : 0))
   const first = values[0]
   const last = values[values.length - 1]
   // 처음부터 끝까지 남은 비율: '지원에서 합격까지'처럼 단계 이름으로 읽는다. 이름이 길거나 비었으면 '전체 전환율'
   const nameOf = (i: number) => (demo ? hintFor(slide.layout, slide.hints, 'title', 'title', i) : (items[i]?.title ?? '')).trim()
   const ends = [nameOf(0), nameOf(items.length - 1)]
   const totalLabel = ends.every((n) => n && !n.includes('\n') && [...n].length <= 8) ? `${ends[0]}에서 ${ends[1]}까지` : '전체 전환율'
-  const total = first > 0 && last > 0 && items.length > 2 && series.ok ? rateText((last / first) * 100) : null
+  const total = first > 0 && last > 0 && last <= first && items.length > 2 && comparable ? rateText((last / first) * 100) : null
   return (
     <>
       <Head />
       <div className={cx('s-body fn', demo && 'is-demo')} data-n={items.length} style={{ '--n': items.length }}>
         {items.map((it, i) => {
           // 빈 단계로 들어가거나 나오는 사이는 잇지 않는다. 앞 단계보다 늘어난 단계는 전환율이 아니라(1,333%) 적지 않는다
-          const linked = i > 0 && values[i - 1] > 0 && values[i] > 0
-          const rate = linked && series.ok && values[i] <= values[i - 1] ? (values[i] / values[i - 1]) * 100 : null
+          const linked = comparable && i > 0 && values[i - 1] > 0 && values[i] > 0
+          const rate = linked && values[i] <= values[i - 1] ? (values[i] / values[i - 1]) * 100 : null
+          const text = demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : it.value
+          const shownUnit = text.trim() ? unitAfter(text, unit) : !final ? unit : ''
           return (
             <div
               key={it.id}
-              className={cx('it fn-row', i === highlight && 'is-hl', !values[i] && 'is-blank')}
+              className={cx('it fn-row', i === highlight && 'is-hl', (!comparable || !values[i]) && 'is-blank')}
               // --pw: 앞 단계의 길이. 이 단계에서 빠진 만큼(앞 길이에서 이 길이까지)을 막대 뒤에 옅게 깐다
               style={{ '--w': widths[i].toFixed(2), '--pw': (linked ? widths[i - 1] : widths[i]).toFixed(2) }}
             >
@@ -61,7 +65,7 @@ export function Funnel() {
                 {mode === 'edit' && i === 0 ? (
                   <T k="unit" as="span" className="fn-unit" oneLine />
                 ) : (
-                  unit && (!final || it.value.trim()) && <span className="fn-unit">{unit}</span>
+                  shownUnit && <span className="fn-unit">{shownUnit}</span>
                 )}
               </div>
               {/* 앞 단계에서 넘어온 비율: 이 막대의 시작 위에 */}

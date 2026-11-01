@@ -16,6 +16,7 @@ import {
   insertGroup,
   LOOSE,
   moveGutter,
+  needRows,
   needWith,
   sameSpot,
   settle,
@@ -27,7 +28,7 @@ import {
 } from './board'
 import { ARRANGE_MAX, arrangeBest, arrangeOrder, boardCost, isArranged } from './arrange'
 import { aspectOf, fitImage, fitPlaced, misfit } from './images'
-import { dropBlock, linkAt, linkIssue, linkTargets, tidyLinks } from './links'
+import { across, dropBlock, isLinkCompanion, linkAt, linkIssue, linkTargets, tidyLinks } from './links'
 import { BLOCK_COL_GAP, BLOCK_GAP, isSmall, isSolo, largeCount, MAX_BLOCKS, MAX_LARGE, settleLook } from './rules'
 import { AREA_W, atRect, boardFit, heightIssue, overAlready, type Rect } from './sizing'
 
@@ -47,18 +48,21 @@ export const BOTTOM: DropTarget = spotTarget({ at: null, side: 'below' })
 /**
  * 그 자리에 넣을 수 없는 까닭. 화면에 보이는 문구는 편집기가 이것으로 만든다 (screens/editor/noRoom.ts).
  * full: 한 장의 부품 수, large: 큰 부품 수, narrow: 그 자리에 끼우면 누군가 너무 좁아진다(span: 넣는 부품의 가장 좁은 너비),
- * height: 넣으면 판이 장보다 높아진다 (need: 잘리지 않는 데 드는 높이, room: 본문 높이, already: 넣기 전의 판부터 장보다 높다)
+ * height: 넣으면 판이 장보다 높아진다 (need: 잘리지 않는 데 드는 높이, room: 본문 높이, already: 넣기 전의 판부터 장보다 높다),
+ * link: 넣으면 유효한 기존 연결의 대상이 바뀐다
  */
 export type NoRoom =
   | { kind: 'full' }
   | { kind: 'narrow'; span: number }
-  | { kind: 'height'; need: number; room: number; already?: true }
+  | { kind: 'height'; need: number; room: number; already?: true; noBody?: true }
   /** 판 너비를 혼자 쓰는 부품(type)과 나란히 놓으려 할 때 */
   | { kind: 'solo'; type: BlockType }
   /** 면을 바꿀 수 없을 때: 진한 면은 하나만, 진한 면과 옅은 면은 섞지 않고, 혼자 판 너비를 다 쓰는 작은 부품은 면 없이 */
   | { kind: 'look'; why: 'one-bold' | 'mix' | 'alone' | 'flat' | 'no-bold' }
   /** 작은 부품이 아닌 부품이 장에 MAX_LARGE개 찼다 */
   | { kind: 'large' }
+  /** 기존 연결의 양 끝을 유지하며 자동으로 넣을 수 없다 */
+  | { kind: 'link' }
   /** 옮기는 부품을 이 부품(type)과 맞바꾸면 한쪽이 상대 자리에 들어가지 않을 때 */
   | { kind: 'swap'; type: BlockType }
 
@@ -181,6 +185,8 @@ export function whyNot(blocks: Block[], target: DropTarget, block: Block, areaH?
 function spotIssue(blocks: Block[], spot: Spot, block: Block, areaH?: number): NoRoom | null {
   const crowd = crowdIssue(blocks, [block])
   if (crowd) return crowd
+  // 제목과 부제가 본문을 다 차지하면 너비가 아니라 높이가 없는 것이다.
+  if (areaH !== undefined && Number.isFinite(areaH) && areaH <= 0) return { kind: 'height', need: 1, room: 0, noBody: true, ...(blocks.length ? { already: true } : {}) }
   if (insertAt(blocks, spot, block, areaH)) return null
   const solo = blocks.length ? soloBeside(blocks, spot, block) : null
   if (solo) return { kind: 'solo', type: solo }
@@ -210,11 +216,19 @@ export function placeIssue(blocks: Block[], block: Block, areaH?: number): NoRoo
   if (crowd) return crowd
   // 들어가는 자리를 하나 찾으면 나머지는 재지 않는다 (부품 고르기는 카드마다 이것을 재서, 거의 모든 카드가 들어가는 장이 가장 흔하다)
   const all: NoRoom[] = []
+  const linked = blocks.some((b) => b.link || b.linkBelow)
+  let breaksLink = false
   for (const s of allSpots(blocks)) {
     const w = whyNot(blocks, spotTarget(s), block, areaH)
-    if (!w) return null
+    if (!w) {
+      const next = linked ? insertAt(blocks, s, block, areaH) : null
+      if (!linked || (next && keepsLinkEnds(blocks, next))) return null
+      breaksLink = true
+      continue
+    }
     all.push(w)
   }
+  if (breaksLink) return { kind: 'link' }
   const tall = all.filter((w) => w.kind === 'height').sort((a, b) => a.need - b.need)[0]
   return tall ?? all.find((w) => w.kind === 'narrow') ?? all[0] ?? { kind: 'full' }
 }
@@ -237,6 +251,29 @@ export function autoPlace(blocks: Block[], block: Block, areaH?: number): Block[
 
 const AUTO: Memo<Block[] | null> = new WeakMap()
 
+/** 사람이 요청했을 때 지금 내용으로 다시 배치한다. 연결 기호나 소제목은 묶음의 뜻을 자동으로 알 수 없어 그대로 둔다. */
+export function rearrangeBlocks(blocks: Block[], areaH: number): Block[] | null {
+  if (blocks.length < 2 || blocks.length > ARRANGE_MAX || blocks.some((b) => b.link || b.linkBelow || b.type === 'heading')) return null
+  if (new Set(blocks.map((b) => b.id)).size !== blocks.length || !treeOf(blocks)) return null
+  // 이미 만들어 둔 슬라이드의 읽는 차례는 사용자가 정한 뜻이다. 저장 배열 순서나 새 결론 우선 규칙으로 바꾸지 않는다.
+  const order = byReading(blocks)
+  const fit = fitFor(blocks, areaH)
+  const tight = needRows(blocks, fit) > BOARD_ROWS
+  const candidates: { blocks: Block[]; cost: number }[] = []
+  arrangeBest(order, fit, areaH, aspectOf, candidates)
+  const best = candidates
+    .filter((c) => byReading(c.blocks).every((b, i) => b.id === order[i].id))
+    .sort((a, b) => a.cost - b.cost)
+    .find((c) => c.cost < 1000 && needRows(c.blocks, fit) <= BOARD_ROWS)
+  // 현재 판이 들어갈 때만 후보가 없어도 그대로 유지할 수 있다. 들어가지 않으면 실패를 알려야 한다.
+  if (!best) return tight ? null : blocks
+  // 현재 판이 너무 높으면 보기 점수보다 공간에 들어가는 것이 먼저다.
+  // 후보에 없는 사람이 정한 비율이 더 나을 수도 있다. 더 나쁜 후보로 바꾸지 않는다.
+  if (!tight && best.cost >= boardCost(blocks, fit, areaH) - 0.5) return blocks
+  const byId = new Map(best.blocks.map((b) => [b.id, b.at]))
+  return blocks.map((b) => ({ ...b, at: byId.get(b.id) ?? b.at }))
+}
+
 /**
  * 짜임 틀 고르기(arrange.ts): 컴포넌트가 넷까지인 장에서, 지금 판이 알아서 고른 판 그대로면(사람이 옮기거나 선을 끌지 않았으면)
  * 끼워 넣은 판(next) 대신 같은 부품들로 짤 수 있는 틀 가운데 가장 보기 좋은 판. 끼운 판이 더 나으면 그대로.
@@ -258,21 +295,21 @@ function arranged(blocks: Block[], next: Block[], areaH: number, added: Block): 
 }
 
 /**
- * 판이 알아서 고른 자리에 끼운 판 (autoPlace의 예전 길). 그 자리가 이음표의 뜻을 깨면(keepsLinks) 깨지 않는 자리 가운데 판의 점수가
- * 가장 좋은 자리에. 그런 자리가 없으면 고른 자리 그대로
+ * 판이 알아서 고른 자리에 끼운 판. 그 자리가 기존 연결의 대상을 바꾸면 대상을 지키는 자리 가운데 점수가 가장 좋은 자리에 놓는다.
+ * 그런 자리가 없으면 넣지 않는다.
  */
 function slotIn(blocks: Block[], block: Block, areaH?: number): Block[] | null {
   const next = slotFirst(blocks, block, areaH)
-  if (!next || keepsLinks(blocks, next)) return next
+  if (!next || keepsLinkEnds(blocks, next)) return next
   let best: { blocks: Block[]; cost: number } | null = null
   for (const spot of allSpots(blocks).reverse()) {
     const other = insertAt(blocks, spot, block, areaH)
-    if (!other || !keepsLinks(blocks, other)) continue
+    if (!other || !keepsLinkEnds(blocks, other)) continue
     if (areaH === undefined) return other
     const cost = boardCost(other, fitFor(other, areaH), areaH)
     if (!best || cost < best.cost) best = { blocks: other, cost }
   }
-  return best?.blocks ?? next
+  return best?.blocks ?? null
 }
 
 /**
@@ -284,6 +321,23 @@ function keepsLinks(before: Block[], after: Block[]): boolean {
   return linkTargets(before).every((t) => {
     const link = linkAt(before, t)
     return !link || !!linkIssue(before, t, link) || (linkAt(after, t) === link && !linkIssue(after, t, link))
+  })
+}
+
+/** 자동 삽입은 유효한 기존 연결의 양 끝도 보존한다. 같은 종류의 부품으로 연결 대상이 바뀌어도 다른 뜻이 된다. */
+function keepsLinkEnds(before: Block[], after: Block[]): boolean {
+  if (!before.some((b) => b.link || b.linkBelow)) return true
+  if (!keepsLinks(before, after)) return false
+  return linkTargets(before).every((t) => {
+    const link = linkAt(before, t)
+    if (!link || linkIssue(before, t, link)) return true
+    const a = before.find((b) => b.id === t.id)
+    const b = after.find((b) => b.id === t.id)
+    if (!a || !b) return false
+    // 소제목과 주석은 linkIssue에서도 다른 부품에 딸린 글로 보므로 연결 대상에 더하지 않는다.
+    const oldEnds = across(before, a, t.dir).filter((x) => !isLinkCompanion(x.type)).map((x) => x.id).sort()
+    const newEnds = across(after, b, t.dir).filter((x) => !isLinkCompanion(x.type)).map((x) => x.id).sort()
+    return oldEnds.length === newEnds.length && oldEnds.every((id, i) => id === newEnds[i])
   })
 }
 
@@ -736,6 +790,7 @@ export function imagePlace(blocks: Block[], block: Block, areaH: number, near?: 
   if (!aspect) return null
   let best: DropTarget | null = null
   let bestScore = Infinity
+  let bestKeeps = false
   const valid = validTargets(blocks, block, areaH)
   for (const [k, t] of valid.entries()) {
     if (t.kind !== 'spot') continue
@@ -753,10 +808,14 @@ export function imagePlace(blocks: Block[], block: Block, areaH: number, near?: 
     const far = r && near ? Math.hypot(r.x + r.w / 2 - near.x, r.y + r.h / 2 - near.y) / AREA_W : 0
     // 놓은 자리가 없으면(붙여 넣기) 비슷하게 맞는 자리끼리는 읽는 차례에서 뒤쪽: 앞에 끼우면 이미 쓴 내용의 차례가 밀린다
     const score = off + far * 0.25 + (near ? 0 : (valid.length - 1 - k) * 0.01)
-    if (score < bestScore) {
+    // 자동 삽입은 기존 연결의 대상을 보존하는 자리가 있으면 이미지 비율보다 우선한다.
+    // 끌어다 놓기는 사람이 가리킨 자리를 따른다.
+    const keeps = near ? true : keepsLinkEnds(blocks, placed)
+    if (!best || (keeps && !bestKeeps) || (keeps === bestKeeps && score < bestScore)) {
       best = t
       bestScore = score
+      bestKeeps = keeps
     }
   }
-  return best
+  return near || bestKeeps ? best : null
 }

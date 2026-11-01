@@ -8,7 +8,8 @@ import { T } from '../fields'
 import { amountPair, readAmount } from '../numbers'
 import { useDemo } from './parts'
 
-const clamp = (x: number) => Math.min(1, Math.max(0, x))
+/** 막대 밖의 값은 끝으로 잘라 다른 값처럼 보이지 않게 그리지 않는다. */
+const fraction = (x: number) => Number.isFinite(x) && x >= 0 && x <= 1 ? x : null
 
 /**
  * 막대의 길이와 목표 눈금의 자리(0~1). 적은 글은 그대로 두고 모양만 읽는다:
@@ -20,18 +21,22 @@ export function meterOf(value: string, of: string, target: string): { p: number;
     const pair = amountPair(value, of)
     if (!pair || pair.b.base <= 0) return null
     const tp = target.trim() ? amountPair(target, of) : null
-    return { p: clamp(pair.a.base / pair.b.base), t: tp ? clamp(tp.a.base / tp.b.base) : null }
+    const p = fraction(pair.a.base / pair.b.base)
+    return p === null ? null : { p, t: tp ? fraction(tp.a.base / tp.b.base) : null }
   }
   const a = readAmount(value)
   if (a?.kind === '%') {
     const t = target.trim() ? readAmount(target) : null
-    return { p: clamp(a.base / 100), t: t?.kind === '%' ? clamp(t.base / 100) : null }
+    const p = fraction(a.base / 100)
+    return p === null ? null : { p, t: t?.kind === '%' ? fraction(t.base / 100) : null }
   }
   const pair = target.trim() ? amountPair(value, target) : null
   if (!pair) return null
   const top = Math.max(pair.a.base, pair.b.base)
   if (top <= 0) return null
-  return { p: clamp(pair.a.base / top), t: clamp(pair.b.base / top) }
+  const p = fraction(pair.a.base / top)
+  const t = fraction(pair.b.base / top)
+  return p === null || t === null ? null : { p, t }
 }
 
 /**

@@ -3,7 +3,7 @@
 import { cx } from '../../lib/cx'
 import { useSlide } from '../context'
 import { T } from '../fields'
-import { amountPair, formatNumber } from '../numbers'
+import { amountPair, formatNumber, unitAfter } from '../numbers'
 import { useDemo } from './parts'
 
 export function Goal() {
@@ -11,11 +11,13 @@ export function Goal() {
   const { demo, read } = useDemo(['value', 'target'])
   // 단위 칸('억 원')으로 숫자만 적은 값을 읽고, 따로 적은 자리('7,200만 / 1억')나 단위('50분 / 2시간')는 같은 기준으로 바꿔 나눈다
   const pair = amountPair(read('value'), read('target'), read('unit'))
-  const pct = pair && pair.b.base > 0 ? (pair.a.base / pair.b.base) * 100 : null
+  const ratio = pair && pair.b.base > 0 && pair.a.base >= 0 ? (pair.a.base / pair.b.base) * 100 : null
+  const pct = ratio !== null && Number.isFinite(ratio) ? ratio : null
   // 발표할 때 실적이나 목표를 비웠으면 그 쪽의 표시(단위, '/ 목표')와 채울 수 없는 막대, 비율 자리의 '–'를 두지 않는다:
   // '억 원 / 목표 10억 원', '7.2억 원 / 목표 억 원'처럼 단위와 표시만 남았다
   const final = mode === 'final'
   const has = (k: string) => !final || !!read(k).trim()
+  const unit = read('unit').trim()
   return (
     <div className={cx('bk-gl', demo && 'is-demo', pct !== null && pct >= 100 && 'is-met')} style={{ '--p': Math.min(100, Math.max(0, pct ?? 0)).toFixed(1) }}>
       <div className="bk-gl-top">
@@ -42,7 +44,7 @@ export function Goal() {
           <span className="bk-gl-num">
             <T k="value" as="span" className="bk-gl-v" />
             {/* 단위는 한 번만 적고 실적과 목표에 같이 붙인다 */}
-            {mode !== 'edit' && read('unit').trim() && <span className="bk-gl-vu">{read('unit')}</span>}
+            {mode !== 'edit' && unitAfter(read('value'), unit) && <span className="bk-gl-vu">{unitAfter(read('value'), unit)}</span>}
           </span>
         )}
         {has('target') && (
@@ -50,7 +52,7 @@ export function Goal() {
             <span className="bk-gl-sep">{has('value') ? '/ 목표' : '목표'}</span>
             <span className="bk-gl-num">
               <T k="target" as="span" className="bk-gl-t" />
-              {(mode !== 'final' || read('unit').trim()) && <T k="unit" as="span" className="bk-gl-u" />}
+              {mode === 'edit' ? <T k="unit" as="span" className="bk-gl-u" /> : unitAfter(read('target'), unit) && <span className="bk-gl-u">{unitAfter(read('target'), unit)}</span>}
             </span>
           </>
         )}

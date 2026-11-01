@@ -165,6 +165,7 @@ export type NativeBlockType =
   | 'heat'
   | 'sparks'
   | 'flow'
+  | 'decision'
   | 'network'
   | 'split'
   | 'merge'

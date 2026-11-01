@@ -790,10 +790,14 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
   const update = (id: string, fn: (b: Block) => Block) => store.updateBlock(slideRef.current.id, id, fn)
   const remove = (b: Block) => {
     const s = slideRef.current
-    store.setBlocks(s.id, removeBlock(s.blocks ?? [], b.id, measureArea(areaEl.current)?.size.h))
+    const before = s.blocks ?? []
+    const next = removeBlock(before, b.id, measureArea(areaEl.current)?.size.h)
+    const links = (bs: Block[]) => bs.reduce((n, block) => n + Number(!!block.link) + Number(!!block.linkBelow), 0)
+    store.setBlocks(s.id, next)
     setSelected(null)
     removed.current = { slide: s.id, id: b.id }
-    toast.show(`${BLOCKS[b.type].name} 컴포넌트를 뺐어요`, undoAction(toast))
+    const notice = links(next) < links(before) ? ' 영향을 받은 연결 기호도 지웠어요.' : ''
+    toast.show(`${BLOCKS[b.type].name} 컴포넌트를 뺐어요.${notice}`, undoAction(toast), notice ? 8000 : undefined)
   }
   const duplicate = (b: Block) => {
     const s = slideRef.current
@@ -801,7 +805,9 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
     const area = measureArea(areaEl.current)
     const next = autoPlace(s.blocks ?? [], copy, area?.size.h)
     if (!next) {
-      toast.show('이 슬라이드에는 더 넣을 자리가 없어요. 컴포넌트를 빼거나 다음 슬라이드에 넣어 주세요.')
+      const reason = placeIssue(s.blocks ?? [], copy, area?.size.h)
+      const text = reason && noRoomText(reason, copy.type, 'slide')
+      toast.show(text ? `${text.why} ${text.fix}` : '이 슬라이드에는 더 넣을 자리가 없어요. 컴포넌트를 빼거나 다음 슬라이드에 넣어 주세요.')
       return
     }
     store.setBlocks(s.id, next)
@@ -1011,7 +1017,13 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
           ? '슬라이드 위로 끌어 오세요'
           : drag.kind === 'move' && drag.target?.kind === 'stay' && !drag.base.length
             ? '컴포넌트가 하나뿐이라 자리가 그대로예요. 다른 컴포넌트를 넣으면 그 옆이나 위아래로 옮길 수 있어요.'
-            : null
+            : drag.kind === 'move' && drag.plan === 'place' && drag.result
+              ? drag.target?.kind === 'stay' || (drag.moving && sameBoard(drag.moving, drag.result))
+                ? '현재 자리예요. 다른 컴포넌트의 옆이나 위아래로 끌어 보세요.'
+                : '놓으면 표시된 자리로 옮겨요. Esc를 누르면 취소해요.'
+              : drag.kind === 'new' && drag.plan === 'place'
+                ? '놓으면 표시된 자리에 넣어요. Esc를 누르면 취소해요.'
+                : null
 
   const shown = drag ?? landing?.ghost ?? null
   const ghost = shown
@@ -1039,7 +1051,7 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
           {/* 장 위에서는 놓일 자리에 컴포넌트가 제 크기로 미리 서니, 손에는 무엇을 드는지 이름표만 (작게 줄인 그림은 글자가 읽히지 않았다) */}
           <span className="bk-ghost-tag">
             <GripIcon />
-            {BLOCKS[shown.block.type].name}
+            {BLOCKS[shown.block.type].name}{drag ? drag.kind === 'move' ? ' · 이동 중' : ' · 추가 중' : ''}
           </span>
         </div>,
         document.body,

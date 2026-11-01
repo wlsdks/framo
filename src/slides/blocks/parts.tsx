@@ -5,7 +5,7 @@ import { readField } from '../../deck/fields'
 import { hintFor } from '../../deck/layouts'
 import { useSlide } from '../context'
 import { minusSigns, splitNumber, T } from '../fields'
-import { formatNumber } from '../numbers'
+import { formatNumber, seriesIn } from '../numbers'
 
 /** 편집할 때 비어 있으면 안내 문구의 예시 숫자로 흐리게 그린다. 발표할 때는 적은 값만 */
 export function useDemo(keys: string[]) {
@@ -28,6 +28,17 @@ export function PersonIcon() {
 export function pctText(p: number): string {
   if (p > 0 && p < 1) return '1% 미만'
   return `${formatNumber(p < 10 ? Math.round(p * 10) / 10 : Math.round(p))}%`
+}
+
+/** 직접 적은 합계도 조각의 단위와 합에 맞을 때만 하나의 전체로 그린다. 빈 합계는 자동 합산을 쓴다. */
+export function totalMatches(texts: string[], total: string, unit: string): boolean {
+  if (!total) return true
+  const series = seriesIn([...texts, total], unit)
+  const end = series.values.at(-1)
+  if (!series.ok || end == null || end < 0) return false
+  const sum = series.values.slice(0, -1).reduce<number>((a, n) => a + (n ?? 0), 0)
+  if (!Number.isFinite(sum)) return false
+  return Math.abs(sum - end) <= Math.max(1e-8, Math.abs(end) * 1e-9)
 }
 
 /** 칸 위의 한 줄: 요점(계산한 말), 표시 설명, 단위. 단위 칸은 편집할 때만 비어 있어도 보인다 */
@@ -57,13 +68,31 @@ export function ChartKey({ sum, keys, unitKey = 'unit' }: { sum?: ReactNode; key
  */
 export function tokensOf(text: string): string[] {
   const out: string[] = []
-  for (const tok of text.split(/[\s/·|]+|,\s+/)) {
-    if (!tok) continue
-    const parts = /^[-−–△▼+]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(tok) ? [tok] : tok.split(',').filter(Boolean)
-    for (const p of parts) {
-      if (/\d/.test(p) || /^([-−–—.x×?]+|없음)$/.test(p) || !out.length) out.push(p)
-      else out[out.length - 1] += ` ${p}`
+  // 천 단위 쉼표는 남기고 나머지 쉼표와 슬래시는 칸 경계로 지킨다. '10, 확인 중, 20'에서 글을 앞 숫자의 단위로 합치면
+  // 세 번째 값이 두 번째 칸으로 당겨져 다른 기간의 값처럼 보였다. 쉼표 뒤에 띄어 쓰지 않아도 같다.
+  const thousands = new Set<number>()
+  for (const m of text.matchAll(/(?<![\d,])[-−–△▼+]?\d{1,3}(?:,\d{3})+(?:\.\d+)?(?!\d|,\d)/g)) {
+    for (let i = 0; i < m[0].length; i++) if (m[0][i] === ',') thousands.add(m.index + i)
+  }
+  const groups: string[] = []
+  let start = 0
+  for (let i = 0; i < text.length; i++) {
+    if ((text[i] === ',' && !thousands.has(i)) || /[/·|]/.test(text[i])) {
+      groups.push(text.slice(start, i))
+      start = i + 1
     }
+  }
+  groups.push(text.slice(start))
+  for (const group of groups) {
+    const cells: string[] = []
+    for (const tok of group.split(/\s+/)) {
+      if (!tok) continue
+      if (/\d/.test(tok) || /^([-−–—.x×?]+|없음)$/.test(tok) || !cells.length) cells.push(tok)
+      else cells[cells.length - 1] += ` ${tok}`
+    }
+    // 구분 기호 사이가 비어 있어도 그 칸을 남겨 뒤의 값이 앞으로 밀리지 않게 한다.
+    if (cells.length) out.push(...cells)
+    else if (groups.length > 1) out.push('')
   }
   return out
 }

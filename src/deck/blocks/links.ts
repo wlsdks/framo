@@ -98,7 +98,7 @@ const KINDS: Record<Kind, BlockType[]> = {
   words: ['message', 'text', 'callout', 'quote', 'heading', 'note', 'summary'],
   list: ['bullets', 'points', 'facts', 'risks', 'faq', 'checks', 'people', 'status', 'date', 'agenda'],
   chart: ['bars', 'bridge', 'trend', 'versus', 'share', 'funnel', 'pareto', 'attain', 'diverge', 'stack', 'heat', 'sparks', 'market', 'split', 'merge', 'scorecard', 'progress'],
-  flow: ['flow', 'network', 'process', 'timeline', 'gantt', 'steps'],
+  flow: ['flow', 'decision', 'network', 'process', 'timeline', 'gantt', 'steps'],
   table: ['table', 'compare', 'pricing', 'rating', 'matrix', 'position', 'swot'],
   image: ['image', 'logos'],
 }
@@ -109,6 +109,8 @@ export const kindOf = (type: BlockType): Kind | null => (Object.keys(KINDS) as K
  * 읽히지 않는다(목표 대비 = 주석 기준 글, 소제목 '지금 방식' + 점 목록)
  */
 const UNLINKED = new Set<BlockType>(['heading', 'note'])
+/** 연결된 다른 부품에 딸린 글. 이음표가 향하는 별도의 대상으로 세지 않는다. */
+export const isLinkCompanion = (type: BlockType) => UNLINKED.has(type)
 /**
  * 결과(=)와 화살표가 맺는 곳: 답이 되는 숫자와 결론 한마디. 강조 상자는 결정 요청이나 꼭 알아야 할 것이라 앞의 것이 모인 답이
  * 아니다(단계 표시 = 결정 요청)
@@ -148,7 +150,7 @@ export function linkIssue(blocks: readonly Block[], t: LinkTarget, link: BlockLi
   if (!all.length) return null
   // 건너편이 여럿이면(위아래로 쌓인 칸) 모두와 뜻이 서야 한다. 그 가운데 소제목과 주석은 옆 부품에 딸린 글이라 빼고 본다:
   // 하나만 맞으면 받던 때는 숫자와 주석이 쌓인 칸에 견주기가 서서 주석과도 견주는 것처럼 읽혔다
-  const next = all.filter((o) => !UNLINKED.has(o.type))
+  const next = all.filter((o) => !isLinkCompanion(o.type))
   const bad = UNLINKED.has(b.type) ? all[0] : (next.length ? next : all).find((o) => !linkFits(link, b.type, o.type))
   return bad ? { from: b.type, to: bad.type } : null
 }
@@ -180,7 +182,21 @@ export function dropBlock(blocks: Block[], id: string, fit: Fit): Block[] {
     }
     return out
   })
-  return tidyLinks(removeFromBoard(cut, id, fit))
+  let out = tidyLinks(removeFromBoard(cut, id, fit))
+  // 다른 칸을 뺀 뒤 이웃이 넓어지면 직접 닿지 않았던 연결도 새 대상을 가리킬 수 있다.
+  // 같은 종류의 칸이라도 다른 내용을 뜻하므로, 이전 대상과 달라진 연결은 남겨 두지 않는다.
+  for (const t of linkTargets(blocks)) {
+    const link = linkAt(blocks, t)
+    if (!link || linkIssue(blocks, t, link) || !linkAt(out, t)) continue
+    const from = blocks.find((b) => b.id === t.id)
+    const next = out.find((b) => b.id === t.id)
+    if (!from || !next) continue
+    const ends = (bs: readonly Block[], b: Block) => across(bs, b, t.dir).filter((x) => !isLinkCompanion(x.type)).map((x) => x.id).sort()
+    const oldEnds = ends(blocks, from)
+    const newEnds = ends(out, next)
+    if (oldEnds.length !== newEnds.length || oldEnds.some((end, i) => end !== newEnds[i])) out = withLink(out, t, null)
+  }
+  return out
 }
 
 /**

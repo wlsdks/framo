@@ -785,7 +785,10 @@ export function motionEngine(): MotionEngine {
         items('.vs-key', t, (el, at) => fade(el, at, 400), 80)
         fade(one('.vs-unit'), t, 400)
         let end = t
-        if (variant === 'lines') {
+        if (one('.vs-rows.is-text')) {
+          // 단위를 견줄 수 없어 원문만 남긴 줄은 차트 대신 글로 차례대로 나타낸다.
+          end = items('.vs-row', t, (el, at) => rise(el, at, L.y * 0.4), L.step * 1.2)
+        } else if (variant === 'lines') {
           // 앞 값(작년) 선이 먼저 그려지고, 뒤 값(올해) 선이 조금 늦게 그 위를 따라간다. 점은 선이 닿을 때 맺힌다
           const draw = d(levelName === 'lively' ? 1400 : 1000)
           const from = { a: t + 80, b: t + 420 }
@@ -938,7 +941,8 @@ export function motionEngine(): MotionEngine {
           }
           // 강조한 조각은 다 그려진 뒤 한 번 도톰해졌다 돌아온다
           const hl = $('.sh-item').findIndex((el) => el.classList.contains('is-hl'))
-          const arc = hl >= 0 ? $('.sh-arc')[hl] : null
+          // 0인 조각은 원을 그리지 않으므로 DOM 순번이 항목 순번과 다르다. 원래 항목 번호로 짝을 찾아야 다른 조각이 강조되지 않는다.
+          const arc = hl >= 0 ? one(`.sh-arc[data-index="${hl}"]`) : null
           if (arc) {
             const w = parseFloat(getComputedStyle(arc).strokeWidth) || 15
             run(anims, arc, [{ strokeWidth: String(w) }, { strokeWidth: String(w * 1.3) }, { strokeWidth: String(w) }], s(t + 80) + sweep, { easing: 'ease-in-out', duration: d(520) })
@@ -1391,6 +1395,11 @@ export function motionEngine(): MotionEngine {
           // 원인 순위는 막대가 다 선 뒤에 누적 비율 선이 왼쪽부터 그어지고, 선이 닿는 점마다 맺힌다
           rise(one('.bk-h'), 60, L.y * 0.5)
           fade(one('.bk-cc-key'), 120, 500)
+          if (one('.bk-tg-text')) {
+            fade(one('.bk-tg-text-head'), 120, 400)
+            items('.bk-tg-text-row', 180, (el, at) => rise(el, at, L.y * 0.4), 120)
+            break
+          }
           // 원인 순위의 가로 막대: 줄마다 앞까지 더한 몫이 먼저 깔리고, 그 끝에서 이 원인의 몫이 뻗는다. 80% 줄은 처음에 한 번
           if (one('.bk-pr-list')) {
             fade(one('.bk-pr-head'), 120, 500)
@@ -1491,6 +1500,11 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-img-c'), 600, 500)
           break
         }
+        case 'decision':
+          fade(one('.bk-dc-label'), 40, 400)
+          rise(one('.bk-dc-question'), 100, L.y * 0.5)
+          items('.bk-dc-row', 240, (el, at) => rise(el, at, L.y * 0.4))
+          break
         case 'flow': {
           // 첫 단계가 나오고, 다음 단계로 선이 그어지는 동안 데이터 조각이 선 끝을 따라 건너가서, 닿을 때 다음 단계가 받아 나타난다.
           // 끝까지 닿으면 조각이 처음부터 끝까지 한 번 더 빠르게 지나가고 멈춘다. 되풀이하지 않는다:

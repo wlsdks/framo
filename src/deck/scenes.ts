@@ -44,7 +44,7 @@ export const SCENES: readonly SceneSpec[] = [
     name: '흐름 따라가기',
     description: '읽는 차례로 선이 이어지며 하나씩 나와요.',
     layouts: ['process', 'points', 'agenda'],
-    blocks: ['steps', 'flow', 'process', 'points', 'agenda'],
+    blocks: ['steps', 'flow', 'decision', 'process', 'points', 'agenda'],
   },
   {
     id: 'compare',

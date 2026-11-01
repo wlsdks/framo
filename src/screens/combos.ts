@@ -279,5 +279,11 @@ export async function checkCombos(): Promise<{ slides: number; cells: number; pr
       for (const p of innerProblems(cell)) problems.push(`${what}: ${p}`)
     }
   })
+  // 가림을 확인하느라 화면 밖 칸을 가져온 뒤에도 제목과 하단 표시가 제자리에 있어야 한다.
+  // overflow: hidden으로 돌아가면 scrollIntoView가 장 내부를 밀어 올리는 회귀를 잡는다.
+  areas.forEach((area, i) => {
+    const slide = area.closest<HTMLElement>('.slide')
+    if (slide && (slide.scrollTop || slide.scrollLeft)) problems.push(`${i + 1}번 장: 슬라이드 내부가 스크롤됐어요`)
+  })
   return { slides: areas.length, cells, problems }
 }

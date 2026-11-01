@@ -71,6 +71,26 @@ describe('모양만 고르기', () => {
     expect([shape.type, shape.audience, shape.method]).toEqual(['blank', 'mixed', 'live'])
   })
 
+  it('조건별 흐름의 질문과 경로 내용도 AI에게 보내지 않는다', () => {
+    const decision = makeBlock('decision')
+    const hidden = {
+      ...decision,
+      id: SECRET,
+      fields: { label: SECRET, question: SECRET },
+      items: decision.items.map((item) => ({ ...item, title: SECRET, body: SECRET })),
+      hints: { question: SECRET, 'items.title': SECRET },
+    }
+    const blocks = autoPlace([], hidden)!
+    const shape = toShape({ ...createSampleDeck(), slides: [{ ...makeSlide('compose'), blocks }] })
+    expect(checkShape(shape)).toBe(true)
+    expect(JSON.stringify(shape)).not.toContain(SECRET)
+    expect(shape.slides[0].blocks![0]).toMatchObject({
+      type: 'decision',
+      fields: { label: 'filled', question: 'filled' },
+      items: [{ title: 'filled', body: 'filled' }, { title: 'filled', body: 'filled' }],
+    })
+  })
+
   it('모든 발표 종류와 듣는 사람의 구성이 꼴 확인과 마지막 그물을 지난다', () => {
     const words = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'pane', 'contain', 'place', 'variant', 'base', 'empty', 'filled', 'long', 'html-maker/shape']
     for (const type of [...DECK_TYPES, 'blank' as const]) {

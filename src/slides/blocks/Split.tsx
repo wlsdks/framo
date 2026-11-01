@@ -2,14 +2,14 @@
 
 import type { CSSProperties } from 'react'
 import { BLOCKS } from '../../deck/blocks'
-import { readField } from '../../deck/fields'
+import { isBlankItem, readField } from '../../deck/fields'
 import { hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
 import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, numberUnits, T, textUnits } from '../fields'
-import { formatNumber, seriesIn } from '../numbers'
+import { formatNumber, seriesIn, unitAfter } from '../numbers'
 import { accentTint, TINT_COUNT } from '../tints'
-import { Numeral, pctText } from './parts'
+import { Numeral, pctText, totalMatches } from './parts'
 
 /** 조각 이름표를 조각 바로 아래에 맞춰 둘 수 있는 가장 좁은 칸 너비의 문턱들(split.css의 @container와 같은 값) */
 const NEEDS = [560, 720, 880, 1100, 1400, 1680]
@@ -41,11 +41,14 @@ export function Split() {
   const demo = demoOf(mode, items)
   const texts = items.map((it, i) => (demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : it.value).trim())
   const unit = readField(slide, meta, 'unit').trim()
+  const shownUnits = texts.map((text) => text ? unitAfter(text, unit) : mode !== 'final' ? unit : '')
   // 조각을 한 기준으로 더한다('1.2억'과 '8,000만'). 단위가 다른 값이 섞였으면 몫과 합계는 틀린 숫자라 보이지 않는다
   const series = seriesIn(texts, unit)
   const values = series.values.map((v) => Math.max(0, v ?? 0))
   const sum = values.reduce((a, b) => a + b, 0)
-  const ok = series.ok && sum > 0
+  const typedTotal = readField(slide, meta, 'total').trim()
+  const complete = series.ok && Number.isFinite(sum) && sum > 0 && items.every((it, i) => demo || isBlankItem(it) || (series.values[i] !== null && series.values[i]! >= 0))
+  const ok = complete && totalMatches(texts, typedTotal, unit)
   const shares = values.map((v) => (ok ? v / sum : 0))
   // 편집할 때 값을 아직 적지 않은 조각(빈 조각): 몫이 없다고 이름표까지 숨기면 '+ 조각'을 눌러도 아무것도 보이지 않고 적을 칸도 없었고,
   // 새 나누기에 값 하나를 적으면 나머지 조각의 이름과 값 칸이 한꺼번에 사라졌다. 적힌 조각의 평균 몫만큼 빈 조각을 칠하지 않은 칸 색으로
@@ -57,8 +60,7 @@ export function Split() {
   const laidSum = laid.reduce((a, b) => a + b, 0) || 1
   const spans = laid.map((p) => p / laidSum)
   const typedPct = texts.every((t) => !t || t.includes('%'))
-  const sumText = ok && !typedPct ? `${formatNumber(Math.round(sum * 100) / 100)}${series.suffix}` : ''
-  const typedTotal = readField(slide, meta, 'total').trim()
+  const sumText = ok && !typedPct ? `${formatNumber(sum)}${series.suffix}` : ''
   // 합계 칸: 적었으면 그것, 비었으면 조각을 더한 값(계산한 글이라 고칠 수 없다. '칸 더하기'로 열면 직접 적는다)
   const totalField = !!typedTotal || (mode !== 'final' && !folds?.has('total'))
   const unitField = !!unit || (mode !== 'final' && !folds?.has('unit'))
@@ -69,9 +71,11 @@ export function Split() {
   // 강조한 것 밖의 나머지는 구성비(Share.tsx)처럼 옅은 강조색 단계(accentTint 2부터). 회색으로 칠하면 한 그림 안에 색 무리가 둘이 되고
   // 회색 면이 데이터가 아닌 칠처럼 보였다(docs/VISUAL-RULES.md 3, 4)
   const colors = items.map((_, i) => (pick < 0 ? accentTint(i) : i === pick ? 'var(--accent)' : accentTint(Math.min(2 + grey++, TINT_COUNT - 1))))
-  const need = splitNeed(
+  // 0인 조각에는 막대 폭이 없지만, 사용자가 적은 이름과 값은 숨기지 않는다. 목록으로 두면 0도 읽을 자리가 있다.
+  const hasZero = items.some((it, i) => !isBlankItem(it) && !!texts[i] && series.values[i] === 0)
+  const need = !ok || hasZero ? 'list' : splitNeed(
     items.map((it, i) => it.title || hintFor(slide.layout, slide.hints, 'title', 'title', i)),
-    items.map((it, i) => (it.value || texts[i] || hintFor(slide.layout, slide.hints, 'value', 'value', i)) + (unit ? ` ${unit}` : '')),
+    items.map((it, i) => (it.value || texts[i] || hintFor(slide.layout, slide.hints, 'value', 'value', i)) + (shownUnits[i] ? ` ${shownUnits[i]}` : '')),
     spans,
   )
   const cols = spans.map((p) => `minmax(0, ${Math.max(p, 0.0001).toFixed(4)}fr)`).join(' ')
@@ -95,6 +99,7 @@ export function Split() {
             </p>
           )
         )}
+        {mode === 'edit' && !demo && !ok && <p className="bk-sg-unit">{complete ? '합계가 조각의 합과 같도록 확인해 주세요.' : '조각 값을 같은 단위의 0 이상 숫자로 채워 주세요.'}</p>}
       </div>
       <div className="bk-sg-bar" aria-hidden="true">
         {items.map((it, i) =>
@@ -109,14 +114,14 @@ export function Split() {
         {items.map((it, i) => (
           <div
             key={it.id}
-            className={cx('it bk-sg-key', i === pick && 'is-hl', shares[i] <= 0 && !ghost[i] && 'is-none')}
-            style={{ '--c': ghost[i] ? 'var(--line)' : colors[i] } as CSSProperties}
+            className={cx('it bk-sg-key', i === pick && 'is-hl', ok && shares[i] <= 0 && !ghost[i] && isBlankItem(it) && 'is-none')}
+            style={{ '--c': !ok || ghost[i] ? 'var(--line)' : colors[i] } as CSSProperties}
           >
             <IT i={i} k="title" className="bk-sg-name" />
             <p className="bk-sg-line">
               <IT i={i} k="value" as="span" className="bk-sg-v" numeral oneLine />
-              {unit && (!!it.value || mode !== 'final') && <span className="bk-sg-vu">{unit}</span>}
-              {!typedPct && <span className="bk-sg-pct">{ok && shares[i] > 0 ? pctText(shares[i] * 100) : '–'}</span>}
+              {shownUnits[i] && <span className="bk-sg-vu">{shownUnits[i]}</span>}
+              {!typedPct && <span className="bk-sg-pct">{ok ? pctText(shares[i] * 100) : '–'}</span>}
             </p>
             <ItemTools i={i} />
           </div>

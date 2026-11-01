@@ -614,6 +614,14 @@
   text-overflow: ellipsis;
 }
 
+.stage-value-note {
+  overflow: hidden;
+  color: var(--warn-ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .warn-pop {
   width: 300px;
   padding: 8px 10px 6px;

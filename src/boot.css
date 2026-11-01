@@ -1,0 +1,25 @@
+/* 화면 코드와 글꼴이 준비되기 전에도 실행 중이라는 것을 먼저 보여 준다.
+   React가 root를 채우면 같이 사라지므로 별도 타이머나 상태를 두지 않는다. */
+.boot-status {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--app-bg, #f3f4f6);
+  color: var(--ink, #191c22);
+  font: 15px/1.5 system-ui, 'Malgun Gothic', sans-serif;
+}
+
+.boot-status strong {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.boot-status p {
+  margin: 0;
+  color: var(--ink-2, #555b66);
+}

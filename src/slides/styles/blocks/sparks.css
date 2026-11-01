@@ -162,6 +162,10 @@
   line-height: 1.4;
 }
 
+.bk-sx-plot > .bk-sx-in:not(.on-chart) {
+  overflow-wrap: anywhere;
+}
+
 .bk-sx.is-demo :is(.bk-sx-svg, .bk-sx-dot, .bk-sx-v, .bk-sx-u:not(.ed), .bk-sx-chg) {
   opacity: 0.4;
 }

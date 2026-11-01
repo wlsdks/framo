@@ -53,11 +53,13 @@ export function Scorecard() {
           const p = amountPair(meta, value)
           const target = p?.a.base ?? 0
           const actual = p?.b.base ?? 0
-          const known = target > 0 && value.trim() !== ''
+          // 음수 실적은 이 막대의 0~목표 축으로 표현할 수 없다. 원문만 남기고 달성 여부를 추측하지 않는다.
+          const known = !!p && target > 0 && actual >= 0 && value.trim() !== ''
           // 낮을수록 좋은 지표('7분 이하'): 목표보다 작아야 달성, 달성률은 목표 ÷ 실적
           const lower = lowerIsBetter(meta)
           const met = lower ? actual <= target : actual >= target
-          const rate = lower ? (actual > 0 ? target / actual : 0) : actual / target
+          const rate = known ? (lower ? (actual > 0 ? target / actual : null) : actual / target) : null
+          const percent = rate === null ? null : rate * 100
           // 목표와 실적 중 큰 쪽이 막대 끝. 목표를 넘으면 목표 줄이 막대 안으로 들어간다.
           const scale = Math.max(target, actual) || 1
           const bar = { '--a': known ? ((actual / scale) * 100).toFixed(2) : '0', '--t': known ? ((target / scale) * 100).toFixed(2) : '0' }
@@ -81,7 +83,7 @@ export function Scorecard() {
               )}
               <IT i={i} k="meta" className="sk-target sk-num" />
               <IT i={i} k="value" className="sk-value sk-num" />
-              <span className="sk-rate sk-num">{known && rate > 0 ? `${Math.round(rate * 100)}%` : '–'}</span>
+              <span className="sk-rate sk-num">{percent !== null && Number.isFinite(percent) ? `${Math.round(percent)}%` : '–'}</span>
               <ItemTools i={i} />
             </div>
           )

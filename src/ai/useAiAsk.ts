@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Deck, Slide } from '../deck/types'
 import type { AskError, AskId, AskRun } from './asks'
 import { askRun, cancelAsk } from './client'
+import { pollAsk } from './askPoll'
 import { startSharedAsk } from './askStart'
 import { shapeSlideId, toShape } from './share'
 
@@ -12,6 +13,8 @@ export interface AskJob extends AskRun {
   ask: AskId
   /** 장 부탁이면 그 장의 원래 id (화면에서 몇째 장인지 보여 주려고). 발표 전체면 null */
   slideId: string | null
+  /** 서버에서 실행 결과를 아직 확인하지 못한 상태. 부탁 자체가 실패한 것은 아니다. */
+  connectionLost?: boolean
 }
 
 export interface AiAsk {
@@ -57,16 +60,9 @@ export function useAiAsk(deck: Deck, share: () => void): AiAsk {
   const running = job?.state === 'running' ? job.id : ''
   useEffect(() => {
     if (!running) return
-    let alive = true
-    const t = window.setInterval(async () => {
-      const run = await askRun(running)
-      if (!alive) return
-      setJob((j) => (j && j.id === running ? (run ? { ...j, ...run } : { ...j, state: 'failed', error: 'failed' }) : j))
+    return pollAsk((signal) => askRun(running, signal), (run) => {
+      setJob((j) => (j && j.id === running ? (run ? { ...j, ...run, connectionLost: false } : j.connectionLost ? j : { ...j, connectionLost: true }) : j))
     }, POLL_MS)
-    return () => {
-      alive = false
-      window.clearInterval(t)
-    }
   }, [running])
 
   const cancel = useCallback(() => {

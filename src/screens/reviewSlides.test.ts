@@ -1,7 +1,29 @@
 import { describe, expect, it } from 'vitest'
+import { composeAreaH, rearrangeBlocks } from '../deck/blocks'
 import { reviewSlides } from './reviewSlides'
 
 describe('대표 조합', () => {
+  it('짧은 목록과 핵심 문장을 다시 놓으면 두 칸의 너비가 치우치지 않는다', () => {
+    const slide = reviewSlides().find((s) => s.id === 'review-message-stack-2')!
+    const arranged = rearrangeBlocks(slide.blocks!, composeAreaH(slide, undefined, true))!
+    expect(arranged.map((b) => b.at?.w)).toEqual([6, 6])
+    expect(arranged.map((b) => b.at?.x)).toEqual([0, 6])
+  })
+
+  it('띄어쓰기가 많은 목록도 실제 글 폭을 어림해 결론 옆에 놓는다', () => {
+    const slide = reviewSlides().find((s) => s.id === 'review-message-stack-2-long')!
+    const arranged = rearrangeBlocks(slide.blocks!, composeAreaH(slide, undefined, true))!
+    expect(arranged.map((b) => [b.at?.x, b.at?.y, b.at?.w])).toEqual([[0, 0, 6], [6, 0, 6]])
+  })
+
+  it('목록과 비율 원을 다시 놓을 때 목록이 지나치게 좁아지지 않는다', () => {
+    const slide = reviewSlides().find((s) => s.id === 'review-list-ring')!
+    const arranged = rearrangeBlocks(slide.blocks!, composeAreaH(slide, undefined, true))!
+    expect(arranged.map((b) => [b.at?.x, b.at?.y, b.at?.w])).toEqual([[0, 0, 6], [6, 0, 6]])
+    expect(arranged[0].items.map((item) => item.title)).toEqual(slide.blocks![0].items.map((item) => item.title))
+    expect(arranged[1].fields.value).toBe('72%')
+  })
+
   it('테마와 글자 크기가 달라도 의도한 컴포넌트를 모두 담는다', () => {
     const expected: Record<string, string[]> = {
       'list-note-short': ['bullets', 'note'],
@@ -22,6 +44,16 @@ describe('대표 조합', () => {
       'pair-chart': ['bullets', 'callout', 'trend'],
       'pair-chart-wide': ['bullets', 'callout', 'trend'],
       'message-list': ['message', 'bullets'],
+      ...Object.fromEntries([2, 3, 4, 5, 6].flatMap((n) => [[`message-stack-${n}`, ['message', 'bullets']], [`message-stack-${n}-long`, ['message', 'bullets']]])),
+      ...Object.fromEntries(['base', 'lines', 'dots'].map((variant) => [`mixed-versus-${variant}`, ['versus', 'note']])),
+      ...Object.fromEntries(['base', 'gap'].map((variant) => [`mixed-attain-${variant}`, ['attain', 'note']])),
+      'missing-rating': ['rating', 'note'],
+      'uncertain-progress': ['progress', 'note'],
+      'five-lane-progress': ['progress'],
+      'list-ring': ['bullets', 'ring'],
+      'list-ring-long': ['bullets', 'ring'],
+      'list-ring-very-long': ['bullets', 'ring'],
+      ...Object.fromEntries(['base', 'gauge'].flatMap((variant) => [[`ring-range-${variant}`, ['ring', 'note']], [`ring-unit-${variant}`, ['ring', 'note']]])),
       'market-long': ['market', 'text'],
       'funnel-stat': ['funnel', 'stat', 'text'],
       'chart-summary': ['diverge', 'summary'],
@@ -29,6 +61,8 @@ describe('대표 조합', () => {
       'number-ring': ['number', 'ring', 'number', 'bars'],
       'linked-numbers': ['number', 'number', 'number', 'stack'],
       'spark-kpi-list': ['spark', 'kpi', 'bullets'],
+      'kpi-next-actions': ['kpi', 'bullets'],
+      'kpi-next-actions-long': ['kpi', 'bullets'],
       'stacked-checks': ['delta', 'checks', 'callout'],
     }
     for (const id of ['white', 'navy', 'serif'] as const) {

@@ -7,7 +7,7 @@ import { cx } from '../../lib/cx'
 import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
 import { placeLabels } from '../fitBlocks'
-import { lineAxis, readNumber, seriesIn } from '../numbers'
+import { lineAxis, lineRuns, seriesIn } from '../numbers'
 import { Head, useItems, useUnitOpen } from './parts'
 
 /**
@@ -25,17 +25,21 @@ export function Trend() {
   const unit = readField(slide, meta, 'unit').trim()
   const unitOpen = useUnitOpen(unit)
   const targetField = readField(slide, meta, 'target')
-  const targetText = readNumber(targetField) === null && demo ? hintFor(slide.layout, slide.hints, 'target') : targetField
+  const targetText = !targetField.trim() && demo ? hintFor(slide.layout, slide.hints, 'target') : targetField
   // 시기마다의 값과 목표를 한 기준으로 ('1.2억'과 '9,500만'의 높이가 맞게)
-  const series = seriesIn([...items.map((it, i) => (demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : it.value)), targetText], unit)
-  const values = series.values.slice(0, items.length)
-  const target = series.values[items.length]
+  const texts = items.map((it, i) => (demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : it.value))
+  const dataSeries = seriesIn(texts, unit)
+  const withTarget = seriesIn([...texts, targetText], unit)
+  // 서로 다른 단위는 한 축에 놓을 수 없다. 목표 단위만 다르면 데이터 선은 살리고 목표선만 빼 둔다.
+  const values = dataSeries.ok ? dataSeries.values : texts.map(() => null)
+  const target = dataSeries.ok && withTarget.ok ? withTarget.values[items.length] : null
+  const invalidTarget = !!targetField.trim() && (!withTarget.ok || withTarget.values[items.length] === null)
   const known = values.filter((v): v is number => v !== null)
   const { floor, y, x } = lineAxis(target === null ? known : [...known, target], items.length)
   const pts = values.map((v, i) => (v === null ? null : { x: x(i), y: y(v) }))
-  const drawn = pts.filter((p): p is { x: number; y: number } => p !== null)
-  const line = drawn.map((p) => `${p.x.toFixed(2)},${(100 - p.y).toFixed(2)}`).join(' ')
-  const area = drawn.length > 1 ? `${drawn[0].x.toFixed(2)},100 ${line} ${drawn[drawn.length - 1].x.toFixed(2)},100` : ''
+  // 값이 없는 시기를 건너뛰어 선을 이으면 그 사이에도 측정값이 있는 것처럼 보인다.
+  // 이어진 값만 각각 선과 면으로 만들고, 하나뿐인 값은 점으로만 남긴다.
+  const segments = lineRuns(pts)
   // 골짜기의 숫자는 점 아래에. 바닥에 붙은 골짜기는 아래 시기 이름과 부딪혀서 위에 둔다
   const dip = (i: number) => {
     const [a, v, b] = [values[i - 1], values[i], values[i + 1]]
@@ -59,7 +63,7 @@ export function Trend() {
       <Head lead />
       <div className={cx('s-body tn', demo && 'is-demo')} style={{ '--n': items.length }}>
         {/* 단위와 목표는 그래프 위 따로 둔 줄에. 선 끝에 이름표를 달면 최근 시기의 점(대개 강조한 점)과 부딪힌다 */}
-        {(unitOpen || target !== null) && (
+        {(unitOpen || target !== null || invalidTarget || (mode === 'edit' && !dataSeries.ok)) && (
           <div className="tn-meta">
             <span className="tn-unit">
               {unitOpen && (
@@ -68,18 +72,14 @@ export function Trend() {
                 </>
               )}
             </span>
-            {target !== null ? (
-              <span className="tn-unit tn-legend">
-                <i className="tn-legend-line" aria-hidden="true" />
-                목표 <T k="target" as="span" oneLine />
+            {(target !== null || invalidTarget || !final) && (
+              <span className={cx('tn-unit', (target !== null || invalidTarget) && 'tn-legend')}>
+                {target !== null && <i className="tn-legend-line" aria-hidden="true" />}
+                {target !== null || invalidTarget ? '목표 ' : '목표선: '}
+                <T k="target" as="span" oneLine />
               </span>
-            ) : (
-              !final && (
-                <span className="tn-unit">
-                  목표선: <T k="target" as="span" oneLine />
-                </span>
-              )
             )}
+            {mode === 'edit' && (!dataSeries.ok || invalidTarget) && <span className="tn-unit" role="status">값과 목표를 같은 단위의 숫자로 적어 주세요.</span>}
           </div>
         )}
         <div className="tn-plot">
@@ -90,8 +90,11 @@ export function Trend() {
               <div className="tn-target" style={{ '--y': y(target).toFixed(2) }} />
             )}
             <svg className="tn-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-              {area && <polygon className="tn-area" points={area} />}
-              {drawn.length > 1 && <polyline className="tn-line" points={line} />}
+              {segments.filter((s) => s.length > 1).map((s) => {
+                const line = s.map((p) => `${p.x.toFixed(2)},${(100 - p.y).toFixed(2)}`).join(' ')
+                const area = `${s[0].x.toFixed(2)},100 ${line} ${s[s.length - 1].x.toFixed(2)},100`
+                return <g key={s[0].x}><polygon className="tn-area" points={area} /><polyline className="tn-line" points={line} /></g>
+              })}
             </svg>
             {items.map((it, i) => {
               const p = pts[i]
@@ -101,6 +104,7 @@ export function Trend() {
                 <div
                   key={it.id}
                   className={cx('tn-pt', i === highlight && 'is-hl', dip(i) && 'is-below', !p && 'is-blank')}
+                  data-index={i}
                   data-tn-side={dip(i) ? 'is-below' : undefined}
                   style={at(p ?? { x: x(i), y: 0 })}
                 >
@@ -119,6 +123,8 @@ export function Trend() {
           {items.map((it, i) => (
             <div key={it.id} className={cx('it tn-col', i === highlight && 'is-hl')}>
               <IT i={i} k="title" className="tn-name" />
+              {/* 숫자로 읽을 수 없는 값(예: 미정)도 발표에서 잃지 않는다. 점은 찍지 않고 시기 아래에 원문을 둔다. */}
+              {final && !pts[i] && !!it.value.trim() && <IT i={i} k="value" className="tn-unit" />}
               <ItemTools i={i} />
             </div>
           ))}

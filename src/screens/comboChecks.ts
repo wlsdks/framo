@@ -424,6 +424,7 @@ export function innerProblems(cell: HTMLElement, { fill = true, covered: cover =
   const inner = cell.querySelector<HTMLElement>(':scope > .bk-in')
   if (!inner || !cell.offsetWidth) return []
   const r0 = cell.getBoundingClientRect()
+  // 장은 overflow: clip으로 내부 스크롤을 막는다. 칸을 화면에 가져와도 제목은 움직이지 않는다.
   if (cover && (r0.top < 0 || r0.bottom > innerHeight)) cell.scrollIntoView({ block: 'center' })
   const area = cell.closest<HTMLElement>('.bk-area')
   const was = area?.classList.contains('is-fitting')

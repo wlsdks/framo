@@ -1,5 +1,16 @@
 /* ---------- 개요 ---------- */
 
+/* 제목이 있는 장에서는 개요의 소제목이 장 제목만큼 커지지 않게 한다. 여유가 있어 칸의 글자를 키우는 경우에도
+   장 제목보다 작은 단계에서 멈춰야 두 제목이 경쟁하지 않는다. */
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) .bk-fc > .bk-h {
+  --fc-heading-cap: calc(36px * var(--scale, 1));
+  font-size: min(var(--fc-heading-cap), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+}
+
+.l-compose:has(.s-title:is(.fit-1, .fit-2):not(.is-hint, .is-empty)) .bk-fc > .bk-h {
+  --fc-heading-cap: calc(30px * var(--scale, 1));
+}
+
 /* 항목 칸은 항목 이름만큼만(가장 긴 이름, 목록 너비의 3분의 1까지). 이름은 '기간', '예산'처럼 짧은데 칸을 비율로 잡으면
    이름 옆이 비고, 좁은 칸에서는 내용 칸이 좁아져 내용이 줄마다 두 줄로 꺾이며 목록이 높아졌다(글자를 줄여야 들어갔다).
    넓은 칸에서는 내용이 본문 가운데쯤에서 시작해 이름과 내용이 양쪽으로 떨어져 읽히고 오른쪽이 통째로 비었다.
@@ -19,7 +30,7 @@
   column-gap: 40px;
   /* 줄 사이는 글자와 함께 크되 한 줄 내용의 두 배를 넘지 않게(VISUAL-RULES 6). 24px씩 위아래에 두고 바람(--bk-air)도 위아래에 다 더하던 때는
      글자를 키운 장에서 한 줄짜리 줄 사이가 109px로 내용(36px)의 세 배였다. 바람은 줄 사이 하나에 한 번만 들어가게 반씩 나눈다 */
-  padding: calc(12px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
+  padding: calc(10px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
 }
 
 /* 줄 사이 선: 옅은 1px, 줄 사이에만(VISUAL-RULES 2). 발표할 때 왼쪽에서부터 그어진다.

@@ -10,10 +10,12 @@
 // 고를 판과 같을 때만(사람이 옮기거나 선을 끌지 않았을 때만) 새 부품을 넣으며 다시 고른다. 다르면 예전처럼 끼운다(place.ts의 autoPlace).
 
 import type { Block, BlockType } from '../types'
+import { headLook } from '../themes'
+import { readPercent } from '../percent'
 import { BOARD_COLS, byReading, type Fit, layTree, leaf, sameArea, split, type Tree, treeOf } from './board'
 import { aspectOf, fitImage } from './images'
 import { isAlone, isSolo, shownLook } from './rules'
-import { AREA_W, atRect, blockMinH, isStretchy } from './sizing'
+import { AREA_W, atRect, blockMinH, isStretchy, widthOf } from './sizing'
 
 /** 틀을 견주는 가장 많은 부품 수. 더 많으면 사람이 짠 차례가 짜임의 뜻이라 판에 맡긴다 */
 export const ARRANGE_MAX = 4
@@ -39,7 +41,17 @@ const MEASURE_W: Partial<Record<BlockType, number>> = { message: 24 * 44, callou
  * 본문의 절반에서 끝났다(blocks/facts.css)
  */
 function measureW(b: Block, w: number): number {
-  if (b.type === 'text' && !(w >= 1300 && b.fields.heading?.trim())) return 24 * 30
+  // 넓은 칸도 소제목과 본문이 화면 끝까지 차는 것은 아니다. 소제목은 글 길이만큼(최대 30%), 본문은 읽기 폭까지만 그려진다.
+  // 칸 너비 전체로 세면 짧은 글과 목록 둘을 위아래로 쌓고 오른쪽 3분의 1을 비우는 판을 나란한 판보다 좋다고 골랐다.
+  if (b.type === 'bullets' && b.items.length <= 3 && w >= 1300 && b.fields.heading?.trim()) {
+    const heading = Math.min(w * 0.3, [...b.fields.heading.trim()].length * 44)
+    // 띄어쓰기와 영문은 한글보다 좁다. 모든 글자를 한글 한 칸으로 세면 짧은 목록이 실제보다 넓게 그려진다고 보아
+    // 결론 아래에 쌓고 오른쪽을 비우는 배치를 고른다.
+    const longest = Math.max(1, ...b.items.flatMap((item) => [item.title, item.body].map((s) => widthOf(s, headLook().lead))))
+    return heading + 72 + 58 + Math.min(24 * 30, longest * 30)
+  }
+  if ((b.type === 'text' || b.type === 'bullets') && w >= 1300 && b.fields.heading?.trim()) return Math.min(w * 0.3, [...b.fields.heading.trim()].length * 44) + 48 + 24 * 30
+  if (b.type === 'text') return 24 * 30
   if (b.type === 'facts' && (b.items.length <= 3 || w < 1300)) return 140 + 24 * 30
   return MEASURE_W[b.type] ?? Infinity
 }
@@ -231,6 +243,20 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
     // 판 너비를 혼자 쓰는 부품(표, 일정)은 한 줄을 다 써야 한다
     if (isSolo(b.type) && at.w < BOARD_COLS) cost += 1000
   }
+  // 핵심 문장과 짧은 목록이 나란하면 한 칸이 한 칸 차이로 더 넓은 판(7:5)도 점수가 거의 같을 수 있다.
+  // 문장이 두 줄로 꺾이면 넓은 왼쪽 칸의 끝이 비어 두 내용이 멀어지므로, 차이가 작을 때는 같은 너비를 먼저 견준다.
+  if (all.length === 2 && all.map((b) => b.type).sort().join(',') === 'bullets,message') {
+    const a = laid.get(all[0].id)!.at!
+    const b = laid.get(all[1].id)!.at!
+    if (a.y === b.y && a.h === b.h) cost += Math.abs(a.w - b.w) * 0.5
+  }
+  // 짧은 목록과 원을 나란히 둘 때 원의 넓은 칸만 우선하면 목록이 불필요하게 여러 줄로 꺾인다.
+  // 다른 점수가 비슷한 판에서는 두 칸의 균형을 먼저 견준다.
+  if (all.length === 2 && all.map((b) => b.type).sort().join(',') === 'bullets,ring') {
+    const a = laid.get(all[0].id)!.at!
+    const b = laid.get(all[1].id)!.at!
+    if (a.y === b.y && a.h === b.h) cost += Math.abs(a.w - b.w)
+  }
   // 한 장의 숫자 둘 이상은 같은 말투: 한 줄에 나란히 서야 크기와 이름표 자리가 맞는다
   const nums = all.filter((b) => NUMBER_TYPES.has(b.type))
   if (nums.length > 1) {
@@ -246,6 +272,25 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
     const img = picture(laid.get(b.id)!, r)
     // 칸보다 좁은 이미지는 칸 가운데에 선다
     if (img) return r.x + (r.w + img.w) / 2
+    // 몇 중 몇은 넓은 칸에서 숫자 옆에 점을 놓지만, 점은 최대 32px이라 칸 전체로 늘어나지 않는다.
+    // 전체가 20 이하인 정수일 때는 최대 열 개와 이름·설명의 폭으로 그려질 끝을 어림한다.
+    // 값이 불명확하거나 백분율 점 100개인 경우는 가득 쓰는 쪽으로 보수적으로 둔다.
+    const placed = laid.get(b.id)!
+    // 낮고 넓은 비율 원은 원을 높이만큼만 그리고 그 옆에 이름을 둔다. 차트처럼 칸 전체를 채운다고 계산하면
+    // 짧은 목록 아래 작은 원을 쌓고 오른쪽 대부분을 비운 판이 가장 좋다고 잘못 고른다.
+    if (b.type === 'ring' && shownLook(placed, isAlone(placed)) === 'plain' && readPercent(placed.fields.value ?? '') !== null && r.w >= 700 && r.h <= 440 && r.w / r.h >= 1.5) {
+      const circle = placed.variant === 'gauge' ? Math.min(r.h * 100 / 72, r.w * 0.5) : Math.min(r.h, r.w * 0.44)
+      const text = Math.max(220, widthOf(placed.fields.label ?? '', headLook().lead) * 44, widthOf(placed.fields.note ?? '', headLook().lead) * 36)
+      return r.x + Math.min(r.w, circle + 64 + text)
+    }
+    const total = placed.fields.total?.trim() ?? ''
+    if (b.type === 'ratio' && r.w >= 900 && /^\d+$/.test(total) && Number(total) > 0 && Number(total) <= 20) {
+      const words = Math.max(1, ...[placed.fields.label, placed.fields.note].map((s) => [...(s ?? '')].length)) * 26
+      const number = [...(placed.fields.value ?? '')].length * 72
+      const text = Math.min(r.w * 0.44, Math.max(words, number))
+      const dots = Math.min(10, Number(total)) * 32 * 1.3 - 9.6
+      return r.x + Math.min(r.w, text + 72 + dots)
+    }
     const w = isStretchy(b.type) ? r.w : Math.min(atRect({ x: 0, y: 0, w: naturalSpan(laid.get(b.id)!), h: 1 }, size).w, measureW(b, r.w))
     return r.x + Math.min(r.w, w)
   }))

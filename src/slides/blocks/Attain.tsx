@@ -7,7 +7,7 @@ import type { Item } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
-import { formatNumber, seriesIn } from '../numbers'
+import { formatNumber, lowerIsBetter, seriesIn } from '../numbers'
 import { ChartKey } from './parts'
 
 /**
@@ -20,16 +20,24 @@ export function Attain() {
   const final = mode === 'final'
   const demo = demoOf(mode, items, ['value', 'meta'])
   const text = (k: 'value' | 'meta', i: number) => (demo ? hintFor(slide.layout, slide.hints, k, k, i) : items[i][k])
-  // 실적과 목표를 한 기준으로 읽는다. 단위가 서로 다른 값이 섞였으면 달성과 달성률은 말하지 않고 막대만 그린다
+  // 실적과 목표를 한 기준으로 읽는다. 서로 다른 단위나 알 수 없는 값은 같은 눈금의 막대로 비교할 수 없다.
   const series = seriesIn([...items.map((_, i) => text('value', i)), ...items.map((_, i) => text('meta', i))], readField(slide, meta, 'unit'))
   const actual = series.values.slice(0, items.length)
   const goal = series.values.slice(items.length)
+  const valid = series.ok && items.every((_, i) =>
+    (actual[i] !== null ? actual[i]! >= 0 : !text('value', i).trim()) &&
+    (goal[i] !== null ? goal[i]! >= 0 : !text('meta', i).trim()) &&
+    (actual[i] === null || goal[i] === null || goal[i] === 0 ||
+      (Number.isFinite((actual[i]! / goal[i]!) * 100) &&
+        (!lowerIsBetter(text('meta', i)) || actual[i] === 0 || Number.isFinite((goal[i]! / actual[i]!) * 100)))),
+  )
   const top = Math.max(0, ...actual.map((v) => v ?? 0), ...goal.map((v) => v ?? 0))
   const y = (v: number | null) => (v === null || top <= 0 ? 0 : (Math.max(0, v) / top) * 100)
-  const met = items.map((_, i) => (actual[i] === null || goal[i] === null || !series.ok ? null : actual[i]! >= goal[i]!))
+  const met = items.map((_, i) => (actual[i] === null || goal[i] === null || !valid ? null : lowerIsBetter(text('meta', i)) ? actual[i]! <= goal[i]! : actual[i]! >= goal[i]!))
   const judged = met.filter((m) => m !== null).length
   const hit = met.filter((m) => m === true).length
-  if (slide.variant === 'gap') return <AttainGap items={items} actual={actual} goal={goal} ok={series.ok} met={met} judged={judged} hit={hit} demo={demo} edit={mode === 'edit'} />
+  if (!valid && mode !== 'edit') return <AttainText items={items} />
+  if (slide.variant === 'gap') return <AttainGap items={items} actual={actual} goal={goal} ok={valid} met={met} judged={judged} hit={hit} demo={demo} edit={mode === 'edit'} />
   return (
     <div
       className={cx('bk-cc bk-tg', demo && 'is-demo', items.length <= 6 && items.every((it) => [...it.title.trim()].length <= 4) && 'is-short')}
@@ -38,14 +46,14 @@ export function Attain() {
       <T k="heading" as="h3" className="bk-h" fit={[18, 32]} multiline />
       <ChartKey
         sum={
-          judged > 1 ? (
+          !valid ? '같은 단위의 0 이상 숫자를 적어 주세요.' : judged > 1 ? (
             <>
               {judged}번 중 <b>{hit}번</b> 달성
             </>
           ) : undefined
         }
         keys={
-          <>
+          valid ? <>
             <span className="bk-cc-lk is-bar">
               <i aria-hidden="true" />
               실적
@@ -54,12 +62,15 @@ export function Attain() {
               <i aria-hidden="true" />
               목표
             </span>
-          </>
+          </> : undefined
         }
       />
       <div className="bk-cc-plot">
         {items.map((it, i) => {
-          const rate = actual[i] !== null && goal[i] && series.ok ? Math.round((actual[i]! / goal[i]!) * 100) : null
+          const ratio = actual[i] !== null && goal[i] && valid
+            ? lowerIsBetter(text('meta', i)) ? (actual[i] ? goal[i]! / actual[i]! : null) : actual[i]! / goal[i]!
+            : null
+          const rate = ratio !== null && Number.isFinite(ratio * 100) ? Math.round(ratio * 100) : null
           return (
             <div
               key={it.id}
@@ -67,8 +78,8 @@ export function Attain() {
               style={{ '--p': y(actual[i]).toFixed(2), '--g': y(goal[i]).toFixed(2), '--m': Math.max(y(actual[i]), y(goal[i])).toFixed(2) }}
             >
               <div className="bk-cc-bar bk-tg-bar">
-                <span className="bk-cc-fill" />
-                {(goal[i] !== null || !final) && <span className="bk-tg-goal" aria-hidden="true" />}
+                {valid && <span className="bk-cc-fill" />}
+                {valid && (goal[i] !== null || !final) && <span className="bk-tg-goal" aria-hidden="true" />}
                 {/* 목표 숫자는 편집할 때만 막대 위에서 적는다. 발표할 때는 목표 줄과 달성률로 읽혀서, 기간마다 숫자 둘을 늘어놓지 않는다 */}
                 <span className="bk-tg-v">
                   <IT i={i} k="value" as="span" className="bk-cc-num" oneLine />
@@ -88,6 +99,28 @@ export function Attain() {
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+/** 비교할 수 없으면 작성한 두 값을 나란히 보여 주되 차이를 계산하지 않는다. */
+function AttainText({ items }: { items: Item[] }) {
+  return (
+    <div className="bk-cc bk-tg is-text">
+      <T k="heading" as="h3" className="bk-h" fit={[18, 32]} multiline />
+      <ChartKey />
+      <div className="bk-tg-text">
+        <div className="bk-tg-text-head bk-cc-u"><span>기간</span><span>실적</span><span>목표</span></div>
+        <ul>
+          {items.map((item, i) => (
+            <li className="bk-tg-text-row" key={item.id}>
+              <span className="bk-cc-name">{item.title.trim() ? <IT i={i} k="title" as="span" /> : '—'}</span>
+              <span className="bk-cc-num">{item.value.trim() ? <IT i={i} k="value" as="span" /> : '—'}</span>
+              <span className="bk-cc-num">{item.meta.trim() ? <IT i={i} k="meta" as="span" /> : '—'}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   )
@@ -139,21 +172,21 @@ function AttainGap({
       <T k="heading" as="h3" className="bk-h" fit={[18, 32]} multiline />
       <ChartKey
         sum={
-          judged > 1 ? (
+          !ok && edit ? '같은 단위의 0 이상 숫자를 적어 주세요.' : judged > 1 ? (
             <>
               {judged}번 중 <b>{hit}번</b> 달성
             </>
           ) : undefined
         }
         keys={
-          <span className="bk-cc-lk is-goal">
+          ok ? <span className="bk-cc-lk is-goal">
             <i aria-hidden="true" />
             목표
-          </span>
+          </span> : undefined
         }
       />
       <div className="bk-cc-plot bk-ag-plot" style={{ '--b': base.toFixed(2) }}>
-        <div className="bk-ag-axis" aria-hidden="true" />
+        {ok && <div className="bk-ag-axis" aria-hidden="true" />}
         {items.map((it, i) => {
           const g = gaps[i]
           return (

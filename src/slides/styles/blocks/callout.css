@@ -58,3 +58,13 @@
 .bk-callout.bk-look-plain .bk-call-l {
   color: var(--accent);
 }
+
+/* 강조는 색이 있는 면이 아니라 글자색이다. 나란한 목록 옆에서 옛 상자용 위 여백과 가운데 정렬을 유지하면
+   짧은 강조 문구만 아래에 떠서 같은 줄의 제목들이 어긋난다. */
+.bk.is-shared.bk-callout.bk-look-bold > .bk-in {
+  padding-block: 0;
+}
+
+.bk.is-shared.bk-callout.bk-look-bold > .bk-in > .bk-call {
+  justify-content: flex-start;
+}

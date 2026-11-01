@@ -372,7 +372,8 @@ export function blockFitter() {
       for (let j = 1; j < mid.length; j++) {
         const a = mid[j - 1]
         const b = mid[j]
-        if (!a || !b) continue
+        // 중간 값이 없으면 선도 끊겨 있으므로, 없는 선을 피하느라 숫자를 옮기지 않는다.
+        if (!a || !b || Number(pts[j].dataset.index) !== Number(pts[j - 1].dataset.index) + 1) continue
         for (let t = 0; t <= 24; t++) {
           const x = a.x + ((b.x - a.x) * t) / 24
           const y = a.y + ((b.y - a.y) * t) / 24
@@ -857,9 +858,24 @@ export function blockFitter() {
     const lineUp = new Map<HTMLElement, number>()
     const alignTops = (dy: Map<HTMLElement, number>) => {
       lineUp.clear()
+      // 원형 그래프와 글 묶음은 보이는 전체의 가운데를 맞춘다. 윗선만 맞추면
+      // 세 줄 목록이 원의 위쪽 절반에 붙어, 서로 다른 줄처럼 보였다.
+      const centered = new Set<HTMLElement>()
+      for (const row of order) {
+        if (row.length !== 2 || !row.every((x) => x.c.classList.contains('bk-look-plain'))) continue
+        const chart = row.find((x) => x.c.dataset.type === 'ring')
+        const copy = row.find((x) => ['bullets', 'text', 'facts', 'checks'].includes(x.c.dataset.type ?? ''))
+        if (!chart || !copy) continue
+        const centers = row.map((x) => (x.ink!.t + x.ink!.b) / 2 + dy.get(x.c)!)
+        const goal = Math.max(...centers)
+        row.forEach((x, i) => {
+          centered.add(x.c)
+          if (goal - centers[i] >= 1) lineUp.set(x.c, goal - centers[i])
+        })
+      }
       const groups = new Map<string, typeof items>()
       for (const x of items) {
-        if (!firstTop.has(x.c)) continue
+        if (!firstTop.has(x.c) || centered.has(x.c)) continue
         const key = (x.c.dataset.band ?? '') + '|' + x.c.style.getPropertyValue('--y')
         groups.set(key, (groups.get(key) || []).concat(x))
       }
@@ -1380,8 +1396,12 @@ export function blockFitter() {
       if (ink.every((x): x is { l: number; r: number } => !!x) && ink[0].r <= ink[1].l) {
         const widths = ink.map((x) => x!.r - x!.l)
         const unit = (a.width - widths[0] - widths[1]) / 3
-        const targets = [a.left + unit, a.left + 2 * unit + widths[0]]
-        if (unit >= 72 * k) {
+        // 글이 둘 다 짧으면 남는 폭을 셋으로 똑같이 나눌 때 두 내용 사이가 지나치게 벌어진다.
+        // 둘 사이를 본문 간격 두 배까지 두고 나머지는 양쪽 바깥에 나누어 한 묶음으로 읽히게 한다.
+        const gap = Math.min(unit, 144 * k)
+        const outer = (a.width - widths[0] - widths[1] - gap) / 2
+        const targets = [a.left + outer, a.left + outer + widths[0] + gap]
+        if (gap >= 72 * k) {
           pair.forEach((c, i) => {
             const r = c.getBoundingClientRect()
             const d = Math.max(r.left - ink[i]!.l, Math.min(r.right - ink[i]!.r, targets[i] - ink[i]!.l))
@@ -1446,6 +1466,28 @@ export function blockFitter() {
         if (px > 0) for (const c of col) c.style.setProperty('--bk-shift-x', px + 'px')
       })
     })
+    // 오른쪽 개요는 줄 선이 칸 끝까지 그어져 있어 위의 균형 맞추기는 가득 찬 것으로 본다. 그러나 값이 짧으면 글은 왼쪽에 몰린다.
+    // 줄을 장 밖으로 밀지 않도록 안쪽 폭을 옮긴 만큼 줄이면서, 내용이 여전히 들어가는 경우에만 조금 오른쪽으로 옮긴다.
+    if (cells.length === 2 && cells.every((c) => !c.classList.contains('lk-row')) && num(cells[0], '--y') === num(cells[1], '--y')) {
+      const pair = [...cells].sort((p, q) => num(p, '--x') - num(q, '--x'))
+      const c = pair[1]
+      const inner = c.dataset.type === 'facts' ? c.querySelector<HTMLElement>(':scope > .bk-in') : null
+      if (inner && !inner.style.getPropertyValue('--bk-content-shift')) {
+        const text = lines(inner, true)
+        const right = text.reduce((r, q) => Math.max(r, q.r), -Infinity)
+        const want = a.right - a.width * 0.23 - right
+        const max = c.getBoundingClientRect().width * 0.12
+        const px = Math.round(Math.min(want, max) / k)
+        if (want > 0 && px > 0) {
+          inner.style.setProperty('--bk-content-shift', `${px}px`)
+          inner.style.setProperty('--bk-content-limit', `${px}px`)
+          if (crowded(inner)) {
+            inner.style.removeProperty('--bk-content-shift')
+            inner.style.removeProperty('--bk-content-limit')
+          }
+        }
+      }
+    }
   }
 
   /**

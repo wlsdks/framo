@@ -307,13 +307,13 @@ export function AskStatus({ deck, job, onCancel }: { deck: Deck; job: AskJob; on
         <AskIcon />
       </span>
       <div className="ai-inbox-text">
-        <p className="ai-inbox-h">‘{askOf(job.ask)?.name}’ 맡겼어요</p>
+        <p className="ai-inbox-h">{job.connectionLost ? '진행 상태를 확인하지 못했어요' : `‘${askOf(job.ask)?.name}’ 맡겼어요`}</p>
         <p className="ai-inbox-p">
-          {target} · {elapsed}
+          {job.connectionLost ? '다시 확인하고 있어요. 연결되지 않으면 중단을 요청해도 부탁이 계속될 수 있어요.' : `${target} · ${elapsed}`}
         </p>
       </div>
       <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
-        그만두기
+        {job.connectionLost ? '중단 요청' : '그만두기'}
       </button>
       <AskSteps job={job} />
     </div>

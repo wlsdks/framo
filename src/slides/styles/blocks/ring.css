@@ -107,6 +107,56 @@
   text-wrap: balance;
 }
 
+/* 비율로 읽을 수 없는 값은 원을 남겨 0%처럼 보이지 않게, 숫자와 설명만 모은다. */
+.bk-rg.is-unknown {
+  grid-template: 'l' auto 'box' auto 'n' auto / minmax(0, 1fr);
+  align-content: start;
+  justify-items: start;
+  text-align: left;
+}
+
+.bk-rg.is-unknown .bk-rg-box {
+  /* 원의 크기를 재던 size 컨테이너를 그대로 두면 내용 높이가 0이 되어 아래 설명과 겹친다. */
+  container-type: normal;
+  width: 100%;
+  height: auto;
+  aspect-ratio: auto;
+}
+
+.bk-rg.is-unknown .bk-rg-sq {
+  width: 100%;
+  aspect-ratio: auto;
+}
+
+.bk-rg.is-unknown .bk-rg-c {
+  position: static;
+  display: block;
+}
+
+.bk-rg.is-unknown .bk-rg-l {
+  margin: 0 0 12px;
+}
+
+.bk-rg.is-unknown .bk-rg-n {
+  margin-top: 12px;
+}
+
+@container bk (min-width: 700px) {
+  .bk-rg.is-unknown {
+    grid-template: 'box l' auto 'box n' auto / minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 64px;
+  }
+
+  .bk-rg.is-unknown .bk-rg-l {
+    align-self: end;
+    margin: 0;
+  }
+
+  .bk-rg.is-unknown .bk-rg-n {
+    align-self: start;
+  }
+}
+
 .bk-rg.is-demo .bk-rg-arc {
   opacity: 0.35;
 }
@@ -258,6 +308,39 @@
 
   .bk-rg-n {
     --fs: var(--t-lead);
+  }
+}
+
+/* 높은 반쪽 칸에서도 원이 칸 높이를 거의 다 차지하면 옆의 짧은 목록에 비해 지나치게 커진다.
+   원과 설명을 옆으로 모아 차트의 의미와 다른 컴포넌트의 크기를 함께 읽을 수 있게 한다. */
+@container bk (min-width: 700px) and (min-height: 441px) {
+  .bk.is-shared.bk-look-plain .bk-rg:not(.is-gauge, .is-unknown) {
+    grid-template: 'box l' auto 'box n' auto / auto minmax(0, 1fr);
+    align-content: start;
+    justify-items: start;
+    gap: 0 40px;
+    text-align: left;
+  }
+
+  .bk.is-shared.bk-look-plain .bk-rg:not(.is-gauge, .is-unknown) .bk-rg-box {
+    width: min(44cqw, 360px);
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .bk.is-shared.bk-look-plain .bk-rg:not(.is-gauge, .is-unknown) .bk-rg-l {
+    align-self: end;
+    margin-top: 0;
+  }
+
+  .bk.is-shared.bk-look-plain .bk-rg:not(.is-gauge, .is-unknown) .bk-rg-n {
+    align-self: start;
+    margin-top: 14px;
+  }
+
+  .bk.is-shared.bk-look-plain .bk-rg:not(.is-gauge, .is-unknown):not(:has(> .bk-rg-n)) > .bk-rg-l {
+    grid-row: l-start / n-end;
+    align-self: center;
   }
 }
 

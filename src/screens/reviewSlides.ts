@@ -81,6 +81,94 @@ function messageList(look?: Look): Slide {
   return { ...slide, blocks: slide.blocks!.map((b, i) => ({ ...b, at: { x: i * 6, y: 0, w: 6, h: 12 } })) }
 }
 
+/** 핵심 문장 아래 낮고 넓은 목록: 항목 수와 글 길이에 따라 단과 여백이 바뀌는 사례 */
+function messageListStacked(n: number, long: boolean): Slide {
+  const message = block({ type: 'message', fields: { text: '주간 보고를 한 양식으로 맞추면 회의가 20분 줄어요', sub: '가상의 시범 운영 3개월 기준' } }, `message-stack-${n}-message`)
+  const list = block({ type: 'bullets', n }, `message-stack-${n}-list`)
+  const short = ['주문이 많은 품목부터 적용해요', '단가 기록을 한곳에 모아요', '매달 처리 시간을 살펴봐요', '담당자에게 결과를 공유해요', '분기마다 효과를 다시 봐요', '결과에 따라 적용 범위를 넓혀요']
+  const extended = ['주문이 많은 품목부터 적용하고 처리 시간을 함께 살펴봐요', '단가 기록을 한곳에 모아 담당자가 쉽게 확인하도록 해요', '매달 처리 시간을 살펴보고 지연된 원인을 찾아요', '담당자에게 결과를 공유하고 개선할 점을 정해요', '분기마다 효과를 다시 보고 다음 계획에 반영해요', '결과에 따라 적용 범위를 넓히고 참여 팀을 정해요']
+  return {
+    ...makeSlide('compose'), id: `review-message-stack-${n}${long ? '-long' : ''}`, fields: { title: '가상의 주간 보고 개선' },
+    blocks: [
+      { ...message, at: { x: 0, y: 0, w: 12, h: 7 } },
+      { ...list, fields: { ...list.fields, heading: '먼저 바꿀 것' }, items: list.items.map((item, i) => ({ ...item, title: (long ? extended : short)[i] })), at: { x: 0, y: 7, w: 12, h: 5 } },
+    ],
+  }
+}
+
+/** 입력 중 단위가 섞이면 원문을 보여 주는 비교 차트. 실제 편집처럼 놓은 뒤 값을 바꿔 본다. */
+function mixedVersus(variant: 'base' | 'lines' | 'dots', look?: Look): Slide {
+  const slide = scene(`mixed-versus-${variant}`, { title: '가상의 비교 값과 단위를 확인해요' }, [
+    { type: 'versus', variant, n: 4 }, { type: 'note', fields: { kind: '확인', text: '두 값의 단위를 맞춘 뒤 비교해요.' } },
+  ], look)
+  const values = [['10건', '20%'], ['8건', '15%'], ['6건', '확인 중'], ['', '5%']]
+  return { ...slide, blocks: slide.blocks!.map((b) => b.type !== 'versus' ? b : {
+    ...b, fields: { ...b.fields, unit: '' },
+    items: b.items.map((item, i) => ({ ...item, meta: values[i][0], value: values[i][1] })),
+  }) }
+}
+
+/** 실적과 목표의 단위가 서로 다를 때 작성한 값을 감추지 않는지 확인한다. */
+function mixedAttain(variant: 'base' | 'gap', look?: Look): Slide {
+  const slide = scene(`mixed-attain-${variant}`, { title: '가상의 실적과 목표 단위를 확인해요' }, [
+    { type: 'attain', variant, n: 3 }, { type: 'note', fields: { kind: '확인', text: '같은 단위로 고친 뒤 달성 여부를 비교해요.' } },
+  ], look)
+  const values = [['10건', '5%'], ['20건', '15%'], [variant === 'gap' ? '' : '확인 중', '25%']]
+  return { ...slide, blocks: slide.blocks!.map((b) => b.type !== 'attain' ? b : {
+    ...b, fields: { ...b.fields, unit: '' },
+    items: b.items.map((item, i) => ({ ...item, value: values[i][0], meta: values[i][1] })),
+  }) }
+}
+
+/** 평가가 빠진 열과 아직 확인 중인 글이 다른 대안으로 밀리지 않는지 확인한다. */
+function missingRating(look?: Look): Slide {
+  const slide = scene('missing-rating', { title: '가상의 세 가지 대안을 비교해요' }, [
+    { type: 'rating', n: 3 }, { type: 'note', fields: { kind: '확인', text: '비어 있는 평가는 확인한 뒤 채워요.' } },
+  ], look)
+  const values = ['좋음, , 나쁨', '보통, 확인 중, 좋음', ', 보통,']
+  return { ...slide, blocks: slide.blocks!.map((b) => b.type !== 'rating' ? b : {
+    ...b, fields: { ...b.fields, opts: '첫째, , 셋째', pick: '' },
+    items: b.items.map((item, i) => ({ ...item, body: values[i] })),
+  }) }
+}
+
+/** 확인되지 않았거나 범위가 맞지 않는 진행률이 어떤 상태로 그려지는지 살펴볼 사례. */
+function uncertainProgress(look?: Look): Slide {
+  const slide = scene('uncertain-progress', { title: '가상의 과제와 확인할 진행률' }, [
+    { type: 'progress', variant: 'board', n: 4 }, { type: 'note', fields: { kind: '검수', text: '진행률과 상태를 확인한 뒤 표시해요.' } },
+  ], look)
+  const values = [['40%', '진행 중'], ['확인 중', ''], ['10건', ''], ['150%', '']]
+  return { ...slide, blocks: slide.blocks!.map((b) => b.type !== 'progress' ? b : {
+    ...b, items: b.items.map((item, i) => ({ ...item, value: values[i][0], body: values[i][1] })),
+  }) }
+}
+
+/** 다섯 상태가 동시에 있을 때 좁은 단과 줄 높이를 점검한다. */
+function fiveLaneProgress(look?: Look): Slide {
+  const slide = scene('five-lane-progress', { title: '가상의 과제 상태를 함께 살펴봐요' }, [
+    { type: 'progress', variant: 'board', n: 7 },
+  ], look)
+  const values = [['100%', '완료'], ['60%', '진행 중'], ['30%', '2주 지연'], ['0%', '예정'], ['150%', '검토 중'], ['40%', '진행 중'], ['10건', '검토 중']]
+  return { ...slide, blocks: slide.blocks!.map((b) => ({ ...b, items: b.items.map((item, i) => ({ ...item, value: values[i][0], body: values[i][1] })) })) }
+}
+
+/** 실제 편집에서 만든 목록과 비율 원: 글이 채워진 뒤 다시 놓는 경우도 살핀다. */
+function listRing(look?: Look, long = false): Slide {
+  const slide = scene(long ? 'list-ring-long' : 'list-ring', { title: '분류 시간을 줄여 현장의 대기와 재작업을 함께 줄여요', lead: '가상의 현장 조사와 시범 운영을 기준으로' }, [
+    { type: 'bullets', n: 3, fields: { heading: '' } }, { type: 'ring', fields: { value: '72%', label: long ? '시범 운영에서 처음으로 해결한 문의의 비율' : '가상의 시범 목표', note: long ? '가상의 문의를 8주 동안 살펴본 결과예요' : '' } },
+  ], look)
+  const titles = ['현장 대기 시간을 먼저 살펴봐요', '한 구간에서 8주간 시범 운영해요', '처리 시간과 재작업을 함께 비교해요']
+  return { ...slide, blocks: slide.blocks!.map((b) => b.type === 'bullets' ? { ...b, items: b.items.map((item, i) => ({ ...item, title: titles[i], body: '' })) } : b) }
+}
+
+/** 실제 입력처럼 이름에 설명까지 길게 적은 경우: 글이 사라지거나 옆 목록과 겹치지 않는지 본다. */
+function listRingVeryLong(look?: Look): Slide {
+  const slide = listRing(look, true)
+  return { ...slide, id: 'review-list-ring-very-long', blocks: slide.blocks!.map((b) => b.type === 'ring' ? {
+    ...b, fields: { ...b.fields, label: '가상의 현장 시범 운영에 참여한 여러 팀이 처음 받은 문의를 추가 확인 없이 해결한 비율과 처리 속도의 변화와 담당자의 확인 결과를 함께 살펴보는 가상의 예시', note: '' },
+  } : b) }
+}
+
 /** 낮고 넓은 시장 규모에서 긴 숫자가 바로 옆 숫자와 겹치던 장 */
 function marketLong(look?: Look): Slide {
   const slide = scene('market-long', {}, [{ type: 'market', n: 3 }, { type: 'text' }], look)
@@ -188,6 +276,26 @@ function sparkKpiList(): Slide {
   }
 }
 
+/** 두 지표가 세로로 쌓이고 옆 목록이 위에만 몰린 사용자의 사례 */
+function kpiNextActions(long = false): Slide {
+  const kpi = block({ type: 'kpi', variant: 'cards', n: 2 }, 'kpi-actions-kpi')
+  const list = block({ type: 'bullets', n: 3 }, 'kpi-actions-list')
+  const items = long ? [
+    { title: '한 달 동안 처리한 문의', value: '12,345건', body: '시범 운영에 참여한 세 곳을 합친 건수' },
+    { title: '처음에 해결된 문의', value: '78.5%', body: '가상의 문의 가운데 추가 확인이 필요 없었던 비율' },
+  ] : [
+    { title: '한 사람이 아끼는 시간', value: '3시간', body: '회의 9시간이 6시간으로' },
+    { title: '줄어드는 진행 회의 시간', value: '67%', body: '진행 회의 90분이 30분으로' },
+  ]
+  return {
+    ...makeSlide('compose'), id: `review-kpi-next-actions${long ? '-long' : ''}`, fields: {},
+    blocks: [
+      { ...kpi, items: kpi.items.map((item, i) => ({ ...item, ...items[i] })), at: { x: 0, y: 0, w: 8, h: 12 } },
+      { ...list, at: { x: 8, y: 0, w: 4, h: 12 } },
+    ],
+  }
+}
+
 /** 쌓인 두 칸 옆 준비 상황의 높이가 줄었다가 되돌아가던 장 */
 function stackedChecks(): Slide {
   const puts: Put[] = [
@@ -248,6 +356,17 @@ export function reviewSlides(look?: Look): Slide[] {
     pairChart(look),
     pairChartWide(look),
     messageList(look),
+    ...[2, 3, 4, 5, 6].flatMap((n) => [messageListStacked(n, false), messageListStacked(n, true)]),
+    ...(['base', 'lines', 'dots'] as const).map((variant) => mixedVersus(variant, look)),
+    ...(['base', 'gap'] as const).map((variant) => mixedAttain(variant, look)),
+    missingRating(look),
+    uncertainProgress(look),
+    fiveLaneProgress(look),
+    listRing(look), listRing(look, true), listRingVeryLong(look),
+    ...(['base', 'gauge'] as const).flatMap((variant) => [
+      scene(`ring-range-${variant}`, { title: '가상의 비율을 확인해요' }, [{ type: 'ring', variant, fields: { value: '150%', label: '확인할 비율' } }, { type: 'note', fields: { text: '입력한 비율이 표시 범위에 맞는지 확인해요.' } }], look),
+      scene(`ring-unit-${variant}`, { title: '가상의 단위를 확인해요' }, [{ type: 'ring', variant, fields: { value: '10건', label: '확인할 값' } }, { type: 'note', fields: { text: '비율이 아닌 값은 원문으로 확인해요.' } }], look),
+    ]),
     marketLong(look),
     funnelStat(),
     chartSummary(),
@@ -255,6 +374,8 @@ export function reviewSlides(look?: Look): Slide[] {
     numberRing(),
     linkedNumbers(),
     sparkKpiList(),
+    kpiNextActions(),
+    kpiNextActions(true),
     stackedChecks(),
   ]
 }

@@ -1,4 +1,4 @@
-import { BLOCK_LOOK_IDS, BLOCKS, BLOCK_TYPES, BOARD_ROWS, boardFit, boardFromRows, composeAreaH, needRows, settleDeck } from '../deck/blocks'
+import { BLOCK_LOOK_IDS, BLOCKS, BLOCK_TYPES, BOARD_ROWS, boardFit, boardFromRows, composeAreaH, needRows, rearrangeBlocks, settleDeck } from '../deck/blocks'
 import { sampleBlock } from '../deck/blockSamples'
 import { BLUEPRINTS } from '../deck/blueprints'
 import { pageInfo } from '../deck/fields'
@@ -18,6 +18,7 @@ import { checkEdit } from './checkEdit'
 import { checkFrame, inkOf } from './checkFrame'
 import { clashes, failingHeights, heightsSource, measureAll, measureAllFonts, measureBlocks, mergeHeights, spanWidth } from './measureBlocks'
 import { reviewSlides } from './reviewSlides'
+import { scenarioSlides } from './scenarioSlides'
 import { checkStress, stressSlides } from './stress'
 import { dirSlides } from './dirSlides'
 
@@ -32,7 +33,9 @@ import { dirSlides } from './dirSlides'
 // &flip=1 은 두 판으로 나뉜 장(표지, 사례, 이미지와 설명, 결정 요청)의 옆 판을 반대쪽으로, &side=3 처럼 숫자면 옆 판의 너비(고를 수 있는 값일 때만).
 // &hideHead=1, &hideFoot=1 은 제목·부제와 아래 표시를 각각 숨긴 슬라이드를 점검한다. &blankHead=1 은 제목과 부제를 비운다.
 // set=edge 는 차트 장이 무너지기 쉬운 값(음수, 빈 값, 많은 항목, 같은 값)만 모아 본다.
-// set=review 는 부품 장의 대표 조합 몇 장 (reviewSlides.ts, 고치기 전과 후를 견줄 때). &w=1920 이면 장을 줄이지 않고 그린다.
+// set=review 는 부품 장의 대표 조합 몇 장 (reviewSlides.ts, 고치기 전과 후를 견줄 때). &reflow=1은 같은 장을 자동 재배치한 결과다.
+// &w=1920 이면 장을 줄이지 않고 그린다.
+// set=scenarios 는 서로 다른 발표 상황의 가상 내용을 자동 조립한 장이다.
 // set=stress&type=bullets 는 부품 하나를 항목 수, 칸 너비, 칸 높이마다 (stress.ts의 checkStress). type=many 는 부품 하나부터 여섯까지.
 // set=dirs 는 컴포넌트의 모양을 고칠 때 전과 후를 견줄 장(dirSlides.ts: 빽빽한 장, 듬성한 장, 지표 줄, 단계, 비교, 인용, 이음표).
 // set=combos&seed=1&n=60 은 규칙이 받아들인 부품 조합을 seed마다 정해진 차례로 만들어 본다 (combos.ts의 checkCombos).
@@ -116,11 +119,13 @@ function edgeSlides(): Slide[] {
  * 핵심 한 줄과 같이 들어가지 않는 부품은 혼자 둔다(편집기도 그 장에는 넣지 않는다).
  * 함께 놓는 부품(fill-)은 높이를 잴 때(measureBlocks) 건너뛴다.
  */
-function blockSlides(fill: string | null, only?: string[], variant?: string | null, look?: string | null, lane?: boolean): Slide[] {
+function blockSlides(fill: string | null, only?: string[], variant?: string | null, look?: string | null, lane?: boolean, value?: string | null, fiveLanes?: boolean, status?: string | null): Slide[] {
   return BLOCK_TYPES.flatMap((type, n) => {
     if (only && !only.includes(type)) return []
     const spec = BLOCKS[type]
-    const sample = sampleBlock(type)
+    const original = sampleBlock(type)
+    // 숫자가 아닌 입력도 실제 크기로 재어 본다. 예시의 다른 부품은 바꾸지 않는다.
+    const sample = type === 'ring' && value != null ? { ...original, fields: { ...original.fields, value } } : original
     // &fill=max: 항목을 가장 많이 넣었을 때, &fill=default: 새로 넣을 때의 수, &fill=3: 세 개. 예시 항목을 되풀이해 채운다
     const count = !spec.items
       ? 0
@@ -135,7 +140,11 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
         : sample.items
     // &lane=1: 진행 현황의 과제를 모두 한 단에(상태별 모양의 높이는 가장 많이 모인 단의 과제 수로 잰다, blocks/sizing.ts).
     // 지연 단이라 과제마다 사정 글이 이름 줄 끝에 선다: 단 너비가 가장 좁은 경우
-    const items = lane && type === 'progress' ? filled.map((it) => ({ ...it, body: '2주 지연' })) : filled
+    const states = [['100%', '완료'], ['60%', '지연 없이 진행 중'], ['30%', '2주 지연'], ['0%', '예정'], ['150%', '검토 중'], ['40%', '진행 중'], ['10건', '검토 중']]
+    const items = type !== 'progress' ? filled : status != null
+      ? filled.map((it) => ({ ...it, body: status })) : fiveLanes
+      ? filled.map((it, i) => ({ ...it, value: states[i][0], body: states[i][1] }))
+      : lane ? filled.map((it) => ({ ...it, body: '2주 지연' })) : filled
     // &bv=list: 그 모양이 있는 부품은 그 모양으로
     const v = variant && spec.variants?.some((x) => x.id === variant) ? { variant } : {}
     const lk = BLOCK_LOOK_IDS.find((x) => x === look) ? { look: look as BlockLook } : {}
@@ -190,11 +199,15 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
   }
   const deck = createSampleDeck()
   if (set === 'edge') return { ...deck, theme: { id: theme }, slides: edgeSlides() }
-  if (set === 'blocks') return { ...deck, theme: { id: theme }, slides: blockSlides(params.get('fill'), params.get('types')?.split(','), params.get('bv'), params.get('bl'), params.get('lane') === '1') }
+  if (set === 'blocks') return { ...deck, theme: { id: theme }, slides: blockSlides(params.get('fill'), params.get('types')?.split(','), params.get('bv'), params.get('bl'), params.get('lane') === '1', params.get('value'), params.get('lanes') === '5', params.get('status')) }
   if (set === 'stress') return { ...deck, theme: { id: theme }, slides: stressSlides(params.get('type'), params.get('bv'), params.get('bl')) }
   // 판은 그 테마(글꼴)와 글자 크기의 본문 높이로 짠다: 명조 제목은 고딕보다 머리가 높다
   const look = { theme: { id: theme, size: params.get('size') ?? undefined } }
-  if (set === 'review') return { ...deck, theme: { id: theme }, slides: reviewSlides(look) }
+  if (set === 'review') {
+    const slides = reviewSlides(look)
+    return { ...deck, theme: { id: theme }, slides: params.get('reflow') === '1' ? slides.map((s) => ({ ...s, blocks: rearrangeBlocks(s.blocks ?? [], composeAreaH(s, look, true)) ?? s.blocks })) : slides }
+  }
+  if (set === 'scenarios') return { ...deck, title: '가상의 발표 예시', theme: { id: theme }, slides: scenarioSlides(look) }
   if (set === 'dirs') return { ...deck, theme: { id: theme }, slides: dirSlides(look) }
   if (set === 'combos') return { ...deck, theme: { id: theme }, slides: comboSlides(Number(params.get('seed')) || 1, Number(params.get('n')) || 40, look, params.get('mode') === 'edit').map((c) => c.slide) }
   return { ...deck, theme: { id: theme }, slides: [...deck.slides, ...extraSlides()] }
@@ -228,7 +241,7 @@ export function Gallery() {
   // 부품의 잘리지 않는 높이를 재는 도구 (measureBlocks.ts). 콘솔에서 await measureBlocks()
   if (params.get('set') === 'blocks') Object.assign(window, { measureAll, measureAllFonts, measureBlocks, mergeHeights, heightsSource, clashes, failingHeights, spanWidth, fitBlocks })
   // 부품 조합 시험 (combos.ts). 콘솔에서 await checkCombos()
-  if (['combos', 'review', 'dirs'].includes(params.get('set') ?? '')) Object.assign(window, { checkCombos, comboSlides, checkAssembly })
+  if (['combos', 'review', 'dirs', 'scenarios'].includes(params.get('set') ?? '')) Object.assign(window, { checkCombos, comboSlides, checkAssembly })
   // 잘림과 짜임 검사는 레이아웃 장 갤러리에서도 (레이아웃 장은 잘림만 본다)
   else Object.assign(window, { checkAssembly })
   // 부품 하나를 항목 수와 칸 크기마다 재는 시험 (stress.ts). 콘솔에서 await checkStress()

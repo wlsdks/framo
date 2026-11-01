@@ -9,24 +9,24 @@ function svg(body: string, w = 360, h = 120): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}">${body}</svg>`)}`
 }
 
-/** 모양 + 회사 이름 네 글자. 그림 너비를 글자 끝(96 + 40×4)에 맞춰야 칸에 맞출 때 로고가 작아지지 않는다 */
+/** 모양 + 가상 업체 표기. 짧아진 이름에 맞춰 그림의 빈 오른쪽을 줄여 로고가 지나치게 작아지지 않게 한다. */
 function wordmark(name: string, shape: string): string {
   return svg(
     `${shape}<text x="96" y="74" font-family="Pretendard Variable, Apple SD Gothic Neo, sans-serif" font-size="40" font-weight="800" letter-spacing="-1" fill="#1d2330">${name}</text>`,
-    280,
+    230,
   )
 }
 
 /** 개발용 레이아웃 모음에서도 쓰는 예시 로고 */
 export const SAMPLE_LOGOS = [
-  wordmark('대성정밀', '<rect x="24" y="36" width="52" height="52" rx="10" fill="#1d2330"/>'),
-  wordmark('한결테크', '<circle cx="50" cy="62" r="27" fill="#1d2330"/>'),
-  wordmark('누리소재', '<path d="M24 88 L50 36 L76 88 Z" fill="#1d2330"/>'),
-  wordmark('선진화학', '<rect x="24" y="36" width="52" height="52" rx="26" fill="none" stroke="#1d2330" stroke-width="10"/>'),
-  wordmark('동해전자', '<path d="M24 36h52v18H42v34H24z" fill="#1d2330"/>'),
-  wordmark('미래모빌', '<path d="M24 88V36l26 26 26-26v52" fill="none" stroke="#1d2330" stroke-width="10"/>'),
-  wordmark('바른식품', '<rect x="24" y="36" width="22" height="52" fill="#1d2330"/><rect x="54" y="52" width="22" height="36" fill="#1d2330"/>'),
-  wordmark('세움건설', '<path d="M24 88h52V36z" fill="#1d2330"/>'),
+  wordmark('가상 A', '<rect x="24" y="36" width="52" height="52" rx="10" fill="#1d2330"/>'),
+  wordmark('가상 B', '<circle cx="50" cy="62" r="27" fill="#1d2330"/>'),
+  wordmark('가상 C', '<path d="M24 88 L50 36 L76 88 Z" fill="#1d2330"/>'),
+  wordmark('가상 D', '<rect x="24" y="36" width="52" height="52" rx="26" fill="none" stroke="#1d2330" stroke-width="10"/>'),
+  wordmark('가상 E', '<path d="M24 36h52v18H42v34H24z" fill="#1d2330"/>'),
+  wordmark('가상 F', '<path d="M24 88V36l26 26 26-26v52" fill="none" stroke="#1d2330" stroke-width="10"/>'),
+  wordmark('가상 G', '<rect x="24" y="36" width="22" height="52" fill="#1d2330"/><rect x="54" y="52" width="22" height="36" fill="#1d2330"/>'),
+  wordmark('가상 H', '<path d="M24 88h52V36z" fill="#1d2330"/>'),
 ]
 
 export const SAMPLE_DASHBOARD = svg(
@@ -151,7 +151,7 @@ const CONTENT: Record<string, Fill> = {
     fields: { title: '한 사람이 일주일에 3시간을 돌려받아요', source: '본부 설문을 바탕으로 한 추정, 9월 기준' },
     items: [
       { value: '3시간', title: '한 사람이 아끼는 시간', body: '회의 9시간이 6시간으로' },
-      { value: '33%', title: '줄어드는 회의 시간', body: '진행 회의 90분이 30분으로' },
+      { value: '67%', title: '줄어드는 진행 회의 시간', body: '진행 회의 90분이 30분으로' },
       { value: '12,000시간', title: '본부가 한 해에 아끼는 시간', body: '80명, 한 해 50주 기준' },
     ],
   },

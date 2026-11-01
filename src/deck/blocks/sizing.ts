@@ -140,7 +140,7 @@ export function blockMinH(block: Block, span: number): number {
 /**
  * 잰 높이를 찾는 항목 수. 진행 현황의 상태별은 과제가 상태마다 한 단에 쌓여서 가장 많이 모인 단의 과제 수다
  * (잰 표도 그 수로 잰다: measureBlocks.ts의 lane). 항목 수로 찾으면 과제가 한 단에 몰릴 때 칸이 모자라 글자를 줄였다.
- * 진행률과 상태를 다 비웠으면 편집할 때는 예시(안내 문구)로, 발표할 때는 모두 예정 단에 그려지므로 둘 중 많은 쪽으로 센다
+ * 진행률과 상태를 다 비웠으면 편집할 때는 예시(안내 문구)로, 발표할 때는 확인 필요 단에 그려지므로 둘 중 많은 쪽으로 센다
  */
 function heightCount(block: Block, variant: string): number {
   const items = blockItems(block)
@@ -179,7 +179,8 @@ export const rowPitch = (areaH: number) => (areaH + BLOCK_GAP) / BOARD_ROWS
 export const colPitch = (areaW = AREA_W) => (areaW + BLOCK_COL_GAP) / BOARD_COLS
 
 /** 이 높이(px)가 드는 세로 칸 수 */
-export const rowsFor = (px: number, areaH: number) => Math.max(1, Math.ceil((px + BLOCK_GAP) / rowPitch(areaH) - 1e-6))
+export const rowsFor = (px: number, areaH: number) =>
+  !Number.isFinite(areaH) || areaH <= 0 ? Infinity : Math.max(1, Math.ceil((px + BLOCK_GAP) / rowPitch(areaH) - 1e-6))
 
 /** 이음표가 선 쪽은 이음표가 설 자리만큼 비켜 준다 (위아래로만 높이에서 빠진다. 옆은 칸 사이가 넓어 이음표가 들어간다) */
 function linkRoom(b: Block, blocks: readonly Block[]): number {
@@ -261,6 +262,8 @@ export function changeBlocks(blocks: Block[], blockId: string, fn: (b: Block) =>
 
 /** 판의 모든 부품이 잘리지 않는 데 드는 높이 (본문 px). 너비로 안 되면 본문의 두 배로 친다 */
 export function needRowsPx(blocks: Block[], areaH: number): number {
+  if (!blocks.length) return 0
+  if (!Number.isFinite(areaH) || areaH <= 0) return Infinity
   const rows = needRows(blocks, boardFit(areaH, blocks))
   return Number.isFinite(rows) ? rows * rowPitch(areaH) - BLOCK_GAP : areaH * 2
 }
@@ -282,6 +285,7 @@ export function overAlready(blocks: Block[], areaH: number): boolean {
 
 /** 이 판이 장에 들어가지 않을 때의 까닭 (잘리지 않는 데 드는 높이와 본문 높이, px). before: 넣거나 바꾸기 전의 판 */
 export function heightIssue(blocks: Block[], areaH: number, before?: Block[]): NoRoom {
+  if (Number.isFinite(areaH) && areaH <= 0) return { kind: 'height', need: 1, room: 0, noBody: true, ...(before?.length ? { already: true } : {}) }
   const already = before && overAlready(before, areaH) ? { already: true as const } : {}
   return { kind: 'height', need: Math.round(needRowsPx(blocks, areaH)), room: Math.round(areaH), ...already }
 }
@@ -308,7 +312,7 @@ export function fitsWith(blocks: Block[], blockId: string, fn: (b: Block) => Blo
 }
 
 /** 글의 폭 (글자 크기의 몫) */
-function widthOf(text: string, g: Glyphs): number {
+export function widthOf(text: string, g: Glyphs): number {
   let w = 0
   for (const ch of text) {
     if (/[ㄱ-ㆎ가-힣一-鿿]/.test(ch)) w += g.hangul
