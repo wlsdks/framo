@@ -72,6 +72,16 @@ export function followIndex(index: number | undefined, from: number, to: number)
   return index
 }
 
+/**
+ * 항목 하나를 뺀 뒤 강조한 항목의 자리. 사람이 고른 강조는 그 항목을 따라 당겨지고, 강조한 항목을 빼면 강조도 없앤다(-1).
+ * 그대로 두면 뺀 자리로 올라온 다음 항목이 강조되었다. 고르지 않은 강조(없음)는 자리로 정한 것이라 그대로 둔다(followIndex와 같다)
+ */
+export function dropIndex(index: number | undefined, removed: number): number | undefined {
+  if (index === undefined || index < 0) return index
+  if (index === removed) return -1
+  return index > removed ? index - 1 : index
+}
+
 export interface Missing {
   key: string
   item?: number

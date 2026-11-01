@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deckBlanks, deckMissingCount, isBlankItem, missingFields, optionalBlanks, presentable, shownOnly, unshownCount } from './fields'
+import { deckBlanks, deckMissingCount, dropIndex, isBlankItem, missingFields, optionalBlanks, presentable, shownOnly, unshownCount } from './fields'
 import { createDeck, emptyItem, makeSlide } from './generate'
 import { BLOCKS, withLayout } from './blocks'
 import { labelFor, labelIn, LAYOUT_ORDER, LAYOUTS } from './layouts'
@@ -178,5 +178,15 @@ describe('빈칸과 비워 둬도 되는 칸', () => {
     const sum = hidden.slides.filter((s) => !s.hidden).reduce((n, s) => n + missingFields(s, hidden.meta).length, 0)
     expect(deckMissingCount(hidden)).toBe(sum)
     expect(deckBlanks(hidden).every((b) => !b.slide.hidden && b.missing.length > 0)).toBe(true)
+  })
+})
+
+describe('항목을 뺀 뒤 강조 (dropIndex)', () => {
+  it('고른 강조는 그 항목을 따라 당겨지고, 강조한 항목을 빼면 없어진다. 고르지 않은 강조는 자리로 정한 것이라 그대로', () => {
+    expect(dropIndex(2, 0)).toBe(1)
+    expect(dropIndex(2, 2)).toBe(-1)
+    expect(dropIndex(2, 3)).toBe(2)
+    expect(dropIndex(undefined, 0)).toBeUndefined()
+    expect(dropIndex(-1, 0)).toBe(-1)
   })
 })

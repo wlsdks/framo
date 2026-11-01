@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createDeck } from '../deck/generate'
+import { createDeck, emptyItem, makeSlide } from '../deck/generate'
 import { sampleBlock } from '../deck/blockSamples'
 import { autoPlace, boardAreaH, boardTight, rearrangeBlocks, removeBlock } from '../deck/blocks'
 import { LAYOUTS, variantOf } from '../deck/layouts'
 import { gestureKey } from '../lib/pointerSession'
+import type { Slide } from '../deck/types'
 import { undoLast, useDeck } from './deckStore'
 
 const deck = () =>
@@ -336,5 +337,26 @@ describe('되돌린 뒤 보는 장', () => {
     useDeck.getState().select(s.id)
     useDeck.getState().undo()
     expect(useDeck.getState().selectedId).toBe(s.id)
+  })
+})
+
+describe('항목 빼기와 복제, 장 복제', () => {
+  const item = (title: string) => ({ ...emptyItem(), title })
+  const open = (slide: Slide) => {
+    const d = deck()
+    useDeck.getState().open({ ...d, slides: [d.slides[0], slide] })
+    return slide.id
+  }
+  const slide = (i = 1) => useDeck.getState().deck!.slides[i]
+  const titles = () => slide().items.map((it) => it.title)
+
+  it('항목을 빼면 고른 강조는 그 항목을 따라가고, 강조한 항목을 빼면 강조도 없어진다 (다음 항목으로 옮겨 가지 않는다)', () => {
+    const id = open({ ...makeSlide('process'), items: ['가', '나', '다', '라'].map(item), options: { highlight: 2 } })
+    useDeck.getState().removeItem(id, 0)
+    expect(titles()).toEqual(['나', '다', '라'])
+    expect(slide().options.highlight).toBe(1)
+    useDeck.getState().removeItem(id, 1)
+    expect(titles()).toEqual(['나', '라'])
+    expect(slide().options.highlight).toBe(-1)
   })
 })

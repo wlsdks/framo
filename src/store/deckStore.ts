@@ -3,7 +3,7 @@ import { asCompose, cleanDeckBlocks, copyBlocks, mapBlock, settleDeck, tidyLinks
 import { unknownParts } from '../deck/compat'
 import { withOneMore } from '../deck/edits'
 import { makeSlide, uid } from '../deck/generate'
-import { followIndex, isMetaKey, moveIn } from '../deck/fields'
+import { dropIndex, followIndex, isMetaKey, moveIn } from '../deck/fields'
 import { LAYOUTS, variantOf } from '../deck/layouts'
 import { migrateDeck } from '../deck/migrate'
 import { GESTURE_KEY } from '../lib/pointerSession'
@@ -267,7 +267,12 @@ export const useDeck = create<DeckState>((set, get) => {
       )
     },
     removeItem(slideId, index) {
-      commit((d) => mapSlide(d, slideId, (s) => ({ ...s, items: s.items.filter((_, i) => i !== index) })))
+      commit((d) =>
+        mapSlide(d, slideId, (s) => {
+          const highlight = dropIndex(s.options.highlight, index)
+          return { ...s, items: s.items.filter((_, i) => i !== index), options: highlight === s.options.highlight ? s.options : { ...s.options, highlight } }
+        }),
+      )
     },
     duplicateItem(slideId, index) {
       commit((d) =>
