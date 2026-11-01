@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { asCompose, autoPlace, dropTarget, insertAt, makeBlock, moveAt, movingBase, placeIssue, removeBlock, type Shown } from '../../deck/blocks'
+import { asCompose, autoArranged, autoPlace, boardSig, dropTarget, insertAt, makeBlock, moveAt, movingBase, placeIssue, removeBlock, resizeBlock, type Shown } from '../../deck/blocks'
 import { makeSlide } from '../../deck/generate'
 import type { Block, Slide } from '../../deck/types'
 import { dropBlocks, planDrop, sameBoard, type DropState } from './planDrop'
@@ -39,7 +39,7 @@ describe('눌러 넣기', () => {
     const s = compose(block('kpi', 'k'))
     const b = block('trend', 't')
     const p = planDrop(s, fresh(s, b), { by: 'auto', h: SIZE.h })
-    expect(p).toEqual({ plan: 'place', target: null, result: autoPlace(s.blocks!, b, SIZE.h), blocked: null, composed: null, base: s.blocks, room: SIZE.h })
+    expect(p).toEqual({ plan: 'place', target: null, result: autoPlace(s.blocks!, b, SIZE.h), blocked: null, composed: null, base: s.blocks, room: SIZE.h, auto: true })
 
     const f = full()
     expect(f.blocks).toHaveLength(6)
@@ -47,6 +47,28 @@ describe('눌러 넣기', () => {
     expect(q.plan).toBe('next')
     expect(q.result).toBeNull()
     expect(q.blocked).toEqual(placeIssue(f.blocks!, b, SIZE.h))
+  })
+
+  it('알아서 짠 표시가 맞는 판은 예전 규칙으로 짠 판이어도 판을 다시 고르고, 그 판을 알아서 짠 판이라고 알린다', () => {
+    const now = compose(block('number', 'n'), block('bullets', 'l'), block('trend', 't')).blocks!
+    // 숫자 칸을 넓힌 판: 예전 규칙이 골랐을 판. 표시가 없으면 사람이 짠 판으로 보인다
+    const old = resizeBlock(now, 'n', 'w', 4, SIZE.h)!
+    expect(autoArranged(old, undefined, SIZE.h)).toBe(false)
+    const b = block('text', 'x')
+    const marked: Slide = { ...makeSlide('compose'), blocks: old, arranged: boardSig(old) }
+    const p = planDrop(marked, fresh(marked, b), { by: 'auto', h: SIZE.h })
+    expect(p.auto).toBe(true)
+    expect(p.result).toEqual(autoPlace(old, b, SIZE.h, true))
+    expect(p.result).not.toEqual(autoPlace(old, b, SIZE.h, false))
+    const plain: Slide = { ...marked, arranged: undefined }
+    const q = planDrop(plain, fresh(plain, b), { by: 'auto', h: SIZE.h })
+    expect(q.auto).toBe(false)
+    expect(q.result).toEqual(autoPlace(old, b, SIZE.h, false))
+    // 장 아래 빈자리로 고른 것은 사람이 고른 자리다
+    const one = compose(block('number', 'n'))
+    const r = planDrop(one, fresh(one, b), { by: 'auto', h: SIZE.h, bottom: true })
+    expect(r.result).toEqual(insertAt(one.blocks!, { at: null, side: 'below' }, b, SIZE.h))
+    expect(r.auto).toBeUndefined()
   })
 
   it('바꿀 수 있는 장: 부품 장으로 바꾼 모습에 넣는다. 아래 빈자리로 고르면 맨 아래 장 너비로', () => {

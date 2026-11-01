@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
+  autoArranged,
   autoPlace,
   bandOf,
   blockFieldPrefix,
@@ -84,6 +85,8 @@ interface Drag {
   blocked: NoRoom | null
   /** 놓으면 할 일: 이 장에 넣기, 이 장을 부품 장으로 바꿔 넣기, 넣지 않고 까닭과 '새 장에 넣기'를 알리기(next) */
   plan: DropPlanKind
+  /** 눌러 넣은 판이 알아서 짠 판인지 (planDrop). 끌어 놓은 것은 사람이 고른 자리라 없다 */
+  auto?: boolean
   /** 끌고 있는 부품 그림의 크기 (캔버스 px)와 화면 크기 */
   canvas: { w: number; h: number }
   ghost: { w: number; h: number }
@@ -338,7 +341,7 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
       }
       const block = d.block
       if (d.plan === 'place' && d.result) {
-        store.setBlocks(s.id, d.result)
+        store.setBlocks(s.id, d.result, undefined, d.auto)
       } else if (d.plan === 'convert' && d.result && d.composed) {
         store.replaceSlide(s.id, { ...d.composed, blocks: d.result })
         toast.show('이 슬라이드를 컴포넌트 슬라이드로 바꿔 넣었어요', undoAction(toast), 6000)
@@ -791,9 +794,12 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
   const remove = (b: Block) => {
     const s = slideRef.current
     const before = s.blocks ?? []
-    const next = removeBlock(before, b.id, measureArea(areaEl.current)?.size.h)
+    const h = measureArea(areaEl.current)?.size.h
+    // 알아서 짠 판에서 빼면 남은 컴포넌트로 판을 다시 고르고, 그 판도 알아서 짠 판으로 남긴다
+    const auto = autoArranged(before, s.arranged, h)
+    const next = removeBlock(before, b.id, h, auto)
     const links = (bs: Block[]) => bs.reduce((n, block) => n + Number(!!block.link) + Number(!!block.linkBelow), 0)
-    store.setBlocks(s.id, next)
+    store.setBlocks(s.id, next, undefined, auto)
     setSelected(null)
     removed.current = { slide: s.id, id: b.id }
     const notice = links(next) < links(before) ? ' 영향을 받은 연결 기호도 지웠어요.' : ''
@@ -803,14 +809,15 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
     const s = slideRef.current
     const copy = copyBlock(b)
     const area = measureArea(areaEl.current)
-    const next = autoPlace(s.blocks ?? [], copy, area?.size.h)
+    const auto = autoArranged(s.blocks ?? [], s.arranged, area?.size.h)
+    const next = autoPlace(s.blocks ?? [], copy, area?.size.h, auto)
     if (!next) {
       const reason = placeIssue(s.blocks ?? [], copy, area?.size.h)
       const text = reason && noRoomText(reason, copy.type, 'slide')
       toast.show(text ? `${text.why} ${text.fix}` : '이 슬라이드에는 더 넣을 자리가 없어요. 컴포넌트를 빼거나 다음 슬라이드에 넣어 주세요.')
       return
     }
-    store.setBlocks(s.id, next)
+    store.setBlocks(s.id, next, undefined, auto)
     setSelected(copy.id)
   }
   /** 저장할 컴포넌트(하나, 또는 나란한 묶음)가 장에서 차지한 크기 (캔버스 px). 목록의 작은 그림을 그 비율로 그린다 */

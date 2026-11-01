@@ -7,6 +7,7 @@
 
 import {
   asCompose,
+  autoArranged,
   autoPlace,
   BLOCK_EFFECT_IDS,
   BLOCK_FROM_IDS,
@@ -19,6 +20,7 @@ import {
   BOARD_ROWS,
   blockItems,
   boardAreaH,
+  boardSig,
   boardFit,
   canCompose,
   effectOf,
@@ -819,11 +821,14 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
         const spot = spotFor(s, blocks, op)
         if (spot === 'no_block') return fail('no_block')
         if (spot && whyNot(blocks, { kind: 'spot', spot }, block, area)) return fail('no_room')
-        const placed = spot ? insertAt(blocks, spot, block, area) : autoPlace(blocks, block, area)
+        // 자리를 정하지 않으면 편집기의 눌러 넣기와 같다: 알아서 짠 판이면 판을 다시 고르고, 그 판도 알아서 짠 판으로 남긴다.
+        // 자리를 정한 것은 사람이 끌어 놓은 것과 같다(표시와 자리가 달라져 사람이 짠 판이 된다)
+        const auto = !spot && autoArranged(blocks, s.arranged, area)
+        const placed = spot ? insertAt(blocks, spot, block, area) : autoPlace(blocks, block, area, auto)
         if (!placed) return fail('no_room')
         // 장의 다른 면과 어긋나는 면은 넣을 때 바탕 없이 바뀐다. AI가 그 면을 골랐으면 알린다
         if (op.look && placed.some((b) => b.id === block.id && lookOf(b) !== op.look)) return fail('look_clash')
-        put(i, { ...s, blocks: placed })
+        put(i, { ...s, blocks: placed, ...(auto ? { arranged: boardSig(placed) } : {}) })
         if (op.as) blockNamed.set(op.as, block.id)
         return done
       }
@@ -832,7 +837,10 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
         const b = findBlock(s, op.block)
         if (!b) return fail('no_block')
         if (!blockEmpty(b)) return fail('has_content')
-        put(i, { ...s, blocks: removeBlock(s.blocks ?? [], b.id, areaOf(s)) })
+        const before = s.blocks ?? []
+        const auto = autoArranged(before, s.arranged, areaOf(s))
+        const left = removeBlock(before, b.id, areaOf(s), auto)
+        put(i, { ...s, blocks: left, ...(auto ? { arranged: boardSig(left) } : {}) })
         return done
       }
       case 'set_block': {

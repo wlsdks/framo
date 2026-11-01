@@ -73,6 +73,12 @@ export const isArea = (v: unknown, cols = BOARD_COLS, rows = BOARD_ROWS): v is B
   return !!a && [a.x, a.y, a.w, a.h].every((n) => Number.isInteger(n)) && a.w > 0 && a.h > 0 && a.x >= 0 && a.y >= 0 && a.x + a.w <= cols && a.y + a.h <= rows
 }
 
+/**
+ * 판의 자리 표시: 부품마다(배열 차례대로) 판의 자리. 알아서 짠 판이면 장에 남겨 두고(Slide.arranged), 넣고 뺄 때 지금 판과 견준다
+ * (place.ts의 autoArranged). 부품 id는 넣지 않는다: 장을 복사해 id가 바뀌어도 같은 판이다. 두 부품의 자리를 맞바꾸면 달라진다
+ */
+export const boardSig = (blocks: readonly Block[]): string => blocks.map((b) => (b.at ? `${b.at.x},${b.at.y},${b.at.w},${b.at.h}` : '-')).join(';')
+
 /** 부품들이 그 자리(r, 없으면 판 전체)를 빈틈없이, 겹치지 않고 덮는지 (부품이 없으면 참) */
 export function tiles(blocks: Block[], r: BlockAt = WHOLE): boolean {
   if (!blocks.length) return true

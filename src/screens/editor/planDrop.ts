@@ -1,6 +1,7 @@
 import {
   asCompose,
   atRect,
+  autoArranged,
   autoPlace,
   canCompose,
   dropTarget,
@@ -91,6 +92,11 @@ export interface DropPlan {
   base: Block[]
   /** 자리를 고를 때 쓴 본문 높이 (캔버스 px) */
   room?: number
+  /**
+   * 눌러 넣은 부품 장의 판(result)이 알아서 짠 판인지: 넣기 전 판이 알아서 짠 판이었으면 참. 장에 표시로 남긴다(deckStore의 setBlocks).
+   * 판이 고른 자리에 넣을 때만 있다(끌어 놓거나 장 아래 빈자리로 고른 것은 사람이 고른 자리)
+   */
+  auto?: boolean
 }
 
 /** 어디에 놓으려는지 */
@@ -137,7 +143,10 @@ export function planDrop(s: Slide, d: DropState, where: DropAt): DropPlan {
     const at = compose ? { blocks: d.base, composed: null } : dropBlocks(s)
     if (!at) return { plan: 'next', target: null, result: null, blocked: null, composed: null, base: d.base, room: where.h }
     // 장 아래 빈자리에서 고르면 맨 아래 새 줄에 먼저
-    const result = (where.bottom && insertAt(at.blocks, BOTTOM, d.block, where.h)) || autoPlace(at.blocks, d.block, where.h)
+    const bottom = where.bottom ? insertAt(at.blocks, BOTTOM, d.block, where.h) : null
+    // 알아서 짠 판이면 판을 다시 고른다. 장에 남긴 표시로 보아, 짜임 규칙이 바뀌어도 그대로 따른다 (바꾼 모습은 표시가 없어 견줘 본다)
+    const auto = !bottom && compose ? autoArranged(at.blocks, s.arranged, where.h) : undefined
+    const result = bottom || autoPlace(at.blocks, d.block, where.h, auto)
     return {
       plan: result ? (compose ? 'place' : 'convert') : 'next',
       target: null,
@@ -146,6 +155,7 @@ export function planDrop(s: Slide, d: DropState, where: DropAt): DropPlan {
       composed: at.composed,
       base: at.blocks,
       room: where.h,
+      ...(result && auto !== undefined ? { auto } : {}),
     }
   }
 
