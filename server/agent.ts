@@ -8,6 +8,7 @@
 //    아무것도 볼 수 없다. 사람이 직접 Claude Code를 쓸 때보다 좁다.
 // 3. 사용자 설정 파일(훅, 플러그인, 다른 MCP 서버)을 읽지 않고(--restricted), 물어야 하는 권한은 모두 거절한다.
 // 4. 부탁 문장은 명령줄이 아니라 stdin으로 넘긴다. 윈도우에서 .cmd를 거쳐도 문장이 명령으로 읽힐 일이 없다.
+// 5. 부탁마다 만드는 빈 임시 폴더에서 띄우고 끝나면 지운다. 띄운 폴더 위에 놓인 CLAUDE.md 같은 지시를 받지 않게.
 //
 // 어디까지 했는지는 도구 이름으로만 보고, 제안은 늘 그렇듯 requests 폴더로 온다. AI가 쓴 답 글은 바꿀 게 없다고 할 때
 // 그 까닭만 짧게 앱에 보여 준다 (AI → 앱 쪽이라 발표 내용이 나가는 길이 아니고, 화면에는 글자로만 그린다).
@@ -203,7 +204,9 @@ export function createAgent(opts: AgentOptions) {
 
       let child: ChildProcess
       try {
-        child = launch(cmd, agentArgs(config), opts.shareRoot)
+        // 빈 임시 폴더에서 띄운다. Claude Code는 띄운 폴더와 그 위 폴더들의 CLAUDE.md를 읽어서, 'AI 공유' 폴더에서 띄우면 그 위에
+        // 놓인 지시(개발할 때는 이 저장소의 AGENTS.md)를 부탁과 함께 받았다. MCP 서버는 GYEOL_SHARE로 'AI 공유' 폴더를 안다
+        child = launch(cmd, agentArgs(config), dir)
       } catch {
         cleanup()
         finish(run, 'failed', 'no_agent')

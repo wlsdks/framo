@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { createServer, request, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -118,12 +118,18 @@ describe('AI에게 부탁', () => {
     expect(run.state).toBe('done')
     expect(run.request).toMatch(/^r[0-9a-f]{12}$/)
     const log = JSON.parse(readFileSync(logFile, 'utf8'))
-    // 부탁 문장은 명령줄이 아니라 stdin으로, 'AI 공유' 폴더에서
+    // 부탁 문장은 명령줄이 아니라 stdin으로
     expect(log.stdin).toBe(askPrompt('slide_layout', shape.deck, shape.slides[0].id))
     expect(log.argv.join(' ')).not.toContain(shape.slides[0].id)
-    expect(realpathSync(log.cwd).normalize('NFC')).toBe(realpathSync(share).normalize('NFC'))
+    // 'AI 공유' 폴더가 아니라 부탁마다 만드는 빈 임시 폴더에서 띄운다. Claude Code는 띄운 폴더와 그 위 폴더들의 CLAUDE.md를 읽어서,
+    // 'AI 공유' 폴더에서 띄우면 그 위에 놓인 지시(개발할 때는 이 저장소의 AGENTS.md)를 부탁과 함께 받았다
+    // 띄운 폴더는 끝나면 지워서 실제 경로를 다시 잴 수 없다. 받아 적은 경로(process.cwd())가 이미 실제 경로다
+    const outside = (dir: string) => !String(log.cwd).normalize('NFC').startsWith(realpathSync(dir).normalize('NFC'))
+    expect(outside(share)).toBe(true)
+    expect(outside(base)).toBe(true)
     const config = log.argv[log.argv.indexOf('--mcp-config') + 1]
     expect(() => readFileSync(config)).toThrow() // 끝나면 설정 파일도 지운다
+    expect(existsSync(log.cwd)).toBe(false) // 띄운 폴더도
   })
 
   it('제안 없이 끝나면 바꿀 게 없다고 알려 준다', async () => {
