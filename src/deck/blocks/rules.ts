@@ -33,7 +33,7 @@ export const isSolo = (type: BlockType) => BLOCKS[type].minSpan >= 12
  * 소제목도 면 없이만: 묶음의 이름인데 면을 깔면 그 자체가 칸 하나로 읽혀 묶는 힘이 사라진다.
  * 주석도: 본문보다 물러나 있어야 하는 글이라, 면을 깔면 위의 표나 그림보다 먼저 눈에 띈다
  */
-const FLAT: BlockType[] = ['logos', 'compare', 'pricing', 'matrix', 'agenda', 'image', 'flow', 'network', 'heading', 'note']
+const FLAT: BlockType[] = ['logos', 'compare', 'pricing', 'matrix', 'agenda', 'image', 'flow', 'decision', 'network', 'heading', 'note']
 /** 강조(bold)를 고를 수 있는 부품: 한 장의 결론이 되는 숫자와 말. 목록이나 그림까지 강조하면 어디가 결론인지 흐려진다 */
 const BOLD_OK: BlockType[] = ['callout', 'number', 'delta', 'goal', 'ring', 'ratio', 'spark', 'quote', 'text', 'message']
 

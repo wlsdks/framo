@@ -1500,6 +1500,11 @@ export function motionEngine(): MotionEngine {
           const links = $('.bk-fw-link')
           // 단계가 많아도 1.5초 안에 끝 단계까지 닿게
           const hop = Math.min(levelName === 'lively' ? 400 : 360, 1500 / Math.max(1, links.length))
+        case 'decision':
+          fade(one('.bk-dc-label'), 40, 400)
+          rise(one('.bk-dc-question'), 100, L.y * 0.5)
+          items('.bk-dc-row', 240, (el, at) => rise(el, at, L.y * 0.4))
+          break
           // 잇는 선의 양 끝(flow.css): 보내는 상자 가장자리의 점에서 받는 상자 가장자리(머리 끝)까지. 가로면 왼쪽에서 오른쪽,
           // 세로로 쌓였으면 위에서 아래
           const tall = (link: HTMLElement) => link.offsetHeight > link.offsetWidth

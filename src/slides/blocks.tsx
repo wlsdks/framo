@@ -16,6 +16,7 @@ import { Bullets } from './blocks/Bullets'
 import { Callout } from './blocks/Callout'
 import { Checks } from './blocks/Checks'
 import { Delta } from './blocks/Delta'
+import { Decision } from './blocks/Decision'
 import { Diverge } from './blocks/Diverge'
 import { Facts } from './blocks/Facts'
 import { Flow } from './blocks/Flow'
@@ -86,6 +87,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   heat: Heat,
   sparks: Sparks,
   flow: Flow,
+  decision: Decision,
   network: Network,
   split: Split,
   merge: Merge,

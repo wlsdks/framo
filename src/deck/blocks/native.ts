@@ -718,6 +718,31 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  decision: {
+    name: '조건별 흐름',
+    description: '조건에 따라 달라지는 다음 행동',
+    motion: '확인할 조건에서 각 행동이 차례로 나타나요',
+    fields: [
+      { key: 'label', label: '안내', hint: '확인할 조건', optional: true },
+      { key: 'question', label: '질문', hint: '재고가 준비됐나요?', multiline: true },
+    ],
+    items: {
+      label: '경로', min: 2, max: 3, default: 2,
+      fields: [
+        { key: 'title', label: '조건', hint: '준비됐어요', hints: ['준비됐어요', '아직 없어요', '확인이 필요해요'], multiline: true },
+        { key: 'body', label: '할 일', hint: '출고를 진행해요', hints: ['출고를 진행해요', '입고 날짜를 알려 드려요', '담당자에게 확인해요'], multiline: true },
+      ],
+    },
+    minSpan: 6,
+    prefSpan: 12,
+    sample: {
+      fields: { label: '확인할 조건', question: '재고가 준비됐나요?' },
+      items: [
+        { title: '준비됐어요', body: '출고를 진행해요' },
+        { title: '아직 없어요', body: '입고 날짜를 알려 드려요' },
+      ],
+    },
+  },
   network: {
     name: '연결도',
     description: '가운데 하나에 여러 시스템이나 팀이 이어진 모습',

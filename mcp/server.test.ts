@@ -10,6 +10,8 @@ import { OP_CODES, OP_KEYS } from '../src/ai/ops'
 import { MCP_TOOLS, RESULT_FORMAT } from '../src/ai/protocol'
 import { SECRET, secretDeck } from '../src/ai/secretDeck'
 import { toShape } from '../src/ai/share'
+import { autoPlace, makeBlock } from '../src/deck/blocks'
+import { makeSlide } from '../src/deck/generate'
 import { createSampleDeck } from '../src/deck/sample'
 import { sandboxArgs, sandboxTight } from './server'
 
@@ -57,6 +59,14 @@ beforeAll(async () => {
   const example = secretDeck()
   example.slides[0].options.hideHead = true
   example.slides[0].options.hideFoot = true
+  const decision = makeBlock('decision')
+  const blocks = autoPlace([], {
+    ...decision,
+    fields: { label: SECRET, question: SECRET },
+    hints: { label: SECRET, question: SECRET },
+    items: decision.items.map((item) => ({ ...item, title: SECRET, body: SECRET })),
+  })!
+  example.slides.push({ ...makeSlide('compose'), fields: { title: SECRET }, blocks })
   const shape = toShape(example)
   writeFileSync(join(share, 'decks', `${shape.deck}.json`), JSON.stringify(shape))
   // 누가 공유 폴더 안에 폴더 밖 파일로 가는 링크를 만들어 둔 경우. 꼴이 맞는 모양 파일이라도 읽히면 안 된다.
@@ -128,6 +138,16 @@ describe('MCP 서버', () => {
     await tool('propose_changes', { deck: list.decks[0].deck, note: 'x', ops: [{ op: 'set_field', text: SECRET }] })
     expect(raw.join('\n')).not.toContain(SECRET)
     expect(raw.join('\n')).not.toContain('7731')
+  })
+
+  it('조건별 흐름도 실제 MCP 창구에서 모양만 보이고 질문과 경로의 글은 나가지 않는다', async () => {
+    const { value: list } = await tool('list_decks')
+    const result = await tool('get_shape', { deck: list.decks[0].deck })
+    expect(result.isError).toBe(false)
+    const block = result.value.slides.flatMap((slide: { blocks?: { type: string }[] }) => slide.blocks ?? []).find((b: { type: string }) => b.type === 'decision')
+    expect(block).toBeDefined()
+    expect(JSON.stringify(block)).not.toContain(SECRET)
+    expect(raw.join('\n')).not.toContain(SECRET)
   })
 
   it('제안은 파일로만 남고, 사람이 보기 전에는 pending이다', async () => {
