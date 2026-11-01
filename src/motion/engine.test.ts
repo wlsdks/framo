@@ -103,6 +103,33 @@ describe('움직임 엔진', () => {
     for (const id of Object.keys(LAYOUTS)) expect(choreo, id).toMatch(new RegExp(`case ["']${id}["']`))
   })
 
+  it('낱말 나누기와 숫자 굴리기는 칸마다 장에 쓰지 않고 모았다가 한 번에 쓴다 (쓰고 바로 재면 칸마다 장 전체를 다시 배치했다)', () => {
+    // 장을 넘기는 순간 한 프레임이 42~77ms였다: 칸마다 낱말 상자를 넣고 바로 그 자리를 다시 재서, 잴 때마다 장 전체를 다시 배치했다
+    const src = motionEngine.toString()
+    const fn = (name: string, next: string) => src.slice(src.indexOf(`function ${name}(`), src.indexOf(`function ${next}(`))
+    for (const [name, body, put] of [
+      ['splitWords', fn('splitWords', 'countUp'), /insertBefore/],
+      ['roll', fn('roll', 'play'), /replaceChild/],
+    ] as const) {
+      // 장에 넣는 일은 모아 둘 일(write) 안에서만
+      const w = body.search(/write\s*[:(]/)
+      expect(w, name).toBeGreaterThan(0)
+      expect(body.slice(0, w), name).not.toMatch(put)
+      expect(body, name).toMatch(/defer\(job\)/)
+    }
+    // 줄 올라오기는 나눈 낱말을 다시 재지 않고 나누기 전에 잰 자리로 줄을 가른다
+    const lines = src.slice(src.search(/const lines = /), src.search(/const count = /))
+    expect(lines).not.toMatch(/getBoundingClientRect|getClientRects/)
+    // 묶음을 다 짠 뒤에 쓰고, 장면은 쓴 뒤에 다시 짠다(나눈 낱말이 장 안에 있어야 어느 묶음의 움직임인지 안다)
+    const batch = src.slice(src.search(/const batch = /), src.indexOf('const mine = {'))
+    expect(batch).toMatch(/make\(\);?\s*flushJobs\(\)/)
+    const c = src.indexOf('choreo(layout, slideVariant)')
+    const f = src.indexOf('flushJobs()', c)
+    expect(c).toBeGreaterThan(0)
+    expect(f).toBeGreaterThan(c)
+    expect(src.indexOf('after()', c)).toBeGreaterThan(f)
+  })
+
   it('고를 수 있는 장면마다 엔진이 짠 컷이 있다 (없으면 장면을 골라도 소리 없이 연출표만 움직인다)', () => {
     const src = motionEngine.toString()
     const scene = src.slice(src.indexOf('function scene('), src.indexOf('const batches'))
