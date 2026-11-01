@@ -36,7 +36,7 @@ PPT로 하던 발표를 HTML로 만드는 도구입니다. 회사 발표에만 �
    - `mcp/server.ts`의 Node 권한 모델 실행(`--permission`, `--allow-fs-*`)을 빼지 않습니다.
    - 권한 모델은 심볼릭 링크를 따라가므로, 링크와 하드 링크를 거르는 `readJson`을 유지합니다.
    - 오류 메시지에 받은 값이나 경로를 넣지 않습니다. 정해진 문구(`MESSAGES`)만 씁니다. stdout에 로그를 쓰지 않습니다.
-   - ‘AI에게 부탁’(`server/agent.ts`)은 Claude Code를 기본 도구 없이(`--tools ""`), Framo MCP 서버(`gyeol`) 하나만(`--strict-mcp-config`), 사용자 설정 없이(`--restricted`), 권한 질문은 모두 거절로(`--permission-prompts none`) 띄웁니다. 이 인자를 빼거나 다른 도구를 열지 않습니다.
+   - ‘AI에게 부탁’(`server/agent.ts`)은 Claude Code를 기본 도구 없이(`--tools ""`), Framo MCP 서버(`gyeol`) 하나만(`--strict-mcp-config`), 사용자 설정 없이(`--restricted`), 권한 질문은 모두 거절로(`--permission-prompts none`), 부탁마다 만드는 빈 임시 폴더에서 띄웁니다(그 위 폴더의 CLAUDE.md 같은 지시를 받지 않게). 이 인자를 빼거나 다른 도구를 열지 않습니다.
    - 부탁은 `src/ai/asks.ts`의 id와 해시 id만 받고, AI에게 보낼 문장은 서버가 정해진 말로 만듭니다. 사람이 적은 글을 받는 칸을 만들지 않습니다. 문장은 명령줄이 아니라 stdin으로 넘깁니다.
 5. **실제 업무 자료를 저장소에 넣지 않는다.** 테스트, 예시, 스크린샷, 이슈, 커밋 메시지 모두 해당합니다. 예시 덱(`src/deck/sample.ts`)의 회사, 사람, 숫자는 지어낸 것입니다.
 6. **의존성은 사내에서 써도 되는 오픈소스만.**
