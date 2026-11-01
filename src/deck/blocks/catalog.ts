@@ -42,7 +42,7 @@ const FROM_LAYOUT: Record<LayoutBlockType, { minSpan: number; prefSpan: number; 
   bars: { minSpan: 6, prefSpan: 8, motion: '막대가 차례로 자라요' },
   versus: { minSpan: 6, prefSpan: 8, motion: '두 막대가 나란히 자라고, 선은 차례로 그려져요' },
   bridge: { minSpan: 12, prefSpan: 12, motion: '막대가 하나씩 쌓여요' },
-  trend: { minSpan: 6, prefSpan: 8, motion: '선이 왼쪽부터 그려져요' },
+  trend: { minSpan: 6, prefSpan: 8, motion: '바닥선을 긋고 선이 그려지며, 선이 닿는 차례로 점과 이름이 나와요' },
   share: { minSpan: 6, prefSpan: 8, motion: '조각이 차례로 채워져요' },
   funnel: { minSpan: 6, prefSpan: 8, motion: '단계마다 줄어들며 내려와요' },
   progress: { minSpan: 12, prefSpan: 12, motion: '진행 막대가 차올라요' },

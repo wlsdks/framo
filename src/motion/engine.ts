@@ -956,6 +956,9 @@ export function motionEngine(): MotionEngine {
         // 선은 왼쪽에서부터 그려지고, 점은 선이 닿을 때 하나씩 맺힌다. 그래서 선은 일정한 빠르기로.
         // 생동감은 조금만 더 길게: 1500이던 때는 선이 1.65초 동안 기어가서 끝의 강조한 숫자가 3.2초에야 멈췄다
         const draw = levelName === 'lively' ? 1150 : 1100
+        // 바닥줄(그림 상자의 아래 선)은 본문 차례에 표의 줄 선처럼 왼쪽부터 그어지고, 선은 그 위를 따라 그려진다. 본문 상자와 함께
+        // 옅게 깔리던 때는 제목이 아직 올라오는 동안 빈 축이 먼저 서 있었다. 상자째 걷어 열어서 목표선과 0의 선도 왼쪽부터 그어진다
+        sweep(one('.tn-plot'), t)
         const svg = one('.tn-svg')
         if (svg) run(anims, svg, [{ clipPath: 'inset(-10% 100% -10% 0)' }, { clipPath: 'inset(-10% 0 -10% 0)' }], s(t + 100), { easing: 'linear', duration: d(draw) })
         $('.tn-pt').forEach((el) => {
@@ -967,7 +970,15 @@ export function motionEngine(): MotionEngine {
             count(el.querySelector('.tn-num'), at + 60)
           } else fade(el.querySelector('.tn-val'), at + 40, 400)
         })
-        items('.tn-col', t, (el, at) => fade(el, at, 400), 30)
+        // 달 이름은 선이 그 달에 닿을 때 하나씩(점과 같은 칸 가운데). 한꺼번에 흐리게 들이던 때는 선이 그려지기 전에 빈 축 아래에
+        // 달 이름이 다 깔려 있었다. 점이 맺히기 조금 전에 가림막 뒤에서 올라와 점이 맺힐 때는 읽힌다
+        const cols = $('.tn-col')
+        cols.forEach((el, i) => {
+          const at = Math.max(t, t + 100 + ((i + 0.5) / cols.length) * draw - 140)
+          lines(el.querySelector('.tn-name'), at)
+          // 숫자로 읽을 수 없어 점 대신 달 아래에 둔 값(미정 같은)
+          fade(el.querySelector(':scope > .tn-unit'), at + 80, 300)
+        })
         fade(one('.tn-target'), t + 200, 600)
         fade(one('.s-source'), t + draw)
         break
