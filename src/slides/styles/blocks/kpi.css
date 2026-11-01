@@ -255,21 +255,40 @@
 
 /* 쌓은 줄: 숫자 왼쪽, 이름(과 설명) 오른쪽. 숫자 칸과 이름 칸은 모든 줄이 같이 써서(subgrid) 이름이 같은 자리에서 시작한다.
    크기 상자는 묶음 전체(.kp)로 둔다: 칸(.kp-item)이 크기 상자이면 subgrid가 되지 않는다. 줄 높이(100cqh)도 이 상자로 재서
-   옅은 면, 진한 면의 안쪽 여백이 저절로 빠진다. 숫자는 칸 너비의 56%까지 (나머지는 이름) */
+   옅은 면, 진한 면의 안쪽 여백이 저절로 빠진다. 숫자는 칸 너비의 56%까지 (나머지는 이름).
+   줄은 내용 높이이고 줄 사이는 사이 줄(--kp-row-gap)이 맡으며, 남는 높이는 맨 아래 빈 줄(1fr)로 간다(docs/VISUAL-RULES.md 6).
+   칸 높이를 줄마다 나누던(1fr) 때는 판 높이 전체(12줄)에 쌓은 숫자 셋이 칸 너비에 묶인 크기에서 멈추고 줄 사이만 159px로 벌어져
+   줄마다 떨어진 섬으로 보였다. 사이 줄은 남는 높이가 있으면 24px에서 줄 몫의 35%(80px까지)로 넓어지고, 모자라면 24px까지 좁아진다
+   (낮은 칸은 예전처럼 칸을 고르게 나눠서 잰 높이가 그대로 맞는다). 사이를 칸의 안쪽 여백으로 두면 맞추기가 16px 넘는 여백을 면 안의
+   여백으로 보고, 바닥선 아래로 조금 내려오는 한글 단위(시간)를 넘친 것으로 알아 키우지 못했다 */
 @container style(--kp-stack: 1) {
   .bk-in > .kp:not([data-n='1']) {
     --kp-gy: 0px;
     --kp-iy: 24px;
     --kp-px: 0px;
+    --kp-row-gap: minmax(24px, clamp(24px, 100cqh / var(--n) * 0.35, 80px));
     --kp-w: calc((100cqi - var(--kp-px)) * 0.56);
     --kp-h: max(44px, ((100cqh - (var(--n) - 1) * var(--kp-gy)) / var(--n) - var(--kp-iy) - 8px) / (0.95 * var(--tall, 1)));
     container: kp / size;
     grid-auto-flow: row;
     grid-template-columns: max-content minmax(0, 1fr);
-    grid-auto-rows: minmax(0, 1fr);
-    align-content: stretch;
-    gap: var(--kp-gy) 40px;
+    grid-template-rows: auto var(--kp-row-gap) auto 1fr;
+    align-content: start;
+    gap: 0 40px;
     padding-bottom: 0;
+  }
+
+  .bk-in > .kp[data-n='3'] {
+    grid-template-rows: auto var(--kp-row-gap) auto var(--kp-row-gap) auto 1fr;
+  }
+
+  /* 칸은 사이 줄을 건너 홀수 줄에 */
+  .bk-in > .kp:not([data-n='1']) > .kp-item:nth-child(2) {
+    grid-row: 3;
+  }
+
+  .bk-in > .kp:not([data-n='1']) > .kp-item:nth-child(3) {
+    grid-row: 5;
   }
 
   .bk-in > .kp:not([data-n='1']) > .kp-item {
@@ -279,8 +298,19 @@
     grid-template-rows: auto auto;
     align-content: center;
     min-height: 0;
-    padding: calc(var(--kp-iy) / 2) calc(var(--kp-px) / 2);
+    padding: calc(var(--kp-iy) / 2 + var(--bk-air, 0px) / 2) calc(var(--kp-px) / 2);
     container-type: normal;
+  }
+
+  /* 바탕 없는 줄은 사이 줄로만 나눈다. 칸 안쪽에는 장이 덜 찰 때 쌓기가 더하는 바람(--bk-air)만 */
+  .va-base > .bk-in > .kp:not([data-n='1']) > .kp-item {
+    padding-block: calc(var(--bk-air, 0px) / 2);
+  }
+
+  /* 첫 줄은 칸 맨 위에서: 위 여백을 두면 옆 칸의 첫 글줄보다 그만큼 내려간다. 다만 윗선에 맞춰 자른 둥근 숫자(3, 6, 8, 9, 0)는
+     윗선 위로 크기의 1.5%쯤 나와서 4px는 둔다(154px의 3이 칸 위로 2px 넘게 나와 맞추기가 칸 전체를 한 단계 줄였다) */
+  .va-base > .bk-in > .kp:not([data-n='1']) > .kp-item:first-child {
+    padding-top: 4px;
   }
 
   .bk-in > .kp:not([data-n='1']) .kp-value {
@@ -337,6 +367,8 @@
     --kp-gy: 16px;
     --kp-iy: 48px;
     --kp-px: 80px;
+    /* 면 사이는 늘 16px: 면은 내용에 맞추고 남는 높이는 맨 아래로 (면을 늘려 채우지 않는다) */
+    --kp-row-gap: var(--kp-gy);
   }
 }
 
