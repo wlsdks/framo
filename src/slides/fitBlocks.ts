@@ -1402,18 +1402,30 @@ export function blockFitter() {
         const outer = (a.width - widths[0] - widths[1] - gap) / 2
         const targets = [a.left + outer, a.left + outer + widths[0] + gap]
         if (gap >= 72 * k) {
+          const inners = pair.map((c) => c.querySelector<HTMLElement>(':scope > .bk-in'))
+          const was = inners.map((inner) => !!inner && over(inner))
           pair.forEach((c, i) => {
             const r = c.getBoundingClientRect()
-            const d = Math.max(r.left - ink[i]!.l, Math.min(r.right - ink[i]!.r, targets[i] - ink[i]!.l))
-            const px = Math.round(d / k)
-            const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
+            const inner = inners[i]
+            // 오른쪽으로는 칸의 안쪽 여백 안까지만 옮긴다. 안쪽 상자는 옮긴 만큼 좁아져서(--bk-content-limit) 칸 끝까지 옮기면 글 폭이
+            // 안쪽 여백만큼 모자라 글이 한 줄 더 꺾였고, 내용에 맞춰 줄여 둔 면(hug) 밖으로 넘쳤다(크게에서 핵심 메시지의 부제가 아래 여백을 12px 먹었다)
+            const room = r.right - (inner ? parseFloat(getComputedStyle(inner).paddingRight) * k : 0) - ink[i]!.r
+            const d = Math.max(r.left - ink[i]!.l, Math.min(room, targets[i] - ink[i]!.l))
+            // 0 쪽으로 버린다: 반올림해 0.5px 더 옮기면 글 끝이 딱 맞던 줄이 꺾일 수 있다
+            const px = Math.trunc(d / k)
             if (inner && px) {
               inner.style.setProperty('--bk-content-shift', px + 'px')
               // 옮긴 안쪽 상자의 빈 부분도 원래 칸 밖으로 나가면 옆 입력 칸의 클릭 영역과 겹친다.
               if (px > 0) inner.style.setProperty('--bk-content-limit', px + 'px')
             }
           })
-          balanced.add(key)
+          // 그래도 옮겨서 넘치게 된 칸이 있으면 둘 다 옮기지 않는다(한쪽만 옮기면 두 글 사이가 어긋난다). 아래의 단 옮기기가 대신 본다
+          if (inners.some((inner, i) => !!inner && !was[i] && over(inner))) {
+            for (const inner of inners) {
+              inner?.style.removeProperty('--bk-content-shift')
+              inner?.style.removeProperty('--bk-content-limit')
+            }
+          } else balanced.add(key)
         }
       }
     })

@@ -9,4 +9,14 @@ describe('부품 장 글자 맞추기', () => {
     const rebuilt = new Function(`return (${src})`)() as typeof fit.blockFitter
     expect(Object.keys(rebuilt())).toEqual(['fit', 'lines', 'over', 'labels', 'figures', 'drawn'])
   })
+
+  it('짧은 글 둘을 칸 안에서 옮길 때 글이 다시 꺾이지 않게 안쪽 여백 안까지만 옮기고, 그래도 넘치면 되돌린다', () => {
+    // 칸 끝까지 옮기면 그만큼 안쪽 폭(--bk-content-limit)이 글보다 좁아져 글이 한 줄 더 꺾이고, 내용에 맞춰 줄여 둔 면(hug) 밖으로 넘쳤다
+    // (크게에서 핵심 메시지의 부제가 아래 여백을 12px 먹었다. 갤러리 combos seed 5의 85번)
+    const src = fit.blockFitter.toString()
+    const balance = src.slice(src.indexOf('function balance'), src.indexOf('function gutters'))
+    const short = balance.slice(balance.indexOf('shortText.has'), balance.indexOf('balanced.add'))
+    expect(short).toMatch(/paddingRight/)
+    expect(short).toMatch(/over\(inner\)/)
+  })
 })
