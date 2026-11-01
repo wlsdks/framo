@@ -39,6 +39,22 @@ describe('움직임 엔진', () => {
     expect(native).toMatch(/lines\(one\(["']\.bk-h["']\)/)
   })
 
+  it('표, 비교, 가격안은 줄 선이 왼쪽부터 그어지며 칸의 글이 차례로 가림막 뒤에서 올라온다 (머리줄을 흐리게 먼저 깔지 않는다)', () => {
+    const src = motionEngine.toString()
+    const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))
+    const caseOf = (id: string) => {
+      const i = choreo.search(new RegExp(`case ["']${id}["']`))
+      return choreo.slice(i, choreo.indexOf('break', i))
+    }
+    const table = caseOf('table')
+    expect(table).not.toMatch(/fade\(one\(["']\.tb-headrow["']\)/)
+    expect(table).toMatch(/sweep\(/)
+    expect(table).toMatch(/lines\(/)
+    expect(caseOf('compare')).toMatch(/sweep\(/)
+    expect(caseOf('compare')).toMatch(/lines\(/)
+    expect(caseOf('pricing')).toMatch(/lines\(/)
+  })
+
   it('레이아웃마다 짠 연출이 있다 (없으면 소리 없이 기본 연출로 떨어진다)', () => {
     const src = motionEngine.toString()
     const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))
