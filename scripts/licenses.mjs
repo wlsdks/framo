@@ -39,8 +39,29 @@ function licenseFiles(dir) {
   return found
 }
 
+/**
+ * 묶여 나가는 패키지(이름@버전)를 npm ls의 JSON 나무에서 고른다. 예전에는 --parseable이 알려 준 경로와 맞춰 보았는데,
+ * npm은 UUID처럼 생긴 폴더 이름을 ***로 가려서 그런 폴더(임시 폴더 같은)에서는 하나도 고르지 못했다. 그러면 모든 패키지를
+ * 만들 때만 쓰는 도구로 보아 더 넓은 허용 목록으로 확인했고, 배포본의 라이선스 전문은 비었다
+ * @param {{ dependencies?: Record<string, any> }} tree
+ * @returns {Set<string>}
+ */
+export function prodPackages(tree) {
+  const out = new Set()
+  /** @param {Record<string, any> | undefined} deps */
+  const walk = (deps) => {
+    for (const [name, dep] of Object.entries(deps ?? {})) {
+      if (typeof dep?.version === 'string') out.add(`${name}@${dep.version}`)
+      walk(dep?.dependencies)
+    }
+  }
+  walk(tree.dependencies)
+  return out
+}
+
 export function scan() {
-  const prodPaths = new Set(execSync('npm ls --omit=dev --all --parseable', { cwd: root, encoding: 'utf8' }).trim().split('\n').slice(1))
+  const tree = JSON.parse(execSync('npm ls --omit=dev --all --json', { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }))
+  const prodIds = prodPackages(tree)
   const out = []
   const walk = (dir) => {
     if (!existsSync(dir)) return
@@ -54,7 +75,7 @@ export function scan() {
       const file = join(p, 'package.json')
       if (existsSync(file)) {
         const pkg = JSON.parse(readFileSync(file, 'utf8'))
-        out.push({ name: pkg.name ?? name, version: pkg.version, license: licenseOf(pkg), path: p, prod: prodPaths.has(p), files: licenseFiles(p) })
+        out.push({ name: pkg.name ?? name, version: pkg.version, license: licenseOf(pkg), path: p, prod: prodIds.has(`${pkg.name ?? name}@${pkg.version}`), files: licenseFiles(p) })
       }
       walk(join(p, 'node_modules'))
     }
@@ -71,6 +92,13 @@ function main() {
       .map(([l, n]) => `${l} ${n}`)
       .join(', ')
   const prod = packages.filter((p) => p.prod)
+  // 묶여 나가는 패키지를 하나라도 못 찾으면 멈춘다: 못 찾은 패키지는 더 넓은 목록으로 확인되고, 라이선스 전문에서도 빠진다
+  const { dependencies = {} } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+  const lost = Object.keys(dependencies).filter((name) => !prod.some((p) => p.name === name))
+  if (lost.length) {
+    console.error(`묶여 나가는 패키지를 찾지 못했어요: ${lost.join(', ')}\nnpm install을 다시 한 뒤 돌려 주세요.`)
+    process.exit(1)
+  }
   console.log(`묶여 나가는 패키지 ${prod.length}개: ${count(prod)}`)
   console.log(`만들 때만 쓰는 패키지 ${packages.length - prod.length}개: ${count(packages.filter((p) => !p.prod))}`)
 
