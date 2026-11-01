@@ -320,6 +320,46 @@ describe('새 버전 창구', () => {
     expect(readFileSync(join(dir, 'gyeol-windows.zip')).equals(ZIP)).toBe(true)
   })
 
+  it('받는 동안에는 다시 묻지 않는다 (받는 버전과 알리는 버전이 어긋나지 않게)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gyeol-update-route-'))
+    let latest = release()
+    const { get: answer, calls } = fake({ [API]: () => ({ status: 200, body: JSON.stringify(latest) }), [DL]: { status: 302, location: ASSET_HOST } })
+    // 파일 보관소는 앞 조각만 보내고 붙잡아 둔다
+    let open = () => {}
+    const gate = new Promise<void>((r) => (open = r))
+    const get: Getter = async (url, headers, idleMs) => {
+      if (url.href !== ASSET_HOST) return answer(url, headers, idleMs)
+      return {
+        status: 200,
+        body: (async function* () {
+          yield ZIP.subarray(0, 1000)
+          await gate
+          yield ZIP.subarray(1000)
+        })(),
+        close() {},
+      }
+    }
+    const call = await serve({ get, downloadDir: dir })
+    expect((await call('check')).body.check).toMatchObject({ state: 'available', version: '0.9.0' })
+    expect((await call('download')).status).toBe(202)
+    // 받는 사이에 더 새 버전이 나왔다. 지금 받는 것은 0.9.0이므로 0.9.1이라고 알리면 안 된다
+    latest = release(
+      { tag_name: 'v0.9.1', html_url: 'https://github.com/wlsdks/gyeol/releases/tag/v0.9.1' },
+      { browser_download_url: 'https://github.com/wlsdks/gyeol/releases/download/v0.9.1/gyeol-windows.zip' },
+    )
+    const during = await call('check/now')
+    expect(during.body.check).toMatchObject({ state: 'available', version: '0.9.0' })
+    expect(during.body.download.state).toBe('downloading')
+    expect(calls.filter((c) => c.url === API)).toHaveLength(1)
+    open()
+    for (let i = 0; i < 50 && (await call('status', { method: 'GET' })).body.download.state !== 'done'; i++) await new Promise((r) => setTimeout(r, 10))
+    expect((await call('status', { method: 'GET' })).body.download).toEqual({ state: 'done' })
+    // 다 받은 뒤에 다시 확인하면 더 새 버전을 알리고, 받기는 처음부터
+    const after = await call('check/now')
+    expect(after.body.check).toMatchObject({ state: 'available', version: '0.9.1' })
+    expect(after.body.download).toEqual({ state: 'idle' })
+  })
+
   it('지문이 없는 릴리스는 받지 않고 페이지만 알린다', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'gyeol-update-route-'))
     const { get, calls } = fake({ [API]: { status: 200, body: JSON.stringify(release({}, { digest: undefined })) } })

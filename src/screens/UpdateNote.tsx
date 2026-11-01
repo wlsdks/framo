@@ -93,7 +93,8 @@ export function UpdateNote() {
               </Info>
             </div>
             {on && status && (
-              <button type="button" className="btn btn-ghost btn-sm" disabled={check?.state === 'checking'} onClick={recheck}>
+              // 받는 동안에는 다시 확인하지 않는다(서버도 묻지 않는다). 누르면 알림이 잠깐 사라졌다 돌아온다
+              <button type="button" className="btn btn-ghost btn-sm" disabled={check?.state === 'checking' || dl?.state === 'downloading'} onClick={recheck}>
                 다시 확인
               </button>
             )}
