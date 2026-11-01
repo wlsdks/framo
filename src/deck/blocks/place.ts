@@ -18,6 +18,7 @@ import {
   moveGutter,
   needRows,
   needWith,
+  rebuild,
   sameSpot,
   settle,
   type Side,
@@ -28,7 +29,7 @@ import {
 } from './board'
 import { ARRANGE_MAX, arrangeBest, arrangeOrder, boardCost, isArranged } from './arrange'
 import { aspectOf, fitImage, fitPlaced, misfit } from './images'
-import { across, dropBlock, isLinkCompanion, linkAt, linkIssue, linkTargets, tidyLinks } from './links'
+import { across, dropBlock, isLinkCompanion, keepLinkEnds, linkAt, linkIssue, linkTargets, tidyLinks } from './links'
 import { BLOCK_COL_GAP, BLOCK_GAP, isSmall, isSolo, largeCount, MAX_BLOCKS, MAX_LARGE, settleLook } from './rules'
 import { AREA_W, atRect, boardFit, heightIssue, overAlready, type Rect } from './sizing'
 
@@ -156,9 +157,24 @@ export function removeBlock(blocks: Block[], blockId: string, areaH?: number): B
       return tidyLinks(next.map((b) => byId.get(b.id) ?? b))
     }
   }
-  let out = next
-  for (const img of next.filter((b) => aspectOf(b))) out = fitImage(out, img.id, aspectOf(img)!, areaH)
+  let out = overAlready(next, areaH) ? (refit(blocks, next, areaH) ?? next) : next
+  for (const img of out.filter((b) => aspectOf(b))) out = fitImage(out, img.id, aspectOf(img)!, areaH)
   return out
+}
+
+/**
+ * 뺀 판이 장에 들어가지 않을 때 다시 놓은 판. 옆 부품이 그 자리를 넓혀 덮는데, 넓어지면 글자가 커져 더 높아지는 부품이 있다(숫자 카드,
+ * 막대 차트): 선을 끌어 짠 판에서 한 줄의 둘 가운데 하나를 빼면 남은 것이 판 너비를 다 받아 판보다 높아졌고, 편집기는 '자리가 모자라요'를
+ * 띄우며 컴포넌트를 잠갔다. 넷까지면 짜임 틀을 견줘 가장 보기 좋은 판을(arrange.ts), 틀로 견줄 수 없으면 읽는 차례대로 눌러서 넣을 때처럼
+ * 다시 놓는다(차례대로 넣으면 숫자 아래에 목록을 쌓고 막대를 옆 칸 위에 홀로 세워 아래가 크게 빈 판이 나왔다).
+ * 그래도 들어가지 않으면 null (뺀 판 그대로 두고 편집기가 '자리가 모자라요'를 알린다)
+ */
+function refit(before: Block[], next: Block[], areaH: number): Block[] | null {
+  const fit = fitFor(next, areaH)
+  const best = arrangeBest(arrangeOrder(next), fit, areaH, aspectOf)
+  const byId = best && new Map(best.blocks.map((b) => [b.id, b]))
+  const again = byId ? next.map((b) => byId.get(b.id) ?? b) : rebuild(next, fit)
+  return again && !overAlready(again, areaH) ? keepLinkEnds(before, again) : null
 }
 
 /**
