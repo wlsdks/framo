@@ -79,3 +79,17 @@ describe('면 위 소제목의 빈 키 자르기', () => {
     for (const s of trims) expect(s, s).toMatch(/:not\(\.is-shared\)/)
   })
 })
+
+describe('목록의 첫 항목 위', () => {
+  it('예상 질문은 첫 질문 위에 선이 없으니 선 아래 여백도 두지 않는다: 옆 칸의 첫 글줄과 윗선이 같은 축에 선다 (docs/VISUAL-RULES.md 5)', () => {
+    // 첫 질문 위 선만 투명하게 지우고(lines.css) 선 아래 여백(큰 칸에서 22px)은 남아서, 핵심 숫자 카드 옆에서 첫 질문이 21px 아래에
+    // 섰다(갤러리 조합 5-82, 크게). 두 칸이 모두 본문 높이를 다 써서 쌓기(fitBlocks의 pack)가 내려 맞출 자리도 없었다. 맡은 사람의 목록과 같다
+    const zero = rules(blocks)
+      .filter((r) => /padding-top:\s*0(px)?\s*;/.test(r.body))
+      .flatMap((r) => split(r.selector, ','))
+    expect(zero).toContain('.bk-qa-item:first-child')
+    // 여러 단으로 흘리면 첫 줄의 질문 모두 (둘째, 셋째 단의 첫 질문만 내려앉지 않게)
+    expect(zero).toContain(".bk-qa-list:is([data-n='2'], [data-n='4']) > .bk-qa-item:nth-child(-n + 2)")
+    expect(zero).toContain(".bk-qa-list[data-n='3'] > .bk-qa-item:nth-child(-n + 3)")
+  })
+})
