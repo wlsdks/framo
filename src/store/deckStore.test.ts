@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createDeck } from '../deck/generate'
+import { createDeck, emptyItem, makeSlide } from '../deck/generate'
 import { sampleBlock } from '../deck/blockSamples'
-import { autoPlace, boardAreaH, boardTight, rearrangeBlocks, removeBlock } from '../deck/blocks'
+import { autoPlace, boardAreaH, boardTight, playOrder, rearrangeBlocks, removeBlock } from '../deck/blocks'
 import { LAYOUTS, variantOf } from '../deck/layouts'
 import { gestureKey } from '../lib/pointerSession'
+import type { Slide } from '../deck/types'
 import { undoLast, useDeck } from './deckStore'
 
 const deck = () =>
@@ -336,5 +337,69 @@ describe('되돌린 뒤 보는 장', () => {
     useDeck.getState().select(s.id)
     useDeck.getState().undo()
     expect(useDeck.getState().selectedId).toBe(s.id)
+  })
+})
+
+describe('항목 빼기와 복제, 장 복제', () => {
+  const item = (title: string) => ({ ...emptyItem(), title })
+  const open = (slide: Slide) => {
+    const d = deck()
+    useDeck.getState().open({ ...d, slides: [d.slides[0], slide] })
+    return slide.id
+  }
+  const slide = (i = 1) => useDeck.getState().deck!.slides[i]
+  const titles = () => slide().items.map((it) => it.title)
+
+  it('항목을 빼면 고른 강조는 그 항목을 따라가고, 강조한 항목을 빼면 강조도 없어진다 (다음 항목으로 옮겨 가지 않는다)', () => {
+    const id = open({ ...makeSlide('process'), items: ['가', '나', '다', '라'].map(item), options: { highlight: 2 } })
+    useDeck.getState().removeItem(id, 0)
+    expect(titles()).toEqual(['나', '다', '라'])
+    expect(slide().options.highlight).toBe(1)
+    useDeck.getState().removeItem(id, 1)
+    expect(titles()).toEqual(['나', '라'])
+    expect(slide().options.highlight).toBe(-1)
+  })
+
+  it('항목을 복제하면 바로 뒤에 새 id로 (같은 id가 둘이면 화면과 AI가 두 항목을 하나로 여긴다)', () => {
+    const id = open({ ...makeSlide('process'), items: ['가', '나'].map(item) })
+    useDeck.getState().duplicateItem(id, 0)
+    expect(titles()).toEqual(['가', '가', '나'])
+    expect(new Set(slide().items.map((it) => it.id)).size).toBe(3)
+  })
+
+  it('장을 복제하면 정해 둔 컴포넌트 나오는 차례도 복제한 장의 컴포넌트를 따른다', () => {
+    const places = [{ x: 0, y: 0, w: 4, h: 12 }, { x: 4, y: 0, w: 4, h: 12 }, { x: 8, y: 0, w: 4, h: 12 }]
+    const blocks = (['number', 'message', 'quote'] as const).map((type, i) => ({ ...sampleBlock(type), id: `b${i}`, at: places[i] }))
+    const id = open({ ...makeSlide('compose'), blocks, options: { order: ['b2', 'b0'] } })
+    useDeck.getState().duplicateSlide(id)
+    const [source, copy] = [slide(1), slide(2)]
+    expect(copy.blocks!.map((b) => b.id).some((b) => source.blocks!.some((s) => s.id === b))).toBe(false)
+    expect(playOrder(copy).map((b) => b.type)).toEqual(['quote', 'number', 'message'])
+    expect(playOrder(source).map((b) => b.type)).toEqual(['quote', 'number', 'message'])
+  })
+})
+
+describe('고친 때', () => {
+  beforeEach(() => useDeck.getState().open(deck()))
+  afterEach(() => vi.restoreAllMocks())
+  const updatedAt = () => useDeck.getState().deck!.updatedAt
+
+  it('되돌리거나 다시 해도 고친 때는 지금 (예전 때로 돌아가면 보관 폴더에 먼저 써 둔 것이 더 새것으로 보여 되돌린 것을 덮는다)', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(2_000_000)
+    useDeck.getState().setTitle('바꾼 제목')
+    expect(updatedAt()).toBe(2_000_000)
+    now.mockReturnValue(3_000_000)
+    useDeck.getState().undo()
+    expect(updatedAt()).toBe(3_000_000)
+    now.mockReturnValue(4_000_000)
+    useDeck.getState().redo()
+    expect(updatedAt()).toBe(4_000_000)
+    // 쓴 글을 곧바로 지워 그 단계가 없어질 때도
+    now.mockReturnValue(5_000_000)
+    useDeck.getState().setTitle('바꾼 제목 더')
+    now.mockReturnValue(5_000_500)
+    useDeck.getState().setTitle('바꾼 제목')
+    expect(useDeck.getState().past).toHaveLength(1)
+    expect(updatedAt()).toBe(5_000_500)
   })
 })

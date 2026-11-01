@@ -6,7 +6,7 @@
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type ReactNode } from 'react'
 import { behind, BLOCK_LINKS, BLOCKS, blockFieldPrefix, boardInfo, byReading, foldableFields, blockItems, blockSlide, effectOf, fromOf, guttersOf, isAlone, knownBlocks, linkAt, playOrder, sameLinkTarget, shownBlocks, shownLook, speedOf, variantOfBlock, whenOf, withLink, type Gutter, type LinkTarget } from '../deck/blocks'
-import { followIndex, moveIn, presentable } from '../deck/fields'
+import { dropIndex, followIndex, moveIn, presentable } from '../deck/fields'
 import type { Block, BlockLink, BlockType, NativeBlockType } from '../deck/types'
 import { cx } from '../lib/cx'
 import { BlockEditContext, type BlockEdit } from './blockEdit'
@@ -138,7 +138,11 @@ function BlockBody({ block, span }: { block: Block; span: number }) {
             ? outer.placeImage(block.id, v)
             : update(block.id, (b) => ({ ...b, fields: { ...b.fields, [k]: v } }), `${block.id}.${k}`),
       setItem: (i, k, v) => update(block.id, (b) => ({ ...b, items: b.items.map((it, j) => (j === i ? { ...it, [k]: v } : it)) }), `${block.id}.${i}.${k}`),
-      removeItem: (i) => update(block.id, (b) => ({ ...b, items: b.items.filter((_, j) => j !== i) })),
+      removeItem: (i) =>
+        update(block.id, (b) => {
+          const highlight = dropIndex(b.highlight, i)
+          return { ...b, items: b.items.filter((_, j) => j !== i), ...(highlight !== undefined ? { highlight } : {}) }
+        }),
       moveItem: (from, to, key) =>
         update(
           block.id,
