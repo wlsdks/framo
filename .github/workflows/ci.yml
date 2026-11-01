@@ -132,8 +132,8 @@ jobs:
           }
           if (-not $ok) { throw "Framo.exe가 30초 안에 켜지지 않았어요 (끝남: $($p.HasExited), 끝 코드: $(if ($p.HasExited) { $p.ExitCode }))" }
           "Framo.exe가 켜졌어요 (pid $($p.Id))"
-          # 바깥에서 오는 Host는 받지 않는다
-          try { Invoke-WebRequest -UseBasicParsing -Headers @{ Host = 'evil.example' } http://127.0.0.1:41580/ | Out-Null; throw 'Host 검사가 꺼져 있어요' } catch { if ($_.Exception.Message -eq 'Host 검사가 꺼져 있어요') { throw } }
+          # 바깥에서 오는 Host는 받지 않는다(403). 오류를 모두 통과로 보면 머리글을 못 바꾸거나 연결이 끊겨도 통과한다
+          $r = Invoke-WebRequest -UseBasicParsing -SkipHttpErrorCheck -Headers @{ Host = 'evil.example' } http://127.0.0.1:41580/; if ($r.StatusCode -ne 403) { throw "바깥 Host를 받았어요(403이 아니라 $($r.StatusCode))" }
           # AI(MCP) 서버는 Framo.exe가 아니라 같이 든 node.exe로 띄운다(권한 모델로 다시 띄우는 길을 그대로)
           $ai = Invoke-RestMethod -Headers @{ 'X-HTML-Maker' = '1' } http://127.0.0.1:41580/__html-maker/ai/status
           "nodePath: $($ai.nodePath)"
@@ -181,8 +181,8 @@ jobs:
           if ($p.ExitCode -ne 0) { throw ".bat이 서버를 켜지 못했어요 (끝 코드 $($p.ExitCode))" }
           $r = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:41580/__html-maker
           if ($r.Content -ne 'html-maker') { throw '서버가 다른 답을 했어요' }
-          # 바깥에서 오는 Host는 받지 않는다
-          try { Invoke-WebRequest -UseBasicParsing -Headers @{ Host = 'evil.example' } http://127.0.0.1:41580/ | Out-Null; throw 'Host 검사가 꺼져 있어요' } catch { if ($_.Exception.Message -eq 'Host 검사가 꺼져 있어요') { throw } }
+          # 바깥에서 오는 Host는 받지 않는다(403). 오류를 모두 통과로 보면 머리글을 못 바꾸거나 연결이 끊겨도 통과한다
+          $r = Invoke-WebRequest -UseBasicParsing -SkipHttpErrorCheck -Headers @{ Host = 'evil.example' } http://127.0.0.1:41580/; if ($r.StatusCode -ne 403) { throw "바깥 Host를 받았어요(403이 아니라 $($r.StatusCode))" }
 
       - name: 윈도우에서 찍은 화면 남기기
         if: always()

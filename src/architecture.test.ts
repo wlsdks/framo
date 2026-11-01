@@ -15,7 +15,12 @@ const ALLOWED: Record<string, string[]> = {
   // 발표를 지울 때 AI 공유도 끈다(persist.ts의 removeDeck)
   store: ['deck', 'lib', 'ai'],
   export: ['deck', 'lib', 'motion', 'slides', 'store'],
+  // 새 버전 창구에 AI 공유와 같은 머리글(AI_HEADER)을 보낸다: 로컬 서버는 그 머리글이 든 요청만 받는다(server/guard.ts)
+  update: ['ai'],
 }
+
+// 맨 위의 층: 화면(screens/)과 src 바로 아래의 파일(App.tsx, main.tsx)은 무엇이든 가져온다
+const TOP = new Set(['screens', ''])
 
 const SRC = dirname(fileURLToPath(import.meta.url))
 
@@ -58,6 +63,12 @@ const folder = (file: string) => {
 const name = (file: string) => relative(SRC, file).split(sep).join('/')
 
 describe('구조', () => {
+  it('src의 폴더마다 기댈 수 있는 방향을 정해 두었다 (모르는 폴더는 방향 검사를 건너뛴다)', () => {
+    // ALLOWED에도 TOP에도 없는 폴더는 위의 검사가 소리 없이 넘긴다. 새 폴더를 만들면 여기와 docs/ARCHITECTURE.md의 '층'에 넣는다
+    const unknown = [...new Set(FILES.map(folder))].filter((f) => !TOP.has(f) && !(f in ALLOWED))
+    expect(unknown).toEqual([])
+  })
+
   it('폴더는 정한 방향으로만 기댄다', () => {
     const wrong: string[] = []
     for (const [file, deps] of GRAPH) {

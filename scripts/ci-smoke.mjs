@@ -27,8 +27,10 @@ for (const channel of ['msedge', 'chrome']) {
   let browser
   try {
     browser = await chromium.launch({ channel, headless: true })
-  } catch {
-    console.log(`${channel}: 이 PC에 없어 건너뛰어요`)
+  } catch (e) {
+    // 쓰는 사람의 브라우저는 크롬과 엣지라 둘 다 봐야 한다. 건너뛰고 넘어가면 검수 PC에서 브라우저가 빠져도 점검 없이 통과한다
+    failed = true
+    console.log(`${channel}: 열지 못했어요 (${String(e).split('\n')[0]})`)
     continue
   }
   // 윈도우 150% 노트북의 브라우저 안 크기

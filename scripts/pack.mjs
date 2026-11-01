@@ -75,12 +75,21 @@ async function officialNode(dist) {
   mkdirSync(cache, { recursive: true })
   const base = `https://nodejs.org/dist/${NODE_VERSION}/`
   const sums = join(cache, `SHASUMS256-${NODE_VERSION}.txt`)
-  if (!existsSync(sums)) writeFileSync(sums, await (await fetch(base + 'SHASUMS256.txt')).text())
+  if (!existsSync(sums)) {
+    const res = await fetch(base + 'SHASUMS256.txt')
+    // 오류 쪽 응답(안내 글)을 그대로 두면 .cache를 지우기 전까지 묶기가 늘 'SHASUMS256.txt에 …이 없어요'로 멈춘다
+    if (!res.ok) throw new Error(`SHASUMS256.txt를 받지 못했어요 (${res.status})`)
+    writeFileSync(sums, await res.text())
+  }
   const expected = readFileSync(sums, 'utf8')
     .split('\n')
     .find((line) => line.endsWith(`  ${file}`))
     ?.split(' ')[0]
-  if (!expected) throw new Error(`SHASUMS256.txt에 ${file}이 없어요`)
+  if (!expected) {
+    // 예전에 잘못 받아 둔 목록일 수 있다. 지워서 다음에 다시 받게
+    rmSync(sums, { force: true })
+    throw new Error(`SHASUMS256.txt에 ${file}이 없어요. 다시 실행해 주세요.`)
+  }
   if (!existsSync(archive)) {
     console.log(`Node.js를 받는 중: ${base}${file}`)
     const res = await fetch(base + file)
