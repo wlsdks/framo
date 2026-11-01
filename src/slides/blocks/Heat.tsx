@@ -32,7 +32,12 @@ export function Heat() {
   const unit = readField(slide, meta, 'unit')
   const cellTexts = rows.map((r) => Array.from({ length: c }, (_, j) => r[j] ?? ''))
   const table = seriesIn(cellTexts.flat(), unit)
-  const nums = byRow ? cellTexts.map((r) => seriesIn(r, unit).values) : cellTexts.map((_, i) => table.values.slice(i * c, (i + 1) * c))
+  const rowSeries = cellTexts.map((r) => seriesIn(r, unit))
+  // 범위에서 견줄 수 없는 단위를 섞으면 숫자를 그대로 두고 색 농담은 그리지 않는다.
+  const nums = byRow
+    ? rowSeries.map((row) => row.ok ? row.values : row.values.map(() => null))
+    : cellTexts.map((_, i) => table.ok ? table.values.slice(i * c, (i + 1) * c) : Array.from({ length: c }, () => null))
+  const invalid = byRow ? rowSeries.some((row) => !row.ok) : !table.ok
   const rangeOf = (vs: (number | null)[]) => {
     const k = vs.filter((v): v is number => v !== null)
     return k.length ? { lo: Math.min(...k), hi: Math.max(...k) } : null
@@ -43,13 +48,13 @@ export function Heat() {
     const g = byRow ? rangeOf(r) : all
     return r.map((v) => (v === null || !g ? null : g.hi === g.lo ? 0.5 : (v - g.lo) / (g.hi - g.lo)))
   })
-  // 가장 높은 칸과 낮은 칸: 같은 값이 여럿이면 먼저 나온 칸. 값이 다 같으면 짚지 않는다
+  // 가장 높은 칸과 낮은 칸: 같은 값이 여럿이면 먼저 나온 칸. 값이 다 같거나 확인하지 않은 칸이 있으면 전체 순위를 단정하지 않는다.
   const find = (v: number): [number, number] | null => {
     for (let i = 0; i < nums.length; i++) for (let j = 0; j < c; j++) if (nums[i][j] === v) return [i, j]
     return null
   }
   // 단위가 서로 다른 칸이 섞인 표에서 가장 높은 곳과 낮은 곳은 틀린 말이라 짚지 않는다
-  const marks = !byRow && table.ok && !!all && all.hi > all.lo
+  const marks = !byRow && table.ok && table.values.every((v) => v !== null) && !!all && all.hi > all.lo
   const top = marks ? find(all.hi) : null
   const low = marks ? find(all.lo) : null
   const is = (p: [number, number] | null, i: number, j: number) => !!p && p[0] === i && p[1] === j
@@ -62,7 +67,7 @@ export function Heat() {
       <T k="heading" as="h3" className="bk-h" fit={[18, 32]} multiline />
       <ChartKey
         sum={
-          topAt && lowAt ? (
+          mode === 'edit' && invalid ? '같은 범위의 값은 같은 단위로 적어 주세요.' : topAt && lowAt ? (
             <>
               가장 높은 곳 <b>{topAt}</b>
               <span className="bk-hm-low">가장 낮은 곳 {lowAt}</span>
@@ -96,7 +101,7 @@ export function Heat() {
                 const mark = is(top, i, j) ? 'is-max' : is(low, i, j) ? 'is-min' : null
                 return (
                   <span key={j} className={cx('bk-hm-cell', v === null && 'is-empty', mark)} style={v === null ? undefined : ({ '--t': v.toFixed(3) })}>
-                    {v !== null && (
+                    {text && !/^[-−–—]+$/.test(text) && (
                       <span className="bk-hm-v one-line" style={{ '--units': numberUnits(text).toFixed(2) }}>
                         <Numeral text={text} />
                       </span>

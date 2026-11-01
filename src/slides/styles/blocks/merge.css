@@ -124,6 +124,10 @@
   color: var(--ink-3);
 }
 
+.bk-mg-warning {
+  grid-column: 1 / -1;
+}
+
 /* 합계: 이 부품의 답. 좁은 칸에서는 내려가는 조각이 합계 아래를 지나가서 숫자를 위에 둔다 */
 .bk-mg-total {
   --fs: 74px;

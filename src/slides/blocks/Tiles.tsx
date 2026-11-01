@@ -48,8 +48,9 @@ export function Tiles() {
   const per = pair ? pair.b.scale / pair.b.place : 1
   const value = pair ? pair.a.base / per : null
   const total = pair ? pair.b.base / per : null
-  const ok = value !== null && total !== null && total > 0
-  const exact = ok && Number.isInteger(total) && total >= 1 && total <= 100 && pair!.kind !== '%'
+  const ok = value !== null && total !== null && total > 0 && value >= 0 && value <= total
+  // 10개 중 4.5개를 다섯 칸으로 반올림하면 다른 수가 된다. 정수가 아니면 100칸의 비율로 그린다.
+  const exact = ok && Number.isInteger(value) && Number.isInteger(total) && total >= 1 && total <= 100 && pair!.kind !== '%'
   const n = !ok ? 0 : exact ? total : 100
   const share = ok ? Math.min(1, Math.max(0, value / total)) : 0
   const on = !ok ? 0 : exact ? Math.round(Math.min(Math.max(value, 0), total)) : Math.round(share * 100)
@@ -76,6 +77,7 @@ export function Tiles() {
           </p>
         )}
         <T k="note" as="p" className="bk-tl-n" multiline />
+        {mode === 'edit' && !demo && !!valueText && !ok && <p className="bk-tl-n">0 이상이고 전체보다 크지 않은 숫자를 적어 주세요.</p>}
       </div>
       {n > 0 && (
         <div className="bk-tl-box" aria-hidden="true" style={{ '--r': r, '--c': c, '--rf': flat.rf, '--cf': flat.cf } as CSSProperties}>

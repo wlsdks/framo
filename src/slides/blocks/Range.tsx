@@ -15,15 +15,19 @@ import { useDemo } from './parts'
 export function rangeOf(low: string, high: string, mark: string): { lo: number; hi: number; m: number | null } | null {
   const pair = amountPair(low, high)
   if (!pair) return null
-  const a = Math.min(pair.a.base, pair.b.base)
-  const b = Math.max(pair.a.base, pair.b.base)
+  // 시작과 끝을 바꿔 그리면 작성한 왼쪽 값이 오른쪽 값의 자리에 표시된다. 역순이면 원문만 남긴다.
+  if (pair.a.base > pair.b.base) return null
+  const a = pair.a.base
+  const b = pair.b.base
   const mp = mark.trim() ? amountPair(low, mark) : null
   const m = mp ? mp.b.base : null
   const min = Math.min(a, m ?? a)
   const max = Math.max(b, m ?? b)
   const pad = max > min ? (max - min) * 0.25 : Math.abs(max) * 0.5 || 1
   const at = (v: number) => ((v - (min - pad)) / (max - min + pad * 2)) * 100
-  return { lo: at(a), hi: at(b), m: m === null ? null : at(m) }
+  const result = { lo: at(a), hi: at(b), m: m === null ? null : at(m) }
+  // 값 각각이 유한해도 양 끝의 차이나 여백이 표현 범위를 넘으면 눈금 위치는 계산할 수 없다.
+  return Number.isFinite(result.lo) && Number.isFinite(result.hi) && (result.m === null || Number.isFinite(result.m)) ? result : null
 }
 
 /**

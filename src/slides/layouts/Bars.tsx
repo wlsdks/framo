@@ -4,7 +4,7 @@ import { readField } from '../../deck/fields'
 import { highlightOf, hintFor } from '../../deck/layouts'
 import type { Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
-import { useSlide } from '../context'
+import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
 import { readNumber, seriesIn } from '../numbers'
 import { Head, useItems, useUnitOpen } from './parts'
@@ -26,12 +26,16 @@ export function Bars() {
   const unit = readField(slide, meta, 'unit').trim()
   const unitOpen = useUnitOpen(unit)
   // 막대끼리 길이를 견주므로 한 기준으로 ('1.2억', '9,500만')
-  const values = seriesIn(
+  const series = seriesIn(
     items.map((it) => it.value),
     unit,
-  ).values.map((v) => v ?? 0)
-  const max = Math.max(0, ...values)
-  const demo = mode !== 'final' && max <= 0
+  )
+  // 음수나 서로 다른 단위, 읽을 수 없는 입력을 0으로 바꾸면 실제 값과 다른 막대가 된다.
+  // 비어 있는 항목은 작성 중인 칸이므로 나머지 비교를 막지 않는다.
+  const comparable = series.ok && series.values.every((v, i) => v === null ? !items[i].value.trim() : v >= 0)
+  const values = series.values
+  const max = Math.max(0, ...values.map((v) => v ?? 0))
+  const demo = demoOf(mode, items)
   const demoP = demo ? demoBars(slide, items.length) : []
   const highlight = highlightOf(slide)
   // 점과 선: 가는 선 끝의 점으로 길이를 읽는다. 점은 선 위를 따라 움직이도록 따로 둔다(선을 늘리는 움직임에 같이 늘어나지 않게)
@@ -40,6 +44,7 @@ export function Bars() {
     <>
       <Head lead />
       <div className="s-body br-wrap">
+        {mode === 'edit' && !comparable && <p className="br-unit" role="status">같은 단위의 0 이상 숫자를 적어 주세요.</p>}
         {unitOpen && (
           <p className="br-top">
             <span className="br-unit">
@@ -49,7 +54,9 @@ export function Bars() {
         )}
         <div className="br" data-n={items.length}>
           {items.map((it, i) => {
-            const pct = demo ? demoP[i] : max > 0 && values[i] > 0 ? Math.max(2, (values[i] / max) * 100) : 0
+            const value = values[i]
+            const pct = demo ? demoP[i] : comparable && max > 0 && value !== null && value > 0 ? Math.max(2, (value / max) * 100) : 0
+            const known = demo || (comparable && value !== null)
             return (
               // 길이는 --p(0~100)로만 넘긴다. 가로 막대는 너비, 세로 막대는 높이로 쓴다.
               <div
@@ -64,8 +71,8 @@ export function Bars() {
                 {/* 막대와 숫자. 가로 막대에서는 묶음 없이(contents) 줄의 칸에, 세로 막대에서는 바닥 줄 위의 한 칸에 */}
                 <div className="br-bar">
                   <div className="br-track">
-                    <div className="br-fill" />
-                    {dots && <span className="br-dot" />}
+                    {known && <div className="br-fill" />}
+                    {dots && known && <span className="br-dot" />}
                   </div>
                   <IT i={i} k="value" className="br-value" />
                 </div>

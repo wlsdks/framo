@@ -168,6 +168,9 @@ function readOwn(text: string): Amount | null {
   const unit = first.unit ?? last.unit ?? (sign ? unitOf(sign[0].trim()) : null)
   const per = (p: Part) => (p.unit ?? unit)?.per ?? 1
   const base = parts.reduce((s, p) => s + p.n * p.place * per(p), 0)
+  // 표현 범위를 넘는 긴 숫자는 Infinity가 되어 막대 길이와 비율을 NaN으로 만든다.
+  // 계산만 멈추고 입력한 글은 각 칸에서 그대로 보여 준다.
+  if (!Number.isFinite(base)) return null
   const unitText = first.unit || last.unit ? unit!.text : ''
   return {
     base: MINUS.test(lead) ? -base : base,
@@ -188,9 +191,25 @@ export function readAmount(text: string, unit = ''): Amount | null {
   if (!own || own.kind || !unit.trim()) return own
   const u = readOwn(`1 ${unit.trim()}`)
   if (!u || u.bare) return own
-  if (own.bare) return { ...own, base: own.base * u.scale, scale: u.scale, place: u.place, kind: u.kind, bare: false, suffix: unit.trim() }
+  if (own.bare) {
+    const base = own.base * u.scale
+    return Number.isFinite(base) ? { ...own, base, scale: u.scale, place: u.place, kind: u.kind, bare: false, suffix: unit.trim() } : null
+  }
   const per = u.scale / u.place
-  return { ...own, base: own.base * per, scale: own.scale * per, kind: u.kind }
+  const base = own.base * per
+  const scale = own.scale * per
+  return Number.isFinite(base) && Number.isFinite(scale) ? { ...own, base, scale, kind: u.kind } : null
+}
+
+/** 값에 이미 적은 단위를 다시 붙이지 않는다. 자리까지 적었으면 단위의 자리는 빼고 ('2억'과 '억 원' → '2억 원'). */
+export function unitAfter(text: string, unit: string): string {
+  const suffix = unit.trim()
+  if (!suffix) return ''
+  const amount = readOwn(text)
+  if (!amount) return ''
+  if (amount.kind) return ''
+  if (amount.place > 1) return suffix.replace(/^(?:[십백천]?[만억조]|[십백천])\s*/, '')
+  return suffix
 }
 
 /** 적은 숫자 그대로 ('131억 원' → 131, '▼ 1.5억 원' → −1.5, '1시간 30분' → 1.5). 숫자가 없거나 어느 숫자인지 모르면 null */
@@ -222,6 +241,8 @@ export function amountPair(a: string, b: string, unit = ''): { a: Amount; b: Amo
   const x = readAmount(a, unit)
   const y = readAmount(b, unit)
   if (!x || !y || !comparable(x, y)) return null
+  const declared = unit.trim() ? readOwn(`1 ${unit.trim()}`) : null
+  if (declared?.kind && [x, y].some((v) => v.kind && v.kind !== declared.kind)) return null
   return { a: x, b: y, kind: x.kind || y.kind }
 }
 
@@ -233,9 +254,11 @@ export function changeOf(before: string, after: string, unit = ''): { value: num
   const p = amountPair(before, after, unit)
   if (!p) return null
   const d = p.b.base - p.a.base
+  if (!Number.isFinite(d)) return null
   if (p.kind === '%') return { value: d, pp: true }
   if (p.a.base === 0) return null
-  return { value: (d / Math.abs(p.a.base)) * 100, pp: false }
+  const value = (d / Math.abs(p.a.base)) * 100
+  return Number.isFinite(value) ? { value, pp: false } : null
 }
 
 /** 한 그림의 값들 */
@@ -255,12 +278,16 @@ export interface Series {
  */
 export function seriesIn(texts: string[], unit = ''): Series {
   const amounts = texts.map((t) => readAmount(t, unit))
+  // 입력 자체가 유한해도 단위를 바꾸는 나눗셈에서 표현 범위를 넘을 수 있다.
+  const finite = (n: number) => Number.isFinite(n) ? n : null
   const known = amounts.filter((a): a is Amount => a !== null)
   const kinds = new Set(known.map((a) => a.kind).filter(Boolean))
   const kind = [...kinds][0] ?? ''
+  const u = unit.trim() ? readOwn(`1 ${unit.trim()}`) : null
   // 자리만 적은 값('3만')과 기준이 여럿인 단위('2시간')가 섞이면 3만이 무엇인지 모른다
-  const ok = kinds.size <= 1 && !(SCALED_KINDS.has(kind) && known.some((a) => !a.bare && !a.kind))
-  if (!ok) return { values: amounts.map((a) => a && a.base / a.scale), ok, suffix: '' }
+  // 단위 칸과 적은 값이 서로 달라도 계산을 멈춘다: '10원, 20원'을 '건'의 합계로 표시하지 않는다.
+  const ok = kinds.size <= 1 && !(u?.kind && kind && u.kind !== kind) && !(SCALED_KINDS.has(kind) && known.some((a) => !a.bare && !a.kind))
+  if (!ok) return { values: amounts.map((a) => a && finite(a.base / a.scale)), ok, suffix: '' }
   // 자리의 기준은 자리나 단위를 적은 첫 값, 단위의 기준은 단위를 적은 첫 값
   const ref = known.find((a) => !a.bare) ?? known[0]
   if (!ref) return { values: amounts.map(() => null), ok, suffix: unit.trim() }
@@ -268,11 +295,22 @@ export function seriesIn(texts: string[], unit = ''): Series {
   // 자리만 적은 값('8,000만')은 단위 무리의 배수만 받는다 (단위를 적은 값이 '9,500만 원'이면 원의 1)
   const per = unitRef ? unitRef.scale / unitRef.place : 1
   // 단위 칸이 있으면 그 단위가 기준이다 (계산한 끝 값에 단위 칸의 글을 붙이므로)
-  const u = unit.trim() ? readOwn(`1 ${unit.trim()}`) : null
   const scale = u && !u.bare && u.kind === kind ? u.scale : ref.kind ? ref.scale : ref.place * per
   // 숫자만 적은 값은 기준의 자리와 단위 그대로라 적은 숫자가 곧 기준의 몇 배다
-  const values = amounts.map((a) => a && (a.bare ? a.base : (a.kind ? a.base : a.base * per) / scale))
+  const values = amounts.map((a) => a && finite(a.bare ? a.base : (a.kind ? a.base : a.base * per) / scale))
   return { values, ok, suffix: unit.trim() || ref.suffix }
+}
+
+/** 빈 값으로 끊긴 선을 나눈다. 중간 시점이 없으면 양옆을 임의로 잇지 않는다. */
+export function lineRuns<T>(points: readonly (T | null)[]): T[][] {
+  const runs: T[][] = []
+  let run: T[] = []
+  for (const point of points) {
+    if (point !== null) run.push(point)
+    else if (run.length) { runs.push(run); run = [] }
+  }
+  if (run.length) runs.push(run)
+  return runs
 }
 
 /**
@@ -324,9 +362,17 @@ export function gradeOf(text: string): Grade | null {
   return null
 }
 
-/** 평가표의 한 줄('좋음 보통 나쁨')을 안마다 나눈다. 띄어 쓰기나 쉼표로 */
+/** 평가표의 한 줄을 안마다 나눈다. 명시한 구분 기호 사이의 빈 칸도 자리를 지킨다. */
 export function gradesOf(text: string): string[] {
-  return text.split(/[\s,·/|]+/).filter(Boolean)
+  if (!text.trim()) return []
+  if (!/[,，、·/|]/.test(text)) return text.trim().split(/\s+/)
+  return text.split(/[,，、·/|]/).flatMap((part) => {
+    const value = part.trim()
+    if (!value) return ['']
+    const words = value.split(/\s+/)
+    // 쉼표 안에 이미 알려진 평가를 띄어 쓴 경우는 각각 나누되, '확인 중' 같은 말은 한 칸에 남긴다.
+    return words.every((word) => gradeOf(word)) ? words : [value]
+  })
 }
 
 // ---------- 추진 일정의 기간 칸 ----------
@@ -358,15 +404,16 @@ const COL_SEPS = [/\s*[,，、\n]\s*/, /\s*(?:[·|]|(?<!\d)\/|\/(?!\d))\s*/]
  * ('10월 1주 10월 2주', '2026년 1분기 2분기', '3월 상순 3월 중순')
  */
 export function colsOf(text: string): string[] {
-  const sep = COL_SEPS.find((s) => s.test(text))
+  const input = text.trim()
+  if (!input) return []
+  const sep = COL_SEPS.find((s) => s.test(input))
   if (sep)
-    return text
+    return input
       .split(sep)
       .map((t) => t.trim().replace(/\s+/g, ' '))
-      .filter(Boolean)
       .slice(0, 12)
   const out: { words: string[]; rank: number | null }[] = []
-  for (const w of text.split(/\s+/).filter(Boolean)) {
+  for (const w of input.split(/\s+/).filter(Boolean)) {
     const r = periodRank(w)
     const last = out[out.length - 1]
     // 때('초', '상순')는 바로 앞 낱말이 기간일 때만 붙는다. 기간은 앞 칸의 가장 작은 기간보다 작을 때만('10월' 뒤의 '1주')
@@ -405,6 +452,8 @@ const escape = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
  * - 큰 기간 뒤에 칸에 없는 때가 온 말 ('10월 중', '10월 말'이면 10월의 칸 모두): 그래도 없을 때만
  */
 function namePatterns(words: string[]): RegExp[][] {
+  // 이름이 비어 있는 열은 자리는 유지하되 어떤 기간이나 추천 이름과도 일치하지 않는다.
+  if (!words.length) return [[], [], []]
   const re = (ws: string[], end: string) => new RegExp(`(?<!\\d)${ws.map(escape).join('\\s*')}${end}`)
   const exact = [re(words, '(?!\\d)')]
   const loose: RegExp[] = []
@@ -424,12 +473,36 @@ function namePatterns(words: string[]): RegExp[][] {
  */
 export function spanIn(text: string, cols: string[]): [number, number] | null {
   const pats = fullNames(cols).map(namePatterns)
-  const t = withContext(text)
+  const t = withContext(expandPeriodRange(text))
   for (let tier = 0; tier < 3; tier++) {
     const hit = pats.flatMap((p, i) => (p[tier].some((r) => r.test(t)) ? [i] : []))
     if (hit.length) return [Math.min(...hit), Math.max(...hit)]
   }
   return null
+}
+
+/** '3~4월', '2~3주'처럼 앞 단위를 생략한 구간을 같은 단위의 양 끝으로 읽는다. */
+function expandPeriodRange(text: string): string {
+  return text.replace(/(?<![\d/.\-])(\d{1,4})\s*(~|∼|–|—|-|부터)\s*(\d{1,4})\s*(년도?|분기|월|주차?|일)(?!\d)/g, (whole, from: string, sep: string, to: string, unit: string) => {
+    return periodRank(from + unit) !== null && periodRank(to + unit) !== null ? `${from}${unit}${sep}${to}${unit}` : whole
+  })
+}
+
+/** 추천하는 안은 정확히 일치하는 이름을 우선하고, 여러 안에 걸치는 모호한 글은 짐작하지 않는다. */
+export function optionIndex(text: string, options: string[]): number {
+  const normal = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+  const query = normal(text)
+  if (!query) return -1
+  const exact = options.flatMap((option, i) => normal(option) === query ? [i] : [])
+  if (exact.length) return exact.length === 1 ? exact[0] : -1
+  // 다른 이름의 일부가 일치해도 추천으로 오인하지 않는다. 'B안 추천', 'B안을 추천'은 허용한다.
+  const matches = options.flatMap((option, i) => {
+    const name = normal(option)
+    if (!name) return []
+    const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${escape(name).replace(/ /g, '\\s+')}(?=(?:은|는|이|가|을|를|으로|로)?(?:[^\\p{L}\\p{N}]|$))`, 'u')
+    return pattern.test(query) ? [i] : []
+  })
+  return matches.length === 1 ? matches[0] : -1
 }
 
 /** 글 안의 기간 이름 ('10월', '2주', '1분기') */
@@ -462,7 +535,7 @@ export function periodRest(text: string, cols: string[]): string {
     })
     // 긴 이름부터 지워야 '10월 2주'의 '2주'만 지워지고 '10월'이 남지 않는다
     .sort((a, b) => b.source.length - a.source.length)
-  let t = text
+  let t = expandPeriodRange(text)
   for (const p of pats) t = t.replace(new RegExp(p.source, 'g'), ' ')
   return t.replace(/부터|까지|[\s~∼\-–—]/g, '')
 }

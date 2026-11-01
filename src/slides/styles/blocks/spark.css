@@ -140,6 +140,14 @@
   line-height: 1.4;
 }
 
+/* 선을 그릴 수 없는 값은 원문이 차트 자리에서 잘리지 않게 한다. */
+.bk-sp-chart > .bk-sp-s:not(.on-chart) {
+  grid-column: 1 / -1;
+  align-self: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .bk-sp.is-demo .bk-sp-chart > :not(.on-chart) {
   opacity: 0.4;
 }

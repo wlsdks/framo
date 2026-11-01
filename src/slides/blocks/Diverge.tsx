@@ -24,7 +24,8 @@ export function Diverge() {
     return demo || (!own && mode !== 'final') ? hintFor(slide.layout, slide.hints, k, k, i) : own
   }
   // 막대 길이끼리 견주므로 한 기준으로 ('+1.2억', '−4,000만')
-  const values = seriesIn(items.map((_, i) => (demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : items[i].value))).values
+  const series = seriesIn(items.map((_, i) => (demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : items[i].value)))
+  const values = series.ok ? series.values : items.map(() => null)
   const known = values.filter((v): v is number => v !== null)
   const pos = Math.max(0, ...known)
   const neg = Math.max(0, ...known.map((v) => -v))
@@ -49,7 +50,7 @@ export function Diverge() {
   return (
     <div className={cx('bk-dv', demo && 'is-demo', neg > 0 && 'has-neg', pos > 0 && 'has-pos', left && 'has-left')} style={vars}>
       <T k="heading" as="h3" className="bk-h" fit={[18, 32]} multiline />
-      <ChartKey unitKey="basis" />
+      <ChartKey unitKey="basis" sum={mode === 'edit' && !series.ok ? '같은 단위의 숫자로 적어 주세요.' : undefined} />
       <ul className="bk-dv-list" data-n={items.length}>
         {items.map((it, i) => {
           const v = values[i]

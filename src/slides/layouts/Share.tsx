@@ -1,11 +1,11 @@
 // 레이아웃: 구성비 (share). 모양은 styles/share.css
 
-import { readField } from '../../deck/fields'
+import { isBlankItem, readField } from '../../deck/fields'
 import { highlightOf, hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
 import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
-import { formatNumber, seriesIn } from '../numbers'
+import { formatNumber, seriesIn, unitAfter } from '../numbers'
 import { accentTint, TINT_COUNT } from '../tints'
 import { Head, useItems, useUnitOpen } from './parts'
 
@@ -35,14 +35,27 @@ export function Share() {
   const demo = demoOf(mode, items)
   const texts = items.map((it, i) => (demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : it.value).trim())
   const unit = readField(slide, meta, 'unit').trim()
+  const shownUnits = texts.map((text) => text ? unitAfter(text, unit) : !final ? unit : '')
   const unitOpen = useUnitOpen(unit)
   // 값을 한 기준으로 더한다 ('1.2억'과 '8,000만'). 단위가 서로 다른 값이 섞였으면 비중과 합계는 틀린 숫자라 보이지 않는다
   const series = seriesIn(texts, unit)
   const values = series.values.map((v) => Math.max(0, v ?? 0))
   const sum = values.reduce((a, b) => a + b, 0)
-  const pcts = values.map((v) => (sum > 0 ? (v / sum) * 100 : 0))
   const typedPct = texts.every((t) => !t || t.includes('%'))
-  const pctText = (p: number) => (!series.ok ? '–' : p > 0 && p < 1 ? '1% 미만' : `${formatNumber(p < 10 ? Math.round(p * 10) / 10 : Math.round(p))}%`)
+  // 쓴 백분율의 합이 100이 아닌데 전체 띠를 채우면, 적힌 30%가 그림에서는 60%로 보일 수 있다.
+  // 단위가 다르거나 숫자가 빠진 경우도 마찬가지로 원래 글은 남기고 비율 그림은 그리지 않는다.
+  const percentValues = typedPct || /^(?:%|％|퍼센트|프로)$/.test(series.suffix)
+  const complete = series.ok && Number.isFinite(sum) && sum > 0 && items.every((it, i) => demo || isBlankItem(it) || (series.values[i] !== null && series.values[i]! >= 0))
+  // 33.3% 셋은 반올림 때문에 99.9%가 될 수 있다. 각 입력의 마지막 자릿수에서 가능한 반올림 오차만 허용한다.
+  const rounding = texts.reduce((a, t, i) => {
+    if (!t || series.values[i] === null) return a
+    const decimals = /\d[\d,]*(?:\.(\d+))?/.exec(t)?.[1]?.length ?? 0
+    return a + 0.5 * 10 ** -decimals
+  }, 1e-9)
+  const comparable = complete && (!percentValues || Math.abs(sum - 100) <= rounding)
+  const showTypedPct = typedPct || (percentValues && comparable)
+  const pcts = values.map((v) => (comparable ? (v / sum) * 100 : 0))
+  const pctText = (p: number) => (!comparable ? '–' : p > 0 && p < 1 ? '1% 미만' : `${formatNumber(p < 10 ? Math.round(p * 10) / 10 : Math.round(p))}%`)
   let grey = 0
   const colors = items.map((_, i) => {
     // 강조할 조각이 없으면 강조색의 농담, 있으면 그 조각만 강조색이고 나머지는 강조색의 옅은 농담(셋째 단계부터, 큰 조각부터 진하게).
@@ -62,7 +75,10 @@ export function Share() {
   // 100칸: 왼쪽 위에서부터 줄마다 항목 차례대로 칠한다. 칸 하나가 1%
   const cells = units ? unitsOf(pcts).flatMap((n, i) => Array.from({ length: n }, () => i)) : []
   // '131억 원'처럼 숫자와 단위는 붙여 쓴다. 단위 칸이 비었으면 값에 붙여 쓴 자리와 단위('58억'이면 억)
-  const totalText = sum > 0 && !typedPct && series.ok ? `${formatNumber(sum)}${series.suffix}` : ''
+  const totalText = comparable && !percentValues ? `${formatNumber(sum)}${series.suffix}` : ''
+  const guidance = mode === 'edit' && !demo && !comparable
+    ? complete && percentValues ? '백분율의 합을 100%로 맞춰 주세요.' : '모든 값을 같은 단위의 0 이상 숫자로 채워 주세요. 하나는 0보다 커야 해요.'
+    : ''
   return (
     <>
       <Head />
@@ -88,6 +104,7 @@ export function Share() {
                   <circle
                     key={items[i].id}
                     className="sh-arc"
+                    data-index={i}
                     cx="50"
                     cy="50"
                     r="40"
@@ -126,17 +143,18 @@ export function Share() {
           </div>
         )}
         <div className="sh-legend">
+          {guidance && <p className="sh-unit sh-warning">{guidance}</p>}
           {items.map((it, i) => (
             <div key={it.id} className={cx('it sh-item', i === highlight && 'is-hl')} style={{ '--c': colors[i] }}>
               <span className="sh-pct">
-                {typedPct ? <IT i={i} k="value" as="span" oneLine /> : final && !texts[i] ? '–' : pctText(pcts[i])}
+                {showTypedPct ? <><IT i={i} k="value" as="span" oneLine />{shownUnits[i] && <span>{shownUnits[i]}</span>}</> : final && !texts[i] ? '–' : pctText(pcts[i])}
               </span>
               <div className="sh-text">
                 <IT i={i} k="title" className="sh-name" />
-                {!typedPct && (!final || texts[i]) && (
+                {!showTypedPct && (!final || texts[i]) && (
                   <span className="sh-value">
                     <IT i={i} k="value" as="span" oneLine />
-                    {unit && <span>{unit}</span>}
+                    {shownUnits[i] && <span>{shownUnits[i]}</span>}
                   </span>
                 )}
                 <IT i={i} k="meta" className="sh-meta" />

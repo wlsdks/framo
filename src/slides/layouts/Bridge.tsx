@@ -1,6 +1,6 @@
 // 레이아웃: 증감 요인 (bridge). 모양은 styles/bridge.css
 
-import { readField } from '../../deck/fields'
+import { isBlankItem, readField } from '../../deck/fields'
 import { hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
 import { demoOf, useSlide } from '../context'
@@ -25,8 +25,10 @@ export function Bridge() {
     [demo ? hintFor(slide.layout, slide.hints, 'startValue') : startText, ...items.map((it, i) => (demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : it.value))],
     unit,
   )
-  const start = series.values[0] ?? 0
-  const deltas = series.values.slice(1).map((v) => v ?? 0)
+  // 빈 요인이나 읽을 수 없는 값을 0으로 세면 끝 값과 막대의 높이가 실제 입력과 달라진다.
+  const known = demo || (!!startText.trim() && series.values[0] !== null && series.ok && items.every((it, i) => isBlankItem(it) || series.values[i + 1] !== null))
+  const start = known ? series.values[0] ?? 0 : 0
+  const deltas = series.values.slice(1).map((v) => known ? v ?? 0 : 0)
   const levels = deltas.reduce((acc, d) => [...acc, acc[acc.length - 1] + d], [start])
   const end = levels[levels.length - 1]
   const lo = Math.min(...levels)
@@ -39,13 +41,12 @@ export function Bridge() {
   const base = cut ? floor : 0
   const col = (a: number, b: number, link?: number) =>
     ({ '--lo': pct(Math.min(a, b)), '--hi': pct(Math.max(a, b)), ...(link !== undefined ? { '--link': pct(link) } : {}) })
-  const known = demo || (!!startText.trim() && series.values[0] !== null && series.ok)
   // 끝 값의 단위: 단위 칸이 비었으면 처음 값에 붙여 쓴 자리와 단위('117억'이면 억)
   const endUnit = unit || (demo ? hintFor(slide.layout, slide.hints, 'unit') : series.suffix)
   return (
     <>
       <Head />
-      <div className={cx('s-body wf', demo && 'is-demo', cut && 'is-cut')} data-n={items.length + 2} style={{ '--n': items.length + 2 }}>
+      <div className={cx('s-body wf', demo && 'is-demo', cut && 'is-cut', !known && 'is-incomplete')} data-n={items.length + 2} style={{ '--n': items.length + 2 }}>
         <div className="wf-col wf-total" style={col(base, start, start)}>
           <div className="wf-plot">
             <span className="wf-bar" />

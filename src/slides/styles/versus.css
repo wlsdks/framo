@@ -364,6 +364,27 @@
   min-height: 0;
 }
 
+/* 값을 비교할 수 없을 때는 빈 차트 자리를 두지 않고 이름과 원문 숫자만 나란히 보여 준다. */
+.vs-rows.is-text {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.vs-rows.is-text .vs-track {
+  display: none;
+}
+
+.vs-rows.is-text .vs-nums {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.vs-rows.is-text .vs-row .vs-num {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
 /* 컴포넌트 장에서는 줄 높이가 내용에 정해진 위아래 사이를 더한 만큼이다(VISUAL-RULES 6): 140px까지 늘이면 판이 높은 칸을 준 장에서
    줄 사이(102px)가 내용(38px)의 두 배를 훌쩍 넘어 줄마다 떨어진 띠로 읽혔다. 남는 높이는 쌓기와 눈높이 맞추기가 내용 바깥에 둔다(fitBlocks).
    레이아웃 장은 본문 높이를 이 차트 하나가 다 쓰므로 그대로 늘인다 */

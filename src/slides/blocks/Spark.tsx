@@ -18,7 +18,10 @@ export function seriesOf(text: string): number[] {
 /** 흐름 칸의 숫자와 그 숫자를 적은 글(선의 처음 값을 적은 그대로 보이려고) */
 function pointsOf(text: string): { v: number; t: string }[] {
   const toks = tokensOf(text)
-  const vs = seriesIn(toks).values
+  const series = seriesIn(toks)
+  // 단위가 다르거나 빠진 값이 있으면 선의 높낮이나 빠진 시점을 임의로 만들지 않는다.
+  if (!series.ok || series.values.some((v) => v === null)) return []
+  const vs = series.values
   return toks.flatMap((t, i) => {
     const v = vs[i]
     return v === null ? [] : [{ v, t }]
@@ -35,7 +38,9 @@ export function Spark() {
   // 흐름 칸만 비었으면(지금 숫자를 먼저 적은 때) 편집할 때는 안내 문구의 흐름을 옅게 그린다. 두 칸이 다 빌 때만 그리던 때는
   // 숫자를 적는 순간 선이 통째로 사라져, 숫자 아래에 빈 자리만 남고 흐름을 어디에 적는지 보이지 않았다
   const ghost = !demo && mode !== 'final' && !read('series').trim()
-  const pts = pointsOf(ghost ? hintFor(slide.layout, slide.hints, 'series') : read('series')).slice(-24)
+  const seriesText = ghost ? hintFor(slide.layout, slide.hints, 'series') : read('series')
+  const pts = pointsOf(seriesText).slice(-24)
+  const invalid = !!seriesText.trim() && tokensOf(seriesText).length > 0 && pts.length < 2
   const vs = pts.map((p) => p.v)
   const lo = Math.min(...vs)
   const hi = Math.max(...vs)
@@ -50,6 +55,7 @@ export function Spark() {
         <T k="label" className="bk-sp-l" />
         <T k="value" className="bk-sp-v" oneLine numeral />
         <T k="note" className="bk-sp-n" />
+        {mode === 'edit' && invalid && <p className="bk-sp-n">흐름은 같은 단위의 숫자를 두 개 이상 적어 주세요.</p>}
       </div>
       <div className="bk-sp-chart">
         {pts.length >= 2 && (
@@ -70,6 +76,7 @@ export function Spark() {
         {/* 흐름 숫자는 편집할 때 그림 자리에서 고친다(올리거나 누르면 숫자가 보인다). 발표 화면에는 선만.
             그림 아래에 줄을 따로 두면 편집 화면에서만 부품이 높아져 글자가 작아진다 */}
         {mode === 'edit' && <T k="series" className="bk-sp-s on-chart" />}
+        {mode !== 'edit' && invalid && <T k="series" className="bk-sp-s" />}
       </div>
     </div>
   )

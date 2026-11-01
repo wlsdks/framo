@@ -2,14 +2,14 @@
 
 import type { CSSProperties } from 'react'
 import { BLOCKS } from '../../deck/blocks'
-import { readField } from '../../deck/fields'
+import { isBlankItem, readField } from '../../deck/fields'
 import { hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
 import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
-import { formatNumber, seriesIn } from '../numbers'
+import { formatNumber, seriesIn, unitAfter } from '../numbers'
 import { accentTint, TINT_COUNT } from '../tints'
-import { Numeral } from './parts'
+import { Numeral, totalMatches } from './parts'
 
 /**
  * 모으기: 여러 값을 더한 합계. 값마다 한 줄(이름, 값)에 그 값의 조각을 두는데, 조각은 합계 막대에서 그 값이 들어갈 자리에
@@ -23,14 +23,16 @@ export function Merge() {
   const demo = demoOf(mode, items)
   const texts = items.map((it, i) => (demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : it.value).trim())
   const unit = readField(slide, meta, 'unit').trim()
+  const shownUnits = texts.map((text) => text ? unitAfter(text, unit) : mode !== 'final' ? unit : '')
   // 값을 한 기준으로 더한다('1.2억'과 '8,000만'). 단위가 다른 값이 섞였으면 조각과 합계는 틀린 숫자라 보이지 않는다
   const series = seriesIn(texts, unit)
   const values = series.values.map((v) => Math.max(0, v ?? 0))
   const sum = values.reduce((a, b) => a + b, 0)
-  const ok = series.ok && sum > 0
-  const shares = values.map((v) => (ok ? v / sum : 0))
-  const sumText = ok ? `${formatNumber(Math.round(sum * 100) / 100)}${series.suffix}` : ''
   const typedTotal = readField(slide, meta, 'total').trim()
+  const complete = series.ok && Number.isFinite(sum) && sum > 0 && items.every((it, i) => demo || isBlankItem(it) || (series.values[i] !== null && series.values[i]! >= 0))
+  const ok = complete && totalMatches(texts, typedTotal, unit)
+  const shares = values.map((v) => (ok ? v / sum : 0))
+  const sumText = ok ? `${formatNumber(sum)}${series.suffix}` : ''
   const totalField = !!typedTotal || (mode !== 'final' && !folds?.has('total'))
   const unitField = !!unit || (mode !== 'final' && !folds?.has('unit'))
   const hl = slide.options.highlight
@@ -53,12 +55,13 @@ export function Merge() {
   return (
     <div className={cx('bk-mg', demo && 'is-demo', !ok && 'is-blank')} data-n={items.length} style={{ '--mg-n': gaps } as CSSProperties}>
       <div className="bk-mg-grid">
+        {mode === 'edit' && !demo && !ok && <p className="bk-mg-unit bk-mg-warning">{complete ? '합계가 각 값의 합과 같도록 확인해 주세요.' : '각 값을 같은 단위의 0 이상 숫자로 채워 주세요.'}</p>}
         {items.map((it, i) => (
           <div key={it.id} className={cx('it bk-mg-part', i === pick && 'is-hl')} style={piece(i)}>
             <IT i={i} k="title" className="bk-mg-name" />
             <p className="bk-mg-num">
               <IT i={i} k="value" as="span" className="bk-mg-v" numeral oneLine />
-              {unit && (!!it.value || mode !== 'final') && <span className="bk-mg-vu">{unit}</span>}
+              {shownUnits[i] && <span className="bk-mg-vu">{shownUnits[i]}</span>}
             </p>
             <span className="bk-mg-track" aria-hidden="true">
               {shares[i] > 0 && <span className="bk-mg-pc" />}

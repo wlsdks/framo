@@ -1,7 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { amountPair, changeOf, colsOf, dateParts, formatNumber, gradeOf, gradesOf, isNumericCell, lineAxis, lowerIsBetter, periodRest, readAmount, readNumber, seriesIn, spanIn, statusOf } from './numbers'
+import { amountPair, changeOf, colsOf, dateParts, formatNumber, gradeOf, gradesOf, isNumericCell, lineAxis, lowerIsBetter, optionIndex, periodRest, readAmount, readNumber, seriesIn, spanIn, statusOf, unitAfter } from './numbers'
 
 describe('숫자 읽기', () => {
+  it('표현 범위를 넘는 숫자는 무한대로 계산하지 않는다', () => {
+    const huge = '9'.repeat(400)
+    expect(readNumber(huge)).toBeNull()
+    expect(readAmount(`${huge}억 원`)).toBeNull()
+    expect(seriesIn([huge, '1']).values).toEqual([null, 1])
+    const finite = `1${'0'.repeat(308)}`
+    expect(readAmount(finite, '억 원')).toBeNull()
+    expect(changeOf(finite, `-${finite}`)).toBeNull()
+    // 유한한 초를 밀리초로 바꾸는 과정에서도 표현 범위를 넘을 수 있다.
+    expect(seriesIn([`${finite}초`, '1ms'], 'ms').values).toEqual([null, 1])
+  })
+  it('값에 단위나 자리를 이미 썼으면 같은 것을 다시 붙이지 않는다', () => {
+    expect(unitAfter('8', '명')).toBe('명')
+    expect(unitAfter('8명', '명')).toBe('')
+    expect(unitAfter('60분', '시간')).toBe('')
+    expect(unitAfter('2.4억', '억 원')).toBe('원')
+    expect(unitAfter('8,000만', '억 원')).toBe('원')
+    expect(unitAfter('2.4억 원', '억 원')).toBe('')
+    expect(unitAfter('확인 중', '건')).toBe('')
+  })
   it('단위와 쉼표가 붙은 값에서 적은 숫자를 읽는다', () => {
     expect(readNumber('131억 원')).toBe(131)
     expect(readNumber('1,200억 원')).toBe(1200)
@@ -120,6 +140,12 @@ describe('숫자 읽기', () => {
     expect(statusOf('진행 중', 40)).toBe('doing')
     expect(statusOf('시작 전', null)).toBe('todo')
     expect(statusOf('검토 중', 50)).toBe(null)
+    expect(statusOf('미완료', 100)).toBe(null)
+    expect(statusOf('완료 안 됨', null)).toBe(null)
+    expect(statusOf('완료 예정', null)).toBe('todo')
+    expect(statusOf('완료 예정, 2주 지연', null)).toBe('late')
+    expect(statusOf('미완료, 2주 지연', null)).toBe('late')
+    expect(statusOf('지연 없음', null)).toBe(null)
     expect(statusOf('', 100)).toBe('done')
     expect(statusOf('', 0)).toBe('todo')
     expect(statusOf('', 35)).toBe('doing')
@@ -165,6 +191,13 @@ describe('한 그림의 값', () => {
     expect(seriesIn(['3건', '40%']).values).toEqual([3, 40])
     expect(seriesIn(['120', '', '미정', '150건']).values).toEqual([120, null, null, 150])
   })
+
+  it('값끼리 같은 단위여도 따로 적은 단위와 다르면 계산하지 않는다', () => {
+    expect(seriesIn(['10원', '20원'], '건').ok).toBe(false)
+    expect(amountPair('10원', '20원', '건')).toBeNull()
+    expect(seriesIn(['40초', '2분'], '분').ok).toBe(true)
+    expect(amountPair('40초', '2분', '분')).not.toBeNull()
+  })
 })
 
 describe('추진 일정의 기간', () => {
@@ -174,6 +207,10 @@ describe('추진 일정의 기간', () => {
     expect(cols).toEqual(['11월', '12월', '1월', '2월', '3월'])
     expect(colsOf('1분기, 2분기,3분기')).toEqual(['1분기', '2분기', '3분기'])
     expect(colsOf('')).toEqual([])
+    expect(colsOf(' \n ')).toEqual([])
+    expect(colsOf('첫째, , 셋째')).toEqual(['첫째', '', '셋째'])
+    expect(spanIn('셋째', colsOf('첫째, , 셋째'))).toEqual([2, 2])
+    expect(spanIn('없는 이름', colsOf('첫째, , 셋째'))).toBeNull()
   })
 
   it('적은 기간의 처음 칸과 끝 칸을 찾는다', () => {
@@ -181,6 +218,15 @@ describe('추진 일정의 기간', () => {
     expect(spanIn('11월부터 1월까지', cols)).toEqual([0, 2])
     expect(spanIn('3월', cols)).toEqual([4, 4])
     expect(spanIn('12월 2주 ~ 2월 1주', cols)).toEqual([1, 3])
+  })
+
+  it('앞쪽 단위를 생략한 구간도 처음부터 끝까지 찾는다', () => {
+    expect(spanIn('12~2월', cols)).toEqual([1, 3])
+    expect(spanIn('2~3주', colsOf('1주 2주 3주 4주'))).toEqual([1, 2])
+    expect(spanIn('10월 2~3주', colsOf('10월 1주 2주 3주 4주'))).toEqual([1, 2])
+    expect(periodRest('10월 2~3주', colsOf('10월 1주 2주 3주 4주'))).toBe('')
+    expect(spanIn('1~3분기', colsOf('1분기 2분기 3분기 4분기'))).toEqual([0, 2])
+    expect(periodRest('12~2월', cols)).toBe('')
   })
 
   it("'1월'을 '11월'이나 '12월' 안에서 잡지 않는다", () => {
@@ -204,6 +250,7 @@ describe('추진 일정의 기간', () => {
     expect(colsOf('10월 1주, 10월 2주, 10월 3주')).toEqual(['10월 1주', '10월 2주', '10월 3주'])
     expect(colsOf('준비 기간, 시범 운영, 전체 적용')).toEqual(['준비 기간', '시범 운영', '전체 적용'])
     expect(colsOf('준비 기간\n시범 운영')).toEqual(['준비 기간', '시범 운영'])
+    expect(colsOf('\n준비 기간\n시범 운영\n')).toEqual(['준비 기간', '시범 운영'])
     expect(colsOf('기획·설계, 개발, 시험')).toEqual(['기획·설계', '개발', '시험'])
     expect(colsOf('A안/B안/C안')).toEqual(['A안', 'B안', 'C안'])
     expect(colsOf('현행 유지 / 신규 도입')).toEqual(['현행 유지', '신규 도입'])
@@ -252,12 +299,30 @@ describe('추진 일정의 기간', () => {
 })
 
 describe('평가표 읽기', () => {
+  it('이름이 겹치는 대안은 정확하게 일치한 안만 추천한다', () => {
+    expect(optionIndex('현행 개선', ['현행', '현행 개선', '신규'])).toBe(1)
+    expect(optionIndex('AA안', ['A안', 'AA안', 'B안'])).toBe(1)
+    expect(optionIndex('현행 개선을 추천', ['현행', '현행 개선', '신규'])).toBe(-1)
+    expect(optionIndex('첫째', ['첫째', '첫째'])).toBe(-1)
+    expect(optionIndex('B안 추천', ['A안', 'B안', 'C안'])).toBe(1)
+    expect(optionIndex('B안을 추천', ['A안', 'B안', 'C안'])).toBe(1)
+    expect(optionIndex('BA안 추천', ['A안', 'C안'])).toBe(-1)
+    expect(optionIndex('', ['', 'A안'])).toBe(-1)
+  })
   it('좋음 보통 나쁨과 기호를 읽고, 모르는 글은 그대로 둔다', () => {
     expect(gradesOf('좋음 보통, 나쁨').map(gradeOf)).toEqual(['good', 'mid', 'bad'])
     expect(gradesOf('○ △ ×').map(gradeOf)).toEqual(['good', 'mid', 'bad'])
     expect(gradesOf('상 중 하').map(gradeOf)).toEqual(['good', 'mid', 'bad'])
     expect(gradeOf('1.9억')).toBeNull()
     expect(gradesOf('')).toEqual([])
+  })
+
+  it('빈 평가와 확인 중인 글 뒤의 평가는 원래 안에 남긴다', () => {
+    expect(gradesOf('좋음, , 나쁨')).toEqual(['좋음', '', '나쁨'])
+    expect(gradesOf('좋음,,나쁨')).toEqual(['좋음', '', '나쁨'])
+    expect(gradesOf('좋음，，나쁨')).toEqual(['좋음', '', '나쁨'])
+    expect(gradesOf('좋음, 확인 중, 나쁨')).toEqual(['좋음', '확인 중', '나쁨'])
+    expect(gradesOf(', 보통,')).toEqual(['', '보통', ''])
   })
 })
 

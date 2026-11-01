@@ -5,13 +5,13 @@ import { hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
 import { useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
-import { colsOf, gradeOf, gradesOf, spanIn, type Grade } from '../numbers'
+import { colsOf, gradeOf, gradesOf, optionIndex, type Grade } from '../numbers'
 import { useDemo } from './parts'
 
 /** 평가표의 표시: 꽉 찬 원(좋음), 반 찬 원(보통), 빈 원(나쁨). 보고서에서 흔히 쓰는 하비 볼 */
-function GradeMark({ grade, className = 'bk-ev-mk' }: { grade: Grade; className?: string }) {
+function GradeMark({ grade, className = 'bk-ev-mk', label }: { grade: Grade; className?: string; label?: string }) {
   return (
-    <svg className={className} viewBox="0 0 32 32" aria-hidden="true">
+    <svg className={className} viewBox="0 0 32 32" role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
       {grade === 'good' ? (
         <circle className="bk-ev-fill" cx="16" cy="16" r="14" />
       ) : (
@@ -38,7 +38,7 @@ export function Rating() {
   const { slide, mode } = useSlide()
   const { demo, read } = useDemo(['opts', 'pick'])
   const opts = colsOf(read('opts')).slice(0, 5)
-  const pick = spanIn(read('pick'), opts)?.[0] ?? -1
+  const pick = optionIndex(read('pick'), opts)
   const items = slide.items.slice(0, BLOCKS.rating.items!.max)
   // 평가가 비어 있으면 편집할 때만 안내 평가로 흐린 표시를 보인다
   const marksOf = (i: number) => gradesOf(items[i].body.trim() || (mode === 'final' ? '' : hintFor(slide.layout, slide.hints, 'body', 'body', i)))
@@ -96,7 +96,7 @@ export function Rating() {
                     const g = marks[j] ? gradeOf(marks[j]) : null
                     return (
                       <span key={j} className={cx('bk-ev-cell', j === pick && 'is-pick')}>
-                        {g ? <GradeMark grade={g} /> : marks[j] ? <span className="bk-ev-x">{marks[j]}</span> : null}
+                        {g ? <GradeMark grade={g} label={marks[j]} /> : marks[j] ? <span className="bk-ev-x">{marks[j]}</span> : null}
                       </span>
                     )
                   })}

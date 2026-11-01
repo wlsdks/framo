@@ -150,6 +150,11 @@
   background: var(--surface);
 }
 
+/* 진행률로 읽을 수 없는 글에는 빈 막대도 그리지 않는다. 0%로 오해할 수 있다. */
+.ps-track.is-unknown {
+  visibility: hidden;
+}
+
 .ps-fill {
   display: block;
   width: calc(var(--p) * 1%);
@@ -316,8 +321,22 @@
   grid-area: state;
 }
 
-/* 발표할 때는 지연된 과제의 사정만: 칩 없이 나쁨 색 글자로 */
-.slide:not(.m-edit) .ps-board .ps-row:not(.is-late) .ps-state {
+/* 읽을 수 없는 값은 막대 자리에 홀로 떨어뜨리지 않고 과제 이름 옆에 둔다. */
+.ps-board .ps-row:has(.ps-track.is-unknown) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'name pct' 'state state';
+}
+
+.ps-board .ps-row:has(.ps-track.is-unknown) .ps-track {
+  display: none;
+}
+
+.ps-board .ps-row:has(.ps-track.is-unknown) .ps-name {
+  margin-bottom: 0;
+}
+
+/* 지연 사정과 알 수 없는 상태, 단 이름만으로 알 수 없는 설명은 발표 화면에도 남긴다. */
+.slide:not(.m-edit) .ps-board .ps-lane:not(.is-unknown) .ps-row:not(.is-late, .has-detail) .ps-state {
   display: none;
 }
 
@@ -363,6 +382,11 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   row-gap: 48px;
   column-gap: 96px;
+}
+
+/* 다섯 종류의 상태는 세 단씩 두 줄로 놓아 세 번째 줄이 생기지 않게 한다. */
+.l-progress .ps-board:has(> .ps-lane:nth-child(5)):is([data-rows='1'], [data-rows='2']) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* 두 줄로 놓을 때는 진행률을 이름 줄 끝으로 올려 과제마다 한 줄을 줄인다(넷부터의 짜임과 같다): 그대로면 두 줄이 본문을 넘었다 */
@@ -430,4 +454,27 @@
 
 .ps-board:is([data-rows='6'], [data-rows='7']) .ps-meta {
   margin-top: 0;
+}
+
+/* 컴포넌트 안에서 다섯 단을 한 줄로 두면 과제명과 담당자가 지나치게 꺾인다. */
+.bk-progress .ps-board:has(> .ps-lane:nth-child(5)) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 36px 64px;
+}
+
+.bk-progress .ps-board:has(> .ps-lane:nth-child(5)) .ps-row:not(.ps-headrow) {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'name state pct' 'track track track';
+  padding-block: 12px;
+}
+
+.bk-progress .ps-board:has(> .ps-lane:nth-child(5)) .ps-name {
+  margin-bottom: 10px;
+}
+
+/* 조밀한 모양의 규칙보다 뒤에 두어 알 수 없는 값은 항상 이름 옆에 둔다. */
+.ps-board .ps-row:has(.ps-track.is-unknown),
+.bk-progress .ps-board:has(> .ps-lane:nth-child(5)) .ps-row:has(.ps-track.is-unknown):not(.ps-headrow) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'name pct' 'state state';
 }

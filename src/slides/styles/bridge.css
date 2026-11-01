@@ -180,6 +180,12 @@
   visibility: hidden;
 }
 
+/* 값이나 단위를 확정할 수 없는 동안은 이어지는 막대의 높이를 추측하지 않는다. 글 칸은 그 자리에 남긴다. */
+.wf.is-incomplete :is(.wf-bar, .wf-cut),
+.wf.is-incomplete .wf-plot::after {
+  visibility: hidden;
+}
+
 .wf.is-demo .wf-bar,
 .wf.is-demo .wf-plot::after {
   opacity: 0.3;

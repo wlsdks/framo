@@ -56,14 +56,16 @@ export function Sparks() {
             const toks = tokensOf(demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : it.value).slice(-24)
             const unit = it.meta.trim() || (demo ? hintFor(slide.layout, slide.hints, 'meta', 'meta', i) : '')
             // 줄 안에서 자리를 섞어 적었으면('9,500만, 1.2억') 한 기준으로 맞춰 선을 긋는다
-            const vs = seriesIn(toks, unit).values
+            const series = seriesIn(toks, unit)
+            const invalid = !series.ok || series.values.some((v) => v === null)
+            const vs = invalid ? toks.map(() => null) : series.values
             const pts = toks.flatMap((t, j) => {
               const v = vs[j]
               return v === null ? [] : [{ j, v, t }]
             })
             const lo = Math.min(...pts.map((p) => p.v))
             const hi = Math.max(...pts.map((p) => p.v))
-            // 위아래 끝의 점이 칸 밖으로 나가지 않게 조금 띄운다. 비어 있는 자리('-')는 그 자리를 건너뛰어 잇는다
+            // 위아래 끝의 점이 칸 밖으로 나가지 않게 조금 띄운다. 값이 빠지거나 단위가 섞이면 선 대신 원문을 둔다.
             const at = pts.map((p) => ({ x: (p.j / Math.max(1, toks.length - 1)) * 100, y: hi === lo ? 50 : 88 - ((p.v - lo) / (hi - lo)) * 76 }))
             const line = at.map((p, k) => `${k ? 'L' : 'M'}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ')
             const last = pts[pts.length - 1]
@@ -82,6 +84,7 @@ export function Sparks() {
                   {end && <span className="bk-sx-dot" style={{ '--x': end.x.toFixed(2), '--y': end.y.toFixed(2) }} aria-hidden="true" />}
                   {/* 흐름 숫자는 선 자리에서 고친다 (올리거나 누르면 숫자가 보인다) */}
                   {mode === 'edit' && <IT i={i} k="value" className="bk-sx-in on-chart" oneLine />}
+                  {mode !== 'edit' && invalid && <IT i={i} k="value" className="bk-sx-in" />}
                 </div>
                 <span className="bk-sx-now">
                   {last && (
@@ -92,7 +95,7 @@ export function Sparks() {
                   {/* 단위는 숫자보다 두 단계 작게 */}
                   {unitField ? <IT i={i} k="meta" as="span" className="bk-sx-u" /> : unit && last && <span className="bk-sx-u">{unit}</span>}
                 </span>
-                <span className="bk-sx-chg">{step && (step.dir === 0 ? '그대로' : `${step.dir > 0 ? '▲' : '▼'} ${step.text}`)}</span>
+                <span className="bk-sx-chg">{mode === 'edit' && invalid ? '값 확인' : step && (step.dir === 0 ? '그대로' : `${step.dir > 0 ? '▲' : '▼'} ${step.text}`)}</span>
                 <ItemTools i={i} />
               </li>
             )

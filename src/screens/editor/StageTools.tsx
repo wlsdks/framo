@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import { withLayout } from '../../deck/blocks'
 import { LAYOUTS } from '../../deck/layouts'
+import { readPercent } from '../../deck/percent'
 import { unshownCount, visibleItems } from '../../deck/fields'
 import type { Deck, Slide } from '../../deck/types'
 import type { OverField } from '../../slides/overflow'
@@ -200,7 +201,7 @@ export function StageTools({
   slide: Slide
   ai: AiShare
   ask: AiAsk
-  blocks: Pick<BlockEditing, 'libraryOpen'>
+  blocks: Pick<BlockEditing, 'libraryOpen' | 'selected'>
   side: SidePanel
   /** '레이아웃 바꾸기'에서 그림에 올린 레이아웃으로 바꾼 모습을 보이는 중 */
   peekSlide: Slide | null
@@ -216,6 +217,9 @@ export function StageTools({
   const store = useDeck.getState()
   const spec = LAYOUTS[slide.layout]
   const canAddItem = !!spec.items && visibleItems(slide).length < spec.items.max
+  const selectedBlock = slide.blocks?.find((b) => b.id === blocks.selected)
+  const ringValue = selectedBlock?.type === 'ring' ? selectedBlock.fields.value?.trim() : ''
+  const ringNeedsValue = !!ringValue && readPercent(ringValue) === null
   const toolsRef = useRef<HTMLDivElement>(null)
   useTightTools(toolsRef)
   return (
@@ -236,6 +240,11 @@ export function StageTools({
         <div className="stage-tools-l">
           {/* 장 위에서 항목이나 판을 고르면 그 도구가 여기에 들어오고(SelectionBar), 그동안 이 장의 단추는 숨긴다(editor.css) */}
           <div className="stage-sel" />
+          {ringNeedsValue && (
+            <div className="stage-warn" role="status">
+              <span className="stage-value-note" title="0부터 100까지의 숫자나 %를 입력하면 원이 나타나요.">0~100을 입력하면 원이 나타나요.</span>
+            </div>
+          )}
           <button
             type="button"
             className={cx('btn btn-sm stage-blocks', blocks.libraryOpen ? 'is-on' : 'btn-ghost')}
