@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
-import { withLayout } from '../deck/blocks'
+import { autoPlace, makeBlock, withLayout } from '../deck/blocks'
 import { emptyItem, makeSlide } from '../deck/generate'
 import { createSampleDeck } from '../deck/sample'
 import { deckData, exportCsp, fontText, parseDeckData } from './exportHtml'
@@ -35,6 +35,26 @@ describe('HTML 파일에 넣는 덱', () => {
     const data = deckData(deck)
     for (const text of Object.values(slide.fields)) expect(data).not.toContain(text)
     expect(slide.fields.title).toBe('숨긴 제목')
+  })
+  it('조건별 흐름의 보이는 글은 HTML에서 되살리고 발표자 노트와 감춘 제목은 제외한다', () => {
+    const deck = createSampleDeck()
+    const base = makeBlock('decision')
+    const block = {
+      ...base,
+      fields: { label: '확인할 시점', question: '재고가 준비됐나요?' },
+      items: [
+        { ...emptyItem(), title: '준비됐어요', body: '출고해요' },
+        { ...emptyItem(), title: '아직 없어요', body: '입고 날짜를 알려요' },
+      ],
+    }
+    const blocks = autoPlace([], block)!
+    deck.slides = [{ ...makeSlide('compose'), fields: { title: '숨긴 제목' }, options: { hideHead: true }, notes: '내부 노트', blocks }]
+    const data = deckData(deck)
+    expect(data).not.toContain('숨긴 제목')
+    expect(data).not.toContain('내부 노트')
+    const back = parseDeckData(data)!
+    expect(back.slides[0].blocks![0].fields).toEqual(block.fields)
+    expect(back.slides[0].blocks![0].items.map(({ title, body }) => ({ title, body }))).toEqual(block.items.map(({ title, body }) => ({ title, body })))
   })
   it('듣는 분께 보이지 않는 글(발표자 노트, 숨긴 장, 레이아웃을 바꿔 가려진 칸)은 넣지 않는다', () => {
     const deck = createSampleDeck()
