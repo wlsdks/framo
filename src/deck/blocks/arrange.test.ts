@@ -1,6 +1,8 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { autoPlace, boardFit, boardTight, byReading, composeAreaH, isArranged, makeBlock, moveAt, rearrangeBlocks, removeBlock, tiles } from '../blocks'
 import { sampleBlock } from '../blockSamples'
+import { KPI_NARROW } from './arrange'
 import { aspectOf } from './images'
 import type { Block, BlockType, Slide } from '../types'
 
@@ -48,6 +50,41 @@ describe('짜임 틀 고르기', () => {
       expect(at(bs, 'b').y).toBe(at(bs, 'r').y)
       expect(at(bs, 'r').x).toBeGreaterThan(at(bs, 'b').x)
     }
+  })
+  it('핵심 숫자를 줄로 쌓는 칸에 너비를 몰아주지 않고 옆 목록과 고르게 나눈다', () => {
+    const quote = { ...block('quote', 'q'), fields: { quote: '회의가 짧아지니 오후에 일할 시간이 생겼어요', by: '시범 부서 팀원' } }
+    const kpi0 = block('kpi', 'k')
+    const kpi = { ...kpi0, items: [['4.8억 원', '한 해 절감액'], ['3년', '회수 기간'], ['22%', '줄인 회의 시간']].map(([value, title], i) => ({ ...kpi0.items[i], value, title })) }
+    const list0 = block('bullets', 'l')
+    const list = { ...list0, items: ['안건은 하루 전까지 보드에 올리기', '결정이 필요한 것만 회의에서', '나머지는 보드 댓글로 정리'].map((title, i) => ({ ...list0.items[i], title })) }
+    const bs = board(quote, kpi, list)
+    expect(tiles(bs)).toBe(true)
+    // 핵심 숫자는 반 칸이나 3분의 2 칸에서 숫자 옆에 이름을 두는 줄로 쌓여 450px 남짓만 쓴다. 8칸을 주면 오른쪽 절반이 비고
+    // 옆 목록은 4칸에 눌려 첫 줄이 꺾였다
+    expect(at(bs, 'k').y).toBe(at(bs, 'l').y)
+    expect(at(bs, 'l').w).toBeGreaterThanOrEqual(at(bs, 'k').w)
+  })
+  it('핵심 숫자 셋은 짧은 글 하나와 함께면 판 너비의 한 줄로 선다', () => {
+    const kpi0 = block('kpi', 'k')
+    const kpi = { ...kpi0, items: [['4.8억 원', '한 해 절감액'], ['3년', '회수 기간'], ['22%', '줄인 회의 시간']].map(([value, title], i) => ({ ...kpi0.items[i], value, title })) }
+    const quote = { ...block('quote', 'q'), fields: { quote: '회의가 짧아지니 오후에 일할 시간이 생겼어요', by: '시범 부서 팀원' } }
+    const list = { ...sampleBlock('bullets'), id: 'l' }
+    // 한 줄로 선 숫자 셋은 칸을 셋으로 나눠 오른쪽 끝까지 그려진다. 반 칸만 쓴다고 어림하던 때는 인용 4칸 옆에 숫자를 8칸 높이 전체로
+    // 쌓아 숫자 오른쪽 30%가 비었다
+    for (const bs of [board(quote, kpi), board(kpi, list)]) {
+      expect(tiles(bs)).toBe(true)
+      expect(at(bs, 'k').w).toBe(12)
+    }
+  })
+  it('핵심 숫자가 좁은 칸의 짜임으로 바꾸는 높이는 그리는 쪽(kpi.css)과 같다', () => {
+    const css = readFileSync(new URL('../../slides/styles/blocks/kpi.css', import.meta.url), 'utf8')
+    const rules = [...css.matchAll(/@container bk \(max-width: 1200px\) and \(min-height: (\d+)px\) \{\s*([^{]+?)\s*\{\s*--kp-(stack|pair): 1;/g)].map((m) => ({ h: Number(m[1]), sel: m[2], kind: m[3] }))
+    for (const n of [2, 3, 4] as const)
+      for (const variant of ['base', 'cards'] as const)
+        for (const body of [0, 1] as const) {
+          const sel = `.va-${variant} > .bk-in:has(> .kp[data-n='${n}']${body ? ' .kp-body)' : '):not(:has(.kp-body))'}`
+          expect(rules.find((r) => r.sel === sel && r.kind === (n === 4 ? 'pair' : 'stack'))?.h, `${n} ${variant} ${body}`).toBe(KPI_NARROW[n][variant][body])
+        }
   })
   it('로고 모음 다음에 넣은 숫자 둘은 한 줄에 나란히, 로고 위에 선다 (숫자가 답)', () => {
     const logos = sampleBlock('logos')
