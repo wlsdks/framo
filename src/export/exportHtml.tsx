@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import { pageInfo, shownOnly } from '../deck/fields'
+import { pageInfo, shownMeta, shownOnly } from '../deck/fields'
 import { uid } from '../deck/generate'
 import type { Deck } from '../deck/types'
 import { pageProps, SlideCanvas } from '../slides/SlideCanvas'
@@ -47,10 +47,12 @@ function escapeHtml(text: string): string {
 
 /**
  * 다시 열어 편집할 수 있게 덱을 넣어 둔다. 듣는 분께 보이지 않는 글은 빼서 다른 사람에게 보내도 안전하다: 발표자 노트,
- * 숨긴 장, 레이아웃을 바꿔 가려진 칸(장에서는 보이지 않아도 파일을 열거나 소스를 보면 읽혔다). 이어서 고칠 원본은 작업 파일이다
+ * 숨긴 장, 레이아웃을 바꿔 가려진 칸, 보내는 장에 나오지 않는 발표 전체의 값(연락처, 로고 같은. 장에서는 보이지 않아도
+ * 파일을 열거나 소스를 보면 읽혔다). 이어서 고칠 원본은 작업 파일이다
  */
 export function deckData(deck: Deck): string {
-  const safe: Deck = { ...deck, slides: deck.slides.filter((s) => !s.hidden).map((s) => ({ ...shownOnly(s), notes: '' })) }
+  const slides = deck.slides.filter((s) => !s.hidden)
+  const safe: Deck = { ...deck, meta: shownMeta(deck.meta, slides), slides: slides.map((s) => ({ ...shownOnly(s), notes: '' })) }
   return JSON.stringify(safe).replace(/</g, '\\u003c')
 }
 

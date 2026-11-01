@@ -74,6 +74,23 @@ describe('HTML 파일에 넣는 덱', () => {
     expect(back.slides.map((s) => s.fields.title)).toEqual([deck.slides[0].fields.title, '보이는 제목', '단락 제목'])
     expect(back.slides[1].items.map((it) => it.title)).toEqual(['보이는 항목', '둘째 항목'])
   })
+  it('발표 전체의 값(소속, 발표자, 날짜, 연락처, 로고)은 보내는 장에 나올 때만 넣는다', () => {
+    const deck = createSampleDeck()
+    const logo = 'data:image/png;base64,bG9nb1NlY3JldA=='
+    deck.meta = { ...deck.meta, org: '소속비밀', presenter: '발표자이름', date: '날짜비밀', contact: '연락처비밀', logo }
+    const before = structuredClone(deck.meta)
+    // 표지를 숨기고 마지막 장만 보내면 듣는 분께 보이는 값은 마지막 장의 발표자와 연락처뿐이다
+    deck.slides = [{ ...makeSlide('cover'), hidden: true }, makeSlide('closing')]
+    const data = deckData(deck)
+    for (const secret of ['소속비밀', '날짜비밀', 'bG9nb1NlY3JldA==']) expect(data, secret).not.toContain(secret)
+    const back = parseDeckData(data)!
+    expect(back.meta).toEqual({ ...before, org: '', date: '', logo: '' })
+    // 표지만 보내면 연락처가 빠지고 로고와 소속은 남는다
+    deck.slides = [makeSlide('cover')]
+    expect(parseDeckData(deckData(deck))!.meta).toEqual({ ...before, contact: '' })
+    // 작업 중인 발표의 값은 그대로
+    expect(deck.meta).toEqual(before)
+  })
 })
 
 describe('HTML 파일에서 덱 되살리기', () => {
