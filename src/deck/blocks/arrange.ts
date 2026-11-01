@@ -13,6 +13,7 @@ import type { Block, BlockType } from '../types'
 import { headLook } from '../themes'
 import { readPercent } from '../percent'
 import { BOARD_COLS, byReading, type Fit, layTree, leaf, sameArea, split, type Tree, treeOf } from './board'
+import { blockItems, variantOfBlock } from './cells'
 import { aspectOf, fitImage } from './images'
 import { isAlone, isSolo, shownLook } from './rules'
 import { AREA_W, atRect, blockMinH, isStretchy, widthOf } from './sizing'
@@ -54,6 +55,34 @@ function measureW(b: Block, w: number): number {
   if (b.type === 'text') return 24 * 30
   if (b.type === 'facts' && (b.items.length <= 3 || w < 1300)) return 140 + 24 * 30
   return MEASURE_W[b.type] ?? Infinity
+}
+
+/**
+ * 핵심 숫자가 좁은 칸에서 바꾸는 짜임의 높이 (캔버스 px, styles/blocks/kpi.css와 같은 값: arrange.test.ts가 맞춰 본다).
+ * 둘·셋은 1200px 밑의 칸이 이만큼 높으면 숫자 옆에 이름을 둔 줄로 쌓고(--kp-stack), 넷은 900px 밑에서는 늘, 1200px 밑에서는
+ * 이만큼 높으면 둘씩 두 줄로 둔다(--kp-pair). [나란히, 카드] × [설명 없음, 설명 있음]
+ */
+export const KPI_NARROW: Record<2 | 3 | 4, { base: [number, number]; cards: [number, number] }> = {
+  2: { base: [200, 240], cards: [280, 320] },
+  3: { base: [300, 360], cards: [380, 440] },
+  4: { base: [400, 520], cards: [460, 580] },
+}
+
+/**
+ * 핵심 숫자가 이 칸에서 좁은 칸의 짜임(줄로 쌓기, 둘씩 두 줄)으로 그려지는지. 그러면 반 칸(가장 좁은 너비)이 보기 좋은 너비다:
+ * 쌓은 줄은 숫자 옆에 이름이 바로 붙고 숫자는 글자 크기 단계에서 멈춰서, 3분의 2 칸(1096px)을 주어도 숫자는 그대로이고 오른쪽이 빌 뿐이다.
+ * 보기 좋은 너비(prefSpan 12)는 숫자를 한 줄에 나란히 둘 때의 판 너비라, 쌓는 칸에서도 그 너비로 세면 핵심 숫자에 8칸을 주고
+ * 옆 목록을 4칸으로 눌렀다(가운데가 크게 비고 목록의 첫 줄이 꺾였다). 판보다 좁은 칸은 옆에 다른 컴포넌트가 있어서, 1000px 넘는 칸의 둘은 나란히 선다(.is-shared)
+ */
+function narrowKpi(b: Block, r: { w: number; h: number }): boolean {
+  if (b.type !== 'kpi' || r.w > 1200) return false
+  const items = blockItems(b)
+  const n = items.length
+  const variant = variantOfBlock(b)
+  if ((n !== 2 && n !== 3 && n !== 4) || (variant !== 'base' && variant !== 'cards')) return false
+  if (n === 2 && r.w >= 1000) return false
+  if (n === 4 && r.w <= 900) return true
+  return r.h >= KPI_NARROW[n][variant][items.some((it) => it.body.trim()) ? 1 : 0]
 }
 
 /** 같은 말투로 맞출 숫자 부품: 한 장에 둘 이상이면 나란히 한 줄에 서야 크기와 이름표 자리를 맞출 수 있다 */
@@ -191,11 +220,13 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
   const all = leaves(t)
   // 그려진 높이: 차트처럼 칸 높이를 다 쓰는 부품은 칸 높이, 글과 숫자는 잰 높이에 글자 단계를 곱한 것
   // 차트도 칸 높이를 끝없이 쓰지는 않는다(흐름, 원, 로고는 비율을 지킨다): 잰 높이의 두 배까지만
-  // 이미지가 든 이미지 부품은 칸 안에 이미지 비율대로 들어간 크기(가운데에 선다)
+  // 이미지가 든 이미지 부품은 칸 안에 이미지 비율대로 들어간 크기(가운데에 선다).
+  // 좁은 칸의 짜임으로 그려지는 핵심 숫자(narrowKpi)도 줄이 칸 높이를 똑같이 나눠 가져(1fr) 칸 높이 전체에 걸쳐 그려진다:
+  // 잰 높이로 세면 판 높이 전체에 쌓은 숫자 옆에 짧은 글을 두고 글 아래가 통째로 비는 판을 나쁘지 않다고 보았다
   const drawn = (b: Block, s: number) => {
     const img = picture(laid.get(b.id)!, rect(b))
     if (img) return img.h
-    return isStretchy(b.type) ? Math.min(rect(b).h, base(b) * 2 * s) : base(b) * s
+    return isStretchy(b.type) || narrowKpi(laid.get(b.id)!, rect(b)) ? Math.min(rect(b).h, base(b) * 2 * s) : base(b) * s
   }
   const pack = (n: Tree, s: number): number => {
     if (n.kind === 'leaf') return drawn(n.block, s)
@@ -231,10 +262,15 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
   walk(t)
   for (const b of all) {
     const at = laid.get(b.id)!.at!
-    // 보기 좋은 너비보다 좁은 칸은 짜임이 눌린다. 숫자는 가장 좁은 너비에서도 한 줄로 서서(숫자 셋이 4·4·4) 덜 친다
-    cost += Math.max(0, fit.prefW(b) - at.w) * (NUMBER_TYPES.has(b.type) ? 1 : 3)
+    // 보기 좋은 너비보다 좁은 칸은 짜임이 눌린다. 숫자는 가장 좁은 너비에서도 한 줄로 서서(숫자 셋이 4·4·4) 덜 친다.
+    // 좁은 칸의 짜임으로 그려지는 핵심 숫자는 반 칸이 보기 좋은 너비다(narrowKpi)
+    const narrow = narrowKpi(laid.get(b.id)!, rect(b))
+    const want = narrow ? fit.minW(b) : fit.prefW(b)
+    cost += Math.max(0, want - at.w) * (NUMBER_TYPES.has(b.type) ? 1 : 3)
+    // 줄로 쌓은 둘·셋은 반 칸에 맞춘 짜임이라 그보다 넓히면 이름 오른쪽이 비고 옆 칸만 좁아진다 (둘씩 두 줄인 넷은 넓힌 만큼 두 단이 쓴다)
+    if (narrow && blockItems(b).length <= 3) cost += Math.max(0, at.w - want) * 3
     // 보기 좋은 너비의 두 배보다 넓으면 내용이 왼쪽에 붙고 오른쪽이 빈다(한 줄을 다 쓰는 숫자 한 줄)
-    if (!isStretchy(b.type)) cost += Math.max(0, at.w - 2 * fit.prefW(b)) * 2
+    if (!isStretchy(b.type)) cost += Math.max(0, at.w - 2 * want) * 2
     // 차트와 그림이 낮은 띠가 되면 읽히지 않는다
     if (isStretchy(b.type) && rect(b).h < 0.4 * areaH) cost += ((0.4 * areaH - rect(b).h) / areaH) * 60
     // 이미지가 칸을 다 쓰지 못하고 가운데에 작게 서면 칸의 남는 몫만큼 빈다 (화면 캡처를 넓고 낮은 띠에 둔 판)
@@ -290,6 +326,13 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
       const text = Math.min(r.w * 0.44, Math.max(words, number))
       const dots = Math.min(10, Number(total)) * 32 * 1.3 - 9.6
       return r.x + Math.min(r.w, text + 72 + dots)
+    }
+    // 한 줄에 나란히 선 핵심 숫자는 칸을 숫자 수만큼 똑같이 나눠 쓴다: 마지막 숫자의 단에서 숫자와 이름(440px 남짓)까지 그려진다.
+    // 잰 높이로 어림하면(naturalSpan) 반 칸에서도 높이가 같아 반 칸만 쓴다고 보아, 한 줄을 다 쓰는 숫자 셋을 '오른쪽 절반이 빈다'고 쳤다
+    // (갤러리에서 잰 끝: 판 너비의 둘 76%, 셋 93~98%, 넷 거의 100%)
+    if (b.type === 'kpi' && !narrowKpi(placed, r)) {
+      const n = Math.max(1, blockItems(placed).length)
+      return r.x + r.w - r.w / n + Math.min(r.w / n, 440)
     }
     const w = isStretchy(b.type) ? r.w : Math.min(atRect({ x: 0, y: 0, w: naturalSpan(laid.get(b.id)!), h: 1 }, size).w, measureW(b, r.w))
     return r.x + Math.min(r.w, w)
