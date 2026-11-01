@@ -27,6 +27,9 @@ function split(text: string, seps: string): string[] {
 /** 중첩 없는 규칙 { 선택자, 몸 } 모두 (@container 안의 규칙도) */
 const rules = (css: string) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ selector: m[1].trim(), body: m[2] }))
 
+/** 부품의 @container 묶음마다 { 조건, 안의 규칙 } */
+const containers = [...blocks.matchAll(/@container ([^{]+)\{((?:[^{}]*\{[^{}]*\})*\s*)\}/g)].map((m) => ({ cond: m[1].trim(), body: m[2] }))
+
 /** 선택자가 가리키는 요소(맨 끝 묶음)의 클래스. :not()과 :has() 안은 그 요소의 클래스가 아니라 뺀다 */
 function subjectClasses(selector: string): string[] {
   const last = split(selector, ' >+~').at(-1) ?? ''
@@ -127,8 +130,6 @@ describe('컴포넌트 칸의 숫자 하나', () => {
 })
 
 describe('넓은 칸의 두 항목 목록', () => {
-  /** @container 묶음마다 { 조건, 안의 규칙 } */
-  const containers = [...blocks.matchAll(/@container ([^{]+)\{((?:[^{}]*\{[^{}]*\})*\s*)\}/g)].map((m) => ({ cond: m[1].trim(), body: m[2] }))
   const px = (cond: string, key: string) => Number(new RegExp(`\\(${key} ?(?:<|:) ?(\\d+)px\\)`).exec(cond)?.[1])
 
   it('소제목이 있으면 한 단이 드는 높이부터 한 단(소제목은 옆에): 편집 화면처럼 낮은 줄에서도 발표 화면과 짜임이 같다', () => {
@@ -145,5 +146,38 @@ describe('넓은 칸의 두 항목 목록', () => {
     expect(oneFrom).toBeLessThanOrEqual(120)
     // 둘 사이에 비는 높이가 없다: 비면 그 높이에서는 소제목 아래에 두 항목이 나란히 서서 낮은 줄에 글자가 줄어든다
     expect(rowBelow).toBe(oneFrom)
+  })
+})
+
+describe('쌓은 핵심 숫자', () => {
+  const stack = containers.filter((c) => c.cond === 'style(--kp-stack: 1)').flatMap((c) => rules(c.body))
+  const body = (selector: string) => stack.find((r) => r.selector === selector)?.body ?? ''
+
+  it('줄은 내용 높이이고 남는 높이는 맨 아래 빈 줄로 (docs/VISUAL-RULES.md 6)', () => {
+    // 칸 높이를 줄마다 나눠(1fr) 늘리던 때는 판 높이 전체(12줄)에 쌓은 숫자 셋이 칸 너비에 묶인 크기에서 멈추고 줄 사이만 159px로
+    // 벌어져 줄마다 떨어진 섬으로 보였다(갤러리 combos seed 1의 75번)
+    expect(body(".bk-in > .kp:not([data-n='1'])")).toMatch(/grid-template-rows:\s*auto var\(--kp-row-gap\) auto 1fr\s*;/)
+    expect(body(".bk-in > .kp[data-n='3']")).toMatch(/grid-template-rows:\s*auto var\(--kp-row-gap\) auto var\(--kp-row-gap\) auto 1fr\s*;/)
+    // 칸은 사이 줄을 건너 홀수 줄에 (차례대로 놓으면 둘째 칸이 사이 줄에 들어간다)
+    expect(body(".bk-in > .kp:not([data-n='1']) > .kp-item:nth-child(2)")).toMatch(/grid-row:\s*3\s*;/)
+    expect(body(".bk-in > .kp:not([data-n='1']) > .kp-item:nth-child(3)")).toMatch(/grid-row:\s*5\s*;/)
+  })
+
+  it('줄 사이는 남는 만큼 넓어지되 묶음 사이보다 좁고, 모자라면 예전 사이까지 좁아진다', () => {
+    const gap = /--kp-row-gap:\s*minmax\((\d+)px, clamp\((\d+)px, [^,]+, (\d+)px\)\)\s*;/.exec(body(".bk-in > .kp:not([data-n='1'])"))
+    expect(gap).not.toBeNull()
+    const [, floor, low, cap] = gap!.map(Number)
+    // 바닥은 칸을 줄마다 나누던 때의 사이(24px)라, 낮은 칸에서 잰 높이(blockHeights.ts)가 그대로 맞는다
+    expect([floor, low]).toEqual([24, 24])
+    // 같은 묶음 안의 사이는 묶음 사이(--bk-gap의 두 배)보다 늘 좁다
+    expect(cap).toBeLessThan(2 * BLOCK_GAP)
+  })
+
+  it('바탕 없는 줄은 사이를 칸 안쪽 여백으로 두지 않는다', () => {
+    // 안쪽 여백이 16px를 넘으면 맞추기(fitBlocks의 crowded)가 면 안의 여백으로 보고, 바닥선 아래로 조금 내려오는 한글 단위(시간)를
+    // 넘친 것으로 알아 칸을 키우지 못했다(갤러리 combos seed 4의 23번이 184px 대신 154px)
+    expect(body(".va-base > .bk-in > .kp:not([data-n='1']) > .kp-item")).toMatch(/padding-block:\s*calc\(var\(--bk-air, 0px\) \/ 2\)\s*;/)
+    // 카드는 면 사이 그대로 (면은 내용에 맞추고 늘리지 않는다)
+    expect(body(".va-cards > .bk-in > .kp:not([data-n='1'])")).toMatch(/--kp-row-gap:\s*var\(--kp-gy\)\s*;/)
   })
 })
