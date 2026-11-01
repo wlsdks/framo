@@ -94,6 +94,26 @@ describe('짜임 틀 고르기', () => {
     expect(at(bs, 's1').h).toBe(at(bs, 's2').h)
     expect(at(bs, 's1').y).toBeLessThan(at(bs, 'l').y)
   })
+  it('짧은 목록이나 글 옆의 숫자를 본문 오른쪽 끝으로 밀지 않는다 (남는 너비를 글 칸에 몰아 가운데가 비지 않게)', () => {
+    // 핵심 한 줄 아래 목록 9칸 | 숫자 3칸: 목록 글은 본문의 3분의 1에서 끝나고 숫자는 오른쪽 끝에 붙어, 둘 사이가 본문의 절반 가까이
+    // (793px) 비었다. 오른쪽 끝의 빈 곳만 세서, 숫자를 끝으로 밀어 그 빈 곳을 가운데로 옮긴 판이 가장 좋다고 골랐다
+    const sample = (type: BlockType, id: string) => ({ ...sampleBlock(type), id })
+    const cases = [
+      board(sample('message', 'm'), sample('bullets', 'b'), sample('number', 'n')),
+      board(sample('bullets', 'b'), sample('number', 'n')),
+      board(sample('market', 'c'), sample('bullets', 'b'), sample('number', 'n')),
+      board(sample('market', 'c'), sample('text', 'b'), sample('number', 'n')),
+    ]
+    for (const bs of cases) {
+      const label = bs.map((b) => `${b.type}@${b.at!.x},${b.at!.w}`).join(' ')
+      expect(tiles(bs), label).toBe(true)
+      expect(at(bs, 'b').y, label).toBe(at(bs, 'n').y)
+      expect(at(bs, 'b').w, label).toBeLessThanOrEqual(7)
+    }
+    // 숫자끼리는 사이가 비어도 같은 너비다(같은 말투): 앞 숫자 칸만 좁혀 사이를 줄이지 않는다
+    const nums = board(sample('logos', 'l'), sample('stat', 's1'), sample('stat', 's2'))
+    expect(at(nums, 's1').w).toBe(at(nums, 's2').w)
+  })
 
   it('소제목 묶음 둘은 소제목마다 그 아래 부품 위에 선다', () => {
     const bs = board(block('heading', 'h1'), block('points', 'p'), block('heading', 'h2'), block('bullets', 'b'))
