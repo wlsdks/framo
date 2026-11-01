@@ -67,3 +67,15 @@ describe('부품 장의 간격', () => {
     expect(px('lk-pad')).toBe(LINK_PAD)
   })
 })
+
+describe('면 위 소제목의 빈 키 자르기', () => {
+  it('나란히 선 칸(is-shared)에서는 자르지 않는다: 옆 칸의 첫 글줄과 윗선이 같은 축에 선다 (docs/VISUAL-RULES.md 5)', () => {
+    // 평가표 카드의 소제목만 잘려 옆 강조 상자 카드의 이름표보다 9px 위에 섰다(갤러리 조합 3-44, 크게)
+    const trims = rules(blocks)
+      .filter((r) => /text-box:\s*trim-start/.test(r.body))
+      .flatMap((r) => split(r.selector, ','))
+      .filter((s) => /\.bk-h\b/.test(s) && /\.bk-look-(card|bold)\b/.test(s))
+    expect(trims.length).toBeGreaterThan(0)
+    for (const s of trims) expect(s, s).toMatch(/:not\(\.is-shared\)/)
+  })
+})

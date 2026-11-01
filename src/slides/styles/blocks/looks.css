@@ -26,9 +26,10 @@
    바로 닿는데 위는 소제목의 빈 키만큼 더 떨어져, 명조 제목 글꼴에서 위 여백이 아래보다 13px 넓었다(1680×700에서 위 57, 아래 44).
    끝이 글인 부품(글, 점 목록)은 아래에도 글의 빈 키가 있어 그대로 둔다. 준비 상황과 안 견주기는 소제목이 맨 위 줄(옆에 합계, 등급 표)
    안에 있어 부품 안 어디서든 찾는다(소제목은 부품마다 하나). 편집할 때는 소제목이 칸(.ed, 격자) 안의 글상자에 들어 있어 그 글상자도 자른다.
-   나란히 놓인 시장 규모는 다른 글의 첫 줄과 맞춰야 하므로 자르지 않는다: 제목만 잘리면 같은 글자 단계인데도 옆 글보다 위에 섰다. */
-:is(.bk-look-card, .bk-look-bold):not(.bk-market.is-shared) > .bk-in > :is(.bk-ck, .bk-sw, .bk-mk, .bk-ev, .bk-sx, .bk-dv, .bk-tg) .bk-h,
-:is(.bk-look-card, .bk-look-bold):not(.bk-market.is-shared) > .bk-in > :is(.bk-ck, .bk-sw, .bk-mk, .bk-ev, .bk-sx, .bk-dv, .bk-tg) .bk-h > :is(.ed-input, .ed-hint) {
+   나란히 놓인 칸(is-shared)에서는 자르지 않는다: 옆 칸의 첫 글줄과 같은 축에 서야 해서(docs/VISUAL-RULES.md 5). 자르면 이 소제목만
+   빈 키만큼 위에 섰다(시장 규모 옆의 글, 안 견주기 옆 강조 상자의 이름표보다 9px 위). 다른 부품의 첫 글줄은 자르지 않는 것이 축이다 */
+:is(.bk-look-card, .bk-look-bold):not(.is-shared) > .bk-in > :is(.bk-ck, .bk-sw, .bk-mk, .bk-ev, .bk-sx, .bk-dv, .bk-tg) .bk-h,
+:is(.bk-look-card, .bk-look-bold):not(.is-shared) > .bk-in > :is(.bk-ck, .bk-sw, .bk-mk, .bk-ev, .bk-sx, .bk-dv, .bk-tg) .bk-h > :is(.ed-input, .ed-hint) {
   text-box: trim-start cap alphabetic;
 }
 
