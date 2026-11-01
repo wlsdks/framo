@@ -153,6 +153,22 @@ export function shownOnly(slide: Slide): Slide {
   return { ...shown, fields, blocks: slide.layout === 'compose' ? slide.blocks?.map((b) => within(b, BLOCKS[b.type])) : undefined }
 }
 
+const META_KEYS: MetaKey[] = ['org', 'presenter', 'date', 'contact', 'logo']
+
+/**
+ * 받은 장들에 그려지는 발표 전체의 값($org 같은 칸)만 남긴 값. 고르는 값(종류, 듣는 사람, 시간, 방식)은 그대로 둔다.
+ * 연락처와 로고는 표지와 마지막 장에만 나와서, 그 장을 숨기거나 빼고 보낸 HTML 파일에서는 보이지 않는데도 소스에는 들어 있었다
+ */
+export function shownMeta(meta: DeckMeta, slides: readonly Slide[]): DeckMeta {
+  const shown = new Set<string>()
+  const add = (spec: { fields: { key: string }[] }) => spec.fields.forEach((f) => isMetaKey(f.key) && shown.add(f.key.slice(1)))
+  for (const s of slides) {
+    add(LAYOUTS[s.layout])
+    if (s.layout === 'compose') allBlocks(s.blocks ?? []).forEach((b) => add(BLOCKS[b.type]))
+  }
+  return { ...meta, ...Object.fromEntries(META_KEYS.filter((key) => !shown.has(key)).map((key) => [key, ''])) }
+}
+
 /** 채운 칸의 수 (발표 전체의 값은 빼고, 부품 안의 칸까지) */
 function filledCount(slide: Slide): number {
   const count = (x: Cells) =>
