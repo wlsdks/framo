@@ -55,6 +55,16 @@ describe('움직임 엔진', () => {
     expect(caseOf('pricing')).toMatch(/lines\(/)
   })
 
+  it('담당자는 사람마다 이름이 가림막 뒤에서 올라오고 역할과 맡은 일이 뒤따른다 (글 묶음째 떠오르지 않는다)', () => {
+    const src = motionEngine.toString()
+    const native = src.slice(src.indexOf('function nativeAuto'))
+    const people = native.slice(native.search(/case ["']people["']/), native.search(/case ["']rating["']/))
+    expect(people).not.toMatch(/rise\([^)]*["']\.bk-pp-text["']/)
+    for (const sel of ['.bk-pp-name', '.bk-pp-role', '.bk-pp-b']) expect(people, sel).toMatch(new RegExp(`lines\\([^)]*["']\\${sel}["']`))
+    // 나란히 모양은 사람마다 위에 긋던 선을 걷었다(people.css): 없는 선을 긋지 않는다
+    expect(people).not.toMatch(/grow\(el, at, ["']x["'], ["']::before["']\)/)
+  })
+
   it('레이아웃마다 짠 연출이 있다 (없으면 소리 없이 기본 연출로 떨어진다)', () => {
     const src = motionEngine.toString()
     const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))

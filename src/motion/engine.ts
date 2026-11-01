@@ -1424,27 +1424,36 @@ export function motionEngine(): MotionEngine {
           break
         case 'people': {
           lines(one('.bk-h'), 60)
+          // 사람마다 이름이 줄마다 가림막 뒤에서 올라오고, 역할과 맡은 일이 반 박자씩 뒤따른다. 이름, 역할, 맡은 일을 묶음째
+          // 띄우던 때는 사람 하나가 한 덩어리로 떠서 누가 무엇을 맡는지가 움직임에 드러나지 않았다
+          const person = (el: Element | undefined, at: number) => {
+            if (!el) return
+            lines(el.querySelector('.bk-pp-name'), at)
+            lines(el.querySelector('.bk-pp-role'), at + 90)
+            lines(el.querySelector('.bk-pp-b'), at + 160)
+          }
           const tree = one('.va-tree .bk-pp-list')
           if (tree) {
             // 체계도: 이끄는 사람이 먼저 올라오고, 그 아래 선이 내려와 가운데에서 양옆으로 퍼진 뒤,
             // 맡은 사람마다 선이 내려오며 글이 올라온다. 선은 칸의 가짜 요소라 칸이 아니라 글만 올린다(칸을 숨기면 선도 숨는다)
             const [lead, ...team] = Array.from(tree.querySelectorAll<HTMLElement>(':scope > .bk-pp-card'))
-            rise(lead?.querySelector('.bk-pp-text') ?? null, 160, L.y * 0.5)
+            person(lead, 160)
             if (team.length) {
               grow(lead, 520, 'down', '::after')
               run(anims, tree, [{ scale: '0 1', transformOrigin: 'center' }, { scale: '1 1', transformOrigin: 'center' }], s(680), L.grow, '::before')
               team.forEach((el, i) => {
                 grow(el, 860 + i * L.step, 'down', '::before')
-                rise(el.querySelector('.bk-pp-text'), 920 + i * L.step, L.y * 0.4)
+                person(el, 920 + i * L.step)
               })
             }
             break
           }
           items('.bk-pp-card', 160, (el, at) => {
-            // 목록 모양은 줄 사이에 선이 있고, 나란히는 사람마다 위에 선이 있다(왼쪽에서부터 긋는다)
-            if (cell.classList.contains('va-list')) ruled(el, at)
-            else grow(el, at, 'x', '::before')
-            rise(el.querySelector('.bk-pp-text'), at + 100, L.y * 0.4)
+            // 목록 모양은 사람 사이의 줄 선을 왼쪽부터 긋는다(표의 줄처럼). 첫 사람 위와 단으로 나란히 놓인 사람 사이에는 선이 없어서
+            // 선이 있는 줄만. 나란히는 사람마다 위에 긋던 선을 걷어서(people.css) 글만 올라온다
+            const ruledRow = cell.classList.contains('va-list') && parseFloat(getComputedStyle(el).borderTopWidth) > 0
+            if (ruledRow) sweep(el, at)
+            person(el, ruledRow ? at + 40 : at)
           }, L.step * 1.5)
           break
         }
