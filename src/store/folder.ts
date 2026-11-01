@@ -248,29 +248,60 @@ async function pruneAuto(dir: FileSystemDirectoryHandle) {
   for (const name of autos.slice(0, Math.max(0, autos.length - AUTO_KEEP))) await dir.removeEntry(name).catch(() => {})
 }
 
-/** 보관 폴더의 '지운 발표'에 들어 있는 발표들 (다른 PC에서 지운 것 포함) */
-export async function trashedDeckIds(): Promise<Set<string>> {
-  const ids = new Set<string>()
+/**
+ * 보관 폴더의 '지운 발표'에 들어 있는 발표들(다른 PC에서 지운 것 포함): id → 지울 때의 고친 시각(updatedAt).
+ * 같은 발표를 여러 번 지웠으면 가장 늦은 것. 맞출 때 그 뒤에 이 PC에서 고친 발표는 지우지 않으려고 시각까지 읽는다
+ */
+export async function trashedDecks(): Promise<Map<string, number>> {
+  const out = new Map<string, number>()
   const dir = await readyFolder()
-  if (!dir) return ids
+  if (!dir) return out
   try {
     const trash = await dir.getDirectoryHandle(TRASH_DIR)
     for await (const handle of trash.values()) {
       if (handle.kind !== 'file' || !handle.name.endsWith(DECK_EXT)) continue
       const deck = decodeDeckFile(await readText(handle as FileSystemFileHandle).catch(() => ''))
-      if (deck) ids.add(deck.id)
+      if (deck) out.set(deck.id, Math.max(out.get(deck.id) ?? -Infinity, deck.updatedAt))
     }
   } catch {
     // 아직 지운 발표가 없다
   }
-  return ids
+  return out
 }
 
-/** 지운 발표는 바로 없애지 않고 '지운 발표' 폴더로 옮긴다 */
+const pendingKey = (deckId: string) => `trash:${deckId}`
+
+/**
+ * 보관 폴더를 쓸 수 없을 때(브라우저를 다시 열어 아직 허용하지 않은 때) 지운 발표: id → 지울 때의 고친 시각.
+ * 다음에 폴더와 맞출 때 폴더의 파일도 '지운 발표'로 옮긴다(persist.ts). 기억해 두지 않으면 폴더에만 남은 파일을 다시 가져와 되살렸다
+ */
+export async function pendingTrash(): Promise<Map<string, number>> {
+  const out = new Map<string, number>()
+  try {
+    for (const key of await keys<string>(settings)) {
+      if (typeof key !== 'string' || !key.startsWith('trash:')) continue
+      const at = await get<number>(key, settings)
+      if (typeof at === 'number') out.set(key.slice('trash:'.length), at)
+    }
+  } catch {
+    // 읽지 못하면 없는 것으로 (지운 발표가 되살아날 수는 있어도 잃지는 않는다)
+  }
+  return out
+}
+
+/** 맞추며 쓴 기억은 지운다 */
+export async function forgetTrash(deckId: string): Promise<void> {
+  await del(pendingKey(deckId), settings).catch(() => {})
+}
+
+/** 지운 발표는 바로 없애지 않고 '지운 발표' 폴더로 옮긴다. 폴더를 쓸 수 없으면 기억해 두었다가 다음에 맞출 때 옮긴다 */
 export function trashDeckInFolder(deck: Deck): Promise<void> {
   return serial(async () => {
     const dir = await readyFolder()
-    if (!dir) return
+    if (!dir) {
+      await set(pendingKey(deck.id), deck.updatedAt, settings).catch(() => {})
+      return
+    }
     try {
       const name = await get<string>(fileKey(deck.id), settings)
       if (!name || !(await exists(dir, name))) return

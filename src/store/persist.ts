@@ -6,10 +6,12 @@ import {
   allowFolder,
   chooseFolder,
   folderStatus,
+  forgetTrash,
   listFolderDecks,
+  pendingTrash,
   readFolderDeck,
   trashDeckInFolder,
-  trashedDeckIds,
+  trashedDecks,
   writeDeckToFolder,
   writeVersionToFolder,
   type FolderStatus,
@@ -116,9 +118,19 @@ export async function syncWithFolder(): Promise<void> {
   const status = useStorage.getState().folder
   if (status?.kind !== 'ready') return
   const inFolder = await listFolderDecks()
+  const pending = await pendingTrash()
   const seen = new Set<string>()
   for (const fileDeck of inFolder) {
     seen.add(fileDeck.id)
+    // 폴더를 쓸 수 없을 때 지운 발표: 지울 때 그대로면 폴더에서도 '지운 발표'로 옮긴다. 그 뒤에 다른 PC에서 고쳤으면 아래에서 가져온다
+    const gone = pending.get(fileDeck.id)
+    if (gone !== undefined) {
+      await forgetTrash(fileDeck.id)
+      if (fileDeck.updatedAt <= gone) {
+        await trashDeckInFolder(fileDeck)
+        continue
+      }
+    }
     // 편집기에 열려 있는 발표는 저장소가 아니라 화면에 있는 것과 비교한다
     const editing = useDeck.getState().deck
     const local = editing?.id === fileDeck.id ? editing : await loadDeck(fileDeck.id)
@@ -129,13 +141,17 @@ export async function syncWithFolder(): Promise<void> {
       if (editing?.id === fileDeck.id) useDeck.getState().open(fileDeck)
     } else if (r.action === 'write' && local) await writeDeckToFolder(local)
   }
-  // 폴더에 없는 발표: 다른 PC에서 지웠으면 여기서도 목록에서 뺀다. 그 밖에는 폴더로 옮겨 둔다.
-  const trashed = await trashedDeckIds()
+  // 폴더에 없는 발표: 다른 PC에서 지웠으면 여기서도 목록에서 뺀다. 지운 뒤에 이 PC에서 고쳤으면 지우지 않고 폴더에 다시
+  // 쓴다(지운 발표의 시각만 보고 지우면 그 뒤에 고친 것을 잃었다). 그 밖에는 폴더로 옮겨 둔다
+  const trashed = await trashedDecks()
   for (const local of await listDecks()) {
     if (seen.has(local.id)) continue
-    if (trashed.has(local.id)) await deleteDeck(local.id)
+    const gone = trashed.get(local.id)
+    if (gone !== undefined && local.updatedAt <= gone) await deleteDeck(local.id)
     else await writeDeckToFolder(local)
   }
+  // 폴더에 파일이 없던 기억은 쓸 데가 없다
+  for (const id of pending.keys()) if (!seen.has(id)) await forgetTrash(id)
 }
 
 /**
