@@ -514,6 +514,37 @@
   grid-template-rows: minmax(124px, 1fr) auto;
 }
 
+/* 비교할 수 없는 값은 막대를 만들지 않고 적은 실적과 목표를 같은 줄에서 읽는다. */
+.bk-tg-text {
+  grid-row: 3;
+  align-self: start;
+}
+
+.bk-tg-text-head,
+.bk-tg-text-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: baseline;
+}
+
+.bk-tg-text-head {
+  margin-bottom: 16px;
+}
+
+.bk-tg-text ul {
+  display: grid;
+  gap: 20px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.bk-tg-text-row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* 낮고 넓은 칸: 기간 이름과 달성률을 나란히. 이름이 짧을 때만(is-short): 몇 칸만 꺾이면 줄이 들쭉날쭉해진다 */
 @container bk (max-height: 460px) and (min-width: 1300px) {
   .bk-tg.is-short .bk-cc-label {
@@ -633,6 +664,15 @@
   background: var(--cc-bar);
 }
 
+/* 낮을수록 좋은 목표는 기준선 아래가 달성이다. 방향보다 달성 여부로 색을 정한다. */
+.bk-ag-col.is-hl .bk-ag-fill {
+  background: var(--accent);
+}
+
+.bk-ag-col.is-miss .bk-ag-fill {
+  background: var(--cc-bar);
+}
+
 .bk-ag-v {
   --fs: 30px;
   position: absolute;
@@ -726,4 +766,8 @@
 
 .bk-st-seg.is-base .bk-st-n {
   color: var(--bg);
+}
+.l-compose:has(.s-title:is(.fit-1, .fit-2):not(.is-hint, .is-empty)) .bk-pa > .bk-h {
+  /* 원인 순위의 소제목도 긴 장 제목보다 한 단계 아래에 둔다. */
+  font-size: min(calc(30px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
 }

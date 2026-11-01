@@ -71,7 +71,8 @@
   width: 1920px;
   height: 1080px;
   padding: var(--pad-top) var(--pad-x) var(--pad-bottom);
-  overflow: hidden;
+  /* 고정 캔버스는 스크롤할 수 없다. hidden은 포커스나 scrollIntoView가 내부를 스크롤해 제목과 하단 표시까지 밀어 올릴 수 있다. */
+  overflow: clip;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
@@ -175,8 +176,8 @@
     .sh-sum, .sh-unit, .sh-pct, .sh-name, .sh-value, .sh-meta, .sh-total-k, .sh-total-v,
     .pc-n, .pc-title, .pc-meta, .pc-body, .fn-name, .fn-meta, .fn-num, .fn-unit, .fn-rate, .fn-total, .pm-name, .pm-body, .pm-nums, .pm-x, .pm-y,
     .bk-msg-t, .bk-msg-s, .bk-label, .bk-h, .bk-body, .bk-li-t, .bk-li-b, .bk-q-t, .bk-q-by, .bk-call-l, .bk-call-t,
-    .bk-num-l, .bk-num-v, .bk-num-n, .bk-dl-l, .bk-dl-k, .bk-dl-v, .bk-dl-chip, .bk-dl-n,
     .bk-dc-label, .bk-dc-question, .bk-dc-condition, .bk-dc-action,
+    .bk-num-l, .bk-num-v, .bk-num-n, .bk-dl-l, .bk-dl-k, .bk-dl-v, .bk-dl-chip, .bk-dl-n,
     .bk-gl-l, .bk-gl-pct, .bk-gl-of, .bk-gl-n, .bk-img-c, .bk-empty-t, .bk-empty-s,
     .bk-rg-l, .bk-rg-v, .bk-rg-n, .bk-rt-l, .bk-rt-t, .bk-rt-u, .bk-rt-sep, .bk-rt-v, .bk-rt-vu, .bk-rt-n,
     .bk-sp-l, .bk-sp-v, .bk-sp-n, .bk-sp-s, .bk-fc-k, .bk-fc-v, .bk-rk-hk, .bk-rk-t, .bk-rk-b, .bk-sw-k, .bk-sw-t, .bk-sw-b,

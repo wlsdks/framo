@@ -43,6 +43,12 @@
   margin-bottom: calc(var(--bk-h-gap) + var(--bk-air, 0px));
 }
 
+/* 장 제목이 길어 한 단계 줄었을 때도 목록 소제목이 제목과 경쟁하지 않게 한다. */
+.l-compose:has(.s-title:is(.fit-1, .fit-2):not(.is-hint, .is-empty)) .bk-bl > .bk-h {
+  --bl-heading-cap: calc(30px * var(--scale, 1));
+  font-size: min(var(--bl-heading-cap), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+}
+
 .bk-list {
   display: flex;
   flex-direction: column;
@@ -213,12 +219,28 @@
   .bk-look-plain > .bk-in > .bk-bl:has(> .bk-h + .bk-list:is([data-n='5'], [data-n='6'])) {
     grid-template-columns: fit-content(350px) minmax(0, 1fr);
   }
+
+  /* 두 단의 각 행을 같은 높이로 묶으면 왼쪽의 긴 문장 때문에 오른쪽 짧은 항목 사이가 벌어진다.
+     각 단이 제 내용 높이대로 흐르게 하고 항목 자체는 단 사이에서 잘리지 않게 한다. */
+  .bk-look-plain > .bk-in > .bk-bl > .bk-list[data-long='1']:is([data-n='5'], [data-n='6']) {
+    display: block;
+    column-count: 2;
+    column-fill: balance;
+    column-gap: var(--bk-col-gap);
+  }
+
+  .bk-look-plain > .bk-in > .bk-bl > .bk-list[data-long='1']:is([data-n='5'], [data-n='6']) > .bk-li {
+    break-inside: avoid;
+  }
+
+  .bk-look-plain > .bk-in > .bk-bl > .bk-list[data-long='1']:is([data-n='5'], [data-n='6']) > .bk-li:nth-child(4) {
+    break-before: column;
+  }
 }
 
 /* 한 줄을 다 쓰는 넓은 칸이 넉넉히 높으면 단을 나누지 않는다. 단 나누기와 나란히 세우기는 높이가 모자랄 때의 짜임이다:
    높이가 넉넉한데 다섯을 셋과 둘로 나누면 목록이 장의 왼쪽 위 4분의 1에 작게 몰리고, 오른쪽 단 아래와 장의 아래 3분의 1이 통째로 비었다.
-   사람이 짠 장처럼 한 단(글 폭 --measure)으로 두고 줄 사이를 높이에 맞게 넓힌다(--bk-air). 소제목이 있으면 소제목을 왼쪽 반,
-   목록을 오른쪽 반에 나란히 두어 넓은 칸을 고르게 쓴다(제목과 글을 넓은 칸에서 눕히는 것과 같은 짜임).
+   사람이 짠 장처럼 한 단(글 폭 --measure)으로 두고 줄 사이를 높이에 맞게 넓힌다(--bk-air). 소제목이 있으면 내용 가까이에 둔다.
    글자는 넓은 칸의 단계 그대로: 반 칸의 단계(0.84)로 줄이면 넓은 칸에 목록만 작아 장이 더 비어 보였다.
    바꾸는 높이는 항목 수마다 반 칸에서 한 단 목록이 들어가는 높이(옅은 면 기준, blockHeights.ts의 bullets 6칸) */
 @container bk (min-width: 1300px) and (min-height: 230px) {
@@ -319,7 +341,7 @@
 
   .bk-bl:has(> .bk-h) {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: fit-content(30%) minmax(0, 1fr);
     align-content: start;
     column-gap: var(--bk-col-gap);
   }
@@ -389,17 +411,14 @@
   }
 }
 
-/* 한 줄을 다 쓰는 넓은 칸(1300px 넘게)의 제목과 글: 소제목을 왼쪽 반, 글을 오른쪽 반에 나란히 둔다
-   (반으로 나누면 글이 판의 가운데 선, 곧 위 줄의 반 칸 부품과 같은 선에서 시작한다).
+/* 한 줄을 다 쓰는 넓은 칸(1300px 넘게)의 제목과 글: 소제목 너비에 맞춰 글을 가까이 둔다.
    글은 글 폭(--measure, 34자 남짓)에서 꺾이므로 위아래로 쌓으면 오른쪽 절반이 통째로 비고 줄만 늘어 칸이 높아졌다.
-   옆으로 눕히면 같은 높이에 들고 넓은 칸을 고르게 쓴다(큰 숫자, 전과 후를 넓은 칸에서 눕히는 것과 같은 짜임 바꾸기).
-   반씩 나눈 두 단은 반 칸 둘과 같아서 글자도 반 칸의 단계(0.84)로: 위 줄의 반 칸 제목과 글(30, 26)보다 한 단계 큰
-   36, 30으로 그려 줄마다 소제목 크기가 달랐다 */
+   옆으로 눕히면 같은 높이에 들고, 글자도 넓은 칸의 단계를 쓴다. */
 @container bk (min-width: 1300px) {
   .bk-tx:has(> .bk-h) {
-    --bk-w: 0.84;
+    --bk-w: 1;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 25%) minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas: 'label body' 'head body';
     align-content: start;

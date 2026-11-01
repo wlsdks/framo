@@ -11,6 +11,11 @@
   margin-bottom: var(--bk-h-gap);
 }
 
+/* 긴 장 제목이 작아진 경우에도 일정의 소제목이 제목과 다투지 않게 한다. */
+.l-compose:has(.s-title:is(.fit-1, .fit-2):not(.is-hint, .is-empty)) .bk-gt > .bk-h {
+  font-size: min(calc(30px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+}
+
 .bk-gt-nowset {
   display: flex;
   align-items: baseline;
