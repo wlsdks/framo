@@ -83,12 +83,12 @@ const FIGURE_MIN: [string, number, number][] = [
   ['.va-columns .br-row[style*="--p: 100."] .br-track', 0, 60],
   // 로고 모음의 판이 줄 수만큼 나뉘어 낮아지면 로고가 알아볼 수 없게 작아진다
   ['.bk-layout .lg-img', 0, 48],
-  ['.bk-rg:not(.is-gauge) .bk-rg-sq', 120, 120],
+  ['.bk-rg:not(.is-gauge):not(.is-unknown) .bk-rg-sq', 120, 120],
   // 원인 순위의 막대와 누적 비율 선 자리(100%까지의 높이): 면 위의 좁은 칸에 원인을 여덟 넣으면 40px로 줄어 막대가 띠가 됐다
   ['.bk-pa-canvas', 0, 100],
   // 쌓은 막대의 가장 높은 막대: 면 위의 좁은 칸에 기간을 여섯 넣으면 50px대로 줄어 칸이 실처럼 가늘어지고 칸 숫자가 다 숨었다
   ['.bk-st .bk-cc-col[style*="--p: 100."] .bk-st-stack', 0, 100],
-  ['.bk-rg.is-gauge .bk-rg-sq', 160, 0],
+  ['.bk-rg.is-gauge:not(.is-unknown) .bk-rg-sq', 160, 0],
 ]
 
 function clashList(cell: HTMLElement, all: boolean): string[] {

@@ -871,6 +871,16 @@ function rowTops(area: HTMLElement, k: number): string[] {
   }
   rows.forEach((row) => {
     if (row.length < 2) return
+    // 원과 글의 짝은 첫 글줄 대신 보이는 묶음 전체의 중심으로 검수한다.
+    if (row.length === 2 && row.every((c) => c.classList.contains('bk-look-plain')) && row.some((c) => c.dataset.type === 'ring') && row.some((c) => ['bullets', 'text', 'facts', 'checks'].includes(c.dataset.type ?? ''))) {
+      const spans = row.map(inkSpan)
+      if (spans.every((s) => s !== null)) {
+        const centers = spans.map((s) => (s!.t + s!.b) / 2)
+        const d = Math.abs(centers[0] - centers[1]) / k
+        if (d > 4) out.push(`원형 그래프와 글 묶음의 중심이 ${Math.round(d)}px 어긋나요`)
+      }
+      return
+    }
     const tops = row.flatMap((c) => {
       const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
       const ink = inkSpan(c)
