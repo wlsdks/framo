@@ -12,7 +12,8 @@
 
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, realpathSync, renameSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { homedir, tmpdir } from 'node:os'
+import { dirname, join, parse, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
 import { version } from '../package.json'
@@ -556,12 +557,34 @@ export function sandboxArgs(share: string, here: string, entry: string): string[
 }
 
 /**
- * 권한 모델이 정말 좁게 걸렸는지 스스로 확인한다. 누가 이 파일을 넓은 권한(--allow-fs-read=*, --allow-child-process)으로
- * 띄웠으면 'AI 공유' 폴더 밖(.deck 작업 파일이 있는 곳)을 읽을 수 있게 되므로 돌지 않는다.
+ * 권한 모델이 정말 좁게 걸렸는지 스스로 확인한다. 누가 이 파일을 넓은 권한으로 띄웠으면 'AI 공유' 폴더 밖
+ * (.deck 작업 파일이 있는 곳)을 읽을 수 있게 되므로 돌지 않는다.
+ * - 넓게 연 것(--allow-fs-read=* 같은): 공유 폴더와 서버 코드의 위, 드라이브 맨 위, 홈, 임시 폴더를 읽거나 쓸 수 있는지 묻는다.
+ * - 다른 것을 연 것: 다른 프로그램, worker, 네이티브 애드온, WASI, 디버거.
+ * - 좁게 더 연 것(--allow-fs-read=문서 폴더): 묻는 것으로는 알 수 없으니 받은 권한 인자가 sandboxArgs의 것뿐인지 본다.
+ *   NODE_OPTIONS로 준 권한 인자는 execArgv에 보이지 않으므로 아예 받지 않는다.
  */
-export function sandboxTight(permission: Pick<NodeJS.ProcessPermission, 'has'>, share: string): boolean {
-  const outside = dirname(resolve(share))
-  return !permission.has('fs.read', outside) && !permission.has('fs.write', outside) && !permission.has('child') && !permission.has('worker')
+export function sandboxTight(
+  permission: Pick<NodeJS.ProcessPermission, 'has'>,
+  share: string,
+  here: string,
+  execArgv: readonly string[] = process.execArgv,
+  nodeOptions: string = process.env.NODE_OPTIONS ?? '',
+): boolean {
+  // 이 Node가 모르는 범위는 열 수도 없다
+  const open = (scope: string, reference?: string) => {
+    try {
+      return permission.has(scope, reference)
+    } catch {
+      return false
+    }
+  }
+  const at = resolve(share)
+  const above = [dirname(at), dirname(resolve(here)), parse(at).root, homedir(), tmpdir()]
+  if (above.some((p) => open('fs.read', p) || open('fs.write', p))) return false
+  if (['child', 'worker', 'addon', 'wasi', 'inspector'].some((scope) => open(scope))) return false
+  const own = new Set(sandboxArgs(share, here, '').filter((a) => a.startsWith('--allow-')))
+  return execArgv.every((a) => !a.startsWith('--allow-') || own.has(a)) && !nodeOptions.includes('--allow-')
 }
 
 /** 권한 모델 밖에서 시작했으면, 'AI 공유' 폴더와 이 서버 코드만 읽을 수 있게 스스로를 다시 띄운다. */
@@ -571,7 +594,7 @@ function launch() {
   const permission = (process as { permission?: NodeJS.ProcessPermission }).permission
 
   if (permission) {
-    if (sandboxTight(permission, share)) return serve(share)
+    if (sandboxTight(permission, share, here)) return serve(share)
     // 정해진 말만 쓴다. 경로는 내보내지 않는다
     process.stderr.write('Framo: 권한이 넓게 열린 채로 띄워서 시작하지 않았어요. node에 권한 인자를 붙이지 말고 띄워 주세요.\n')
     process.exit(1)

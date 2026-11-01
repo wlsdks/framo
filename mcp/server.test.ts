@@ -1,7 +1,7 @@
 import { execFileSync, spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { linkSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { linkSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { dirname, join, parse, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import pkg from '../package.json'
@@ -378,19 +378,47 @@ describe('MCP 서버를 가두는 권한', () => {
     // 운영체제의 경로 꼴로 (윈도우에서는 '/s'가 'D:\s'가 된다)
     const s = resolve('/s')
     const inShare = join(s, 'AI 공유')
-    expect(sandboxTight(only([`fs.read:${inShare}`]), inShare)).toBe(true)
-    expect(sandboxTight(only([`fs.read:${s}`]), inShare)).toBe(false)
-    expect(sandboxTight(only([`fs.write:${s}`]), inShare)).toBe(false)
-    expect(sandboxTight(only(['child']), inShare)).toBe(false)
-    expect(sandboxTight(only(['worker']), inShare)).toBe(false)
+    const here = resolve('/app/dist-node')
+    const argv = sandboxArgs(inShare, here, join(here, 'gyeol-mcp.mjs')).slice(0, -1)
+    const tight = (open: string[], execArgv = argv, nodeOptions = '') => sandboxTight(only(open), inShare, here, execArgv, nodeOptions)
+    expect(tight([`fs.read:${inShare}`])).toBe(true)
+    expect(tight([`fs.read:${s}`])).toBe(false)
+    expect(tight([`fs.write:${s}`])).toBe(false)
+    // 드라이브 맨 위, 홈, 임시 폴더, 서버 코드의 위를 연 것(--allow-fs-read=* 같은)
+    for (const p of [parse(s).root, homedir(), tmpdir(), dirname(here)]) expect(tight([`fs.read:${p}`]), p).toBe(false)
+    // 다른 프로그램, worker, 네이티브 애드온, WASI, 디버거
+    for (const scope of ['child', 'worker', 'addon', 'wasi', 'inspector']) expect(tight([scope]), scope).toBe(false)
+    // 문서 폴더 하나만 더 연 것은 물어서는 알 수 없다. 받은 권한 인자로 본다(NODE_OPTIONS로 준 것은 execArgv에 없다)
+    const docs = `--allow-fs-read=${resolve('/docs')}`
+    expect(tight([], [...argv, docs])).toBe(false)
+    expect(tight([], argv, docs)).toBe(false)
+    expect(tight([], ['--max-old-space-size=512', ...argv], '--max-old-space-size=512')).toBe(true)
   })
 
   it('넓은 권한으로 띄우면 시작하지 않고, 경로도 말하지 않는다', () => {
-    for (const extra of [['--allow-fs-read=*'], [`--allow-fs-read=${share}`, `--allow-fs-read=${built}`, '--allow-child-process']]) {
-      const res = spawnSync(process.execPath, ['--permission', ...extra, entry], { env: { ...process.env, GYEOL_SHARE: share }, input: '', encoding: 'utf8' })
-      expect(res.status, extra.join(' ')).toBe(1)
+    // 실제 경로로 띄운다. 맥의 임시 폴더(/var → /private/var)처럼 링크가 낀 경로는 권한 모델 안에서 모듈을 불러오다
+    // 먼저 멈춰서(1로 끝난다) 권한 확인이 막았는지 가릴 수 없다
+    const realShare = realpathSync.native(share)
+    const realBuilt = realpathSync.native(built)
+    const run = (flags: string[], env: Record<string, string> = {}) =>
+      spawnSync(process.execPath, ['--permission', ...flags, join(realBuilt, 'gyeol-mcp.mjs')], { env: { ...process.env, ...env, GYEOL_SHARE: realShare }, input: '', encoding: 'utf8' })
+    const own = [`--allow-fs-read=${realShare}`, `--allow-fs-write=${realShare}`, `--allow-fs-read=${realBuilt}`]
+    // 스스로 다시 띄울 때와 같은 인자면 시작한다(입력이 끝나면 0으로 끝난다). 아래가 권한 확인 때문에 멈추는지 보려고
+    expect(run(own).status).toBe(0)
+    const other = `--allow-fs-read=${join(realpathSync.native(base), 'other')}`
+    const wide: [string[], Record<string, string>?][] = [
+      [['--allow-fs-read=*']],
+      [[...own, '--allow-child-process']],
+      // 공유 폴더 옆의 다른 폴더 하나만 더 연 것. 공유 폴더의 위를 물어서는 걸리지 않는다
+      [[...own, other]],
+      [own, { NODE_OPTIONS: other }],
+    ]
+    for (const [flags, env] of wide) {
+      const res = run(flags, env)
+      expect(res.status, flags.join(' ')).toBe(1)
+      expect(res.stderr).toContain('권한이 넓게 열린 채로')
       expect(res.stdout).toBe('')
-      expect(res.stderr).not.toContain(share)
+      expect(res.stderr).not.toContain(realShare)
     }
   })
 })
