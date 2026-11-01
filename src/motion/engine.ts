@@ -517,6 +517,45 @@ export function motionEngine(): MotionEngine {
       })
       return t + 120
     }
+    /**
+     * 줄 올라오기: 글이 줄마다 제 줄의 가림막 뒤에서 밀려 올라온다(위 줄부터). 설명 글, 인용, 강조 상자가 칸째 한 덩어리로
+     * 떠오르던 때는 몇 줄인지, 어디서 끊기는지 같은 글의 짜임이 움직임에 드러나지 않았다(필름으로 끊어 보니 장 제목만 낱말마다
+     * 올라오고 컴포넌트의 글은 상자째 떴다). 낱말로 나눈 뒤(splitWords, 낱말 상자가 가림막) 같은 줄의 낱말은 왼쪽부터 아주 조금씩만
+     * 엇갈려 한 줄로 읽히게 올린다. 줄이 많아도 다 합쳐 0.7초(생동감 0.9초) 안에 시작하게 줄 사이를 좁힌다. 장면이 이 글을 초점으로
+     * 삼았으면 한 글자씩(letters). 다음 차례가 시작할 수 있는 때를 돌려준다
+     */
+    const lines = (el: Element | null, at: number) => {
+      if (!el || still || el.closest('[data-mo-keep]')) return at
+      if (el === lettersFor) return letters(el, at)
+      // 편집 중인 칸의 글자는 나누지 않는다 (입력 칸을 건드리지 않게). 통째로 올라온다
+      if (el.closest('.m-edit') || el.querySelector('[contenteditable]')) {
+        rise(el, at, L.y * 0.6)
+        return at + 240
+      }
+      const split = splitWords(el)
+      if (!split.words.length) return at
+      restores.push(split.restore)
+      // 같은 줄: 낱말 상자(.mo-w)는 줄의 위에 맞춰 서서 한 줄의 상자는 윗변이 같다
+      const rows: HTMLElement[][] = []
+      let top = NaN
+      for (const w of split.words) {
+        const b = (w.parentElement ?? w).getBoundingClientRect()
+        if (!rows.length || Math.abs(b.top - top) > b.height / 2) {
+          rows.push([])
+          top = b.top
+        }
+        rows[rows.length - 1].push(w)
+      }
+      const lively = levelName === 'lively'
+      const gap = Math.min(lively ? 130 : 90, (lively ? 900 : 700) / rows.length)
+      const ripple = lively ? 12 : 8
+      // 생동감은 먹이 가라앉듯 아주 조금 흐린 데서(한 글자씩과 같은 1.5px). 낱말마다의 제목(5px)만큼 흐리면 긴 글이 뿌옇게 떠 보인다
+      const frames: Keyframe[] = lively
+        ? [{ translate: '0 105%', filter: 'blur(1.5px)' }, { translate: '0 0', filter: 'blur(0px)' }]
+        : [{ translate: '0 105%' }, { translate: '0 0' }]
+      rows.forEach((row, k) => row.forEach((w, i) => run(anims, w, frames, s(at + k * gap + Math.min(i, 6) * ripple), L.move)))
+      return at + rows.length * gap + 160
+    }
     const count = (el: Element | null, at: number) => {
       // 편집 중인 칸의 글자는 바꾸지 않는다 (쓰고 있는 글과 엇갈리지 않게). 옮겨 온 숫자는 다시 굴리지 않는다
       if (!el || still || el.closest('.m-edit, [data-mo-keep]')) return
@@ -1187,14 +1226,16 @@ export function motionEngine(): MotionEngine {
       switch (type) {
         case 'message': {
           const t = words(one('.bk-msg-t'), 0, L.word * 1.2)
-          rise(one('.bk-msg-s'), t, L.y * 0.6)
+          lines(one('.bk-msg-s'), t)
           break
         }
-        case 'text':
+        case 'text': {
           rise(one('.bk-label'), 60, L.y * 0.4)
-          rise(one('.bk-h'), 120, L.y * 0.6)
-          rise(one('.bk-body'), 240, L.y * 0.6)
+          // 글은 제목의 첫 줄이 올라오는 사이에 따라 나온다. 제목이 없으면 바로
+          const h = lines(one('.bk-h'), 120)
+          lines(one('.bk-body'), Math.min(h, 240))
           break
+        }
         case 'bullets':
           rise(one('.bk-h'), 60, L.y * 0.5)
           items('.bk-li', 160, (el, at) => {
@@ -1202,13 +1243,20 @@ export function motionEngine(): MotionEngine {
             rise(el.querySelector('.bk-li-text'), at + 40, L.y * 0.5)
           })
           break
-        case 'quote':
-          rise(one('.bk-q-t'), 120, L.y * 0.6)
-          fade(one('.bk-q-by'), 520, 600)
+        case 'quote': {
+          // 여는 따옴표가 먼저 맺히고, 말이 줄마다 올라오고, 닫는 따옴표는 마지막 줄을 따라 나온다. 따옴표는 글자가 아니라
+          // 가짜 요소(quote.css)라 줄과 함께 가려지지 않는다: 따로 들이지 않으면 말보다 먼저 빈 따옴표 한 쌍이 떠 있다
+          const q = one('.bk-q-t')
+          if (q) run(anims, q, [{ opacity: 0, translate: `0 ${L.y * 0.4}px` }], s(60), L.move, '::before')
+          const end = lines(q, 120)
+          if (q) run(anims, q, [{ opacity: 0 }], s(end - 160), { easing: OUT, duration: d(400) }, '::after')
+          fade(one('.bk-q-by'), Math.max(520, end), 600)
           break
+        }
         case 'callout':
           rise(one('.bk-call-l'), 160, L.y * 0.4)
-          rise(one('.bk-call-t'), 240, L.y * 0.6)
+          // 장면 '결론 한 방'이 이 글을 초점으로 삼으면 한 글자씩 (lines가 letters로 넘긴다)
+          lines(one('.bk-call-t'), 240)
           break
         case 'number':
           fade(one('.bk-num-l'), 100, 500)
