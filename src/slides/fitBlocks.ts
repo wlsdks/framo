@@ -580,6 +580,35 @@ export function blockFitter() {
     })
   }
 
+  /** 칠하지 않은 색: 투명(계산된 값은 rgba(…, 0), 섞은 색은 color(… / 0)) */
+  function clearColor(c: string): boolean {
+    return !c || c === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(c) || /\/\s*0\)$/.test(c)
+  }
+
+  /**
+   * 보이는 테두리: 굵기와 선 모양이 있고 색이 투명하지 않은 것. 줄 선 규칙(lines.css)은 첫 항목 위와 끝 항목 아래의 선을 투명하게 두어
+   * 높이만 지킨다. 굵기만 보던 때는 이 선도 그려진 것으로 세어, 예상 질문의 그려진 윗선이 첫 글줄보다 10px 위(항목 상자의 위끝)가
+   * 되었고 옆 칸과 첫 글줄을 맞추는 일(8px 안만)에서 빠졌다
+   */
+  function edgeSeen(cs: CSSStyleDeclaration, side: 'Top' | 'Bottom' | 'Left' | 'Right'): boolean {
+    return parseFloat(cs[`border${side}Width`]) > 0 && cs[`border${side}Style`] !== 'none' && cs[`border${side}Style`] !== 'hidden' && !clearColor(cs[`border${side}Color`])
+  }
+
+  /**
+   * 상자에서 그려진 위아래 (화면 px, 상자의 자리 top, bottom과 장의 줄인 비율 k로). 칠한 상자는 상자째, 위아래 선만 그은 상자(목록의
+   * 줄 선)는 그 선만, 아무것도 그리지 않으면 null. 상자째 세던 때는 아래 선만 있는 첫 항목의 위 여백(선이 없는 쪽)까지 그려진 것이 되어,
+   * 요점 목록의 첫 글줄이 그려진 윗선보다 23px 아래였고 옆 칸과 첫 글줄을 맞추지 못했다(갤러리 combos seed 1의 3번)
+   */
+  function paintSpan(cs: CSSStyleDeclaration, top: number, bottom: number, k: number): [number, number] | null {
+    // 그림자로 긋는 선(위아래 선 모양의 타일, 머리 괘선)도 그려진 것이다: 빼면 타일의 아래 선이 그려진 범위 밖이라 쌓기가 칸을 본문 아래로
+    // 밀어 선이 하단 표시 글을 그었다
+    if (!clearColor(cs.backgroundColor) || cs.backgroundImage !== 'none' || cs.boxShadow !== 'none') return [top, bottom]
+    const up = edgeSeen(cs, 'Top')
+    const down = edgeSeen(cs, 'Bottom')
+    if (!up && !down) return null
+    return [up ? top : bottom - parseFloat(cs.borderBottomWidth) * k, down ? bottom : top + parseFloat(cs.borderTopWidth) * k]
+  }
+
   /**
    * 칸에서 그려진 것의 위아래 (화면 px). 면이 있는 칸은 면째(칸 전체), 없으면 글 줄(글자가 그려진 선)과 그림(svg, 이미지),
    * 바탕이나 테두리를 칠한 상자의 범위. 상자의 자리로 재면 높이를 다 쓰는 격자(몇 중 몇의 점 판 같은)가 칸 바닥까지 잡혀,
@@ -608,19 +637,15 @@ export function blockFitter() {
       const e = el.getBoundingClientRect()
       if (!e.width || !e.height) continue
       const tag = el.tagName.toLowerCase()
-      let paint = tag === 'svg' || tag === 'img'
-      if (!paint) {
+      let span: [number, number] | null = [e.top, e.bottom]
+      if (tag !== 'svg' && tag !== 'img') {
         const cs = getComputedStyle(el)
         if (cs.visibility === 'hidden' || cs.opacity === '0') continue
-        const bg = cs.backgroundColor
-        const clear = !bg || bg === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(bg) || /\/\s*0\)$/.test(bg)
-        // 그림자로 긋는 선(위아래 선 모양의 타일, 머리 괘선)도 그려진 것이다: 빼면 타일의 아래 선이 그려진 범위 밖이라 쌓기가 칸을 본문 아래로
-        // 밀어 선이 하단 표시 글을 그었다
-        paint = !clear || cs.backgroundImage !== 'none' || parseFloat(cs.borderTopWidth) > 0 || parseFloat(cs.borderBottomWidth) > 0 || cs.boxShadow !== 'none'
+        span = paintSpan(cs, e.top, e.bottom, k)
       }
-      if (!paint) continue
-      t = Math.min(t, e.top)
-      b = Math.max(b, e.bottom)
+      if (!span) continue
+      t = Math.min(t, span[0])
+      b = Math.max(b, span[1])
     }
     // 칸 밖 위에 긋는 머리 괘선(.bk::before, blocks/base.css)도 그려진 것이다. 안쪽 상자만 보면 이 선을 몰라서, 쌓기가 칸의 글을
     // 앞 줄 소제목 바로 아래(headGap)로 올렸고 칸 위 23px에 선 선이 소제목의 덧붙임 글을 가운데로 그었다(취소선처럼 보였다).
@@ -631,9 +656,7 @@ export function blockFitter() {
       if (ps.content === 'none' || ps.content === 'normal' || ps.display === 'none' || ps.position !== 'absolute' || ps.visibility === 'hidden') continue
       const h = parseFloat(ps.height) || 0
       const y = parseFloat(ps.top)
-      const bg = ps.backgroundColor
-      const clear = !bg || bg === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(bg) || /\/\s*0\)$/.test(bg)
-      if (h <= 0 || !Number.isFinite(y) || (clear && ps.backgroundImage === 'none')) continue
+      if (h <= 0 || !Number.isFinite(y) || (clearColor(ps.backgroundColor) && ps.backgroundImage === 'none')) continue
       t = Math.min(t, r.top + y * k)
       b = Math.max(b, r.top + (y + h) * k)
     }
@@ -1264,9 +1287,7 @@ export function blockFitter() {
       if (el.parentElement?.closest('svg') || el.closest('.ed-halo, .it-remove, .it-grip, .pn-tools, .img-tools, .bk-handle')) continue
       const cs = getComputedStyle(el)
       if (cs.visibility === 'hidden' || cs.opacity === '0') continue
-      const bg = cs.backgroundColor
-      const clear = !bg || bg === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(bg) || /\/\s*0\)$/.test(bg)
-      if (clear && cs.backgroundImage === 'none' && cs.boxShadow === 'none' && !(parseFloat(cs.borderTopWidth) > 0) && !(parseFloat(cs.borderBottomWidth) > 0) && !(parseFloat(cs.borderLeftWidth) > 0) && !(parseFloat(cs.borderRightWidth) > 0)) continue
+      if (clearColor(cs.backgroundColor) && cs.backgroundImage === 'none' && cs.boxShadow === 'none' && !(['Top', 'Bottom', 'Left', 'Right'] as const).some((side) => edgeSeen(cs, side))) continue
       const q = el.getBoundingClientRect()
       if (!q.width || !q.height) continue
       l = Math.min(l, q.left)
@@ -1280,9 +1301,7 @@ export function blockFitter() {
       for (const w of ['::before', '::after']) {
         const ps = getComputedStyle(el, w)
         if (ps.content === 'none' || ps.content === 'normal' || ps.display === 'none' || ps.position !== 'absolute' || ps.visibility === 'hidden') continue
-        const bg = ps.backgroundColor
-        const clear = !bg || bg === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(bg) || /\/\s*0\)$/.test(bg)
-        if (clear && ps.backgroundImage === 'none' && !(parseFloat(ps.borderTopWidth) > 0) && !(parseFloat(ps.borderLeftWidth) > 0)) continue
+        if (clearColor(ps.backgroundColor) && ps.backgroundImage === 'none' && !edgeSeen(ps, 'Top') && !edgeSeen(ps, 'Left')) continue
         const x = parseFloat(ps.left)
         const pw = parseFloat(ps.width)
         if (!Number.isFinite(x) || !(pw > 0)) continue
@@ -2022,7 +2041,7 @@ export function blockFitter() {
     }
   }
 
-  return { fit, lines, over, labels, figures, drawn }
+  return { fit, lines, over, labels, figures, drawn, edgeSeen }
 }
 
 let fitter: ReturnType<typeof blockFitter> | null = null
@@ -2040,3 +2059,5 @@ export const blockOverflows = (inner: HTMLElement) => shared().over(inner)
 export const blockFigures = (inner: HTMLElement) => shared().figures(inner)
 /** 칸에서 그려진 것의 위아래 (쌓기와 개발용 검사 checkAssembly가 같이 본다) */
 export const blockDrawn = (cell: HTMLElement) => shared().drawn(cell)
+/** 보이는 테두리인지 (투명하게 지운 줄 선은 그려진 것이 아니다. 개발용 검사 checkAssembly도 쌓기와 같게 본다) */
+export const blockEdgeSeen = (cs: CSSStyleDeclaration, side: 'Top' | 'Bottom' | 'Left' | 'Right') => shared().edgeSeen(cs, side)
