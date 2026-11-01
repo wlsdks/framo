@@ -17,6 +17,12 @@
   border-top: var(--rule-hair) solid var(--line);
 }
 
+/* 첫 질문 위에는 선이 없으니(lines.css) 선 아래 여백도 두지 않는다: 남겨 두면 첫 질문이 옆 칸의 첫 글줄보다 그만큼(큰 칸에서 22px)
+   아래에서 시작했다(핵심 숫자 카드 옆, checkAssembly). 맡은 사람의 목록과 같다 */
+.bk-qa-item:first-child {
+  padding-top: 0;
+}
+
 .bk-qa-q {
   display: contents;
 }
@@ -79,6 +85,12 @@
      넷이면 아랫줄 선이 단마다 끊겨 섰다(칸마다 끊어 긋는 선, VISUAL-RULES 2). 단 사이와 줄 사이는 여백이 나눈다 */
   .bk-qa-list:is([data-n='2'], [data-n='3'], [data-n='4']) > .bk-qa-item {
     border-top-color: transparent;
+  }
+
+  /* 첫 줄의 질문은 모두 위 여백 없이: 첫 질문만 지우면 둘째, 셋째 단의 첫 질문이 그만큼 내려앉는다. 아랫줄은 여백이 줄 사이를 나눈다 */
+  .bk-qa-list:is([data-n='2'], [data-n='4']) > .bk-qa-item:nth-child(-n + 2),
+  .bk-qa-list[data-n='3'] > .bk-qa-item:nth-child(-n + 3) {
+    padding-top: 0;
   }
 }
 
