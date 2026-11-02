@@ -5,6 +5,11 @@ export interface FieldSpec {
   key: string
   label: string
   hint: string
+  /**
+   * 레이아웃의 예시 이야기(항목 칸의 hints)에 매인 예시(추이의 목표 120은 예시 값 96~152에 맞춘 것). 발표 종류가 항목 예시를
+   * 따로 준 장에는 섞지 않고 hint(안내)를 보인다: 시장 추이(600~1,200억 원)에 목표 120이 그래프 바닥에 그어졌다
+   */
+  example?: string
   multiline?: boolean
   optional?: boolean
   /** 비워 두면 정해진 이름(목표, 실적 같은)으로 보이는 칸. 부품 안에서도 접지 않는다 */
@@ -247,7 +252,7 @@ export const LAYOUTS: Record<LayoutId, LayoutSpec> = {
       title('흐름이 말해 주는 결론'),
       lead(),
       { key: 'unit', label: '단위', hint: '억 원', optional: true },
-      { key: 'target', label: '목표선', hint: '120', optional: true },
+      { key: 'target', label: '목표선', hint: '있으면 숫자로', example: '120', optional: true },
       source,
     ],
     items: {
@@ -732,14 +737,15 @@ export function hintFor(
   const path = itemKey ? `items.${itemKey}` : key
   if (hints[path]) return hints[path]
   const spec = LAYOUTS[layout]
+  // 줄마다 다른 예시는 한 이야기다. 발표 종류의 예시가 있는 장에 레이아웃의 예시를 섞으면 '결과 공유회 · 처리 시간을 다시 잼'처럼
+  // 앞뒤가 맞지 않는 줄이 되니, 그때 빈 칸은 칸의 안내만 보인다. 그 이야기에 매인 장의 칸(추이의 목표)도 같다
+  const own = Object.keys(hints).some((k) => /^items\.\d+\./.test(k))
   if (itemKey) {
     const f = spec.items?.fields.find((x) => x.key === itemKey)
-    // 줄마다 다른 예시는 한 이야기다. 발표 종류의 예시가 있는 장에 레이아웃의 예시를 섞으면 '결과 공유회 · 처리 시간을 다시 잼'처럼
-    // 앞뒤가 맞지 않는 줄이 되니, 그때 빈 칸은 칸의 안내만 보인다
-    const own = Object.keys(hints).some((k) => /^items\.\d+\./.test(k))
     return (index !== undefined && !own && f?.hints?.[index]) || f?.hint || ''
   }
-  return spec.fields.find((f) => f.key === key)?.hint ?? ''
+  const f = spec.fields.find((x) => x.key === key)
+  return (!own && f?.example) || f?.hint || ''
 }
 
 /**
