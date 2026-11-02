@@ -947,26 +947,41 @@ function fill(slide: HTMLElement, area: HTMLElement): string[] {
 const LAYOUT_EYE = 0.75
 
 function layoutFill(slide: HTMLElement): string[] {
+  if (slide.classList.contains('l-compose')) return []
+  // 채울 본문: 보통 장은 장 머리 아래의 본문 하나, 사례 장은 단마다(제목 아래 이야기, 대상 아래 결과 숫자. fitBlocks.ts의 layoutParts와 같다)
+  const parts: { body: HTMLElement; name: string }[] = []
   const body = slide.querySelector<HTMLElement>(':scope > .s-body')
-  if (!body || slide.classList.contains('l-compose') || !slide.querySelector(':scope > .s-head') || body.dataset.eye) return []
+  if (body && slide.querySelector(':scope > .s-head')) parts.push({ body, name: '본문을' })
+  if (slide.classList.contains('l-case')) {
+    const story = slide.querySelector<HTMLElement>(':scope > .cs-main > .cs-story')
+    const results = slide.querySelector<HTMLElement>(':scope > .cs-side > .cs-results')
+    if (story) parts.push({ body: story, name: '왼쪽 단의 이야기를' })
+    if (results) parts.push({ body: results, name: '결과 숫자를' })
+  }
   const sr = slide.getBoundingClientRect()
   const k = sr.height / slide.offsetHeight
-  const b = body.getBoundingClientRect()
-  const room = sr.bottom - (parseFloat(getComputedStyle(slide).getPropertyValue('--pad-y')) || 0) * k - b.top
-  if (!k || room <= 0) return []
-  let bottom = -Infinity
-  for (const q of blockTextLines(body)) if (!q.n.parentElement?.closest(EDIT_UI)) bottom = Math.max(bottom, q.b)
-  for (const f of blockFigures(body)) bottom = Math.max(bottom, f.getBoundingClientRect().bottom)
-  for (const im of body.querySelectorAll('img')) {
-    const r = im.getBoundingClientRect()
-    if (r.width && r.height) bottom = Math.max(bottom, r.bottom)
+  if (!k) return []
+  const out: string[] = []
+  for (const { body, name } of parts) {
+    if (body.dataset.eye) continue
+    const b = body.getBoundingClientRect()
+    const room = sr.bottom - (parseFloat(getComputedStyle(slide).getPropertyValue('--pad-y')) || 0) * k - b.top
+    if (room <= 0 || !b.height) continue
+    let bottom = -Infinity
+    for (const q of blockTextLines(body)) if (!q.n.parentElement?.closest(EDIT_UI)) bottom = Math.max(bottom, q.b)
+    for (const f of blockFigures(body)) bottom = Math.max(bottom, f.getBoundingClientRect().bottom)
+    for (const im of body.querySelectorAll('img')) {
+      const r = im.getBoundingClientRect()
+      if (r.width && r.height) bottom = Math.max(bottom, r.bottom)
+    }
+    if (bottom === -Infinity) continue
+    const used = (bottom - b.top) / room
+    // 머리 줄뿐인 덜 쓴 장은 fitLayout도 내리지 않는다(내리면 머리 글자만 가운데에 뜬다).
+    // 제목이 없어도 본문이 완결되어 있으면 위아래 균형을 검사한다.
+    if (used < 0.25) continue
+    if (used < LAYOUT_EYE) out.push(`${name} ${Math.round(used * 100)}%만 채우고 위에 붙어 있어요(아래 ${Math.round((room - (bottom - b.top)) / k)}px 빔)`)
   }
-  if (bottom === -Infinity) return []
-  const used = (bottom - b.top) / room
-  // 머리 줄뿐인 덜 쓴 장은 fitLayout도 내리지 않는다(내리면 머리 글자만 가운데에 뜬다).
-  // 제목이 없어도 본문이 완결되어 있으면 위아래 균형을 검사한다.
-  if (used < 0.25) return []
-  return used < LAYOUT_EYE ? [`본문을 ${Math.round(used * 100)}%만 채우고 위에 붙어 있어요(아래 ${Math.round((room - (bottom - b.top)) / k)}px 빔)`] : []
+  return out
 }
 
 /**

@@ -35,21 +35,39 @@
   margin-top: calc(-1em * ((1.45 - 1.19) / 2 + 0.155));
 }
 
+/* 제목 아래 이야기(내용, 한마디). 제목과 띄우는 몫은 묶음 밖에 둔다: 장 채움 맞추기(fitBlocks.ts의 fitLayout)가 머리와 묶음 사이로
+   위의 빈 곳을 재고, 키워도 단을 덜 채우면 그 사이에 --eye를 더해 눈높이 가운데로 내린다(VISUAL-RULES 6의 위아래 균형) */
+/* 묶음은 단의 아래 여백까지 늘인다(.s-body처럼): 내용 높이뿐이면 한 줄짜리 한마디의 따옴표(::before, 88px)가 묶음 아래로 29px
+   비어져 나와, 맞추기가 넘친 것으로 보고 키우지 않았다 */
+.cs-story {
+  flex: 1;
+  margin-top: calc(40px + var(--eye, 0px));
+}
+
+.cs-story > :first-child {
+  margin-top: 0;
+}
+
+/* 내용 없이 한마디만 있으면 한마디는 제목과 --body-gap만큼 (전과 같이) */
+.cs-story:has(> .cs-quote:first-child) {
+  margin-top: calc(var(--body-gap) + var(--eye, 0px));
+}
+
+.slide.hide-head > .cs-main > .cs-story {
+  margin-top: var(--eye, 0px);
+}
+
 .cs-body {
   --fs: var(--t-body);
   max-width: 1020px;
-  margin-top: 40px;
   color: var(--ink-2);
   line-height: 1.62;
   text-wrap: pretty;
 }
 
-.slide.hide-head > .cs-main .cs-body {
-  margin-top: 0;
-}
-
 /* 한마디는 본문 바로 아래에(--body-gap만큼 띄워): 왼쪽 단의 아래 끝에 붙이던 때는 본문과 한마디 사이가 장의 절반쯤 비어
-   한 단이 위아래로 찢어져 보였다. 남는 높이는 맨 아래에 모인다(docs/VISUAL-RULES.md 6). 한 단계 크게 써서 본문과 갈린다 */
+   한 단이 위아래로 찢어져 보였다. 남는 높이는 본문과 한마디 사이가 아니라 이야기 묶음의 위아래에 1 : 1.2로 나뉜다(.cs-story,
+   docs/VISUAL-RULES.md 6). 한 단계 크게 써서 본문과 갈린다 */
 .cs-quote {
   --fs: 44px;
   position: relative;
@@ -108,12 +126,14 @@
   object-position: left center;
 }
 
-/* 결과 숫자는 대상 바로 아래에(--body-gap만큼 띄워): 판의 아래 끝에 붙이던 때는 위의 로고·대상과 숫자 사이가 판 높이의 절반 넘게 비었다 */
+/* 결과 숫자는 대상 바로 아래에(--body-gap만큼 띄워): 판의 아래 끝에 붙이던 때는 위의 로고·대상과 숫자 사이가 판 높이의 절반 넘게 비었다.
+   숫자 둘셋이 판을 덜 채우면 장 채움 맞추기가 한 단계 키우고, 그래도 비면 --eye만큼 눈높이 가운데로 내린다(왼쪽 단의 이야기와 같이) */
 .cs-results {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 60px;
-  margin-top: var(--body-gap);
+  margin-top: calc(var(--body-gap) + var(--eye, 0px));
 }
 
 .cs-res {
