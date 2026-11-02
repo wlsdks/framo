@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { asksDecision, AUDIENCES, BLUEPRINTS, DECK_GROUPS, DECK_TYPES, DURATIONS } from './blueprints'
 import { createDeck, planRecipes, priorityFor, targetCount } from './generate'
-import { hintFor, LAYOUT_GROUPS, LAYOUT_ORDER, LAYOUTS, logoColumns } from './layouts'
+import { DROP_ROW, hintFor, LAYOUT_GROUPS, LAYOUT_ORDER, LAYOUTS, logoColumns, rowHint } from './layouts'
 import { showcaseSlides } from './showcase'
 import { scoreOf, seriesIn } from '../slides/numbers'
 
@@ -254,6 +254,36 @@ describe('createDeck', () => {
       }
     }
     expect([...wrong]).toEqual([])
+  })
+
+  it('줄을 지워도 된다는 안내는 빈 줄에만 보인다: 줄의 다른 칸을 채우면 그 칸의 안내로 바뀐다', () => {
+    // 결정 요청의 셋째 줄은 설명 칸의 안내가 '없으면 이 줄을 지워요'뿐이라, 제목을 채워도 설명 칸에 그 말이 남아
+    // '썼는데 지우라는 건가'로 읽혔다
+    let rows = 0
+    const wrong: string[] = []
+    for (const type of DECK_TYPES) {
+      for (const s of createDeck({ ...input, type }).slides) {
+        s.items.forEach((it, i) => {
+          for (const k of ['title', 'body'] as const) {
+            const own = hintFor(s.layout, s.hints, k, k, i)
+            if (!own.includes(DROP_ROW)) continue
+            const where = `${type} ${s.layout} ${i + 1}번 줄 ${k}`
+            // 아무것도 쓰지 않은 줄에는 그대로 보인다
+            if (rowHint(s.layout, s.hints, it, k, i) !== own) wrong.push(`${where}: 빈 줄에 안내가 없어요`)
+            // 칸 자신의 안내 끝에 붙은 말은 그 칸을 채우면 안내째로 사라진다
+            if (own !== DROP_ROW) continue
+            rows++
+            const filled = rowHint(s.layout, s.hints, { ...it, [k === 'title' ? 'body' : 'title']: '채운 글' }, k, i)
+            if (filled.includes(DROP_ROW) || !filled.trim()) wrong.push(`${where}: '${filled}'`)
+          }
+        })
+      }
+    }
+    expect(rows).toBeGreaterThan(5)
+    expect(wrong).toEqual([])
+    // 줄의 이야기와 맞는 안내로: 제안의 셋째 줄(연락 또는 다음 일정)에 첫 줄의 안내(무엇을 확인하고 싶은지)가 보이지 않게
+    const next = createDeck({ ...input, type: 'proposal' }).slides.find((s) => s.layout === 'closing')!
+    expect(rowHint(next.layout, next.hints, { ...next.items[2], title: '다음 주 화요일 다시 만나요' }, 'body', 2)).toBe('언제, 누구와 이어 갈지')
   })
 
   it('추이 예시의 목표선은 예시 숫자와 같은 크기다: 동떨어진 목표선이 그래프 바닥에 그어지지 않게', () => {
