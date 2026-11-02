@@ -1,0 +1,173 @@
+/* ---------- 원인 캐기 ----------
+   드러난 문제에서 '왜?'를 거듭해 한 단씩 깊이 내려간다. 계단(기본)은 단마다 --wy-in만큼 오른쪽으로 들이고, 앞 단의 이름표 아래에서
+   내려와 꺾여 들어오는 선(└)으로 잇는다: 캐 들어간 깊이가 들여 쓴 만큼 보인다. 선은 두 조각이다. 앞 단의 ::after가 그 단의 이름표
+   아래에서 단의 아래 끝까지, 이 단의 .bk-wy-link가 단의 위 끝에서 이름표의 가운데 높이까지 내려와 이름표 앞까지 꺾인다.
+   단은 사이 없이 맞붙고(줄 사이는 단의 위 여백), 두 조각이 단의 경계에서 이어져 원인 글이 몇 줄이든 끊기지 않는다.
+   선은 옅은 1px(데이터의 짜임만, docs/VISUAL-RULES.md). 근본 원인으로 들어오는 마지막 갈고리와 그 이름표만 강조색이다(답) */
+.bk-wy {
+  /* 단을 들이는 너비, 선이 내려오는 자리(앞 단 왼쪽 끝에서), 선 끝과 이름표 사이 */
+  --wy-in: calc(56px * var(--bk-fit, 1));
+  --wy-x: 11px;
+  --wy-gap: calc(26px * var(--bk-fit, 1) + var(--bk-air, 0px));
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  height: 100%;
+}
+
+.bk-wy > .bk-h {
+  margin-bottom: 20px;
+}
+
+.bk-wy-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 단 하나: 이름표(문제, 왜?, 근본 원인)와 글. 이름표는 글의 첫 줄에 기준선을 맞춘다.
+   글자 크기(base.css의 --fs)는 단의 글(본문)과 같아서, 선의 높이(em)를 글 줄에 맞춰 잡는다 */
+.bk-wy-step {
+  --fs: var(--t-body);
+  --wy-top: var(--wy-gap);
+  position: relative;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: baseline;
+  margin-left: calc(var(--wy-d, 0) * var(--wy-in));
+  padding-top: var(--wy-top);
+  line-height: 1.4;
+}
+
+.bk-wy-step:first-child {
+  --wy-top: 0px;
+}
+
+/* 앞 단에서 내려가는 조각: 이름표가 선 줄(글의 첫 줄) 아래에서 단의 아래 끝까지. 마지막 단은 내려갈 곳이 없다 */
+.bk-wy-step:not(:last-child)::after {
+  position: absolute;
+  top: calc(var(--wy-top) + 1.4em + 4px);
+  bottom: 0;
+  left: var(--wy-x);
+  border-left: var(--rule-hair) solid var(--line-strong);
+  content: '';
+}
+
+/* 이 단으로 들어오는 조각: 단의 위 끝(앞 단의 아래 끝)에서 첫 글줄의 가운데 높이까지 내려와, 이름표 10px 앞까지 꺾인다 */
+.bk-wy-link {
+  position: absolute;
+  top: 0;
+  left: calc(var(--wy-x) - var(--wy-in));
+  width: calc(var(--wy-in) - var(--wy-x) - 10px);
+  height: calc(var(--wy-top) + 0.7em);
+  border-bottom: var(--rule-hair) solid var(--line-strong);
+  border-left: var(--rule-hair) solid var(--line-strong);
+}
+
+.bk-wy-step.is-root > .bk-wy-link {
+  border-color: var(--accent);
+}
+
+.bk-wy-k {
+  --fs: var(--t-source);
+  color: var(--ink-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bk-wy-step.is-root > .bk-wy-k {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.bk-wy-text {
+  min-width: 0;
+}
+
+.bk-wy-t {
+  --fs: var(--t-body);
+  display: block;
+  color: var(--ink);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+/* 문제와 근본 원인은 굵게: 캐기의 처음과 끝. 사이의 원인은 보통 굵기로 그 둘을 잇는 줄로 읽힌다 */
+.bk-wy-step:is(.is-problem, .is-root) .bk-wy-t {
+  font-weight: 700;
+}
+
+.bk-wy-m {
+  --fs: var(--t-source);
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-3);
+  line-height: 1.35;
+}
+
+/* 좁은 칸: 단을 덜 들인다. 다섯 단이면 들인 너비만 칸의 3분의 1이 넘어 글이 몇 글자마다 꺾였다 */
+@container bk (max-width: 760px) {
+  .bk-wy {
+    --wy-in: calc(36px * var(--bk-fit, 1));
+    --wy-x: 9px;
+  }
+}
+
+/* ---------- 가로 ----------
+   넓고 낮은 칸에서 같은 차례를 왼쪽에서 오른쪽으로: 단마다 한 칸(같은 너비), 이름표가 칸 위에 서고 글이 그 아래.
+   이름표 줄을 따라 앞 이름표에서 다음 이름표까지 선이 이어진다(갈고리 대신 곧은 선). 칸이 좁으면(단 넷까지 960px, 다섯부터 1300px 밑)
+   계단으로 쌓는다: 한 칸이 240px 밑이면 글이 네댓 글자마다 꺾였다. 칸 너비와 단 수로 정한 표시(--wy-row)를 짜임이 묻는다 */
+@container bk (min-width: 960px) {
+  .bk-wy.is-across:is([data-steps='2'], [data-steps='3'], [data-steps='4']) {
+    --wy-row: 1;
+  }
+}
+
+@container bk (min-width: 1300px) {
+  .bk-wy.is-across {
+    --wy-row: 1;
+  }
+}
+
+@container style(--wy-row: 1) {
+  .bk-wy-list {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    column-gap: 56px;
+  }
+
+  .bk-wy-step {
+    --wy-top: 0px;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 10px;
+    align-content: start;
+    margin-left: 0;
+  }
+
+  /* 갈고리 두 조각 대신 이름표 줄의 곧은 선 하나: 앞 이름표 끝에서 다음 이름표 10px 앞까지(칸 사이 56px를 건너) 잇는다.
+     문제 ──── 왜? ──── 왜? ──── 근본 원인. 칸 사이의 짧은 선만 두던 시안은 이름표 앞의 줄표처럼 읽혀 사슬로 보이지 않았다.
+     선은 앞 단의 이름표(::after)가 갖는다: 이름표가 칸 너비로 늘어서 이름표 글 뒤의 남는 너비를 선이 채운다 */
+  .bk-wy-step:not(:last-child)::after,
+  .bk-wy-link {
+    display: none;
+  }
+
+  .bk-wy-k {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .bk-wy-step:not(:last-child) > .bk-wy-k::after {
+    flex: 1;
+    margin-right: -46px;
+    border-top: var(--rule-hair) solid var(--line-strong);
+    content: '';
+  }
+}
+
+/* 강조(bold): 근본 원인이 답이라 강조색 글자로 (looks.css의 강조와 같은 뜻) */
+.bk-look-bold > .bk-in .bk-wy-step.is-root .bk-wy-t {
+  color: var(--accent);
+}

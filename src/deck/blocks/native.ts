@@ -743,6 +743,52 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  whys: {
+    name: '원인 캐기',
+    description: '드러난 문제에서 왜를 거듭해 근본 원인까지 한 단씩 내려가요. 장애 보고, 개선 제안에',
+    motion: '문제 아래로 선이 한 단씩 그어지며 원인이 나오고, 마지막 근본 원인이 또렷하게 맺혀요',
+    variants: [
+      { id: 'base', name: '계단' },
+      { id: 'across', name: '가로' },
+    ],
+    fields: [
+      { key: 'heading', label: '소제목', hint: '예: 보고가 늦어지는 이유', optional: true },
+      { key: 'problem', label: '문제', hint: '드러난 문제 (예: 월간 보고가 매달 이틀 늦어요)', multiline: true },
+    ],
+    items: {
+      label: '원인',
+      // 원인 하나는 캐기가 아니라 문제와 원인 한 쌍이다. 여섯부터는 계단이 칸 너비의 절반 넘게 들어가 글 자리가 좁다
+      min: 2,
+      max: 5,
+      default: 3,
+      fields: [
+        {
+          key: 'title',
+          label: '원인',
+          hint: '왜 그런지 한 줄로',
+          hints: ['부서 숫자가 마감 뒤에 모여요', '부서마다 양식이 달라 다시 맞춰요', '양식을 정하고 고치는 곳이 없어요', '보고 절차를 맡은 팀이 없어요', '조직을 바꿀 때 보고 일이 빠졌어요'],
+          multiline: true,
+        },
+        {
+          key: 'meta',
+          label: '근거',
+          hint: '확인한 사실 (예: 12개 부서 중 9곳)',
+          hints: ['12개 부서 중 9곳', '양식 7가지', '최근 3년 맡은 곳 없음', '업무 분장표에 없음', '2024년 조직 개편'],
+          optional: true,
+        },
+      ],
+    },
+    minSpan: 5,
+    prefSpan: 6,
+    sample: {
+      fields: { problem: '월간 보고가 매달 이틀 늦어요' },
+      items: [
+        { title: '부서 숫자가 마감 뒤에 모여요', meta: '12개 부서 중 9곳' },
+        { title: '부서마다 양식이 달라 다시 맞춰요', meta: '양식 7가지' },
+        { title: '양식을 정하고 고치는 곳이 없어요' },
+      ],
+    },
+  },
   network: {
     name: '연결도',
     description: '가운데 하나에 여러 시스템이나 팀이 이어진 모습',
