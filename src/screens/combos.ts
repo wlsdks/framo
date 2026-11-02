@@ -87,6 +87,8 @@ const SCENES: BlockType[][][] = [
   [['logos'], ['stat'], ['stat']],
   // 칸 조립과 설명
   [['tiles', 'ratio'], ['text', 'bullets']],
+  // 효과 셈과 결론: 한마디 아래 셈, 옆에 근거
+  [['message', 'callout'], ['calc'], ['bullets', 'note']],
 ]
 
 /** 어느 장면에도 없는 부품은 설명 글과 짝지은 장면으로 (새 부품을 더해도 시험에서 빠지지 않게) */

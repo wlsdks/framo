@@ -94,7 +94,7 @@ export function tidyLinks(blocks: Block[]): Block[] {
  */
 type Kind = 'number' | 'words' | 'list' | 'chart' | 'flow' | 'table' | 'image'
 const KINDS: Record<Kind, BlockType[]> = {
-  number: ['number', 'delta', 'goal', 'ring', 'ratio', 'spark', 'stat', 'meter', 'range', 'tiles', 'kpi'],
+  number: ['number', 'delta', 'goal', 'ring', 'ratio', 'spark', 'stat', 'meter', 'range', 'tiles', 'calc', 'kpi'],
   words: ['message', 'text', 'callout', 'quote', 'heading', 'note', 'summary'],
   list: ['bullets', 'points', 'facts', 'risks', 'faq', 'checks', 'people', 'status', 'date', 'agenda'],
   chart: ['bars', 'bridge', 'trend', 'versus', 'share', 'funnel', 'pareto', 'attain', 'diverge', 'stack', 'heat', 'sparks', 'market', 'split', 'merge', 'scorecard', 'progress'],
