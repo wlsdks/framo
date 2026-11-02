@@ -76,6 +76,21 @@ describe('움직임 엔진', () => {
     expect(likert).toMatch(/count(In)?\(el\.querySelector\(["']\.bk-lk-tot["']\)/)
   })
 
+  it('원인 캐기는 단마다 앞 단 아래에서 선이 내려와 꺾여 들어오고(└), 근본 원인은 흐릿하다 또렷하게 맺힌다', () => {
+    const src = motionEngine.toString()
+    const native = src.slice(src.indexOf('function nativeAuto'))
+    const i = native.search(/case ["']whys["']/)
+    expect(i).toBeGreaterThan(0)
+    const whys = native.slice(i, native.indexOf('break', i))
+    // 앞 단의 아래로 내려가는 조각(::after)을 위에서 긋고, 이 단의 갈고리는 세로를 먼저 연 다음 가로로 연다
+    expect(whys).toMatch(/["']center top["'],\s*["']::after["']/)
+    expect(whys).toMatch(/["']\.bk-wy-link["']/)
+    expect(whys).toMatch(/inset\(0 calc\(100% - 3px\) 0 0\)/)
+    expect(whys).toMatch(/blur\(/)
+    // 가로 모양은 앞 이름표에서 이 이름표까지의 곧은 선을 왼쪽부터
+    expect(whys).toMatch(/["']left center["'],\s*["']::after["']/)
+  })
+
   it('추이는 바닥줄이 왼쪽부터 그어지고 달 이름은 선이 그 달에 닿을 때 하나씩 나온다 (빈 축과 달 이름을 먼저 깔지 않는다)', () => {
     const src = motionEngine.toString()
     const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))

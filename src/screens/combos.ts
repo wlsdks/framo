@@ -91,6 +91,8 @@ const SCENES: BlockType[][][] = [
   [['message', 'callout'], ['calc'], ['bullets', 'note']],
   // 설문 결과와 해석: 막대 옆이나 아래에 읽은 것
   [['likert'], ['callout', 'bullets', 'text']],
+  // 원인 캐기와 대책: 근본 원인 옆이나 아래에 고칠 것
+  [['whys'], ['callout', 'bullets', 'checks']],
 ]
 
 /** 어느 장면에도 없는 부품은 설명 글과 짝지은 장면으로 (새 부품을 더해도 시험에서 빠지지 않게) */

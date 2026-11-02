@@ -1742,6 +1742,47 @@ export function motionEngine(): MotionEngine {
           rise(one('.bk-dc-question'), 100, L.y * 0.5)
           items('.bk-dc-row', 240, (el, at) => rise(el, at, L.y * 0.4))
           break
+        case 'whys': {
+          // 문제가 먼저 서고, 단마다 앞 단의 이름표 아래에서 선이 내려와 꺾여 들어오면(└) 그 끝에 '왜?'가 닿고 원인이 올라온다.
+          // 계단을 한 단씩 내려가는 차례가 캐 들어가는 차례다. 마지막 근본 원인은 강조색 갈고리가 닿을 때 흐릿하던 글이 또렷하게
+          // 맺힌다(답). 단이 많아도 1.6초 안에 근본 원인까지 닿게
+          lines(one('.bk-h'), 60)
+          const steps = $('.bk-wy-step')
+          const hop = Math.min(levelName === 'lively' ? 560 : 480, 1600 / Math.max(1, steps.length - 1))
+          const seg = hop * 0.8
+          steps.forEach((step, n) => {
+            const at = 120 + n * hop
+            const label = step.querySelector('.bk-wy-k')
+            const text = step.querySelector('.bk-wy-t')
+            const note = step.querySelector('.bk-wy-m')
+            if (n === 0) {
+              fade(label, at, 400)
+              rise(text, at, L.y * 0.5)
+              rise(note, at + 80, L.y * 0.3)
+              return
+            }
+            const link = step.querySelector<HTMLElement>('.bk-wy-link')
+            if (link && link.offsetParent) {
+              // 계단: 앞 단의 이름표 아래에서 단 끝까지 내려가는 조각을 먼저 긋고, 이 단의 갈고리가 이어서 세로를 연 다음 가로로 연다
+              draw(steps[n - 1], at - hop * 0.35, hop * 0.35, 'center top', '::after')
+              const frames: Keyframe[] = [{ clipPath: 'inset(0 100% 100% 0)' }, { clipPath: 'inset(0 calc(100% - 3px) 0 0)', offset: 0.5 }, { clipPath: 'inset(0 0 0 0)' }]
+              run(anims, link, frames, s(at), { easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)', duration: d(seg) })
+            } else {
+              // 가로(넓은 칸): 갈고리는 숨고 앞 이름표에서 이 이름표까지 이름표 줄의 곧은 선(앞 이름표의 ::after)이 왼쪽에서 그어진다
+              draw(steps[n - 1].querySelector('.bk-wy-k'), at - hop * 0.2, seg, 'left center', '::after')
+            }
+            fade(label, at + seg * 0.7, 360)
+            if (step.classList.contains('is-root') && text) {
+              const origin = 'left center'
+              run(anims, text, [{ opacity: 0, filter: 'blur(6px)', scale: '1.04', transformOrigin: origin }, { opacity: 1, filter: 'blur(0px)', scale: '1', transformOrigin: origin }], s(at + seg * 0.75), {
+                easing: OUT,
+                duration: d(720),
+              })
+            } else rise(text, at + seg * 0.75, L.y * 0.4)
+            rise(note, at + seg * 0.75 + 90, L.y * 0.3)
+          })
+          break
+        }
         case 'flow': {
           // 첫 단계가 나오고, 다음 단계로 선이 그어지는 동안 데이터 조각이 선 끝을 따라 건너가서, 닿을 때 다음 단계가 받아 나타난다.
           // 끝까지 닿으면 조각이 처음부터 끝까지 한 번 더 빠르게 지나가고 멈춘다. 되풀이하지 않는다:
