@@ -65,7 +65,7 @@ export const weekly: Blueprint = {
       guide: '막힌 일과 어떻게 풀지를 줄마다 적어요.',
       fields: { leftTitle: '이슈', rightTitle: '대응' },
       hints: {
-        title: '두 가지가 막혀 있어요',
+        title: '세 가지가 막혀 있어요',
         'items.title': '막히거나 늦어지는 일',
         'items.body': '어떻게 풀지, 언제까지',
         ...each({
