@@ -3,6 +3,7 @@ import { BLOCK_EFFECTS, BLOCK_LOOKS, BLOCKS, blockItems, effectOf, isAlone, show
 import { sceneOf } from '../../deck/scenes'
 import type { Block, BlockEffect, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
+import { onMenuKeys } from '../../lib/menuKeys'
 import { Icon, MotionIcon, PlusIcon, ShapesIcon, TrashIcon } from '../ui'
 import { noRoomText } from './noRoom'
 import { SceneOverride } from './ScenePicker'
@@ -129,7 +130,7 @@ export function BlockTools({
           <Icon d="M6 9l6 6 6-6" />
         </button>
         {menu === 'more' && (
-          <ul ref={menuRef} className="bk-menu is-more" role="menu" aria-label={`${spec.name} 더 보기`}>
+          <ul ref={menuRef} className="bk-menu is-more" role="menu" onKeyDown={onMenuKeys} aria-label={`${spec.name} 더 보기`}>
             <li>
               <button
                 type="button"
@@ -218,7 +219,7 @@ export function BlockTools({
           <span className="btn-t">{BLOCK_LOOKS.find((l) => l.id === look)?.name}</span>
         </button>
         {menu === 'look' && (
-          <ul ref={menuRef} className="bk-menu is-looks" role="menu">
+          <ul ref={menuRef} className="bk-menu is-looks" role="menu" onKeyDown={onMenuKeys}>
             {BLOCK_LOOKS.map((l) => {
               // 들여 쓰기와 강조는 안쪽 여백만큼 높아져서, 장이 꽉 찼으면 바꿀 수 없다
               const r = look === l.id ? null : lookIssue(l.id)
@@ -267,7 +268,7 @@ export function BlockTools({
           </ul>
         )}
         {menu === 'motion' && !scened && (
-          <ul ref={menuRef} className="bk-menu" role="menu">
+          <ul ref={menuRef} className="bk-menu" role="menu" onKeyDown={onMenuKeys}>
             {BLOCK_EFFECTS.map((x) => (
               <li key={x.id}>
                 <button
@@ -310,7 +311,7 @@ export function BlockTools({
             <span className="btn-t">{variants.find((v) => v.id === variant)?.name}</span>
           </button>
           {menu === 'variant' && (
-            <ul ref={menuRef} className="bk-menu is-variants" role="menu">
+            <ul ref={menuRef} className="bk-menu is-variants" role="menu" onKeyDown={onMenuKeys}>
               {variants.map((v) => {
                 const r = v.id === variant ? null : variantIssue(v.id)
                 return (
