@@ -110,6 +110,21 @@ describe('숫자 읽기', () => {
       expect(changeOf(a, b), `${a} → ${b}`).toBe(null)
   })
 
+  it('0을 지나 부호가 바뀌면(적자에서 흑자로처럼) 전 값에 대한 %를 말하지 않는다', () => {
+    // −1억에서 100억이 되면 전 값에 대한 %로는 ▲ 10,100%다. 크기도 뜻도 없는 숫자가 결과 아래에 붙었다
+    for (const [a, b] of [
+      ['-5억', '3억'],
+      ['−1억 원', '100억 원'],
+      ['2,000만 원', '-500만 원'],
+      ['▼3', '▲4'],
+    ])
+      expect(changeOf(a, b), `${a} → ${b}`).toBe(null)
+    // 같은 쪽에서 바뀌거나 0에 닿는 것은 그대로 센다. %끼리는 %p(차이)라 0을 지나도 된다
+    expect(changeOf('-5억', '-10억')?.value).toBe(-100)
+    expect(changeOf('5억', '0억')?.value).toBe(-100)
+    expect(changeOf('-2%', '3%')).toEqual({ value: 5, pp: true })
+  })
+
   it('목표와 실적은 단위 칸과 따로 적은 자리, 단위를 같이 읽는다', () => {
     const rate = (v: string, t: string, unit?: string) => {
       const p = amountPair(v, t, unit)
