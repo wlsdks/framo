@@ -10,7 +10,7 @@
  *    내용이 적은 장에서 작은 글이 넓은 칸 한쪽에만 있으면 칸이 비어 보인다. 모든 칸을 같이 키워서 칸끼리 크기는 그대로 맞는다.
  * 3-2. 쌓은 뒤에도 내용이 본문 높이의 60%에 못 미치면(docs/VISUAL-RULES.md 6) 글자와 그림을 한 단계 더(1.44) 키우고, 그래도 비면
  *    줄 사이를 장 안의 모든 칸에 같은 값으로 넓힌다(--bk-air, 12px까지). 칸마다 바닥까지 따로 채우지는 않는다: 줄 사이가 칸마다 달라 보였다.
- *    레이아웃 장도 같다(fitLayout: 본문 .s-body의 --bk-fit, --fill-air).
+ *    레이아웃 장도 같다(fitLayout: 본문 .s-body의 --bk-fit, --fill-air. 사례 장은 두 단의 .cs-story, .cs-results).
  *
  * 3-3. 한 줄에 부품이 둘 이상이면 부품마다 위에서부터 그린다(소제목 윗선을 맞춘다, blocks.css). 이음표가 선 줄도 같다. 칸 높이를 다 쓰는
  *    부품(차트, 표) 옆의 숫자 부품만 한두 단계 키운다. 짧은 부품을 가운데로 내리지 않는다: 남는 높이는 3-4가 맨 아래에 모은다.
@@ -1115,7 +1115,7 @@ export function blockFitter() {
    * 제목이 여럿으로 읽힌다. 숫자는 답이라 커도 된다. slide는 장(또는 장 머리를 품은 상자)
    */
   function rivals(slide: Element | null, scopes: HTMLElement[]): boolean {
-    const title = slide?.querySelector<HTMLElement>(':scope > .s-head .s-title')
+    const title = slide?.querySelector<HTMLElement>(':scope > .s-head .s-title, :scope > .cs-main > .cs-title')
     if (!title || !(title.textContent || '').trim()) return false
     const tf = parseFloat(getComputedStyle(title).fontSize)
     for (const scope of scopes)
@@ -1938,6 +1938,7 @@ export function blockFitter() {
    * 장 제목과 다투어 키우지 못하는 세 단 요점, 줄 사이가 없는 가로 일정과 단계 흐름, 숫자 하나 장이 위 절반에 몰리고 아래가 통째로 비었다.
    * 본문 높이는 본문 상자가 아니라 장에서 본문이 쓸 수 있는 자리(본문 윗선부터 하단 표시 몫 위까지)로 잰다: 비교 장은 본문 상자가
    * 내용 높이뿐이라(화살표를 내용 가운데에 두려고) 늘 다 찬 것으로 재어, 줄 셋이 위 절반에 몰려도 키우지도 넓히지도 않았다.
+   * 사례 장은 두 단(제목 아래 이야기, 대상 아래 결과 숫자)을 단마다 이렇게 맞춘다(layoutParts).
    * 표지, 단락 장, 마지막 장, 부품 장은 하지 않는다. 움직이는 중이면 끝난 뒤에
    */
   /** 본문마다 지난번 맞추기에서 찾은 줄 사이(--fill-air) 값 */
@@ -1953,14 +1954,44 @@ export function blockFitter() {
     }
   }
 
-  function fitLayoutNow(slide: HTMLElement): void {
+  /**
+   * 채울 본문(body)과 그 머리(head), 본문이 쓸 수 있는 아래 끝을 정하는 상자(box, 그 아래 여백 위까지), 올려 볼 글자 단계(ups).
+   * 보통 장은 장 머리(.s-head) 아래의 본문(.s-body) 하나다. 사례 장은 장 머리와 본문 상자 없이 두 단이라 단마다 맞춘다:
+   * 제목 아래 이야기(.cs-main의 .cs-story)와 로고·대상 아래 결과 숫자(.cs-side의 .cs-results). 맞추기가 닿지 않던 때는 짧은 사례면
+   * 왼쪽 단의 아래 절반이 통째로 비었다. 사례 장의 한마디는 제목 글꼴이라 두 단계(1.44) 키우면 장 제목만 해져 제목이 둘로 읽혔다: 한 단계까지만
+   */
+  function layoutParts(slide: HTMLElement): { body: HTMLElement; head: HTMLElement | null; box: HTMLElement; ups: number[] }[] {
     const body = slide.querySelector<HTMLElement>(':scope > .s-body')
-    if (!body || slide.classList.contains('l-compose') || !slide.querySelector(':scope > .s-head')) return
+    const head = slide.querySelector<HTMLElement>(':scope > .s-head')
+    if (body && head) return [{ body, head, box: slide, ups: [ups[0], more] }]
+    if (!slide.classList.contains('l-case')) return []
+    const out: { body: HTMLElement; head: HTMLElement | null; box: HTMLElement; ups: number[] }[] = []
+    const main = slide.querySelector<HTMLElement>(':scope > .cs-main')
+    const story = main?.querySelector<HTMLElement>(':scope > .cs-story')
+    if (main && story) out.push({ body: story, head: main.querySelector<HTMLElement>(':scope > .cs-title'), box: main, ups: [ups[0]] })
+    const side = slide.querySelector<HTMLElement>(':scope > .cs-side')
+    const results = side?.querySelector<HTMLElement>(':scope > .cs-results')
+    if (side && results) {
+      // 결과 숫자의 머리는 그 위의 대상(없으면 로고)
+      const heads = Array.from(side.querySelectorAll<HTMLElement>(':scope > .cs-logo, :scope > .cs-client'))
+      out.push({ body: results, head: heads[heads.length - 1] ?? null, box: side, ups: [ups[0]] })
+    }
+    return out
+  }
+
+  function fitLayoutNow(slide: HTMLElement): void {
+    if (slide.classList.contains('l-compose')) return
+    const parts = layoutParts(slide)
+    if (!parts.length) return
     const mover = moving(slide)
     if (mover) {
       later(slide, mover, () => fitLayout(slide))
       return
     }
+    for (const part of parts) fitPart(slide, part)
+  }
+
+  function fitPart(slide: HTMLElement, { body, head, box, ups: steps }: ReturnType<typeof layoutParts>[number]): void {
     // 본문에 값을 적으면 잰 것을 비운다
     const setB = (name: string, v: string) => {
       body.style.setProperty(name, v)
@@ -1978,12 +2009,13 @@ export function blockFitter() {
     const sr = slide.getBoundingClientRect()
     const k = sr.height / slide.offsetHeight
     if (!b.height || !k) return
-    // 본문이 쓸 수 있는 아래 끝(장의 아래 여백 위)과 장 틀의 아랫선(--pad-y). 그 사이가 하단 표시 몫이다.
+    // 본문이 쓸 수 있는 아래 끝(장이나 단의 아래 여백 위)과 장 틀의 아랫선(--pad-y). 그 사이가 하단 표시 몫이다.
     // 채움은 장 틀의 아랫선까지로 잰다(VISUAL-RULES 6: 하단 표시 몫은 공백 설계에 넣지 않는다). 본문 상자 끝까지로 재면
     // 아래 띠 몫이 빈 곳에서 빠져, 아래가 340px 넘게 빈 비교 장도 64% 찬 것으로 보고 아무것도 하지 않았다.
-    // 글과 그림은 여전히 본문 상자 안에만 둔다(bad): 출처와 단락 지도에 닿지 않게
+    // 글과 그림은 여전히 본문 상자 안에만 둔다(bad): 출처와 단락 지도에 닿지 않게. 사례 장의 결과 판은 하단 표시가 왼쪽 단 아래에
+    // 있어 판의 아래 여백이 곧 장 틀이다
     const cs = getComputedStyle(slide)
-    const end = sr.bottom - (parseFloat(cs.paddingBottom) || 0) * k
+    const end = box.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(box).paddingBottom) || 0) * k
     const frame = sr.bottom - (parseFloat(cs.getPropertyValue('--pad-y')) || 0) * k
     const room = frame - b.top
     if (end - b.top <= 0) return
@@ -2025,7 +2057,6 @@ export function blockFitter() {
       if (bottom === -Infinity) return
       // 위의 빈 곳은 보이는 그대로 장 머리(제목, 부제) 아래부터 센다: 본문 윗선부터 세면 --body-gap만큼 위가 넓어져
       // 단계 흐름이 가운데보다 아래에 앉았다. (gap + move) : (아래 - move) = 1 : 1.2
-      const head = slide.querySelector<HTMLElement>(':scope > .s-head')
       const gap = head?.getClientRects().length ? Math.max(0, b.top - head.getBoundingClientRect().bottom) : 0
       const move = Math.round(Math.min((frame - bottom - 1.2 * gap) / 2.2, end - bottom) / k)
       if (move < 8) return
@@ -2034,11 +2065,11 @@ export function blockFitter() {
     }
     // (가) 글자 단계는 60%를 못 채울 때만 올린다
     if (fill() < FILL_MIN) {
-      for (const f of [ups[0], more]) {
+      for (const [j, f] of steps.entries()) {
         setB('--bk-fit', String(f))
         if (bad()) {
-          if (f === ups[0]) delB('--bk-fit')
-          else setB('--bk-fit', String(ups[0]))
+          if (j === 0) delB('--bk-fit')
+          else setB('--bk-fit', String(steps[j - 1]))
           break
         }
         if (fill() >= FILL_MIN) break
