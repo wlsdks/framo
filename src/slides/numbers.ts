@@ -265,7 +265,8 @@ export function scoreOf(target: string, actual: string): { known: boolean; met: 
 
 /**
  * 전과 후가 얼마나 바뀌었는지. 둘 다 %면 %p, 아니면 전 값에 대한 %.
- * 견줄 수 없는 단위이거나 전 값이 0이면 null (비율을 말할 수 없다)
+ * 견줄 수 없는 단위이거나 전 값이 0이면 null (비율을 말할 수 없다).
+ * 0을 지나 부호가 바뀌어도(적자에서 흑자로처럼) null: −1억에서 100억이 되면 전 값에 대한 %로는 ▲ 10,100%라 크기도 뜻도 없다
  */
 export function changeOf(before: string, after: string, unit = ''): { value: number; pp: boolean } | null {
   const p = amountPair(before, after, unit)
@@ -273,7 +274,7 @@ export function changeOf(before: string, after: string, unit = ''): { value: num
   const d = p.b.base - p.a.base
   if (!Number.isFinite(d)) return null
   if (p.kind === '%') return { value: d, pp: true }
-  if (p.a.base === 0) return null
+  if (p.a.base === 0 || p.a.base * p.b.base < 0) return null
   const value = (d / Math.abs(p.a.base)) * 100
   return Number.isFinite(value) ? { value, pp: false } : null
 }
