@@ -216,7 +216,7 @@ export function SavedParts({ deck, slide, blocks, toast }: { deck: Deck; slide: 
           </span>
           <p className="mine-empty-t">자주 쓰는 조합을 저장해 두세요</p>
           <p className="mine-empty-p">
-            슬라이드 위에서 컴포넌트를 고르고 도구의 <BookmarkIcon /> 를 누르면 그 컴포넌트, 그 줄, 슬라이드 전체를 저장해요. 어느 발표에서든 다시 넣을 수 있어요.
+            슬라이드 위에서 컴포넌트를 고르고, 슬라이드 아래 도구에서 컴포넌트 이름을 눌러 '내 컴포넌트로 저장'을 고르면 그 컴포넌트, 그 줄, 슬라이드 전체를 저장해요. 어느 발표에서든 다시 넣을 수 있어요.
           </p>
           <button type="button" className="btn btn-sm" onClick={() => fileRef.current?.click()}>
             <UploadIcon />
