@@ -658,7 +658,7 @@ export const LAYOUTS: Record<LayoutId, LayoutSpec> = {
     fields: [
       title('결정해 주실 것'),
       { key: '$presenter', label: '발표자', hint: '발표자 이름', optional: true },
-      { key: '$contact', label: '연락처', hint: '이메일이나 내선 번호', optional: true },
+      { key: '$contact', label: '연락처', hint: '이메일이나 전화번호', optional: true },
     ],
     items: {
       label: '요청',
