@@ -1665,6 +1665,35 @@ export function motionEngine(): MotionEngine {
             count(el.querySelector('.bk-dv-num'), at + 320)
           })
           break
+        case 'likert': {
+          // 가운데 선이 먼저 서고, 질문마다 막대가 그 선에서 양쪽으로 열린다: 가까운 단계(보통, 그렇다)부터 먼 단계(매우 그렇다)로
+          // 번지듯. 양쪽이 같은 때에 끝나서 짧은 쪽은 천천히 열린다. 합계는 막대가 열리는 동안 굴러 맞춰지고, 칸 안 숫자는 다 열린 뒤에
+          lines(one('.bk-h'), 60)
+          // 머리 줄(응답 수, 단계 색 표시, 합계의 머리)은 질문 줄들과 한 칸 나눔에 서서 표시 줄의 상자(.bk-cc-key)가 없다(display: contents)
+          fade(one('.bk-cc-u'), 120, 500)
+          fade(one('.bk-lk-keywrap'), 120, 500)
+          fade(one('.bk-lk-th'), 160, 500)
+          $('.bk-lk-axis').forEach((a) => grow(a, 120, 'down'))
+          const open = levelName === 'lively' ? 900 : 760
+          items('.bk-lk-row', 220, (el, at) => {
+            rise(el.querySelector('.bk-lk-q'), at, L.y * 0.4)
+            const bar = el.querySelector<HTMLElement>('.bk-lk-bar')
+            if (bar) {
+              // 막대 안에서 가운데 선의 자리(%): 셋 다 막대 칸에 대한 몫이다(가운데 선 --lk-x, 막대의 시작 --o, 너비 --w)
+              const x = parseFloat((bar.closest('.bk-lk') as HTMLElement | null)?.style.getPropertyValue('--lk-x') || '50')
+              const o = parseFloat(bar.style.getPropertyValue('--o')) || 0
+              const w = parseFloat(bar.style.getPropertyValue('--w')) || 100
+              const c = Math.min(100, Math.max(0, ((x - o) / w) * 100))
+              run(anims, bar, [{ clipPath: `inset(-2px ${100 - c}% -2px ${c}%)` }, { clipPath: 'inset(-2px 0 -2px 0)' }], s(at + 80), {
+                easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
+                duration: d(open),
+              })
+            }
+            el.querySelectorAll('.bk-lk-n').forEach((n) => fade(n, at + 80 + open * 0.8, 360))
+            countIn(el.querySelector('.bk-lk-tot'), at + 200)
+          })
+          break
+        }
         case 'heat': {
           // 칸이 왼쪽 위 모서리부터 비스듬한 물결로 물든다(줄 + 칸이 같은 칸이 함께). 칸이 많아도 1초 안에 다 물들게.
           // 다 물든 뒤 가장 높은 칸과 낮은 칸에 고리가 맺힌다

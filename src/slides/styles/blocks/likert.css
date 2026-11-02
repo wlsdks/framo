@@ -1,0 +1,198 @@
+/* ---------- 설문 결과 ----------
+   질문마다 답의 비율을 막대 하나에 갈라 쌓는다: 부정은 가운데 선 왼쪽, 긍정은 오른쪽, 보통은 선에 반씩 걸친다.
+   한 줄은 '질문 | 막대 | 합계'의 세 칸이고, 줄마다 subgrid로 같은 칸 나눔을 쓴다. 질문 칸은 가장 긴 질문의 폭(--lk-qu em,
+   Likert.tsx가 글자 수로 어림)이되 칸 너비의 38%까지(그보다 길면 줄을 바꾼다), 합계 칸은 머리('그렇다 이상')와 숫자의 폭.
+   막대 칸 안의 가운데 선 자리(--lk-x)와 줄마다 막대의 시작(--o)과 너비(--w)는 막대 칸에 대한 %로 Likert.tsx가 셈한다:
+   모든 질문이 같은 0 선을 써서 긍정이 많은 질문은 막대가 오른쪽으로 길게 보인다. 가운데 선은 줄마다 그려 줄 사이 틈 없이 이어지게 */
+.bk-lk {
+  /* 질문 글의 크기 (base.css의 글자 칸 꼴과 같은 셈): 질문 칸의 너비를 em으로 잡는다 */
+  --lk-fs: max(var(--fs-min, 0px), calc(var(--t-small) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1)));
+  --lk-bar: calc(44px * var(--bk-fit, 1));
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  height: 100%;
+}
+
+.bk-lk > .bk-h {
+  margin-bottom: 18px;
+}
+
+.bk-lk-grid {
+  display: grid;
+  grid-template-columns: min(38%, calc(var(--lk-qu) * var(--lk-fs) + 4px)) minmax(0, 1fr) max-content;
+  column-gap: 24px;
+}
+
+/* 머리 줄: 칸마다 그 칸을 설명하는 것이 바로 위에 선다. 응답 수(근거)는 질문 칸 위, 단계 색 표시는 막대 칸 위, 합계의 머리는
+   합계 숫자들 위. 셋의 아래 끝을 맞춰 한 줄로 읽힌다. 표시 줄을 질문 칸부터 늘어놓고 합계의 머리만 오른쪽 끝에 두던 때는
+   한 줄을 다 쓰는 칸에서 표시 줄 끝과 머리 사이가 850px 넘게 비어 양 끝으로 찢어져 보였다(checkAssembly) */
+.bk-lk-grid > .bk-cc-key {
+  display: contents;
+}
+
+.bk-lk-grid > .bk-cc-key > .bk-cc-u {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: end;
+  min-width: 0;
+  margin-bottom: 20px;
+  /* 질문 칸 너비 안에서 줄을 바꾼다: 한 줄로 두면 긴 근거('응답 140명, 10월 사내 설문')가 옆 표시 줄을 덮는다 */
+  white-space: normal;
+}
+
+.bk-lk-keywrap {
+  position: relative;
+  grid-row: 1;
+  grid-column: 2;
+  align-self: end;
+  min-width: 0;
+  margin-bottom: 20px;
+}
+
+.bk-lk-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+}
+
+.bk-lk-th {
+  --fs: var(--t-source);
+  grid-row: 1;
+  grid-column: 3;
+  align-self: end;
+  justify-self: end;
+  margin-bottom: 20px;
+  color: var(--ink-3);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* 편집할 때 읽지 못한 값을 알리는 줄 */
+.bk-lk-warn {
+  margin-bottom: 16px;
+}
+
+/* 질문 줄들은 표시 줄과 같은 칸 나눔에 선다 */
+.bk-lk-list {
+  display: contents;
+}
+
+.bk-lk-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  min-height: calc(var(--lk-bar) + 2 * (10px * var(--bk-fit, 1) + var(--bk-air, 0px)));
+}
+
+.bk-lk-q {
+  --fs: var(--t-small);
+  min-width: 0;
+  padding: calc(14px * var(--bk-fit, 1) + var(--bk-air, 0px)) 0;
+  color: var(--ink-2);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.bk-lk-track {
+  position: relative;
+  align-self: stretch;
+  min-width: 0;
+}
+
+/* 0 선은 기준선이라 옅은 무채색 1px (VISUAL-RULES 2). 막대 뒤에 서서 막대 사이(줄의 위아래)에서만 보인다 */
+.bk-lk-axis {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--lk-x) * 1%);
+  width: var(--rule-hair);
+  background: color-mix(in srgb, var(--ink-3) 70%, var(--bg));
+  translate: -50% 0;
+}
+
+.bk-lk-bar {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--o) * 1%);
+  width: calc(var(--w) * 1%);
+  height: var(--lk-bar);
+  translate: 0 -50%;
+}
+
+/* 단계마다 한 칸. 칸 사이는 바탕색 틈(2px, 쌓은 막대와 같다). 칸마다 크기 상자: 칸 안 숫자는 칸이 숫자보다 넓을 때만 보인다.
+   칸의 글자 크기를 숫자와 같게 두고(--fs) 그 배수(em)로 잰다: 글자 크기 '크게'에서도 숫자 폭과 같이 커진다 */
+.bk-lk-seg {
+  --fs: var(--t-source);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--l) * 1%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--s) * 1% - 2px);
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.bk-lk-seg:last-child {
+  width: calc(var(--s) * 1%);
+}
+
+.bk-lk-n {
+  --fs: var(--t-source);
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 강조하는 쪽의 끝 단계(강조색 그대로) 위의 숫자는 바탕색 */
+.bk-lk-seg.is-strong .bk-lk-n {
+  color: var(--bg);
+}
+
+/* 숫자 폭(글자 수마다 어림)에 양옆 0.2em씩: '8%' 1.5em, '43%' 2.1em, '100%' 2.7em */
+@container (max-width: 1.9em) {
+  .bk-lk-n {
+    visibility: hidden;
+  }
+}
+
+@container (max-width: 2.5em) {
+  .bk-lk-n:is(.is-w3, .is-w4) {
+    visibility: hidden;
+  }
+}
+
+@container (max-width: 3.1em) {
+  .bk-lk-n.is-w4 {
+    visibility: hidden;
+  }
+}
+
+/* 합계: 강조하는 쪽(긍정 쪽 강조면 그렇다 이상)을 더한 몫. 이 장의 답이라 강조색, 질문 글보다 한 단계 크게 */
+.bk-lk-tot {
+  --fs: var(--t-body);
+  justify-self: end;
+  color: var(--accent);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 편집할 때 단계 이름과 질문의 값은 그림 위에서 고친다 (.on-chart, edit.css) */
+:is(.bk-lk-scaleed, .bk-lk-in) {
+  --fs: var(--t-source);
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+/* 예시 숫자로 그린 막대와 합계는 흐리게 */
+.bk-lk.is-demo :is(.bk-lk-bar, .bk-lk-tot, .bk-lk-th) {
+  opacity: 0.4;
+}

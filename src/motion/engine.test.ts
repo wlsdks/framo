@@ -65,6 +65,17 @@ describe('움직임 엔진', () => {
     expect(people).not.toMatch(/grow\(el, at, ["']x["'], ["']::before["']\)/)
   })
 
+  it('설문 결과는 가운데 선이 서고 막대가 그 선 자리에서 양쪽으로 열린다 (한쪽 끝에서 자라지 않는다)', () => {
+    const src = motionEngine.toString()
+    const native = src.slice(src.indexOf('function nativeAuto'))
+    const i = native.search(/case ["']likert["']/)
+    const likert = native.slice(i, native.indexOf('break', i))
+    expect(likert).toMatch(/["']\.bk-lk-axis["']/)
+    // 막대 안의 가운데 선 자리(c%)에서 양쪽으로 여는 창: 갈라 쌓은 막대는 가운데 선이 0이라 거기서 열려야 몫이 0에서 자라는 것으로 읽힌다
+    expect(likert).toMatch(/inset\(-2px \$\{100 - c\}% -2px \$\{c\}%\)/)
+    expect(likert).toMatch(/count(In)?\(el\.querySelector\(["']\.bk-lk-tot["']\)/)
+  })
+
   it('추이는 바닥줄이 왼쪽부터 그어지고 달 이름은 선이 그 달에 닿을 때 하나씩 나온다 (빈 축과 달 이름을 먼저 깔지 않는다)', () => {
     const src = motionEngine.toString()
     const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))
