@@ -6,8 +6,7 @@ import { slideName } from '../../deck/blocks'
 import { missingFields, pageInfo } from '../../deck/fields'
 import type { Deck, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
-import { josa } from '../../lib/josa'
-import { listAccessibility, useListDrag } from '../../lib/listDrag'
+import { listAccessibility, movedSay, useListDrag } from '../../lib/listDrag'
 import { slideOverflow } from '../../slides/overflow'
 import { ScaledSlide, SlideCanvas, useStableSections } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
@@ -64,7 +63,7 @@ export function SlideList({ deck, selectedId }: { deck: Deck; selectedId: string
     const id = deck.slides[i].id
     if (e.altKey) {
       // 고른 장을 한 칸 옮긴다. 옮기면서 단추가 다시 붙어 초점이 빠지므로 다시 둔다
-      setSaid(`${josa(nameOf(id), '을', '를')} ${to + 1}번째로 옮겼어요.`)
+      setSaid(movedSay(nameOf(id), to + 1))
       moveSlide(i, to)
       requestAnimationFrame(() => document.getElementById(`thumb-${id}`)?.focus())
       return

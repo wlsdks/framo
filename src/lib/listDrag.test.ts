@@ -2,7 +2,7 @@ import type { Active, Over } from '@dnd-kit/core'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { listAccessibility } from './listDrag'
+import { listAccessibility, movedSay } from './listDrag'
 
 const SRC = join(__dirname, '..')
 
@@ -55,5 +55,21 @@ describe('끌어 옮기는 목록의 화면 읽기 안내', () => {
     // 이 목록들은 키보드 끌기(스페이스로 집기)를 쓰지 않는다. 키보드로는 Alt와 위아래 화살표로 옮긴다
     expect(screenReaderInstructions.draggable).toMatch(/^마우스로 끌어 순서를 바꿔요\. 키보드로는 .+로 한 칸씩 옮겨요\.$/)
     expect(screenReaderInstructions.draggable).not.toMatch(/space|스페이스/i)
+  })
+
+  it('키보드로 한 칸 옮긴 것도 읽는다: Alt와 위아래 화살표로 옮기는 목록마다 알림 줄이 있다', () => {
+    expect(movedSay('막대 비교', 2)).toBe('막대 비교를 2번째로 옮겼어요.')
+    expect(movedSay('3번째 슬라이드 ‘시장’', 1)).toBe('3번째 슬라이드 ‘시장’을 1번째로 옮겼어요.')
+    // 움직임 편집의 시간표는 Alt+화살표로 줄을 옮겨도 아무것도 읽지 않았다
+    const keyed = sources(SRC).filter((f) => {
+      const text = readFileSync(f, 'utf8')
+      return /e\.altKey/.test(text) && text.includes("'ArrowUp'")
+    })
+    expect(keyed.length).toBeGreaterThanOrEqual(3)
+    const bad = keyed.filter((f) => {
+      const text = readFileSync(f, 'utf8')
+      return !text.includes('movedSay(') || !/aria-live="polite"/.test(text)
+    })
+    expect(bad.map((f) => f.slice(SRC.length + 1))).toEqual([])
   })
 })

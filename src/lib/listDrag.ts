@@ -48,6 +48,11 @@ export function listAccessibility(nameOf: (id: UniqueIdentifier) => string, plac
   }
 }
 
+/** 키보드(Alt와 위아래 화살표)로 한 칸 옮긴 뒤 목록의 알림 줄(aria-live)에 읽을 문장. place는 옮겨 간 자리(1부터) */
+export function movedSay(name: string, place: number): string {
+  return `${josa(name, '을', '를')} ${place}번째로 옮겼어요.`
+}
+
 /** 목록을 끄는 동안 body에 붙는 class. 창(ui.tsx의 useDialog)은 이것이 있으면 Esc를 받지 않는다 */
 export const LIST_DRAGGING = 'is-list-dragging'
 
