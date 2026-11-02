@@ -8,7 +8,9 @@
   /* 단을 들이는 너비, 선이 내려오는 자리(앞 단 왼쪽 끝에서), 선 끝과 이름표 사이 */
   --wy-in: calc(56px * var(--bk-fit, 1));
   --wy-x: 11px;
-  --wy-gap: calc(26px * var(--bk-fit, 1) + var(--bk-air, 0px));
+  /* 단 사이는 장이 덜 찰 때 넓히는 줄 사이(--bk-air)를 받지 않는다. 갈고리가 꺾여 들어올 자리라 이미 글 높이의 1.3배쯤이어서,
+     12px를 더하면 그려진 글 사이가 글 높이의 두 배를 넘어 단마다 떨어져 보였다(docs/VISUAL-RULES.md 6) */
+  --wy-gap: calc(26px * var(--bk-fit, 1));
   display: flex;
   flex-direction: column;
   justify-content: safe center;
