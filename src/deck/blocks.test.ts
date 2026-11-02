@@ -794,8 +794,10 @@ describe('이음표', () => {
     expect(across(after, after.find((b) => b.id === 'a')!, 'h').map((b) => b.id).sort()).toEqual(ends)
   })
 
+  /** 사람이 차트 아래에 숫자를 놓은 판 (눌러 넣으면 숫자는 차트 위로 간다: arrange.ts의 chartAnswersFirst) */
+  const chartOverNumber = () => insertAt(board({ ...sampleBlock('trend'), id: 'a' }), { at: 'a', side: 'below' }, { ...sampleBlock('number'), id: 'b' }, H)!
   it('기존 연결을 유지할 자리가 없으면 자동 삽입을 멈추고 이유를 알려 준다', () => {
-    const before = withLink(board({ ...sampleBlock('trend'), id: 'a' }, { ...sampleBlock('number'), id: 'b' }), { id: 'a', dir: 'v' }, 'arrow')
+    const before = withLink(chartOverNumber(), { id: 'a', dir: 'v' }, 'arrow')
     const target = { id: 'a', dir: 'v' as const }
     expect(linkAt(before, target)).toBe('arrow')
     expect(linkIssue(before, target, 'arrow')).toBeNull()
@@ -824,7 +826,7 @@ describe('이음표', () => {
   })
 
   it('연결 대상에 딸린 주석은 기존 연결을 바꾸지 않고 자동으로 넣을 수 있다', () => {
-    const before = withLink(board({ ...sampleBlock('trend'), id: 'a' }, { ...sampleBlock('number'), id: 'b' }), { id: 'a', dir: 'v' }, 'arrow')
+    const before = withLink(chartOverNumber(), { id: 'a', dir: 'v' }, 'arrow')
     const target = { id: 'a', dir: 'v' as const }
     const after = autoPlace(before, { ...sampleBlock('note'), id: 'note' }, H)
     expect(after).not.toBeNull()

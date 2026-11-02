@@ -13,6 +13,7 @@ import type { Block, BlockType } from '../types'
 import { headLook } from '../themes'
 import { readPercent } from '../percent'
 import { BOARD_COLS, byReading, type Fit, layTree, leaf, sameArea, split, type Tree, treeOf } from './board'
+import { BLOCK_GROUPS } from './catalog'
 import { blockItems, variantOfBlock } from './cells'
 import { aspectOf, fitImage } from './images'
 import { BLOCK_COL_GAP, isAlone, isSolo, shownLook } from './rules'
@@ -98,12 +99,13 @@ export const NUMBER_TYPES = new Set<BlockType>(['number', 'stat', 'delta', 'goal
 /**
  * 틀을 견줄 읽는 차례: 넣은 차례(장의 부품 차례) 그대로. 판을 읽은 차례로 하면 소제목 묶음 둘이 나란한 판(소제목 둘이 같은 줄)은
  * 소제목, 소제목, 목록, 목록으로 읽혀 소제목 둘이 위아래로 붙은 틀이 나왔다. 다만 맨 위에 선 결론(핵심 한 줄, 강조 상자: place.ts의
- * autoPlace가 근거 위로 올린다)은 맨 앞에, 로고 모음 다음에 넣은 숫자는 로고 앞에(answersFirst)
+ * autoPlace가 근거 위로 올린다)은 맨 앞에, 로고 모음 다음에 넣은 숫자는 로고 앞에(answersFirst), 차트 다음에 숫자만 넣었으면
+ * 그 숫자는 차트 앞에(chartAnswersFirst)
  */
 export function arrangeOrder(blocks: Block[]): Block[] {
   const first = byReading(blocks)[0]
   const lead = first && LEADS.has(first.type) ? [first] : []
-  return answersFirst([...lead, ...blocks.filter((b) => !lead.includes(b))])
+  return chartAnswersFirst(answersFirst([...lead, ...blocks.filter((b) => !lead.includes(b))]))
 }
 
 /** 결론을 말하는 부품 (place.ts의 LEADS) */
@@ -119,6 +121,26 @@ function answersFirst(order: Block[]): Block[] {
   const late = order.slice(i + 1).filter((b) => NUMBER_TYPES.has(b.type))
   if (!late.length) return order
   return [...order.slice(0, i), ...late, ...order.slice(i).filter((b) => !late.includes(b))]
+}
+
+/** 숫자의 근거로 서는 데이터 차트 (catalog.ts의 '차트' 묶음) */
+const CHARTS = new Set<BlockType>(BLOCK_GROUPS.find((g) => g.short === '차트')?.types ?? [])
+/** 차트 앞으로 올리는 숫자: 칸 높이를 받지 않는 것. 비율 원, 몇 중 몇은 그 자체로 높이를 받는 차트라 올리지 않는다 */
+const isAnswer = (b: Block) => NUMBER_TYPES.has(b.type) && !isStretchy(b.type)
+
+/**
+ * 차트 다음에 숫자만 넣었으면 숫자를 차트 앞으로(숫자가 장의 답이고 차트는 그 근거). 넣은 차례대로 두면 차트가 위를 다 쓰고
+ * 숫자가 그 아래 띠의 왼쪽에 각주처럼 혼자 붙어, 띠의 오른쪽이 통째로 비었다. 차트 다음에 목록이나 글도 넣었으면 숫자가 그것과
+ * 한 줄에 서므로 그대로 둔다. 소제목 다음의 부품은 그 소제목의 묶음이라 소제목까지만 본다
+ */
+function chartAnswersFirst(order: Block[]): Block[] {
+  const i = order.findIndex((b) => CHARTS.has(b.type))
+  if (i < 0) return order
+  const after = order.slice(i + 1)
+  const end = after.findIndex((b) => b.type === 'heading')
+  const late = end < 0 ? after : after.slice(0, end)
+  if (!late.length || !late.every(isAnswer)) return order
+  return [...order.slice(0, i), ...late, order[i], ...after.slice(late.length)]
 }
 
 /** 이 부품들(읽는 차례)을 끝에서 끝까지 잘라 만들 수 있는 모든 나무. 같은 쪽 가지 안에 같은 쪽 가지는 없다(board.ts의 tidy) */
@@ -384,6 +406,14 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
   if (!headsOk(t, last)) cost += 100
   // 숫자가 로고 모음 아래에 깔리면 답이 근거 밑으로 간다 (answersFirst)
   for (const lg of all.filter((b) => b.type === 'logos')) if (nums.some((b) => laid.get(b.id)!.at!.y > laid.get(lg.id)!.at!.y)) cost += 20
+  // 숫자가 차트 바로 아래 띠를 혼자 차지하면(차트 너비를 다 덮고 그 아래) 답이 근거 밑에 각주처럼 붙는다 (chartAnswersFirst)
+  for (const c of all.filter((b) => CHARTS.has(b.type))) {
+    const r = laid.get(c.id)!.at!
+    for (const b of all.filter(isAnswer)) {
+      const a = laid.get(b.id)!.at!
+      if (a.y >= r.y + r.h && a.x <= r.x && a.x + a.w >= r.x + r.w) cost += 20
+    }
+  }
   return cost
 }
 

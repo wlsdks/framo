@@ -94,6 +94,27 @@ describe('짜임 틀 고르기', () => {
     expect(at(bs, 's1').h).toBe(at(bs, 's2').h)
     expect(at(bs, 's1').y).toBeLessThan(at(bs, 'l').y)
   })
+  it('차트 다음에 숫자만 넣으면 숫자가 차트 위나 옆에 선다: 차트 아래 띠에 혼자 깔리지 않는다 (숫자가 답)', () => {
+    // 추이 다음에 큰 숫자를 넣으면 추이가 위를 다 쓰고 숫자가 그 아래 띠의 왼쪽에 각주처럼 혼자 붙어, 아래 오른쪽이 통째로 비었다
+    const cases: [BlockType, BlockType[]][] = [['trend', ['number']], ['bars', ['stat', 'stat']], ['trend', ['delta']], ['attain', ['goal']], ['share', ['number']]]
+    for (const [chart, nums] of cases) {
+      const bs = board({ ...sampleBlock(chart), id: 'c' }, ...nums.map((t, i) => ({ ...sampleBlock(t), id: `n${i}` })))
+      const label = bs.map((b) => `${b.type}@${b.at!.x},${b.at!.y},${b.at!.w},${b.at!.h}`).join(' ')
+      expect(tiles(bs), label).toBe(true)
+      const c = at(bs, 'c')
+      for (const i of nums.keys()) expect(at(bs, `n${i}`).y, label).toBeLessThanOrEqual(c.y)
+    }
+    // 소제목 아래 묶음에서도 같다
+    const head = board(block('heading', 'h'), { ...sampleBlock('trend'), id: 'c' }, { ...sampleBlock('number'), id: 'n0' })
+    expect(at(head, 'n0').y).toBeLessThanOrEqual(at(head, 'c').y)
+    expect(at(head, 'h').y).toBeLessThan(at(head, 'n0').y)
+  })
+  it('차트 다음에 목록과 숫자를 넣으면 목록과 숫자가 차트 아래 한 줄에 그대로 선다 (숫자만 올리지 않는다)', () => {
+    const bs = board({ ...sampleBlock('market'), id: 'c' }, { ...sampleBlock('bullets'), id: 'b' }, { ...sampleBlock('number'), id: 'n' })
+    expect(tiles(bs)).toBe(true)
+    expect(at(bs, 'n').y).toBe(at(bs, 'b').y)
+    expect(at(bs, 'n').y).toBeGreaterThan(at(bs, 'c').y)
+  })
   it('짧은 목록이나 글 옆의 숫자를 본문 오른쪽 끝으로 밀지 않는다 (남는 너비를 글 칸에 몰아 가운데가 비지 않게)', () => {
     // 핵심 한 줄 아래 목록 9칸 | 숫자 3칸: 목록 글은 본문의 3분의 1에서 끝나고 숫자는 오른쪽 끝에 붙어, 둘 사이가 본문의 절반 가까이
     // (793px) 비었다. 오른쪽 끝의 빈 곳만 세서, 숫자를 끝으로 밀어 그 빈 곳을 가운데로 옮긴 판이 가장 좋다고 골랐다
