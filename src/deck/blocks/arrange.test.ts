@@ -115,6 +115,19 @@ describe('짜임 틀 고르기', () => {
     expect(at(nums, 's1').w).toBe(at(nums, 's2').w)
   })
 
+  it('들여 쓰기(카드)를 고른 부품 옆에 넣어도 바탕 없는 부품과 같이 나란히 놓는다', () => {
+    // 판 너비를 혼자 쓰는 부품은 고른 바탕이 있어도 바탕 없이 그려진다. 그런데 내용이 그려지는 너비를 카드의 높이로 어림해서
+    // (좁은 칸은 카드의 안쪽 여백만큼 늘 높다) 판 너비를 다 쓴다고 보았고, 목록을 넣으면 아래에 쌓아 두 내용이 왼쪽 절반에만 그려졌다
+    for (const type of ['quote', 'steps', 'status', 'delta', 'goal', 'tiles'] as BlockType[]) {
+      for (const look of ['plain', 'card'] as const) {
+        const bs = board({ ...sampleBlock(type), id: 'a', look }, { ...sampleBlock('bullets'), id: 'b' })
+        const label = `${type} ${look}: ` + bs.map((b) => `${b.type}@${b.at!.x},${b.at!.y},${b.at!.w}`).join(' ')
+        expect(tiles(bs), label).toBe(true)
+        expect(at(bs, 'b').y, label).toBe(at(bs, 'a').y)
+      }
+    }
+  })
+
   it('소제목 묶음 둘은 소제목마다 그 아래 부품 위에 선다', () => {
     const bs = board(block('heading', 'h1'), block('points', 'p'), block('heading', 'h2'), block('bullets', 'b'))
     expect(tiles(bs)).toBe(true)

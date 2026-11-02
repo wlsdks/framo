@@ -194,11 +194,15 @@ type Laid = Map<string, Block>
 
 /**
  * 부품이 실제로 쓰는 너비(칸 수): 그보다 넓혀도 높이가 줄지 않는 가장 좁은 너비. 글은 글 폭에서 줄을 꺾고, 목록과 숫자는 제 너비만
- * 쓰므로 칸이 넓어도 오른쪽이 빈다. 넓을수록 단을 나누거나 옆으로 눕히는 부품은 넓힐수록 낮아져 판 너비를 다 쓴다
+ * 쓰므로 칸이 넓어도 오른쪽이 빈다. 넓을수록 단을 나누거나 옆으로 눕히는 부품은 넓힐수록 낮아져 판 너비를 다 쓴다.
+ * 좁은 너비도 이 칸에 그려지는 바탕의 높이로 견준다: 판 너비를 혼자 쓰는 부품은 카드를 골랐어도 바탕 없이 그려지는데(shownLook),
+ * 좁은 너비를 카드의 높이(안쪽 여백만큼 늘 높다)로 견주면 판 너비를 다 쓴다고 보아, 카드 부품 아래에 목록을 쌓고 두 내용이
+ * 왼쪽 절반에만 그려진 판을 나란한 판보다 좋다고 골랐다
  */
 function naturalSpan(b: Block): number {
-  const full = blockMinH(b, BOARD_COLS)
-  for (const w of [3, 4, 6, 8]) if (blockMinH(b, w) <= full * 1.05 + SLACK) return w
+  const drawn: Block = { ...b, look: shownLook(b, isAlone(b)) }
+  const full = blockMinH(drawn, BOARD_COLS)
+  for (const w of [3, 4, 6, 8]) if (blockMinH(drawn, w) <= full * 1.05 + SLACK) return w
   return BOARD_COLS
 }
 
