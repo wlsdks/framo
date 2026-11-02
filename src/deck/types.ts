@@ -170,6 +170,7 @@ export type NativeBlockType =
   | 'split'
   | 'merge'
   | 'tiles'
+  | 'calc'
   | 'heading'
   | 'stat'
   | 'meter'

@@ -1,0 +1,259 @@
+/* ---------- 계산식 ----------
+   한 줄 꼴: 값 × 값 × 값 = 결과. 숫자는 모두 같은 크기이고 칸마다 제 숫자의 폭만큼(숫자 아래에 이름), 칸 사이 틈(--ca-opw)에
+   셈 기호가 숫자 줄의 가운데 높이로 선다. 결과는 강조색(답). 선도 면도 없다: 기호와 숫자의 줄 하나가 셈으로 읽힌다.
+   쌓은 꼴(칸이 좁아 숫자가 52px 밑으로 줄 때, data-need): 영수증처럼 줄마다 기호, 이름, 오른쪽 끝에 값. 합계 선(데이터의 짜임이라
+   옅은 1px) 아래에 = 결과의 이름과 결과 */
+
+.bk-ca {
+  /* 한 줄 꼴의 숫자 크기와 기호 칸 너비 */
+  --ca-v: 74px;
+  --ca-opw: 84px;
+  /* 쌓은 꼴의 값과 결과(값의 1.41배, 글자 크기 단계 둘 위: 44 → 62) */
+  --ca-sv: 44px;
+  --ca-sr: 62px;
+  --ca-sk: 1.41;
+  display: flex;
+  flex-direction: column;
+  /* 칸이 내용보다 높으면 위에 붙이고 남는 높이는 아래로(모으기와 같다): 가운데에 띄우면 옆 칸과 첫 줄이 어긋난다 */
+  justify-content: flex-start;
+  height: 100%;
+}
+
+.bk-ca-row {
+  /* 줄여지기 전의 숫자 크기(--fs 목록과 같은 식) */
+  --ca-vs: calc(var(--ca-v) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1));
+  container-type: inline-size;
+}
+
+/* 값 칸(.it)과 결과 칸: 숫자와 이름. 감싼 칸(.bk-ca-cell)은 짜임에 들지 않아 숫자와 이름이 이 칸의 줄이 된다 */
+.bk-ca-term {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+
+.bk-ca-cell {
+  display: contents;
+}
+
+.bk-ca-vbox {
+  min-width: 0;
+}
+
+.bk-ca-v {
+  --fs: var(--ca-v);
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.bk-ca-result .bk-ca-v {
+  color: var(--accent);
+}
+
+.bk-ca-name {
+  --fs: var(--t-small);
+  min-width: 0;
+  color: var(--ink-2);
+  line-height: 1.3;
+  /* 좁은 칸에서 두 줄이 되면 끝 줄에 낱말 하나만 남지 않게 ('줄어드는 회의 / 시간' → '줄어드는 / 회의 시간') */
+  text-wrap: balance;
+}
+
+.bk-ca-result .bk-ca-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.bk-ca-op {
+  color: var(--ink-3);
+  font-family: var(--font-head);
+  font-weight: var(--num-weight);
+  line-height: 1;
+  text-align: center;
+}
+
+.bk-ca-n {
+  --fs: var(--t-small);
+  margin-top: 28px;
+  color: var(--ink-3);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* ---------- 한 줄 꼴 ---------- */
+@container not style(--ca-stack: 1) {
+  /* 숫자 크기: 줄여지기 전의 크기, 또는 숫자들의 폭(Calc.tsx의 --ca-sum, 숫자마다 잰 폭을 더한 것)과 기호 칸들이 줄 너비에
+     드는 크기 가운데 작은 쪽. 숫자 칸을 가장 긴 숫자의 폭으로 모두 같게 두면 짧은 숫자('4만 원') 뒤가 비어 다음 기호(=)가
+     멀리 떨어져 보였다: 칸은 제 숫자의 폭만큼이고 기호와 숫자 사이는 늘 같다 */
+  .bk-ca-row {
+    --ca-fit: min(var(--ca-vs), (100cqi - (var(--ca-n) - 1) * var(--ca-opw)) / (var(--ca-sum, 8) * var(--glyph-k, 1)));
+    display: flex;
+    align-items: flex-start;
+    column-gap: var(--ca-opw);
+  }
+
+  .bk-ca-term {
+    flex: none;
+    grid-template-rows: auto auto;
+  }
+
+  /* 결과는 줄 끝까지(이름이 남은 너비에서 줄바꿈된다) */
+  .bk-ca-result {
+    flex: 1 1 auto;
+  }
+
+  .bk-ca-vbox {
+    grid-row: 1;
+  }
+
+  /* 모두 같은 크기(.one-line의 칸 맞춤 대신 줄 전체로 맞춘 크기) */
+  .slide .bk-ca-row .bk-ca-v {
+    font-size: var(--ca-fit);
+  }
+
+  /* 이름은 칸 너비를 정하지 않는다(숫자의 폭이 칸 너비). 다음 칸이 있으면 기호 아래 틈까지 쓰고, 이웃 이름과는 40px 띄운다:
+     짧은 숫자('10명') 아래의 이름이 숫자 폭에서만 줄바꿈되면 서너 줄로 쌓였다. 기호는 숫자 줄에만 서서 겹치지 않는다 */
+  .bk-ca-name {
+    grid-row: 2;
+    margin-top: 10px;
+    contain: inline-size;
+  }
+
+  .bk-ca-term:not(:last-child) .bk-ca-name {
+    width: calc(100% + var(--ca-opw) - 40px);
+  }
+
+  /* 이름은 숫자를 따라 커진다(숫자와 이름의 비 26:74 그대로): 줄 너비에 맞춰 숫자가 줄었는데(--ca-fit) 이름만 칸 높이를 따라 커지면
+     (--bk-fit) 짧은 숫자('5시간') 아래의 이름이 37px로 네 줄이 됐다. 글자 크기 단계의 가장 작은 22px 밑으로는 줄이지 않는다 */
+  .slide .bk-ca-row .bk-ca-name {
+    font-size: min(
+      max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))),
+      max(calc(22px * var(--scale, 1)), calc(var(--ca-fit) * 26 / 74))
+    );
+  }
+
+  /* 셈 기호: 앞 칸과의 틈에 숫자 줄의 가운데 높이로. 크기는 그려지는 숫자의 0.6배(--ca-fit에 글자 크기 설정과 칸 크기가
+     이미 들어 있어 --fs 목록의 식을 다시 거치지 않는다) */
+  .bk-ca-op {
+    position: absolute;
+    font-size: calc(var(--ca-fit) * 0.6);
+    /* 놓인 칸의 줄은 끝 줄까지 적는다: 절대 위치 칸의 auto 끝 줄은 칸의 아래 가장자리라 이름 줄까지 덮여 기호가 내려앉았다 */
+    grid-row: 1 / 2;
+    top: 0;
+    right: 100%;
+    bottom: 0;
+    display: grid;
+    place-items: center;
+    width: var(--ca-opw);
+  }
+}
+
+/* ---------- 쌓은 꼴 ---------- */
+.bk-ca[data-need='stack'] {
+  --ca-stack: 1;
+}
+
+@container (max-width: 1679px) {
+  .bk-ca[data-need='1680'] {
+    --ca-stack: 1;
+  }
+}
+
+@container (max-width: 1399px) {
+  .bk-ca[data-need='1400'] {
+    --ca-stack: 1;
+  }
+}
+
+@container (max-width: 1099px) {
+  .bk-ca[data-need='1100'] {
+    --ca-stack: 1;
+  }
+}
+
+@container (max-width: 879px) {
+  .bk-ca[data-need='880'] {
+    --ca-stack: 1;
+  }
+}
+
+@container (max-width: 719px) {
+  .bk-ca[data-need='720'] {
+    --ca-stack: 1;
+  }
+}
+
+@container (max-width: 559px) {
+  .bk-ca[data-need='560'] {
+    --ca-stack: 1;
+  }
+}
+
+@container style(--ca-stack: 1) {
+  .bk-ca-row {
+    --ca-vs: calc(var(--ca-sv) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1));
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* 줄마다 기호, 이름, 값. 값 칸은 가장 긴 숫자의 폭(모두 같은 크기, .one-line이 이 칸에 맞춘다)으로, 줄의 60%까지 */
+  .bk-ca-term {
+    grid-template-columns: 48px minmax(0, 1fr) minmax(0, min(60%, var(--ca-units, 4) * var(--glyph-k, 1) * var(--ca-vs)));
+    align-items: baseline;
+    column-gap: 16px;
+  }
+
+  .bk-ca-op {
+    font-size: calc(var(--ca-vs) * 0.6);
+    grid-column: 1;
+    grid-row: 1;
+    text-align: left;
+  }
+
+  .bk-ca-name {
+    --fs: var(--t-body);
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .bk-ca-vbox {
+    container-type: inline-size;
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .bk-ca-v {
+    --fs: var(--ca-sv);
+    text-align: right;
+  }
+
+  /* 합계 선 아래 = 결과: 선은 셈의 짜임(데이터의 줄)이라 옅은 1px, 결과는 두 단계 크게. 선은 가짜 요소라 발표할 때
+     왼쪽에서 그어진다(engine.ts의 calc) */
+  .bk-ca-result {
+    margin-top: 8px;
+    padding-top: 20px;
+    grid-template-columns: 48px minmax(0, 1fr) minmax(0, min(60%, var(--ca-ru, 4) * var(--glyph-k, 1) * var(--ca-vs) * var(--ca-sk)));
+  }
+
+  .bk-ca-result::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: var(--rule-hair, 1px);
+    background: var(--line);
+    content: '';
+  }
+
+  .bk-ca-result .bk-ca-v {
+    --fs: var(--ca-sr);
+  }
+
+  .bk-ca-result .bk-ca-op {
+    font-size: calc(var(--ca-vs) * 0.6 * var(--ca-sk));
+  }
+}

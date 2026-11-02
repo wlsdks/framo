@@ -24,6 +24,7 @@ import { Network } from './blocks/Network'
 import { Merge } from './blocks/Merge'
 import { Split } from './blocks/Split'
 import { Tiles } from './blocks/Tiles'
+import { Calc } from './blocks/Calc'
 import { Heading } from './blocks/Heading'
 import { Stat } from './blocks/Stat'
 import { Meter } from './blocks/Meter'
@@ -92,6 +93,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   split: Split,
   merge: Merge,
   tiles: Tiles,
+  calc: Calc,
   heading: Heading,
   stat: Stat,
   meter: Meter,

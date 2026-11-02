@@ -89,7 +89,7 @@ export const BLOCK_GROUPS: { name: string; short: string; description: string; t
   { name: '글과 메시지', short: '글', description: '결론 한 줄, 설명, 목록, 인용, 예상 질문', types: ['message', 'text', 'bullets', 'quote', 'callout', 'faq', 'summary', 'points'] },
   // 좁은 칸, 낮은 줄에 여럿 쌓거나 나란히 두는 작은 것들. 넓은 칸에서는 늘이지 않고 한 줄로 눕힌다
   { name: '작은 컴포넌트', short: '작게', description: '소제목, 숫자 한 줄, 막대 하나, 범위, 상태, 단계 표시, 날짜, 주석', types: ['heading', 'stat', 'meter', 'range', 'status', 'steps', 'date', 'note'] },
-  { name: '숫자', short: '숫자', description: '큰 숫자, 전과 후, 목표 대비, 비율', types: ['number', 'delta', 'goal', 'ring', 'ratio', 'spark', 'kpi', 'scorecard'] },
+  { name: '숫자', short: '숫자', description: '큰 숫자, 전과 후, 목표 대비, 비율, 계산식', types: ['number', 'delta', 'goal', 'ring', 'ratio', 'spark', 'calc', 'kpi', 'scorecard'] },
   {
     name: '차트',
     short: '차트',

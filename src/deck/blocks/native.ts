@@ -845,6 +845,37 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
     sample: { fields: { label: '보안 교육을 마친 직원', value: '86%', note: '남은 14%는 11월 말까지 마쳐요' } },
   },
   // ---------- 작은 컴포넌트: 좁은 칸, 낮은 줄에 여럿 쌓아 쓰는 것 ----------
+  calc: {
+    name: '계산식',
+    description: '값을 곱하거나 더한 셈과 결과 (1,200시간 × 4만 원 × 10명 = 4.8억 원)',
+    motion: '값이 차례로 놓이고 셈 기호가 맺힌 뒤 결과가 굴러 맞춰져요',
+    fields: [
+      { key: 'label', label: '결과의 이름', hint: '무엇을 셈한 것인지 (예: 한 해 아끼는 돈)' },
+      { key: 'result', label: '결과', hint: '4.8억 원' },
+      { key: 'note', label: '보충 설명', hint: '셈의 기준 (예: 시급은 평균 인건비)', optional: true, multiline: true },
+    ],
+    items: {
+      label: '값',
+      min: 2,
+      max: 4,
+      default: 3,
+      fields: [
+        { key: 'value', label: '값', hint: '값', hints: ['1,200시간', '4만 원', '10명', '12개월'] },
+        { key: 'title', label: '이름', hint: '무엇의 값인지', hints: ['줄어드는 회의 시간', '한 시간 인건비', '회의에 드는 사람', '한 해'] },
+        { key: 'meta', label: '셈 기호', hint: '×', hints: ['', '×', '×', '×'], optional: true },
+      ],
+    },
+    minSpan: 4,
+    prefSpan: 8,
+    sample: {
+      fields: { label: '한 해 아끼는 돈', result: '4.8억 원', note: '시급은 평균 인건비 기준' },
+      items: [
+        { value: '1,200시간', title: '줄어드는 회의 시간' },
+        { value: '4만 원', title: '한 시간 인건비', meta: '×' },
+        { value: '10명', title: '회의에 드는 사람', meta: '×' },
+      ],
+    },
+  },
   heading: {
     name: '소제목',
     description: '옆이나 아래 컴포넌트들을 묶는 짧은 제목 (지금 방식, 바꾸면)',

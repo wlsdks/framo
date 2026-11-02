@@ -1925,6 +1925,38 @@ export function motionEngine(): MotionEngine {
           else count(total, line + 160)
           break
         }
+        case 'calc': {
+          // 셈을 적어 내려가듯: 값이 하나씩 놓이고, 다음 값이 오기 바로 전에 그 앞 틈에 셈 기호가 맺힌다(생동감은 기호가 4분의 1 바퀴
+          // 돌며 튀어나온다. ×와 +는 돌아도 같은 꼴이라 도는 것이 셈의 박자로 읽힌다). 끝에 = 가 왼쪽에서 그어지고(쌓은 꼴은 합계 선이
+          // 먼저) 결과가 올라오며 굴러 맞춰진다. 굴리는 것은 결과뿐: 값마다 굴리면 답보다 셈에 눈이 간다
+          const lively = levelName === 'lively'
+          const terms = $('.bk-ca-term:not(.bk-ca-result)')
+          const hop = Math.min(lively ? 300 : 240, 1000 / Math.max(1, terms.length))
+          const sign = (op: Element | null, at: number) => {
+            if (!op) return
+            if (lively) run(anims, op, [{ opacity: 0, scale: '0.3', rotate: '-90deg' }], s(at), SPRINGS.settle)
+            else run(anims, op, [{ opacity: 0, scale: '0.6' }], s(at), L.pop)
+          }
+          let at = 80
+          terms.forEach((term, i) => {
+            if (i > 0) sign(term.querySelector(':scope > .bk-ca-op'), at - 90)
+            rise(term.querySelector('.bk-ca-vbox'), at, L.y * 0.5)
+            fade(term.querySelector('.bk-ca-name'), at + 120, 420)
+            at += hop
+          })
+          const res = one('.bk-ca-result')
+          if (res) {
+            // 합계 선(쌓은 꼴에만 있는 가짜 요소)이 왼쪽에서 그어지고, = 의 두 획이 따라 그어진다
+            draw(res, at - 40, lively ? 520 : 420, 'left center', '::before')
+            wipe(res.querySelector(':scope > .bk-ca-op'), at, 'left', lively ? 420 : 340)
+            rise(res.querySelector('.bk-ca-vbox'), at + 180, L.y * 0.6)
+            count(res.querySelector('.bk-ca-v'), at + 200)
+            fade(res.querySelector('.bk-ca-name'), at + 420, 500)
+            at += 640
+          }
+          fade(one('.bk-ca-n'), at, 500)
+          break
+        }
         case 'tiles': {
           // 흩어져 있던 칸이 단마다 왼쪽부터 날아와 한 판으로 맞춰지고(모두 옅은 칸으로), 다 맞춰질 즈음 채운 칸이 차례로(왼쪽 단부터,
           // 단마다 아래에서 위로) 물든다. 숫자는 칸이 물드는 만큼 오른다
