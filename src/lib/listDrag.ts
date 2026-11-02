@@ -1,7 +1,9 @@
 // 위아래로 늘어선 목록을 끌어 차례를 바꿀 때(장 목록, 나오는 차례, 움직임 편집의 시간표) 같이 쓰는 dnd-kit 조정
 
-import type { Modifier } from '@dnd-kit/core'
+import type { Announcements, Modifier, UniqueIdentifier } from '@dnd-kit/core'
 import { useMemo, useRef } from 'react'
+import { josa } from './josa'
+import { keys } from './keys'
 import { usePointerSessions, type PointerSession } from './pointerSession'
 
 /**
@@ -25,6 +27,26 @@ export const keepInList: Modifier = ({ transform, activeNodeRect, scrollableAnce
  * 바라던 자리를 지나쳐 맨 끝에 놓였다
  */
 const AUTO_SCROLL = { threshold: { x: 0, y: 0.1 }, acceleration: 5 }
+
+/**
+ * DndContext의 accessibility: 끄는 동안 화면 읽기 프로그램이 읽을 한국어 문장과 목록의 사용법.
+ * 주지 않으면 dnd-kit의 영어 기본 문장('Picked up draggable item …')이 읽혔고, 기본 사용법의 '스페이스로 집기'는
+ * 키보드 끌기를 쓰지 않는 이 목록들에서 되지도 않았다. 키보드로는 Alt와 위아래 화살표로 한 칸씩 옮긴다(목록마다의 onKeyDown).
+ * nameOf는 읽을 이름, placeOf는 그 자리가 몇 번째인지(1부터)
+ */
+export function listAccessibility(nameOf: (id: UniqueIdentifier) => string, placeOf: (id: UniqueIdentifier) => number) {
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `${josa(nameOf(active.id), '을', '를')} 집었어요.`,
+    onDragOver: ({ over }) => (over ? `${placeOf(over.id)}번째 자리 위에 있어요.` : '목록 밖에 있어요.'),
+    onDragEnd: ({ active, over }) =>
+      over && over.id !== active.id ? `${josa(nameOf(active.id), '을', '를')} ${placeOf(over.id)}번째 자리에 놓았어요.` : `${josa(nameOf(active.id), '은', '는')} 제자리에 있어요.`,
+    onDragCancel: ({ active }) => `옮기기를 그만뒀어요. ${josa(nameOf(active.id), '은', '는')} 제자리에 있어요.`,
+  }
+  return {
+    announcements,
+    screenReaderInstructions: { draggable: `마우스로 끌어 순서를 바꿔요. 키보드로는 ${keys('alt+↑')}, ${keys('alt+↓')}로 한 칸씩 옮겨요.` },
+  }
+}
 
 /** 목록을 끄는 동안 body에 붙는 class. 창(ui.tsx의 useDialog)은 이것이 있으면 Esc를 받지 않는다 */
 export const LIST_DRAGGING = 'is-list-dragging'

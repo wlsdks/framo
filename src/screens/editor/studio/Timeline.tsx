@@ -4,7 +4,7 @@ import { CSS as DndCss } from '@dnd-kit/utilities'
 import { useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { cx } from '../../../lib/cx'
 import { keys } from '../../../lib/keys'
-import { useListDrag } from '../../../lib/listDrag'
+import { listAccessibility, useListDrag } from '../../../lib/listDrag'
 import { GripIcon, Icon, Info, PlayIcon } from '../../ui'
 import type { Lane, Player } from './player'
 
@@ -96,6 +96,10 @@ export function Timeline({
   for (let t = 0; t <= span; t += tickStep(span)) ticks.push(t)
   const head = plan.lanes.filter((l) => !l.block)
   const lanes = order.map((id) => plan.lanes.find((l) => l.block === id)).filter((l): l is Lane => !!l)
+  const accessibility = listAccessibility(
+    (id) => lanes.find((l) => l.block === id)?.name ?? '컴포넌트',
+    (id) => order.indexOf(String(id)) + 1,
+  )
   const none = !plan.lanes.length
 
   return (
@@ -189,6 +193,7 @@ export function Timeline({
             onDragStart={drag.start}
             onDragEnd={onDragEnd}
             onDragCancel={drag.end}
+            accessibility={accessibility}
           >
             <SortableContext items={order} strategy={verticalListSortingStrategy}>
               {lanes.map((l, i) => (

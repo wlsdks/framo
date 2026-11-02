@@ -1,4 +1,4 @@
-import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent, type UniqueIdentifier } from '@dnd-kit/core'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS as DndCss } from '@dnd-kit/utilities'
 import { useMemo, useRef, useState } from 'react'
@@ -9,7 +9,7 @@ import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockWhen, Deck, Motion
 import { cx } from '../../lib/cx'
 import { josa } from '../../lib/josa'
 import { keys } from '../../lib/keys'
-import { useListDrag } from '../../lib/listDrag'
+import { listAccessibility, useListDrag } from '../../lib/listDrag'
 import { motionEngine } from '../../motion/engine'
 import { useDeck } from '../../store/deckStore'
 import { ChevronIcon, GripIcon, Icon, PlayIcon, Segmented, type Toast } from '../ui'
@@ -146,16 +146,22 @@ function Sequence({ deck, slide, blocks }: { deck: Deck; slide: Slide; blocks: P
   const listRef = useRef<HTMLOListElement>(null)
   const drag = useListDrag()
   const ids = order.map((b) => b.id)
-  const move = (from: number, to: number) => {
-    if (from === to || to < 0 || to >= ids.length) return
+  const nameOf = (id: UniqueIdentifier) => names.get(String(id)) ?? '컴포넌트'
+  const accessibility = listAccessibility(nameOf, (id) => ids.indexOf(String(id)) + 1)
+  const reorder = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= ids.length) return false
     setOptions(slide.id, { order: arrayMove(ids, from, to) }, 'order')
-    setSaid(`${josa(names.get(ids[from]) ?? '컴포넌트', '을', '를')} ${to + 1}번째로 옮겼어요.`)
+    return true
+  }
+  // 키보드로 옮긴 것만 여기서 읽는다. 끌어 놓은 것은 dnd-kit이 accessibility의 문장으로 읽는다(같은 말을 두 번 읽지 않게)
+  const move = (from: number, to: number) => {
+    if (reorder(from, to)) setSaid(`${josa(nameOf(ids[from]), '을', '를')} ${to + 1}번째로 옮겼어요.`)
   }
   const onDragEnd = (e: DragEndEvent) => {
     drag.end()
     setHeld(null)
     if (!e.over || e.active.id === e.over.id) return
-    move(ids.indexOf(String(e.active.id)), ids.indexOf(String(e.over.id)))
+    reorder(ids.indexOf(String(e.active.id)), ids.indexOf(String(e.over.id)))
   }
   if (!order.length) {
     return (
@@ -196,6 +202,7 @@ function Sequence({ deck, slide, blocks }: { deck: Deck; slide: Slide; blocks: P
           drag.end()
           setHeld(null)
         }}
+        accessibility={accessibility}
       >
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <ol
@@ -245,7 +252,7 @@ function Row({
   onMove(d: 1 | -1): void
 }) {
   const updateBlock = useDeck((s) => s.updateBlock)
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id, attributes: { roleDescription: '옮길 수 있는 컴포넌트' } })
   const effect = effectOf(block)
   const when = whenOf(block)
   const from = fromOf(block)
