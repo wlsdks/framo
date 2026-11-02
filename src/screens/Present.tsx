@@ -17,6 +17,15 @@ export function startIndex(deck: Deck, shown: Deck['slides'], startId?: string):
   return Math.max(0, shown.findIndex((s) => s.id === from?.id))
 }
 
+/**
+ * 발표를 끝내면 편집기가 고를 장: 마지막으로 보던 장. 시작한 장으로 돌아가면 발표하다 고칠 곳을 본 장(열 번째 장)을 다시 찾아
+ * 넘겨야 했다. PowerPoint, 구글 슬라이드도 끝낸 장을 고른다. shown은 발표하는 장들(뺀 장 빼고), index는 보던 장의 차례
+ */
+export function endSlideId(shown: Deck['slides'], index: number): string | undefined {
+  if (!shown.length) return undefined
+  return shown[Math.min(Math.max(index, 0), shown.length - 1)].id
+}
+
 /** 장 밖에 남는 검은 여백 가운데 발표 막대(쪽 번호, 발표 끝내기)를 둘 곳. 막대 너비와 높이에 여유를 더한 값 */
 const SIDE_ROOM = 104
 const TOP_ROOM = 44
@@ -37,7 +46,7 @@ export function barRoom(w: number, h: number): BarRoom {
  * 전체 화면 발표. 클리커가 보내는 PageUp/PageDown도 받는다.
  * 발표자 화면(Presenter)이 열려 있으면 같이 움직인다. 어느 창에서 넘겨도 된다.
  */
-export function Present({ deck, startId, entering, onExit }: { deck: Deck; startId?: string; entering?: Promise<unknown>; onExit: () => void }) {
+export function Present({ deck, startId, entering, onExit }: { deck: Deck; startId?: string; entering?: Promise<unknown>; onExit: (lastId?: string) => void }) {
   const slides = useMemo(() => deck.slides.filter((s) => !s.hidden), [deck.slides])
   // 장마다 넘기는 쪽 번호와 단락. 그릴 때마다 새로 만들면 단락 목록이 새 배열이라, 마우스를 움직이거나 멈출 때마다(아래 표시를
   // 보이고 숨긴다) 지금 장을 통째로 다시 그렸다
@@ -130,9 +139,9 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
     (fromLink = false) => {
       if (!fromLink) link.current?.post({ type: 'end' })
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
-      onExit()
+      onExit(endSlideId(slides, now.current.index))
     },
-    [onExit],
+    [onExit, slides],
   )
 
   // 발표자 화면과 잇기
