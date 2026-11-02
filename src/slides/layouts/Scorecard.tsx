@@ -5,7 +5,7 @@ import { highlightOf, hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
 import { useSlide } from '../context'
 import { IT, ItemTools } from '../fields'
-import { amountPair, lowerIsBetter } from '../numbers'
+import { scoreOf } from '../numbers'
 import { Head, Label, useItems } from './parts'
 
 /**
@@ -48,17 +48,9 @@ export function Scorecard() {
         )}
         {items.map((it, i) => {
           const { demo, meta, value } = pair(i)
-          // 목표와 실적은 단위까지 읽어 같은 기준으로 ('7분 이하'와 '6분 30초', '1.2억 원'과 '9,500만 원').
-          // 견줄 수 없는 단위끼리면 달성률과 달성 여부를 말하지 않는다
-          const p = amountPair(meta, value)
-          const target = p?.a.base ?? 0
-          const actual = p?.b.base ?? 0
-          // 음수 실적은 이 막대의 0~목표 축으로 표현할 수 없다. 원문만 남기고 달성 여부를 추측하지 않는다.
-          const known = !!p && target > 0 && actual >= 0 && value.trim() !== ''
-          // 낮을수록 좋은 지표('7분 이하'): 목표보다 작아야 달성, 달성률은 목표 ÷ 실적
-          const lower = lowerIsBetter(meta)
-          const met = lower ? actual <= target : actual >= target
-          const rate = known ? (lower ? (actual > 0 ? target / actual : null) : actual / target) : null
+          // 목표와 실적은 단위까지 읽어 같은 기준으로 견주고, 견줄 수 없으면 달성률과 달성 여부를 말하지 않는다(scoreOf).
+          // 음수 실적은 이 막대의 0~목표 축으로 표현할 수 없어 원문만 남긴다. 낮을수록 좋은 지표('7분 이하')는 목표 ÷ 실적
+          const { known, met, rate, target, actual } = scoreOf(meta, value)
           const percent = rate === null ? null : rate * 100
           // 목표와 실적 중 큰 쪽이 막대 끝. 목표를 넘으면 목표 줄이 막대 안으로 들어간다.
           const scale = Math.max(target, actual) || 1

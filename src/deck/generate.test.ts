@@ -3,6 +3,7 @@ import { asksDecision, AUDIENCES, BLUEPRINTS, DECK_GROUPS, DECK_TYPES, DURATIONS
 import { createDeck, planRecipes, priorityFor, targetCount } from './generate'
 import { hintFor, LAYOUT_GROUPS, LAYOUT_ORDER, LAYOUTS, logoColumns } from './layouts'
 import { showcaseSlides } from './showcase'
+import { scoreOf } from '../slides/numbers'
 
 describe('planRecipes', () => {
   it('발표 시간에 맞는 장 수를 넘지 않는다', () => {
@@ -196,6 +197,16 @@ describe('createDeck', () => {
       }
     }
     expect(wrong).toEqual([])
+  })
+
+  it('목표 대비 실적 예시는 제목대로 셈된다: 결과 보고는 네 목표 중 셋을 이룬다', () => {
+    // 적응 기간과 비용은 낮을수록 좋은 지표라 목표에 '이하'가 있어야 한다. 없던 때는 6주(목표 6.5주)와 1,850만 원(목표 2,000만 원)이
+    // 못 미친 것(92%, 93%)으로 그려져, 제목은 셋을 이뤘다는데 장에는 하나만 달성이었다
+    const recipe = BLUEPRINTS.result.recipes.find((r) => r.layout === 'scorecard')!
+    expect(recipe.hints?.title).toBe('네 목표 중 세 개를 이뤘어요')
+    const scores = [0, 1, 2, 3].map((i) => scoreOf(recipe.hints![`items.${i}.meta`], recipe.hints![`items.${i}.value`]))
+    expect(scores.every((s) => s.known)).toBe(true)
+    expect(scores.filter((s) => s.met)).toHaveLength(3)
   })
 
   it('제목을 비우면 보고 종류의 기본 제목을 쓴다', () => {
