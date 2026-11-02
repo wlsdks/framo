@@ -70,9 +70,10 @@
   mix-blend-mode: screen;
 }
 
-/* 표지, 사례의 로고 하나는 색을 살려야 해서 밝은 판을 깐다 */
+/* 표지, 사례의 로고 하나는 색을 살려야 해서 밝은 판을 깐다. 판은 로고 그림에 맞춘다(fit-content): 세로로 쌓는 단 안에서
+   width: auto는 단 너비로 늘어, 4:1 로고도 늘 380px 판의 왼쪽에 붙고 오른쪽이 비었다 */
 .is-dark :is(.cv-logo, .cs-logo):not(.img-empty) {
-  width: auto;
+  width: fit-content;
   max-width: 380px;
   padding: 16px 24px;
   border-radius: var(--r-mark);
@@ -80,9 +81,12 @@
   background: color-mix(in srgb, var(--ink) 92%, var(--bg));
 }
 
+/* 흰 바탕 로고(JPG)의 바탕은 곱하기로 판 색에 묻는다: 판이 눈부시지 않게 섞은 옅은 회색이라 흰 네모가 판 안에 떠 보였다.
+   로고의 색은 거의 그대로다(투명한 PNG도) */
 .is-dark :is(.cv-logo, .cs-logo):not(.img-empty) img {
   width: auto;
   max-width: 100%;
+  mix-blend-mode: multiply;
 }
 
 /* 한 줄뿐이면 한 단계 더 키우고, 키워도 본문의 60%를 못 채우는 완결된 한 줄이라 본문의 눈높이 가운데(가운데보다 조금 위)에 둔다

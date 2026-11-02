@@ -191,3 +191,38 @@ describe('진행 현황의 상태 색', () => {
     for (const r of fills) expect(r.body).not.toContain('--accent')
   })
 })
+
+describe('어두운 면 위의 로고 판 (표지, 사례)', () => {
+  // 밝은 판을 까는 규칙: 색을 살린 로고 하나를 어두운 면 위에 놓는 자리
+  const plates = rules(slides).filter((r) => /\.(cv|cs)-logo/.test(r.selector) && r.selector.includes(':not(.img-empty)') && /background:/.test(r.body))
+
+  it('판은 로고 그림에 맞춘다: 단에 늘어 늘 가장 넓은 너비(380px)로 깔리지 않게', () => {
+    // 세로로 쌓는 단(flex) 안의 width: auto는 단 너비로 늘어, 4:1 로고(208px)도 380px 판의 왼쪽에 붙고 오른쪽이 비었다
+    expect(plates.length).toBeGreaterThanOrEqual(2)
+    for (const r of plates) {
+      expect(r.body, r.selector).toMatch(/width:\s*fit-content/)
+      expect(r.body, r.selector).toMatch(/max-width:/)
+    }
+  })
+
+  it('편집할 때 좁은 판에서도 그림 도구(바꾸기, 지우기)가 잘리지 않는다', () => {
+    // 판이 로고에 맞춰 좁아지면(정사각형 로고면 100px) 판 안에 오른쪽으로 붙인 도구 둘(157px)의 '바꾸기'가 판(overflow: hidden) 밖에서 잘렸다
+    const edit = rules(read('edit.css'))
+    for (const plate of plates) {
+      const sel = plate.selector.replace(':not(.img-empty)', '.img-ed:not(.img-empty)')
+      expect(edit.find((r) => split(r.selector, ',').includes(sel))?.body, sel).toMatch(/overflow:\s*visible/)
+      const tools = edit.find((r) => split(r.selector, ',').includes(`${sel} .img-tools`))?.body
+      expect(tools, sel).toMatch(/left:\s*4px/)
+      expect(tools, sel).toMatch(/right:\s*auto/)
+    }
+  })
+
+  it('흰 바탕 로고(JPG)의 바탕은 판 색에 묻힌다: 판 안에 더 흰 네모가 뜨지 않게', () => {
+    // 판은 눈부시지 않게 글자색에 바탕을 섞은 옅은 회색이라, 흰 바탕 그림이 판 안에 흰 네모로 떠 보였다. 곱하기(multiply)로
+    // 겹치면 흰색은 판 색이 되고 로고의 색은 거의 그대로다(투명한 PNG도 같다)
+    for (const plate of plates) {
+      const img = rules(slides).find((r) => r.selector === `${plate.selector} img`)
+      expect(img?.body, plate.selector).toMatch(/mix-blend-mode:\s*multiply/)
+    }
+  })
+})

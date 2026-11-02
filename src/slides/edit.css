@@ -551,6 +551,19 @@ body:not(.is-block-dragging, .is-block-resizing) .slide.m-edit .bk-area.is-live:
   font-size: 18px;
 }
 
+/* 어두운 면, 색 면의 로고 판은 로고 그림에 맞춰 좁을 수 있다(logos.css): 정사각형 로고면 판(100px)이 도구 둘(157px)보다 좁아
+   '바꾸기'가 판 밖에서 잘렸다. 도구는 판의 왼쪽 아래에서 시작하고 넘치면 판 밖 오른쪽(빈 자리)으로 */
+.is-dark :is(.cv-logo, .cs-logo).img-ed:not(.img-empty),
+.l-cover.va-full .cv-logo.img-ed:not(.img-empty) {
+  overflow: visible;
+}
+
+.is-dark :is(.cv-logo, .cs-logo).img-ed:not(.img-empty) .img-tools,
+.l-cover.va-full .cv-logo.img-ed:not(.img-empty) .img-tools {
+  right: auto;
+  left: 4px;
+}
+
 /* ---------- 부품 장 편집 ----------
    칸에 올리면 옅은 테두리와 손잡이, 고르면 진한 테두리. 끄는 동안 놓일 자리는 파란 점선 칸.
    손잡이처럼 화면에서 늘 같은 크기여야 하는 것은 --vs(화면 배율)로 되돌려 키운다 */

@@ -198,8 +198,9 @@
   background: none;
 }
 
+/* 색 면 위의 로고도 밝은 판에 (판은 로고에 맞추고 흰 바탕은 판 색에 묻는다. logos.css의 어두운 면과 같은 까닭) */
 .l-cover.va-full .cv-logo:not(.img-empty) {
-  width: auto;
+  width: fit-content;
   max-width: 380px;
   padding: 16px 24px;
   border-radius: var(--r-mark);
@@ -210,6 +211,7 @@
 .l-cover.va-full .cv-logo:not(.img-empty) img {
   width: auto;
   max-width: 100%;
+  mix-blend-mode: multiply;
 }
 
 /* 제목 자리 (SlideOptions.place). 기본은 아래. 위로 올리면 로고는 아래로 내려 제목 자리를 비켜 주고,
