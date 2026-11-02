@@ -4,7 +4,7 @@ import type { Deck } from '../deck/types'
 import type { AskError, AskId, AskRun } from './asks'
 import type { ChangeRequest, OpResult } from './ops'
 import { AI_HEADER, AI_PREFIX } from './protocol'
-import { shapeDeckId, toShape, type ShapeDeck } from './share'
+import { shapeDeckId, type ShapeDeck } from './share'
 
 /** 다른 웹사이트가 이 창구를 쓰지 못하게 서버가 확인하는 머리글 */
 const HEADERS = { [AI_HEADER]: '1' }
@@ -103,6 +103,3 @@ export async function askRun(id: string, signal?: AbortSignal): Promise<AskRun |
 export async function cancelAsk(id: string): Promise<void> {
   await call(`asks/${id}`, { method: 'DELETE' })
 }
-
-/** 지금 덱을 공유하면 AI에게 보이는 그대로 */
-export const shapeOf = (deck: Deck) => toShape(deck)

@@ -177,8 +177,6 @@ export const isStretchy = (type: BlockType) => STRETCHY.has(type)
 
 /** 판의 세로 한 칸(칸 사이 하나를 더한 것)의 높이, 캔버스 px */
 export const rowPitch = (areaH: number) => (areaH + BLOCK_GAP) / BOARD_ROWS
-/** 판의 가로 한 칸(칸 사이 하나를 더한 것)의 너비, 캔버스 px. 레이아웃 장의 12칸 격자와 같다 */
-export const colPitch = (areaW = AREA_W) => (areaW + BLOCK_COL_GAP) / BOARD_COLS
 
 /** 이 높이(px)가 드는 세로 칸 수 */
 export const rowsFor = (px: number, areaH: number) =>
@@ -249,11 +247,6 @@ export function atRect(at: BlockAt, size: { w: number; h: number }): Rect {
   const cp = (size.w + BLOCK_COL_GAP) / BOARD_COLS
   const rp = (size.h + BLOCK_GAP) / BOARD_ROWS
   return { x: at.x * cp, y: at.y * rp, w: at.w * cp - BLOCK_COL_GAP, h: at.h * rp - BLOCK_GAP }
-}
-
-/** 부품마다의 자리를 px로 (본문 상자 크기 기준). 부품 id로 찾는다 */
-export function boardRects(blocks: readonly Block[], size: { w: number; h: number }): Map<string, Rect> {
-  return new Map(blocks.filter((b) => b.at).map((b) => [b.id, atRect(b.at!, size)]))
 }
 
 /** 부품 하나를 바꾼 판: 바뀐 부품이 커지면(항목, 모양, 바탕) 옆에서 자리를 받는다. 장에 들어가지 않으면 null */

@@ -43,7 +43,6 @@ export type ResultStatus = (typeof RESULT_STATUSES)[number]
 /** MCP 서버의 이름과 도구. 'AI에게 부탁'은 이 도구만 허락해 Claude Code를 띄운다 */
 export const MCP_SERVER_NAME = 'gyeol'
 export const MCP_TOOLS = ['list_decks', 'get_catalog', 'get_shape', 'check_changes', 'propose_changes', 'get_result'] as const
-export type McpTool = (typeof MCP_TOOLS)[number]
 
 /** 한 장, 한 부품의 항목 수 상한. 제안의 항목 수, 칸 번호, 강조할 항목 번호의 범위가 여기서 나온다 */
 export const MAX_ITEMS = 20

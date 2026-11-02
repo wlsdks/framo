@@ -96,6 +96,3 @@ export function boardFromRows(rows: unknown, fit: Fit, lost?: { n: number }): Bl
   })
   return laid.map((b) => ({ ...b, ...links.get(b.id) }))
 }
-
-/** 예전 줄에 든 부품 수 (내 컴포넌트 파일의 kind를 읽을 때) */
-export const rowsCount = (rows: unknown): number => readRows(rows).reduce((n, r) => n + r.cells.reduce((m, c) => m + c.blocks.length, 0), 0)
