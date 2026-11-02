@@ -97,7 +97,7 @@ export function foldableFields(type: BlockType): { key: string; label: string; i
     ...spec.fields
       .filter((f) => f.optional && !f.named && !f.shown && !f.image && !f.key.startsWith('$'))
       .map((f) => ({ key: f.key, label: f.label, item: false, use: use(f.key) })),
-    ...(spec.items?.fields ?? []).filter((f) => f.optional && !f.image).map((f) => ({ key: `items.${f.key}`, label: f.label, item: true, use: use(`items.${f.key}`) })),
+    ...(spec.items?.fields ?? []).filter((f) => f.optional && !f.shown && !f.image).map((f) => ({ key: `items.${f.key}`, label: f.label, item: true, use: use(`items.${f.key}`) })),
   ]
 }
 
@@ -121,7 +121,7 @@ const FOLD_USES: Partial<Record<BlockType, Record<string, string>>> = {
   goal: { unit: '지금과 목표 뒤에 붙는 단위', note: '막대 아래 짧은 설명' },
   ratio: { unit: '센 것의 단위. ‘명’이나 ‘분’이면 점이 사람 모양이 돼요' },
   spark: { note: '숫자 아래 기간이나 기준' },
-  checks: { 'items.body': '할 일마다 완료, 진행 중, 지연, 예정 표시', 'items.meta': '할 일마다 누가, 언제까지' },
+  checks: { 'items.meta': '할 일마다 누가, 언제까지' },
   gantt: { now: '지금인 기간을 띠로 짚어요 (예: 12월)', 'items.meta': '할 일마다 맡은 팀이나 사람' },
   people: { 'items.body': '사람마다 맡은 일 한 줄' },
   image: { caption: '그림 아래 한 줄 설명' },

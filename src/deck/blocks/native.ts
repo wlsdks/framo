@@ -291,7 +291,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       default: 4,
       fields: [
         { key: 'title', label: '할 일', hint: '할 일', hints: ['예산 승인', '업체 고르기', '참석자 초대', '자료 준비', '효과 점검', '결과 보고'] },
-        { key: 'body', label: '상태', hint: '완료, 진행 중, 지연, 예정', hints: ['완료', '완료', '진행 중', '예정', '예정', '예정'], optional: true },
+        { key: 'body', label: '상태', hint: '완료, 진행 중, 지연, 예정', hints: ['완료', '완료', '진행 중', '예정', '예정', '예정'], optional: true, shown: true },
         { key: 'meta', label: '담당과 기한', hint: '담당, 기한', optional: true },
       ],
     },

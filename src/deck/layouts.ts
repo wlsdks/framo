@@ -27,6 +27,8 @@ export interface ItemFieldSpec {
   hints?: string[]
   multiline?: boolean
   optional?: boolean
+  /** 채우지 않아도 되지만 부품 안에서 접지 않고 늘 보이는 항목 칸 (준비 상황의 상태: 표시가 이 칸의 글을 따른다) */
+  shown?: boolean
   image?: boolean
 }
 
