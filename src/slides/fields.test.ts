@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cssSource } from './cssSource'
-import { gluedParts, minusSigns, numberUnits, pastedText, splitNumber, textUnits, UNIT_K } from './fields'
+import { gluedParts, minusSigns, numberRuns, numberUnits, pastedText, splitNumber, textUnits, UNIT_K } from './fields'
 
 // 숫자의 꼴은 그릴 때만 바꾼다 (docs/DESIGN.md '숫자의 꼴'). 저장한 글은 이 함수들을 거치지 않는다
 describe('숫자의 꼴', () => {
@@ -29,6 +29,29 @@ describe('숫자의 꼴', () => {
     expect(splitNumber('3년 6개월')).toBeNull()
     expect(splitNumber('미정')).toBeNull()
     expect(splitNumber('')).toBeNull()
+  })
+
+  it('숫자가 둘인 값도 숫자마다 단위를 뗀다: 옆의 \'62%\'처럼 단위가 작아야 한 장의 말투가 같다', () => {
+    // '6분 30초', '3억 5,000만 원'은 숫자 하나의 꼴이 아니라 나누지 않아서, 단위(분, 초, 억, 만 원)가 숫자와 같은 크기로 그려졌다
+    expect(numberRuns('6분 30초')).toEqual({ runs: [{ num: '6', unit: '분 ' }, { num: '30', unit: '초' }] })
+    expect(numberRuns('3억 5,000만 원')).toEqual({ runs: [{ num: '3', unit: '억 ' }, { num: '5,000', unit: '만 원' }] })
+    expect(numberRuns('1시간 30분')).toEqual({ runs: [{ num: '1', unit: '시간 ' }, { num: '30', unit: '분' }] })
+    expect(numberRuns('3년 6개월')).toEqual({ runs: [{ num: '3', unit: '년 ' }, { num: '6', unit: '개월' }] })
+    expect(numberRuns('3억5,000만 원')).toEqual({ runs: [{ num: '3', unit: '억' }, { num: '5,000', unit: '만 원' }] })
+    expect(numberRuns('하루 3시간 20분')).toEqual({ pre: '하루 ', runs: [{ num: '3', unit: '시간 ' }, { num: '20', unit: '분' }] })
+    expect(numberRuns('−1억 2,000만 원')).toEqual({ runs: [{ num: '−1', unit: '억 ' }, { num: '2,000', unit: '만 원' }] })
+    // 숫자 하나면 splitNumber와 같다
+    expect(numberRuns('1,200시간')).toEqual({ runs: [{ num: '1,200', unit: '시간' }] })
+    expect(numberRuns('하루 10분')).toEqual({ pre: '하루 ', runs: [{ num: '10', unit: '분' }] })
+    // 숫자와 단위가 번갈아 서는 꼴이 아니면 그대로
+    for (const t of ['1200', '미정', '', '3개 중 2개', '작년보다 −12.5%', 'A등급 3개', '2026-10-25', '1, 2, 3']) expect(numberRuns(t), t).toBeNull()
+    // 글자는 하나도 바꾸지 않는다 (편집 칸의 글이 적은 글과 같아야 한다)
+    for (const t of ['6분 30초', '3억 5,000만 원', '하루 3시간 20분', '−1억 2,000만 원', '3억5,000만 원']) {
+      const r = numberRuns(t)!
+      expect((r.pre ?? '') + r.runs.map((x) => x.num + x.unit).join(''), t).toBe(t)
+    }
+    // 단위를 작게 그리니 폭도 그만큼 좁게 어림한다
+    expect(numberUnits('3억 5,000만 원')).toBeLessThan(textUnits('3억 5,000만 원'))
   })
 
   it('숫자 앞의 붙임표만 빼기 기호로 바꾼다', () => {

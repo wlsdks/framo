@@ -673,9 +673,21 @@ export function motionEngine(): MotionEngine {
       rows.forEach((row, k) => row.forEach((w, i) => run(anims, w, frames, s(at + k * gap + Math.min(i, 6) * ripple), L.move)))
       return at + rows.length * gap + 160
     }
+    /**
+     * 칸 안에서 숫자가 든 글 조각 수. 숫자가 둘인 값('6분 30초', '3억 5,000만 원')은 단위를 작게 떼어 그려서(fields.tsx의 numberRuns)
+     * 숫자마다 조각이 나뉜다. 굴리기와 올리기는 숫자 하나만 다뤄서, 그런 값은 앞 숫자만 구르고 뒤 숫자는 그대로 서 있었다
+     */
+    const digitTexts = (el: Element) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let n = 0
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) if (/\d/.test(node.nodeValue || '')) n++
+      return n
+    }
     const count = (el: Element | null, at: number) => {
       // 편집 중인 칸의 글자는 바꾸지 않는다 (쓰고 있는 글과 엇갈리지 않게). 옮겨 온 숫자는 다시 굴리지 않는다
       if (!el || still || el.closest('.m-edit, [data-mo-keep]')) return
+      // 숫자가 둘인 값은 그대로 둔다 (digitTexts)
+      if (digitTexts(el) > 1) return
       // 자리마다 굴린다. 생동감은 조금 더 길게 구른다. 굴릴 수 없는 칸은 0부터 올린다
       const lively = levelName === 'lively'
       // 숫자는 장이 나오고 2초 안에 다 멈춘다(녹화해 보니 1.3초씩 굴리면 다음 장으로 넘길 때까지 굴러가고 있었다)
@@ -1321,7 +1333,7 @@ export function motionEngine(): MotionEngine {
      * 움직이지 않는 때(still)에는 올리지 않는다: 제 시계로 도는 것이라 움직임 없음에서도 합계가 0부터 올라갔다
      */
     const tally = (el: Element | null, marks: { at: number; upto: number }[]) => {
-      if (!el || still || el.closest('.m-edit') || !marks.length) return
+      if (!el || still || el.closest('.m-edit') || !marks.length || digitTexts(el) > 1) return
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
       let node = walker.nextNode() as Text | null
       while (node && !/\d/.test(node.nodeValue || '')) node = walker.nextNode() as Text | null
