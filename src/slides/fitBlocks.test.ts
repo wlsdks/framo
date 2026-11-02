@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cssSource } from './cssSource'
 import * as fit from './fitBlocks'
+import { OVER_BOXES } from './overflow'
 
 describe('부품 장 글자 맞추기', () => {
   it('바깥의 이름을 쓰지 않는다 (내보낸 HTML에 blockFitter의 소스만 들어간다)', () => {
@@ -74,5 +75,62 @@ describe('부품 장 글자 맞추기', () => {
     expect(now).toMatch(/finally\s*\{[^}]*slide\.classList\.remove\(['"]is-fitting['"]\)/)
     const css = cssSource(new URL('./edit.css', import.meta.url))
     expect(css).toMatch(/:is\([^)]*\.slide\.is-fitting[^)]*\)\s*:is\(\.ed-halo[^)]*\)\s*\{\s*display:\s*none/)
+  })
+
+  describe('레이아웃 장을 채우며 넘침 경고가 보는 상자를 넘치게 하지 않는다', () => {
+    // 눈높이 내리기(--eye)와 줄 사이(--fill-air)를 그려진 글 줄만 보고 정하던 때는, 마지막 줄 상자의 아래 여백(줄 사이 몫)이 본문 상자 밖으로
+    // 16px 나가 짧은 줄 셋뿐인 비교 장(나란한 두 목록)에도 편집기와 슬라이드 목록에 '글이 넘쳤어요'가 떴다. 그려진 글은 본문 안이었다
+    // (갤러리 22번 장, 흰·검은 테마와 명조, SUIT 모두)
+    const src = fit.blockFitter.toString()
+    const fn = (name: string) => {
+      const i = src.indexOf(`function ${name}(`)
+      expect(i, name).toBeGreaterThan(0)
+      return src.slice(i, src.indexOf('/**', i))
+    }
+
+    it('넘침 검사(overflow.ts)와 같은 상자를 본다', () => {
+      const m = src.match(/OVER_BOXES = (['"])(.*?)\1/)
+      expect(m?.[2]).toBe(OVER_BOXES)
+      expect(fn('spill')).toMatch(/OVER_BOXES/)
+    })
+
+    it('넘치게 하는 글자 단계와 줄 사이는 고르지 않는다', () => {
+      const part = src.slice(src.indexOf('function fitPart('), src.indexOf('function labels('))
+      const bad = part.slice(part.indexOf('const bad = '), part.indexOf('const eye = '))
+      expect(bad).toMatch(/spill\(/)
+    })
+
+    it('눈높이로 내린 만큼 상자 밖으로 나가면 나간 만큼 덜 내리고, 8px도 못 내리면 내리지 않는다', () => {
+      const eyeRoom = new Function(`${fn('eyeRoom')}\nreturn eyeRoom`)() as (move: number, put: (m: number) => void, over: () => number) => number
+      // 본문은 장의 남은 높이를 쓴다: 내린 만큼 본문 상자가 줄고, 내용(줄 상자, 아래 여백까지)은 그대로다
+      const body = (room: number, content: number, allow = 1) => {
+        let at = 0
+        const put = (m: number) => {
+          at = m
+        }
+        const over = () => Math.max(0, content - (room - at)) - allow
+        return { put, over, at: () => at }
+      }
+      // 22번 장: 본문 705, 내용 667. 54px 내리면 16px 나간다 → 39px만(1px은 반올림 몫)
+      const b = body(705, 667)
+      expect(eyeRoom(54, b.put, b.over)).toBe(39)
+      expect(b.at()).toBe(39)
+      expect(b.over()).toBeLessThanOrEqual(0)
+      // 나가지 않으면 그대로
+      const c = body(705, 600)
+      expect(eyeRoom(54, c.put, c.over)).toBe(54)
+      // 남는 높이가 8px 밑이면 내리지 않는다
+      const d = body(705, 700)
+      expect(eyeRoom(54, d.put, d.over)).toBe(0)
+      // 덜 내려도 줄지 않는 넘침(본문이 내용 높이로 서서 장째 밀린다 같은)이면 내리지 않는다
+      expect(eyeRoom(54, () => {}, () => 5)).toBe(0)
+    })
+
+    it('눈높이 내리기는 eyeRoom으로 정한다', () => {
+      const part = src.slice(src.indexOf('function fitPart('), src.indexOf('function labels('))
+      const eye = part.slice(part.indexOf('const eye = '), part.indexOf('if (fill() < FILL_MIN)'))
+      expect(eye).toMatch(/eyeRoom\(/)
+      expect(eye).toMatch(/spill\(/)
+    })
   })
 })

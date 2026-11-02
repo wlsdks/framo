@@ -44,6 +44,8 @@ export function blockFitter() {
   const FILL_EYE = 0.75
   const FILL_AIR = 0.8
   const FILL_MAX = 0.85
+  // 넘침 경고(slides/overflow.ts)가 넘쳤는지 보는 상자들. 바깥 이름을 쓰지 못해 따로 적고, 같은 목록인지는 테스트가 본다
+  const OVER_BOXES = '.s-body, .ix-text, .cs-main, .cs-side, .cl-main, .cv-main, .ag, .bk-in'
   let range: Range | null = null
   // 잰 글 줄과 그림을 담아 두는 곳. 쓰는 쪽(fitLayout)이 값을 적을 때마다 새로 만들고 다 쓰면 null로 둔다(그 밖에서는 늘 새로 잰다)
   let memo: Map<Node, Map<string, unknown>> | null = null
@@ -1930,6 +1932,32 @@ export function blockFitter() {
   }
 
   /**
+   * 넘침 경고(slides/overflow.ts의 overflowAt)가 보는 상자들(장과 OVER_BOXES)이 내용보다 작은 만큼(캔버스 px) 가운데 가장 큰 값.
+   * 장 채움 맞추기(fitLayout)는 이 값을 늘리지 않는다: 그려진 글 줄만 보고 눈높이로 내리고 줄 사이를 넓히던 때는, 마지막 줄 상자의
+   * 아래 여백(줄 사이 몫)이 본문 상자 밖으로 나가 짧은 줄 셋뿐인 비교 장에도 '글이 넘쳤어요'가 떴다(그려진 글은 본문 안인데)
+   */
+  function spill(slide: HTMLElement): number {
+    let most = Math.max(slide.scrollHeight - slide.clientHeight, slide.scrollWidth - slide.clientWidth)
+    for (const el of Array.from(slide.querySelectorAll<HTMLElement>(OVER_BOXES))) most = Math.max(most, el.scrollHeight - el.clientHeight)
+    return most
+  }
+
+  /**
+   * 눈높이로 내릴 몫(캔버스 px)을 넘침 경고가 보는 상자 안으로 줄인다. 본문은 장의 남은 높이를 써서 내린 만큼 상자가 줄어드니,
+   * 마지막 줄 상자(아래 여백까지)가 상자 밖으로 나가면 나간 만큼 덜 내린다. 8px도 못 내리거나 덜 내려도 넘치면 내리지 않는다(0).
+   * put(m): 그 몫을 적어 본다. over(): 적은 모습에서 넘친 만큼(맞추기 전부터 넘쳐 있던 만큼은 뺀 값, 0 이하면 괜찮다)
+   */
+  function eyeRoom(move: number, put: (m: number) => void, over: () => number): number {
+    put(move)
+    const out = over()
+    if (out <= 0) return move
+    const m = move - out
+    if (m < 8) return 0
+    put(m)
+    return over() <= 0 ? m : 0
+  }
+
+  /**
    * 레이아웃 장(요약, 요점, 비교, 가격안, 표 같은)의 채움 (docs/VISUAL-RULES.md 6). 본문(.s-body)의 그려진 내용이 본문 높이의 60%에
    * 못 미치면 (가) 본문의 글자와 그림을 한 단계씩(1.2, 1.44) 키우고 (나) 그래도 비면 줄 사이를 줄마다 같은 값으로 넓힌다(--fill-air,
    * 캔버스 px, airMax까지. 레이아웃 CSS가 줄 사이에 더한다). 넘치거나 겹치거나 그림이 찌그러지거나 장 제목과 다투면 한 단계 앞으로.
@@ -2028,6 +2056,8 @@ export function blockFitter() {
     const frame = sr.bottom - (parseFloat(cs.getPropertyValue('--pad-y')) || 0) * k
     const room = frame - b.top
     if (end - b.top <= 0) return
+    // 맞추기 전에 넘침 경고가 보는 상자가 넘쳐 있던 만큼(1px은 반올림 몫). 키우고 넓히고 내려도 이보다 더 넘치게 하지 않는다(spill)
+    const allow = Math.max(spill(slide), 1)
     const drawnBottom = () => {
       let bottom = -Infinity
       for (const q of lines(body)) bottom = Math.max(bottom, q.b)
@@ -2054,7 +2084,8 @@ export function blockFitter() {
       if (crowded(body, shapes) || rivals(slide, [body])) return true
       // 본문 아래(출처와 하단 표시 자리)로 나간 글
       for (const q of lines(body)) if (q.b > end + 2) return true
-      return false
+      // 넘침 경고가 보는 상자 밖으로 나간 것: 그려지지 않는 줄 상자의 아래 여백이라도 경고는 넘쳤다고 본다
+      return spill(slide) > allow
     }
     // (다) 눈높이 가운데로: 위의 빈 곳과 아래(장 틀의 아랫선까지)의 빈 곳이 1 : 1.2. 하단 표시 몫 밖으로는 내리지 않는다.
     // 아직 덜 쓴 장은 위에 둔다: 머리 줄뿐인 얇은 내용(본문의 4분의 1 밑)을 내리면 '지금 → 추진 후' 같은 글자만 가운데에 뜬다.
@@ -2069,7 +2100,12 @@ export function blockFitter() {
       const gap = head?.getClientRects().length ? Math.max(0, b.top - head.getBoundingClientRect().bottom) : 0
       const move = Math.round(Math.min((frame - bottom - 1.2 * gap) / 2.2, end - bottom) / k)
       if (move < 8) return
-      setB('--eye', move + 'px')
+      // 내린 만큼 본문 상자가 줄어 마지막 줄 상자의 아래 여백이 상자 밖으로 나가면 나간 만큼 덜 내린다
+      const m = eyeRoom(move, (v) => setB('--eye', v + 'px'), () => spill(slide) - allow)
+      if (!m) {
+        delB('--eye')
+        return
+      }
       body.dataset.eye = '1'
     }
     // (가) 글자 단계는 60%를 못 채울 때만 올린다

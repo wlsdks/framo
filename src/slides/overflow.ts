@@ -3,8 +3,8 @@
  * 개발용 점검(screens/checkEdit.ts)이 같이 쓴다: 따로 두면 점검이 통과해도 편집기는 넘쳤다고 알렸다.
  */
 
-/** 글이 넘칠 수 있는 상자: 장 전체와 레이아웃의 본문 칸, 부품의 안쪽 */
-const BOXES = '.s-body, .ix-text, .cs-main, .cs-side, .cl-main, .cv-main, .ag, .bk-in'
+/** 글이 넘칠 수 있는 상자: 장 전체와 레이아웃의 본문 칸, 부품의 안쪽. 장 채움 맞추기(fitBlocks.ts의 spill)도 이 상자들을 넘치게 하지 않는다 */
+export const OVER_BOXES = '.s-body, .ix-text, .cs-main, .cs-side, .cl-main, .cv-main, .ag, .bk-in'
 
 /** 넘친 칸 하나: 칸의 id(.ed-input의 data-field)와 화면에 보이는 칸 이름 */
 export interface OverField {
@@ -28,7 +28,7 @@ function grown(input: HTMLElement, r: DOMRect): number {
  * 예전에는 넘쳤다는 것만 알려서, 어느 칸을 줄여야 하는지 장을 뒤져 찾아야 했다
  */
 export function overflowAt(root: HTMLElement): { over: boolean; fields: OverField[]; pushed: boolean } {
-  const boxes = [root, ...root.querySelectorAll<HTMLElement>(BOXES)]
+  const boxes = [root, ...root.querySelectorAll<HTMLElement>(OVER_BOXES)]
   // 빈칸의 옅은 면(.ed-halo)은 글보다 조금 넓게 깔려서 맨 아래 칸이면 상자 밖으로 나온다. 글이 넘친 것이 아니니 재는 동안만 숨긴다
   root.classList.add('is-measuring')
   // 항목 빼기 버튼이 칸 오른쪽으로 살짝 나와 있어서, 가로 넘침은 슬라이드 전체만 본다.
