@@ -100,7 +100,6 @@ export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersion
               setAsking(false)
               toggle()
             }}
-            aria-live="polite"
           >
             {tone === 'bad' ? <AlertIcon /> : tone === 'busy' ? <span className="save-dot" /> : <CheckIcon />}
             {label}
@@ -109,6 +108,11 @@ export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersion
       >
         {(close) => <SaveDetails deck={deck} close={close} onOpenVersions={onOpenVersions} />}
       </Popover>
+      {/* 화면 읽기 프로그램에는 저장하지 못한 때만 알린다. 저장 단추 자체를 알림 칸(aria-live)으로 두었더니 글을 쓰는 동안
+          고칠 때마다 '저장 중'과 '이 브라우저에 저장됨'을 번갈아 읽어 쓰는 글을 듣기 어려웠다. 저장된 상태는 단추 이름으로 읽힌다 */}
+      <p className="sr-only" role="alert">
+        {tone === 'bad' ? label : ''}
+      </p>
       {fix === 'pick' && (
         <button type="button" className="save-fix" onClick={() => void pick()}>
           보관 폴더 정하기
