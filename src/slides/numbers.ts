@@ -496,11 +496,31 @@ function namePatterns(words: string[]): RegExp[][] {
 export function spanIn(text: string, cols: string[]): [number, number] | null {
   const pats = fullNames(cols).map(namePatterns)
   const t = withContext(expandPeriodRange(text))
+  // 범위의 끝이 처음보다 앞 칸이면('1월 … 12월' 칸의 '12월~2월') 해를 넘긴 기간이다: 처음 칸부터 마지막 칸까지(칸 밖으로 이어진다).
+  // 칸 순서의 가장 앞과 뒤만 보던 때는 2월부터 12월까지 거꾸로 열 달짜리 막대가 섰다
+  const sides = rangeSides(t, pats)
+  if (sides && sides[0] > sides[1]) return [sides[0], cols.length - 1]
   for (let tier = 0; tier < 3; tier++) {
     const hit = pats.flatMap((p, i) => (p[tier].some((r) => r.test(t)) ? [i] : []))
     if (hit.length) return [Math.min(...hit), Math.max(...hit)]
   }
   return null
+}
+
+/** 범위 글('12월~2월')의 앞이 가리키는 처음 칸과 뒤가 가리키는 끝 칸. 범위가 아니거나 한쪽이 칸에 없으면 null */
+function rangeSides(t: string, pats: RegExp[][][]): [number, number] | null {
+  const m = /^(.*?)(?:~|∼|–|—|-|부터)(.*)$/s.exec(t)
+  if (!m) return null
+  const side = (s: string, pick: (hit: number[]) => number) => {
+    for (let tier = 0; tier < 3; tier++) {
+      const hit = pats.flatMap((p, i) => (p[tier].some((r) => r.test(s)) ? [i] : []))
+      if (hit.length) return pick(hit)
+    }
+    return null
+  }
+  const a = side(m[1], (hit) => Math.min(...hit))
+  const b = side(m[2], (hit) => Math.max(...hit))
+  return a === null || b === null ? null : [a, b]
 }
 
 /** '3~4월', '2~3주'처럼 앞 단위를 생략한 구간을 같은 단위의 양 끝으로 읽는다. */
@@ -549,6 +569,9 @@ function withContext(text: string): string {
 
 /** 기간 글에서 칸 이름과 사이 표시(~, 부터, 까지)를 뺀 나머지. 비었으면 막대가 기간을 다 보여 준다 ('내년 상반기'는 남는다) */
 export function periodRest(text: string, cols: string[]): string {
+  // 해를 넘겨 막대가 칸 끝에서 잘리면 막대가 기간을 다 보여 주지 못한다: 기간 글을 그대로 보인다
+  const sides = rangeSides(withContext(expandPeriodRange(text)), fullNames(cols).map(namePatterns))
+  if (sides && sides[0] > sides[1]) return text.trim()
   // '10월 말'처럼 칸에 없는 때까지 적은 것(wide)은 남겨서 기간 글을 보인다
   const pats = fullNames(cols)
     .flatMap((w) => {
