@@ -98,7 +98,7 @@ function Consent({ direct, onMore, onCancel, onOk }: { direct: boolean; onMore?:
     <div className="ask-consent" role="group" aria-label="AI에게 모양 보여 주기">
       <p className="ask-consent-p">
         이 발표의 모양만 AI에게 보여 줘요. 적은 글은 보내지 않아요.
-        {!onMore && <Info label="AI에게 보이는 것">슬라이드 순서, 레이아웃, 칸이 비었는지, 테마가 보여요. 제목과 적은 글, 숫자, 이미지, 노트는 보이지 않아요.</Info>}
+        {!onMore && <Info label="AI에게 보이는 것">슬라이드 순서, 레이아웃, 칸이 비었는지, 테마가 보여요. 제목과 작성한 글, 숫자, 이미지, 노트는 보이지 않아요.</Info>}
       </p>
       <div className="ask-consent-actions">
         {onMore && (
@@ -250,7 +250,7 @@ export function SlideAsk({ deck, slide, ai, ask }: { deck: Deck; slide: Slide; a
           type="button"
           className={cx('btn btn-ghost btn-sm ask-btn', busy && 'is-busy')}
           aria-expanded={open}
-          title="이 슬라이드의 레이아웃, 강조, 칸 안내를 AI가 제안해요. 적은 글은 보내지 않아요"
+          title="이 슬라이드의 레이아웃, 강조, 칸 안내를 AI가 제안해요. 작성한 글은 보내지 않아요"
           onClick={toggle}
         >
           <AskIcon />
@@ -459,7 +459,7 @@ function AiDetails({ deck, ai, ask, onPicked }: { deck: Deck; ai: AiShare; ask: 
               </button>
             </span>
           ) : (
-            <span>적은 글은 AI에게 보내지 않아요</span>
+            <span>작성한 글은 AI에게 보내지 않아요</span>
           )}
           <button type="button" className="ai-foot-more" onClick={() => setMore(true)}>
             {ai.status ? '보이는 것, 직접 연결' : 'AI에게 보이는 것'}
@@ -499,7 +499,7 @@ function AiMore({ deck, ai, onBack }: { deck: Deck; ai: AiShare; onBack: () => v
         <div>
           <p className="ai-pop-k">보이지 않아요</p>
           <ul>
-            <li>제목과 적은 글</li>
+            <li>제목과 작성한 글</li>
             <li>숫자와 이미지</li>
             <li>발표자 노트</li>
             <li>소속, 이름, 연락처</li>
@@ -775,7 +775,7 @@ export function AiReview({
       <header className="vpp-head">
         <div>
           <p className="vpp-title">AI가 구성을 바꾸자고 해요</p>
-          <p className="vpp-sub">{okCount ? `${okCount}가지를 바꿔요. 적은 글은 그대로예요.` : '바꿀 수 있는 것이 없어요. 거절하거나 나중에 다시 봐요.'}</p>
+          <p className="vpp-sub">{okCount ? `${okCount}가지를 바꿔요. 작성한 글은 그대로예요.` : '바꿀 수 있는 것이 없어요. 거절하거나 나중에 다시 봐요.'}</p>
         </div>
         <div className="vpp-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>

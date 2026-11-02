@@ -336,7 +336,7 @@ export function PaneTools() {
           aria-valuemin={spec.sides[0]}
           aria-valuemax={spec.sides[spec.sides.length - 1]}
           tabIndex={0}
-          title="끌어서 너비 바꾸기 (두 번 누르면 처음 너비)"
+          title="끌어서 너비 바꾸기 (더블클릭하면 처음 너비)"
           onPointerDown={startSize}
           onDoubleClick={() => sizeTo(spec.base)}
           onKeyDown={onEdgeKey}
