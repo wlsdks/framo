@@ -1,10 +1,10 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS as DndCss } from '@dnd-kit/utilities'
-import { useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { cx } from '../../../lib/cx'
 import { keys } from '../../../lib/keys'
-import { listAccessibility, useListDrag } from '../../../lib/listDrag'
+import { listAccessibility, movedSay, useListDrag } from '../../../lib/listDrag'
 import { GripIcon, Icon, Info, PlayIcon } from '../../ui'
 import type { Lane, Player } from './player'
 
@@ -101,9 +101,20 @@ export function Timeline({
     (id) => order.indexOf(String(id)) + 1,
   )
   const none = !plan.lanes.length
+  // 키보드로 옮긴 것은 여기서 읽는다(끌어 놓은 것은 dnd-kit이 accessibility의 문장으로). 예전에는 Alt+화살표로 줄을 옮겨도
+  // 아무것도 읽지 않아, 화면을 보지 않으면 옮겨졌는지 알 수 없었다
+  const [said, setSaid] = useState('')
+  const keyMove = (i: number, to: number) => {
+    if (to < 0 || to >= order.length) return
+    onMove(i, to)
+    setSaid(movedSay(lanes[i].name, to + 1))
+  }
 
   return (
     <section className={cx('ms-tl', player.solo && 'is-solo', quiet && 'is-quiet')} aria-label="시간표">
+      <p className="sr-only" aria-live="polite">
+        {said}
+      </p>
       <div className="ms-tl-bar">
         <button type="button" className="ms-play" disabled={!!quiet} aria-label={player.playing ? '멈추기' : '재생'} title={`${player.playing ? '멈추기' : '재생'} (Space)`} onClick={player.toggle}>
           {player.playing ? <PauseIcon /> : <PlayIcon />}
@@ -207,7 +218,7 @@ export function Timeline({
                   solo={player.solo === l.block}
                   onSelect={() => onSelect(l.block!)}
                   onHot={onHot}
-                  onMove={(d) => onMove(i, i + d)}
+                  onMove={(d) => keyMove(i, i + d)}
                 />
               ))}
             </SortableContext>

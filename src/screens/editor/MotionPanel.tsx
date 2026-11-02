@@ -7,9 +7,8 @@ import { sceneOf } from '../../deck/scenes'
 import { MOTIONS, motionOf, TRANSITIONS } from '../../deck/themes'
 import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockWhen, Deck, Motion, Slide, Transition } from '../../deck/types'
 import { cx } from '../../lib/cx'
-import { josa } from '../../lib/josa'
 import { keys } from '../../lib/keys'
-import { listAccessibility, useListDrag } from '../../lib/listDrag'
+import { listAccessibility, movedSay, useListDrag } from '../../lib/listDrag'
 import { motionEngine } from '../../motion/engine'
 import { useDeck } from '../../store/deckStore'
 import { ChevronIcon, GripIcon, Icon, PlayIcon, Segmented, type Toast } from '../ui'
@@ -155,7 +154,7 @@ function Sequence({ deck, slide, blocks }: { deck: Deck; slide: Slide; blocks: P
   }
   // 키보드로 옮긴 것만 여기서 읽는다. 끌어 놓은 것은 dnd-kit이 accessibility의 문장으로 읽는다(같은 말을 두 번 읽지 않게)
   const move = (from: number, to: number) => {
-    if (reorder(from, to)) setSaid(`${josa(nameOf(ids[from]), '을', '를')} ${to + 1}번째로 옮겼어요.`)
+    if (reorder(from, to)) setSaid(movedSay(nameOf(ids[from]), to + 1))
   }
   const onDragEnd = (e: DragEndEvent) => {
     drag.end()
