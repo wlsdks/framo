@@ -419,7 +419,7 @@ function LayoutPicker({
           <BackIcon />
         </button>
         <h2 className="ins-picker-t">레이아웃 바꾸기</h2>
-        <Info label="레이아웃 바꾸기 도움말">적은 글은 그대로 두고 모양만 바뀌어요. 그림에 마우스를 올리면 슬라이드에서 미리 보여요.</Info>
+        <Info label="레이아웃 바꾸기 도움말">작성한 글은 그대로 두고 모양만 바뀌어요. 그림에 마우스를 올리면 슬라이드에서 미리 보여요.</Info>
       </div>
       {LAYOUT_GROUPS.map((g) => (
         <div key={g.name} className="ins-group" role="group" aria-label={g.name}>

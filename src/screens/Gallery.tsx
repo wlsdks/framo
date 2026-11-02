@@ -101,7 +101,7 @@ function edgeSlides(): Slide[] {
       makeSlide('funnel'),
       [
         { title: '홈페이지 방문', value: '12,400' },
-        { title: '자료 내려받기', value: '1,860' },
+        { title: '자료 다운로드', value: '1,860' },
         { title: '상담 신청', value: '310' },
         { title: '현장 방문', value: '' },
         { title: '제안', value: '42' },
