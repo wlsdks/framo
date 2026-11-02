@@ -57,6 +57,7 @@ import {
   shiftIssue,
   shownBlocks,
   shownLook,
+  slideHeading,
   slideName,
   speedOf,
   tidyLinks,
@@ -291,6 +292,17 @@ describe('자리 정하기', () => {
     const added = makeSlide('section')
     expect(slideName({ ...added, fields: { ...added.fields, title: '경쟁' } })).toBe('섹션: 경쟁')
     expect(slideName({ ...added, fields: { ...added.fields, title: '' } })).toBe(added.purpose)
+  })
+
+  it('장 하나를 크게 보는 곳의 머리 이름은 적은 제목, 없으면 장 목록의 이름', () => {
+    // 모션 편집의 머리는 제목 칸만 봐서, 제목 칸을 비워 둔 컴포넌트 장(예시 발표의 2번째 장)이 '제목 없는 슬라이드'로 보였다.
+    // 장 목록에서는 '핵심 한 줄, 점 목록 외 1'로 부르는 장이다
+    const s = { ...makeSlide('compose'), blocks: board(block('kpi', 'k')) }
+    expect(slideHeading(s)).toBe('핵심 숫자')
+    expect(slideHeading({ ...s, fields: { ...s.fields, title: '  ' } })).toBe('핵심 숫자')
+    expect(slideHeading({ ...s, fields: { ...s.fields, title: '상담 대기를\n절반으로' } })).toBe('상담 대기를 절반으로')
+    const cover = makeSlide('cover')
+    expect(slideHeading({ ...cover, fields: { ...cover.fields, title: '' } })).toBe(cover.purpose)
   })
 
   it('작은 컴포넌트를 잇달아 넣으면 혼자 두지 않고 앞의 것 곁에 둔다', () => {

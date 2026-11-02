@@ -55,3 +55,11 @@ export function slideName(slide: Slide): string {
   if (!names.length) return slide.purpose
   return names.length > 2 ? `${names.slice(0, 2).join(', ')} 외 ${names.length - 2}` : names.join(', ')
 }
+
+/**
+ * 장 하나를 크게 보는 곳(모션 편집의 머리)에 쓰는 이름: 적은 제목, 없으면 장 목록의 이름.
+ * 제목 칸만 보면 제목 칸을 비워 둔 컴포넌트 장이 모두 '제목 없는 슬라이드'로 보여, 장 목록의 이름과 짝이 맞지 않았다
+ */
+export function slideHeading(slide: Slide): string {
+  return (slide.fields.title ?? '').replace(/\s+/g, ' ').trim() || slideName(slide)
+}

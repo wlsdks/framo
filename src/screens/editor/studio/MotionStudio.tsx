@@ -13,6 +13,7 @@ import {
   MOTION_PRESETS,
   playOrder,
   presetFits,
+  slideHeading,
   speedOf,
   whenOf,
   withPreset,
@@ -204,7 +205,7 @@ export function MotionStudio({
           <button type="button" className="icon-btn" aria-label="다음 슬라이드" title="다음 슬라이드 (→)" disabled={at < 0 || at >= visible.length - 1} onClick={() => go(1)}>
             <ChevronIcon />
           </button>
-          <span className="ms-slide-name">{slide.fields.title || '제목 없는 슬라이드'}</span>
+          <span className="ms-slide-name">{slideHeading(slide)}</span>
         </nav>
         <button type="button" className="btn btn-primary btn-sm ms-present" onClick={() => onPresent(slide.id)}>
           <PlayIcon />이 슬라이드부터 발표
