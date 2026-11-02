@@ -279,6 +279,20 @@ describe('자리 정하기', () => {
     expect(slideName({ ...s, blocks: [] })).toBe(s.purpose)
   })
 
+  it('섹션 장은 지금 적힌 섹션 제목으로 부른다: 만들 때의 섹션 이름이 목록에 남지 않게', () => {
+    // 조사·분석 보고의 섹션 장은 '섹션: 시장'으로 만들어져, 섹션 제목을 '만족도 흐름'으로 바꿔도 장 목록과 버전 기록에는
+    // '섹션: 시장'이 남았다(장 아래의 섹션 표시는 제목을 따르는데 목록만 옛 이름)
+    const s = { ...makeSlide('section'), purpose: '섹션: 시장', fields: { title: '시장' } }
+    expect(slideName({ ...s, fields: { title: '만족도 흐름' } })).toBe('섹션: 만족도 흐름')
+    expect(slideName({ ...s, fields: { title: '응답한\n사람들' } })).toBe('섹션: 응답한 사람들')
+    // 제목을 비우면 만들 때의 이름 그대로
+    expect(slideName({ ...s, fields: { title: '  ' } })).toBe('섹션: 시장')
+    // 장 추가로 만든 섹션 장(레이아웃 이름)도 제목을 적으면 그 제목으로
+    const added = makeSlide('section')
+    expect(slideName({ ...added, fields: { ...added.fields, title: '경쟁' } })).toBe('섹션: 경쟁')
+    expect(slideName({ ...added, fields: { ...added.fields, title: '' } })).toBe(added.purpose)
+  })
+
   it('작은 컴포넌트를 잇달아 넣으면 혼자 두지 않고 앞의 것 곁에 둔다', () => {
     const bs = board(block('funnel', 'f'), block('stat', 's1'), block('stat', 's2'))
     const near = bandOf(bs, 's2').some((b) => b.id === 's1') || isStacked(bs, 's2')

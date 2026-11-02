@@ -40,10 +40,16 @@ export function blockNames(blocks: Block[]): Map<string, string> {
 }
 
 /**
- * 장 목록, 버전 기록, 제안 미리 보기에 쓰는 장 이름. 보고 종류가 정해 준 이름(주요 숫자, 다음 할 일)은 그대로 두고,
+ * 장 목록, 버전 기록, 제안 미리 보기에 쓰는 장 이름. 보고 종류가 정해 준 이름(주요 숫자, 다음 할 일)은 그대로 두고, 섹션 장은 지금의 섹션 제목으로,
  * '장 추가'로 만든 컴포넌트 장은 모두 '컴포넌트로 꾸미기'라 서로 구별되지 않아서 넣은 컴포넌트의 이름으로 부른다
  */
 export function slideName(slide: Slide): string {
+  // 섹션 장은 지금 적힌 섹션 제목으로: 만들 때의 이름('섹션: 시장')은 사람이 섹션 제목을 바꾸면 낡는다(장 아래의 섹션 표시는
+  // 제목을 따르는데 목록만 옛 이름으로 남았다). 이 이름은 이 PC의 화면에만 쓴다(AI에게 가는 모양은 만들 때의 이름, share.ts)
+  if (slide.layout === 'section') {
+    const title = (slide.fields.title ?? '').replace(/\s+/g, ' ').trim()
+    return title ? `섹션: ${title}` : slide.purpose
+  }
   if (slide.layout !== 'compose' || slide.purpose !== LAYOUTS.compose.name) return slide.purpose
   const names = [...new Set(allBlocks(slide.blocks ?? []).map((b) => BLOCKS[b.type].name))]
   if (!names.length) return slide.purpose
