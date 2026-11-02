@@ -183,6 +183,17 @@ describe('움직임 엔진', () => {
     expect(src.indexOf('after()', c)).toBeGreaterThan(f)
   })
 
+  it('움직임 없음과 동작 줄이기에서는 숫자도 올리지 않는다: 합계를 조각마다 올리는 시계도 멈춘 때(still)를 지킨다', () => {
+    // 합계 올리기(tally)만 멈춘 때를 보지 않아서, 움직임 없음이나 윈도우의 '애니메이션 효과 끄기'에서도 합계가 0부터 올라갔다
+    const src = motionEngine.toString()
+    for (const name of ['count', 'pulse', 'tally']) {
+      const at = src.indexOf(`const ${name} = (`)
+      expect(at, name).toBeGreaterThan(0)
+      const guard = /if \(([^)]*\)?)*?\) return/.exec(src.slice(at))
+      expect(guard?.[0], name).toMatch(/\bstill\b/)
+    }
+  })
+
   it('고를 수 있는 장면마다 엔진이 짠 컷이 있다 (없으면 장면을 골라도 소리 없이 연출표만 움직인다)', () => {
     const src = motionEngine.toString()
     const scene = src.slice(src.indexOf('function scene('), src.indexOf('const batches'))

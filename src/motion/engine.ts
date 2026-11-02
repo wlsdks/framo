@@ -1317,10 +1317,11 @@ export function motionEngine(): MotionEngine {
 
     /**
      * 합계를 조각이 닿을 때마다 그만큼씩 올린다. marks는 닿는 때(ms)와 그때까지 모인 몫(0~1). 숫자가 하나만 있는 칸만(countUp과
-     * 같은 조건). 한 번에 0부터 굴리면 조각이 끼워지는 것과 숫자가 따로 놀아서, 끼워질 때마다 그 몫만큼 짧게 올라가 멈춘다
+     * 같은 조건). 한 번에 0부터 굴리면 조각이 끼워지는 것과 숫자가 따로 놀아서, 끼워질 때마다 그 몫만큼 짧게 올라가 멈춘다.
+     * 움직이지 않는 때(still)에는 올리지 않는다: 제 시계로 도는 것이라 움직임 없음에서도 합계가 0부터 올라갔다
      */
     const tally = (el: Element | null, marks: { at: number; upto: number }[]) => {
-      if (!el || el.closest('.m-edit') || !marks.length) return
+      if (!el || still || el.closest('.m-edit') || !marks.length) return
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
       let node = walker.nextNode() as Text | null
       while (node && !/\d/.test(node.nodeValue || '')) node = walker.nextNode() as Text | null
