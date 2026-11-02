@@ -199,6 +199,35 @@ describe('createDeck', () => {
     expect(wrong).toEqual([])
   })
 
+  it('줄마다 다른 예시를 준 장은 레이아웃이 줄마다 예시를 두는 칸도 모두 제 이야기로 채운다 (빠진 칸에는 다른 이야기의 예시가 섞인다)', () => {
+    // 결과 보고의 후속 과제 표가 과제·담당·기한만 줘서 비고 칸에 표 레이아웃의 예시(결재 절차 개선)가 들어가
+    // '결과 공유회 · 경영지원본부 · 11월 · 처리 시간을 다시 잼'처럼 앞뒤가 맞지 않는 줄을 보여 줬다
+    const wrong: string[] = []
+    for (const [type, bp] of Object.entries(BLUEPRINTS)) {
+      for (const r of bp.recipes) {
+        const spec = LAYOUTS[r.layout]
+        const hints = r.hints ?? {}
+        if (!spec.items || !Object.keys(hints).some((key) => /^items\.\d+\./.test(key))) continue
+        const count = r.items ?? spec.items.default
+        for (const field of spec.items.fields) {
+          if (!field.hints?.length || hints[`items.${field.key}`]) continue
+          const missing = Array.from({ length: count }, (_, i) => i).filter((i) => !hints[`items.${i}.${field.key}`] && !r.prefill?.[i]?.[field.key])
+          if (missing.length) wrong.push(`${type} ${r.purpose} ${field.key}: ${missing.map((i) => i + 1).join(',')}째 줄`)
+        }
+      }
+    }
+    expect(wrong).toEqual([])
+  })
+
+  it('줄마다 다른 예시가 있는 장의 빈 칸은 레이아웃의 다른 이야기 대신 칸의 안내를 보인다 (예전에 만든 발표)', () => {
+    // 고치기 전에 만든 발표는 비고 예시 없이 저장돼 있다. 레이아웃의 줄마다 예시(결재 절차 개선)를 섞지 않고 칸의 안내로
+    const saved = { title: '네 가지가 남았어요', 'items.0.title': '전사로 넓히기', 'items.0.meta': '인사팀', 'items.0.value': '1월' }
+    expect(hintFor('table', saved, 'body', 'body', 0)).toBe('짧은 설명')
+    expect(hintFor('table', saved, 'title', 'title', 0)).toBe('전사로 넓히기')
+    // 줄마다 예시가 없는 장(빈 발표에 더한 표)은 레이아웃의 예시가 한 이야기라 그대로 쓴다
+    expect(hintFor('table', {}, 'body', 'body', 0)).toBe('팀마다 다른 양식을 하나로')
+  })
+
   it('목표 대비 실적 예시는 제목대로 셈된다: 결과 보고는 네 목표 중 셋을 이룬다', () => {
     // 적응 기간과 비용은 낮을수록 좋은 지표라 목표에 '이하'가 있어야 한다. 없던 때는 6주(목표 6.5주)와 1,850만 원(목표 2,000만 원)이
     // 못 미친 것(92%, 93%)으로 그려져, 제목은 셋을 이뤘다는데 장에는 하나만 달성이었다
