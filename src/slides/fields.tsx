@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ElementType } from 'react'
 import { isBlankItem, readField } from '../deck/fields'
-import { hintFor, labelIn, LAYOUTS } from '../deck/layouts'
+import { hintFor, labelIn, LAYOUTS, rowHint } from '../deck/layouts'
 import type { ItemKey } from '../deck/types'
 import { cx } from '../lib/cx'
 import { imageToDataUrl, pickImage } from '../lib/imageFile'
@@ -533,13 +533,13 @@ export function IT({ i, k, ...props }: TextProps & { i: number; k: ItemKey }) {
   // 나란한 항목의 제목 크기가 줄마다 달랐다(핵심 포인트의 세 제목이 44, 44, 52px)
   const fitText = props.fit
     ? slide.items
-        .map((it, j) => (mode === 'final' ? (it[k] ?? '').trim() : it[k] || hintFor(slide.layout, slide.hints, k, k, j)))
+        .map((it, j) => (mode === 'final' ? (it[k] ?? '').trim() : it[k] || rowHint(slide.layout, slide.hints, it, k, j)))
         .reduce((a, t) => ([...t].length > [...a].length ? t : a), '')
     : undefined
   return (
     <Field
       value={slide.items[i]?.[k] ?? ''}
-      hint={hintFor(slide.layout, slide.hints, k, k, i)}
+      hint={rowHint(slide.layout, slide.hints, slide.items[i], k, i)}
       label={labelIn(labels ?? LAYOUTS[slide.layout], k, k, i)}
       optional={!!(labels ?? LAYOUTS[slide.layout]).items?.fields.find((f) => f.key === k)?.optional}
       fieldId={`${fieldPrefix}${i}.${k}`}

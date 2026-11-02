@@ -1,4 +1,4 @@
-import type { ItemKey, LayoutId, Place, Slide } from './types'
+import type { Item, ItemKey, LayoutId, Place, Slide } from './types'
 
 export interface FieldSpec {
   /** 슬라이드 칸 이름. `$`로 시작하면 덱 단위 값(소속, 발표자 등) */
@@ -746,6 +746,20 @@ export function hintFor(
   }
   const f = spec.fields.find((x) => x.key === key)
   return (!own && f?.example) || f?.hint || ''
+}
+
+/** 줄을 지워도 된다는 안내. 빈 줄에만 맞는다(rowHint) */
+export const DROP_ROW = '없으면 이 줄을 지워요'
+
+/**
+ * 항목 칸의 안내. 안내가 줄을 지워도 된다는 말(DROP_ROW)뿐인 칸은 빈 줄에만 그 말을 보이고, 줄의 다른 칸을 채웠으면 칸의 보통
+ * 안내를 보인다: 결정 요청의 셋째 줄은 제목을 채워도 설명 칸에 '없으면 이 줄을 지워요'가 남아 '썼는데 지우라는 건가'로 읽혔다.
+ * 칸 자신의 안내 끝에 붙은 말('도움이 필요한 것 (없으면 이 줄을 지워요)')은 그 칸을 채우면 안내째로 사라지니 그대로 둔다
+ */
+export function rowHint(layout: LayoutId, hints: Record<string, string>, item: Item | undefined, key: ItemKey, index: number): string {
+  const hint = hintFor(layout, hints, key, key, index)
+  if (hint !== DROP_ROW || !item || !(['title', 'body', 'value', 'meta', 'image'] as const).some((k) => k !== key && item[k]?.trim())) return hint
+  return hintFor(layout, hints, key, key)
 }
 
 /**
