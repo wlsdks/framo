@@ -226,7 +226,13 @@ function EditorBody({ deck }: { deck: Deck }) {
     toast.show('슬라이드를 지웠어요', undoAction(toast))
   }
 
-  if (launch.presenting) return <Present deck={deck} startId={launch.presenting.startId} entering={launch.presenting.entering} onExit={launch.exit} />
+  // 발표를 끝내면 마지막으로 보던 장을 고른다(발표를 시작한 장이 아니라)
+  const endPresent = (lastId?: string) => {
+    launch.exit()
+    if (lastId) store.select(lastId)
+  }
+
+  if (launch.presenting) return <Present deck={deck} startId={launch.presenting.startId} entering={launch.presenting.entering} onExit={endPresent} />
 
   return (
     <div className="ed-app">

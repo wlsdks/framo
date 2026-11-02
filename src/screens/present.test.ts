@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createDeck } from '../deck/generate'
-import { barRoom, startIndex } from './Present'
+import { barRoom, endSlideId, startIndex } from './Present'
 
 describe('발표를 시작할 장', () => {
   const deck = createDeck({ type: 'report', audience: 'mixed', minutes: 20, method: 'live', title: '', org: '', presenter: '', theme: 'white' })
@@ -20,6 +20,23 @@ describe('발표를 시작할 장', () => {
 
   it('고른 장이 없으면 첫 장부터', () => {
     expect(startIndex(deck, shown)).toBe(0)
+  })
+})
+
+describe('발표를 끝내면 편집기가 고를 장', () => {
+  const deck = createDeck({ type: 'report', audience: 'mixed', minutes: 20, method: 'live', title: '', org: '', presenter: '', theme: 'white' })
+  deck.slides[2].hidden = true
+  const shown = deck.slides.filter((s) => !s.hidden)
+
+  it('발표를 시작한 장이 아니라 마지막으로 보던 장 (PowerPoint, 구글 슬라이드와 같다)', () => {
+    expect(endSlideId(shown, 4)).toBe(shown[4].id)
+    expect(endSlideId(shown, shown.length - 1)).toBe(shown.at(-1)!.id)
+  })
+
+  it('보던 장 번호가 범위 밖이면 가까운 끝 장, 발표할 장이 없으면 고르지 않는다', () => {
+    expect(endSlideId(shown, shown.length + 3)).toBe(shown.at(-1)!.id)
+    expect(endSlideId(shown, -1)).toBe(shown[0].id)
+    expect(endSlideId([], 0)).toBeUndefined()
   })
 })
 
