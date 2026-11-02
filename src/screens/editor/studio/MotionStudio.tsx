@@ -24,6 +24,7 @@ import { sceneOf } from '../../../deck/scenes'
 import { MOTIONS, motionOf, transitionOf } from '../../../deck/themes'
 import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockWhen, Deck, Motion, Slide } from '../../../deck/types'
 import { cx } from '../../../lib/cx'
+import { presentKey } from '../../../lib/presentKeys'
 import { FitSlide, pageProps, SlideCanvas, useStableSections } from '../../../slides/SlideCanvas'
 import { useDeck } from '../../../store/deckStore'
 import { BackIcon, ChevronIcon, PlayIcon, Segmented, useDialog, type Toast } from '../../ui'
@@ -92,7 +93,8 @@ export function MotionStudio({
   // 이어 보려고 누른 Space가 아무 일도 하지 않았다). 되돌리기와 다시 하기는 편집기와 같은 키로 (스튜디오가 덮은 동안 편집기의 단축키는 쉰다)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase()
+      // 한글 입력 상태에서는 Ctrl+Z가 'ㅋ'로 와서 글자 키는 자판 자리로 읽는다 (편집기의 단축키와 같게)
+      const k = presentKey(e).toLowerCase()
       if ((e.metaKey || e.ctrlKey) && !e.altKey && (k === 'z' || k === 'y')) {
         e.preventDefault()
         const st = useDeck.getState()
