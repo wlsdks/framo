@@ -401,7 +401,7 @@ export function Wizard() {
           </button>
         )}
         {/* 낮은 화면에서도 가리지 않게, 만들기 단추 바로 옆에 */}
-        {step === 2 && <p className="wz-privacy">적은 내용은 이 PC 밖으로 나가지 않아요.</p>}
+        {step === 2 && <p className="wz-privacy">작성한 내용은 이 PC 밖으로 나가지 않아요.</p>}
         {step === 2 && (
           <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={create}>
             발표 만들기

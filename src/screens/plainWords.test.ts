@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 // AGENTS.md '화면 문구': 순화어나 예스러운 말보다 흔히 쓰는 말로 쓴다. 괄호 안의 말(적은 글, 저절로, 내려받기 …)은 화면에 쓰지 않는다.
 // 화면에 '적은 글은 그대로예요'처럼 남아 있어도 테스트가 없어 아무도 몰랐다
-const AVOID = ['적은 글', '저절로', '내려받기', '까닭', '지어낸', '두 번 누르', '두 번 눌러']
+const AVOID = ['적은 글', '적은 내용', '저절로', '내려받기', '까닭', '지어낸', '두 번 누르', '두 번 눌러']
 
 /** 화면 글이 있는 곳: 화면, 슬라이드, 발표 종류의 예시와 안내, 레이아웃과 컴포넌트의 안내, 내보낸 HTML */
 const ROOTS = ['src/screens', 'src/slides', 'src/deck', 'src/export', 'src/present', 'src/motion']

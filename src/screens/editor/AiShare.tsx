@@ -22,7 +22,7 @@ import { AskIcon, BackIcon, CheckIcon, ChevronIcon, CopyIcon, Info, Popover, Tog
 
 const SKIP_REASON: Record<Exclude<OpCode, 'applied'>, string> = {
   no_slide: '그 슬라이드가 지금은 없어요',
-  has_content: '적은 내용이 있어서 지우지 않아요',
+  has_content: '작성한 내용이 있어서 지우지 않아요',
   out_of_range: '고를 수 있는 범위를 넘어요',
   not_for_layout: '이 레이아웃에는 없는 설정이에요',
   last_slide: '마지막 남은 슬라이드는 지울 수 없어요',
