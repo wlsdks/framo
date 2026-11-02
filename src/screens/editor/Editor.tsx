@@ -9,6 +9,7 @@ import type { Deck, LayoutId, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { isMac, keys } from '../../lib/keys'
 import { go } from '../../lib/router'
+import { onTabListKeys } from '../../lib/tabList'
 import { APP_VERSION } from '../../lib/version'
 import { useAutosave } from '../../store/autosave'
 import { copyDeck } from '../../store/copy'
@@ -286,14 +287,14 @@ function EditorBody({ deck }: { deck: Deck }) {
           slide && (
             // 오른쪽 칸은 탭 셋: 이 장 설정, 움직임, 컴포넌트. 컴포넌트를 고르는 동안에도 어디로 돌아가는지 보인다
             <aside className="side" aria-label="오른쪽 칸">
-              <div className="side-tabs" role="tablist">
-                <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'settings'} onClick={side.settings}>
+              <div className="side-tabs" role="tablist" onKeyDown={onTabListKeys}>
+                <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'settings'} tabIndex={side.tab === 'settings' ? 0 : -1} onClick={side.settings}>
                   이 슬라이드 설정
                 </button>
-                <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'motion'} onClick={side.motion}>
+                <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'motion'} tabIndex={side.tab === 'motion' ? 0 : -1} onClick={side.motion}>
                   모션
                 </button>
-                <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'library'} onClick={() => blocks.setLibraryOpen(true)}>
+                <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'library'} tabIndex={side.tab === 'library' ? 0 : -1} onClick={() => blocks.setLibraryOpen(true)}>
                   컴포넌트
                 </button>
                 {blocks.libraryOpen && (

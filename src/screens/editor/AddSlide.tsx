@@ -4,6 +4,7 @@ import { showcaseSlides } from '../../deck/showcase'
 import type { LayoutId, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { hashOf } from '../../lib/router'
+import { onTabListKeys } from '../../lib/tabList'
 import { ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
 import { useDrawSoon } from '../drawSoon'
 import type { Look } from './look'
@@ -36,9 +37,9 @@ export function AddSlide({ look, onPick }: { look: Look; onPick: (layout: Layout
   const g = GROUPS[group]
   return (
     <div className="add-slide" role="dialog" aria-label="슬라이드 추가">
-      <div className="add-slide-nav" role="tablist" aria-label="슬라이드 묶음" aria-orientation="vertical">
+      <div className="add-slide-nav" role="tablist" aria-label="슬라이드 묶음" aria-orientation="vertical" onKeyDown={onTabListKeys}>
         {GROUPS.map((x, i) => (
-          <button key={x.name} type="button" role="tab" aria-selected={i === group} className={cx('add-slide-tab', i === group && 'is-on')} onClick={() => setGroup(i)}>
+          <button key={x.name} type="button" role="tab" aria-selected={i === group} tabIndex={i === group ? 0 : -1} className={cx('add-slide-tab', i === group && 'is-on')} onClick={() => setGroup(i)}>
             {x.name}
             <span className="add-slide-n">{x.layouts.length}</span>
           </button>
