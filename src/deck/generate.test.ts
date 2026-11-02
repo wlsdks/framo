@@ -3,7 +3,7 @@ import { asksDecision, AUDIENCES, BLUEPRINTS, DECK_GROUPS, DECK_TYPES, DURATIONS
 import { createDeck, planRecipes, priorityFor, targetCount } from './generate'
 import { hintFor, LAYOUT_GROUPS, LAYOUT_ORDER, LAYOUTS, logoColumns } from './layouts'
 import { showcaseSlides } from './showcase'
-import { scoreOf } from '../slides/numbers'
+import { scoreOf, seriesIn } from '../slides/numbers'
 
 describe('planRecipes', () => {
   it('발표 시간에 맞는 장 수를 넘지 않는다', () => {
@@ -254,6 +254,33 @@ describe('createDeck', () => {
       }
     }
     expect([...wrong]).toEqual([])
+  })
+
+  it('추이 예시의 목표선은 예시 숫자와 같은 크기다: 동떨어진 목표선이 그래프 바닥에 그어지지 않게', () => {
+    // 조사·분석 보고의 시장 추이는 값 예시(600~1,200억 원)만 주고 목표 예시를 주지 않아, 레이아웃의 예시 목표(120)가 그래프 바닥에
+    // '목표 120'으로 그어졌다(주간 업무 보고의 문의 240~380건도). 목표가 어울리지 않는 이야기는 숫자 아닌 안내로 둔다(선을 긋지 않는다)
+    const wrong: string[] = []
+    for (const [type, bp] of Object.entries(BLUEPRINTS)) {
+      for (const r of bp.recipes) {
+        const spec = LAYOUTS[r.layout]
+        if (!spec.items || !spec.fields.some((f) => f.key === 'target')) continue
+        const hints = r.hints ?? {}
+        const unit = hintFor(r.layout, hints, 'unit')
+        const count = r.items ?? spec.items.default
+        const values = seriesIn(Array.from({ length: count }, (_, i) => hintFor(r.layout, hints, 'value', 'value', i)), unit).values.filter((v): v is number => v !== null)
+        const target = seriesIn([hintFor(r.layout, hints, 'target')], unit).values[0]
+        if (target == null || !values.length) continue
+        const [lo, hi] = [Math.min(...values), Math.max(...values)]
+        // 축은 목표까지 담아 그리니, 값 범위에서 멀면 예시 선이 납작해지고 목표선은 바닥이나 천장에 붙는다
+        if (target < lo * 0.75 || target > hi * 1.25) wrong.push(`${type} ${r.purpose}: 목표 ${target}, 값 ${lo}~${hi}`)
+      }
+    }
+    expect(wrong).toEqual([])
+    // 예전에 만든 발표(장에 저장된 예시)도 같다: 항목 예시를 따로 준 장에는 레이아웃 이야기의 목표(120)를 섞지 않는다
+    const market = { title: '5년 동안 시장이 두 배가 됐어요', 'items.0.value': '600', 'items.5.value': '1,200' }
+    expect(seriesIn([hintFor('trend', market, 'target')]).values[0]).toBeNull()
+    // 레이아웃의 예시 그대로인 장(빈 발표에 더한 추이, 장 모음)은 그 이야기의 목표로 예시 선을 긋는다
+    expect(hintFor('trend', {}, 'target')).toBe('120')
   })
 
   it('실적 보고의 깔때기 예시는 제목대로 제안까지 간 다섯 곳 중 한 곳이 계약한다', () => {
