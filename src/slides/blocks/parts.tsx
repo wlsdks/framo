@@ -1,10 +1,10 @@
 // 여러 부품이 같이 쓰는 조각: 빈 칸의 예시 값, 사람 모양, 차트 범례, 값 나누기, 숫자 글자
 
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { readField } from '../../deck/fields'
 import { hintFor } from '../../deck/layouts'
 import { useSlide } from '../context'
-import { minusSigns, splitNumber, T } from '../fields'
+import { minusSigns, numberRuns, T } from '../fields'
 import { formatNumber, seriesIn } from '../numbers'
 
 /** 편집할 때 비어 있으면 안내 문구의 예시 숫자로 흐리게 그린다. 발표할 때는 적은 값만 */
@@ -100,13 +100,17 @@ export function tokensOf(text: string): string[] {
 /** 숫자 글: 빼기 기호로 바꾸고, 붙여 쓴 단위('58억')는 두 단계 작은 글자로 뗀다 (fields.tsx의 Shown과 같은 꼴) */
 export function Numeral({ text }: { text: string }) {
   const t = minusSigns(text)
-  const p = splitNumber(t)
+  const p = numberRuns(t)
   if (!p) return <>{t}</>
   return (
     <>
       {p.pre && <span className="u u-pre">{p.pre}</span>}
-      {p.num}
-      {p.unit && <span className="u">{p.unit}</span>}
+      {p.runs.map((r, i) => (
+        <Fragment key={i}>
+          {r.num}
+          {r.unit && <span className="u">{r.unit}</span>}
+        </Fragment>
+      ))}
     </>
   )
 }

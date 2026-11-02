@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ElementType } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ElementType } from 'react'
 import { isBlankItem, readField } from '../deck/fields'
 import { hintFor, labelIn, LAYOUTS, rowHint } from '../deck/layouts'
 import type { ItemKey } from '../deck/types'
@@ -70,12 +70,43 @@ export function splitNumber(text: string): { pre?: string; num: string; unit: st
   return m[1] ? { pre: m[1], num: m[2], unit: m[3] } : { num: m[2], unit: m[3] }
 }
 
+/** 숫자 하나와 그 뒤의 단위 */
+export interface NumberRun {
+  num: string
+  unit: string
+}
+
+const NUM = String.raw`\d[\d,]*(?:\.\d+)?`
+/**
+ * 숫자가 둘 이상인 값: 숫자마다 짧은 한글 단위가 붙어 이어지는 꼴('6분 30초', '3억 5,000만 원', '1시간 30분', '3년 6개월').
+ * 앞에는 숫자 하나의 꼴과 같은 덧말과 부호만
+ */
+const COMPOUND = new RegExp(`^([가-힣]{1,3} )?([+\\-−–±▲▼△▽$₩€£¥]?\\s?)((?:${NUM}[가-힣]{1,2} ?)+)(${NUM})(\\D{1,8})$`)
+const RUN = new RegExp(`(${NUM})([가-힣]{1,2} ?)`, 'g')
+
+/**
+ * 큰 숫자를 앞말과 '숫자, 단위' 묶음들로 나눈다. 숫자 하나면 splitNumber와 같고, 숫자가 둘 이상인 값('6분 30초', '3억 5,000만 원')은
+ * 숫자마다 단위를 뗀다: 나누지 않던 때는 단위가 숫자와 같은 크기로 그려져, 옆의 '62%'와 한 장에서 말투가 달랐다.
+ * 글자는 하나도 바꾸지 않는다(앞말과 묶음을 이으면 원래 글). 둘 다 아니면 null
+ */
+export function numberRuns(text: string): { pre?: string; runs: NumberRun[] } | null {
+  const one = splitNumber(text)
+  if (one) return one.pre ? { pre: one.pre, runs: [{ num: one.num, unit: one.unit }] } : { runs: [{ num: one.num, unit: one.unit }] }
+  const m = COMPOUND.exec(text)
+  if (!m) return null
+  const runs = [...m[3].matchAll(RUN)].map((r) => ({ num: r[1], unit: r[2] }))
+  runs[0] = { num: m[2] + runs[0].num, unit: runs[0].unit }
+  runs.push({ num: m[4], unit: m[5] })
+  return m[1] ? { pre: m[1], runs } : { runs }
+}
+
 /** 단위를 작게 그리는 큰 숫자의 폭(em). 나란한 숫자들이 같은 크기를 고를 때 쓴다 */
 export function numberUnits(text: string): number {
   const t = text.trim()
-  const parts = splitNumber(t)
+  const parts = numberRuns(t)
   if (!parts) return textUnits(t)
-  return Math.max(1, glyphWidth(parts.num) + glyphWidth((parts.pre ?? '') + parts.unit) * UNIT_K)
+  const small = (parts.pre ?? '') + parts.runs.map((r) => r.unit).join('')
+  return Math.max(1, glyphWidth(parts.runs.map((r) => r.num).join('')) + glyphWidth(small) * UNIT_K)
 }
 
 interface TextProps {
@@ -133,26 +164,30 @@ function Glued({ text }: { text: string }) {
 /** 발표 화면의 글: 빼기 기호를 바로 쓰고, 큰 숫자면 단위를 작은 글자로 떼어 낸다 */
 function Shown({ text, numeral }: { text: string; numeral?: boolean }) {
   const t = minusSigns(text)
-  const parts = numeral ? splitNumber(t) : null
+  const parts = numeral ? numberRuns(t) : null
   if (!parts) return <Glued text={t} />
   return (
     <>
       {parts.pre && <span className="u u-pre">{parts.pre}</span>}
-      {parts.num}
-      {parts.unit && <span className="u">{parts.unit}</span>}
+      {parts.runs.map((r, i) => (
+        <Fragment key={i}>
+          {r.num}
+          {r.unit && <span className="u">{r.unit}</span>}
+        </Fragment>
+      ))}
     </>
   )
 }
 
 /** 큰 숫자의 앞말, 숫자, 단위를 칸에 넣을 조각으로 (앞말과 단위는 작은 글자) */
-function numberNodes(parts: { pre?: string; num: string; unit: string }): (Node | string)[] {
+function numberNodes(parts: { pre?: string; runs: NumberRun[] }): (Node | string)[] {
   const span = (text: string, cls: string) => {
     const el = document.createElement('span')
     el.className = cls
     el.textContent = text
     return el
   }
-  return [...(parts.pre ? [span(parts.pre, 'u u-pre')] : []), parts.num, ...(parts.unit ? [span(parts.unit, 'u')] : [])]
+  return [...(parts.pre ? [span(parts.pre, 'u u-pre')] : []), ...parts.runs.flatMap((r) => [r.num, ...(r.unit ? [span(r.unit, 'u')] : [])])]
 }
 
 /**
@@ -160,7 +195,7 @@ function numberNodes(parts: { pre?: string; num: string; unit: string }): (Node 
  * 글자는 하나도 바꾸지 않아서(빼기 기호도 그대로) 칸의 innerText가 적은 글과 같다
  */
 function paint(el: HTMLElement, value: string, numeral?: boolean) {
-  const parts = numeral ? splitNumber(value) : null
+  const parts = numeral ? numberRuns(value) : null
   // 숫자와 조사를 묶을 낱말이 있으면 발표 화면처럼 줄을 꺾지 않는 조각(.nb)에 (Glued)
   const glued = parts ? null : gluedParts(value)
   if (glued) {
