@@ -8,6 +8,7 @@ import type { OverField } from '../../slides/overflow'
 import type { AiAsk } from '../../ai/useAiAsk'
 import type { AiShare } from '../../ai/useAiShare'
 import { cx } from '../../lib/cx'
+import { onMenuKeys } from '../../lib/menuKeys'
 import { useDeck } from '../../store/deckStore'
 import { AlertIcon, BlocksIcon, CopyIcon, EyeIcon, EyeOffIcon, MoreIcon, PlayIcon, PlusIcon, Popover, ScreenIcon, SlidersIcon, TrashIcon } from '../ui'
 import { SlideAsk } from './AiShare'
@@ -315,7 +316,7 @@ export function StageTools({
           )}
         >
           {(close) => (
-            <div className="menu stage-menu" role="menu">
+            <div className="menu stage-menu" role="menu" onKeyDown={onMenuKeys}>
               <button
                 type="button"
                 role="menuitem"
