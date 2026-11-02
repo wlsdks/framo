@@ -734,7 +734,10 @@ export function hintFor(
   const spec = LAYOUTS[layout]
   if (itemKey) {
     const f = spec.items?.fields.find((x) => x.key === itemKey)
-    return (index !== undefined && f?.hints?.[index]) || f?.hint || ''
+    // 줄마다 다른 예시는 한 이야기다. 발표 종류의 예시가 있는 장에 레이아웃의 예시를 섞으면 '결과 공유회 · 처리 시간을 다시 잼'처럼
+    // 앞뒤가 맞지 않는 줄이 되니, 그때 빈 칸은 칸의 안내만 보인다
+    const own = Object.keys(hints).some((k) => /^items\.\d+\./.test(k))
+    return (index !== undefined && !own && f?.hints?.[index]) || f?.hint || ''
   }
   return spec.fields.find((f) => f.key === key)?.hint ?? ''
 }
