@@ -283,5 +283,3 @@ export function createUpdater({ version, platform = process.platform, get = node
 
   return { latest, download }
 }
-
-export type Updater = ReturnType<typeof createUpdater>
