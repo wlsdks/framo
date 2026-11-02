@@ -171,6 +171,7 @@ export type NativeBlockType =
   | 'merge'
   | 'tiles'
   | 'calc'
+  | 'likert'
   | 'heading'
   | 'stat'
   | 'meter'

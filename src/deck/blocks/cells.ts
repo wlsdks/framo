@@ -128,6 +128,7 @@ const FOLD_USES: Partial<Record<BlockType, Record<string, string>>> = {
   rating: { pick: '추천하는 안을 강조색으로 짚어요 (예: B안)', 'items.meta': '기준마다 한 줄 설명' },
   market: { 'items.body': '원마다 어떤 시장인지 한 줄' },
   diverge: { basis: '무엇과 견준 증감인지 (예: 작년 대비)' },
+  likert: { scale: '답의 단계 이름을 바꿔요 (예: 매우 불만, 불만, 보통, 만족, 매우 만족). 비우면 단계 수에 맞는 이름', basis: '응답 수나 조사한 때 (예: 응답 140명, 10월)' },
   sparks: { period: '흐름을 본 기간 (예: 4월~9월)', 'items.meta': '지표마다 지금 값 뒤에 붙는 단위' },
   flow: { what: '무엇이 오가는지 맨 위에 한 줄 (예: 신청 데이터)', 'items.meta': '단계마다 어느 시스템, 누가 맡는지', 'items.value': '단계마다 오가는 양 (예: 320건)' },
   decision: { label: '질문 위에 확인할 기준을 짧게 적어요' },

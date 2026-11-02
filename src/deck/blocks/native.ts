@@ -876,6 +876,51 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  likert: {
+    name: '설문 결과',
+    description: '질문마다 답(전혀 아니다~매우 그렇다)의 비율을 가운데에서 양쪽으로 갈라 쌓고, 긍정 합계를 짚어요',
+    motion: '막대가 가운데 선에서 양쪽으로 자라고, 합계가 굴러 맞춰져요',
+    variants: [
+      { id: 'pos', name: '긍정 쪽 강조' },
+      { id: 'neg', name: '부정 쪽 강조' },
+    ],
+    fields: [
+      { key: 'heading', label: '소제목', hint: '예: 신입 교육 만족도', optional: true },
+      { key: 'scale', label: '답의 단계', hint: '전혀 아니다, 아니다, 보통, 그렇다, 매우 그렇다', optional: true },
+      { key: 'basis', label: '응답', hint: '예: 응답 140명', optional: true },
+    ],
+    items: {
+      label: '질문',
+      min: 1,
+      max: 6,
+      default: 4,
+      fields: [
+        {
+          key: 'title',
+          label: '질문',
+          hint: '질문',
+          hints: ['교육 내용이 업무에 도움이 됐다', '강사의 설명이 알기 쉬웠다', '교육 시간이 알맞았다', '동료에게 권하고 싶다', '실습 시간이 넉넉했다', '교육 장소가 편했다'],
+        },
+        {
+          key: 'value',
+          label: '비율',
+          hint: '단계마다 쉼표로 (예: 4, 8, 20, 43, 25)',
+          hints: ['3, 7, 18, 45, 27', '2, 6, 22, 48, 22', '8, 17, 30, 32, 13', '4, 9, 25, 38, 24', '12, 21, 27, 28, 12', '5, 10, 25, 40, 20'],
+        },
+      ],
+    },
+    minSpan: 6,
+    prefSpan: 8,
+    sample: {
+      fields: { heading: '신입 교육 만족도', basis: '응답 140명' },
+      items: [
+        { title: '교육 내용이 업무에 도움이 됐다', value: '3, 7, 18, 45, 27' },
+        { title: '강사의 설명이 알기 쉬웠다', value: '2, 6, 22, 48, 22' },
+        { title: '교육 시간이 알맞았다', value: '8, 17, 30, 32, 13' },
+        { title: '동료에게 권하고 싶다', value: '4, 9, 25, 38, 24' },
+      ],
+    },
+  },
   heading: {
     name: '소제목',
     description: '옆이나 아래 컴포넌트들을 묶는 짧은 제목 (지금 방식, 바꾸면)',

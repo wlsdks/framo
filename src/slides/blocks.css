@@ -49,6 +49,7 @@
 @import './styles/blocks/merge.css';
 @import './styles/blocks/tiles.css';
 @import './styles/blocks/calc.css';
+@import './styles/blocks/likert.css';
 @import './styles/blocks/heading.css';
 @import './styles/blocks/stat.css';
 @import './styles/blocks/meter.css';
