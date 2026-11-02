@@ -325,10 +325,11 @@ export function motionEngine(): MotionEngine {
    * 0부터 그 숫자까지(한 바퀴 더) 굴린다. 왼쪽 자리부터 차례로 멈춘다. 다 굴러가면 창을 걷고 원래 글자로.
    * 글자 상자를 잴 수 없으면(안 보이는 칸) false를 돌려준다. 그때는 0부터 올리기로.
    */
-  function roll(el: Element, at: number, duration: number, lively: boolean, anims: Animation[], restores: (() => void)[]) {
+  function roll(el: Element, at: number, duration: number, lively: boolean, anims: Animation[], restores: (() => void)[], nth = 0) {
+    // 숫자가 든 nth째 글 조각. 숫자가 둘인 값('3시간 30분')은 숫자마다 조각이 나뉘어 조각마다 굴린다(play의 count)
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
     let node = walker.nextNode() as Text | null
-    while (node && !/\d/.test(node.nodeValue || '')) node = walker.nextNode() as Text | null
+    for (let seen = -1; node; node = walker.nextNode() as Text | null) if (/\d/.test(node.nodeValue || '') && ++seen === nth) break
     const parent = node && node.parentElement
     if (!node || !parent) return false
     const text = node.nodeValue || ''
@@ -675,7 +676,7 @@ export function motionEngine(): MotionEngine {
     }
     /**
      * 칸 안에서 숫자가 든 글 조각 수. 숫자가 둘인 값('6분 30초', '3억 5,000만 원')은 단위를 작게 떼어 그려서(fields.tsx의 numberRuns)
-     * 숫자마다 조각이 나뉜다. 굴리기와 올리기는 숫자 하나만 다뤄서, 그런 값은 앞 숫자만 구르고 뒤 숫자는 그대로 서 있었다
+     * 숫자마다 조각이 나뉜다. 굴리기와 올리기는 조각 하나만 다뤄서, 그런 값을 한 번 굴리면 앞 숫자만 구르고 뒤 숫자는 서 있었다
      */
     const digitTexts = (el: Element) => {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
@@ -686,10 +687,14 @@ export function motionEngine(): MotionEngine {
     const count = (el: Element | null, at: number) => {
       // 편집 중인 칸의 글자는 바꾸지 않는다 (쓰고 있는 글과 엇갈리지 않게). 옮겨 온 숫자는 다시 굴리지 않는다
       if (!el || still || el.closest('.m-edit, [data-mo-keep]')) return
-      // 숫자가 둘인 값은 그대로 둔다 (digitTexts)
-      if (digitTexts(el) > 1) return
       // 자리마다 굴린다. 생동감은 조금 더 길게 구른다. 굴릴 수 없는 칸은 0부터 올린다
       const lively = levelName === 'lively'
+      // 숫자가 둘인 값은 숫자 조각마다 굴린다(digitTexts). 0부터 올리기는 숫자 하나만 다뤄서, 굴릴 수 없으면 그대로 둔다
+      const runs = digitTexts(el)
+      if (runs > 1) {
+        for (let i = 0; i < runs; i++) roll(el, s(at), lively ? 900 : 800, lively, anims, restores, i)
+        return
+      }
       // 숫자는 장이 나오고 2초 안에 다 멈춘다(녹화해 보니 1.3초씩 굴리면 다음 장으로 넘길 때까지 굴러가고 있었다)
       if (!roll(el, s(at), lively ? 900 : 800, lively, anims, restores))
         countUp(el, s(at), (lively ? 1000 : 800) * pace, stops, waits)

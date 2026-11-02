@@ -194,13 +194,19 @@ describe('움직임 엔진', () => {
     }
   })
 
-  it('숫자가 둘인 값(6분 30초)은 굴리거나 올리지 않는다: 숫자마다 조각이 나뉘어 앞 숫자만 구르고 뒤 숫자는 서 있지 않게', () => {
+  it('숫자가 둘인 값(3시간 30분)은 숫자 조각마다 굴린다: 앞 숫자만 구르고 뒤 숫자는 서 있지 않게', () => {
+    // 숫자마다 단위를 작게 떼어 그리면(fields.tsx의 numberRuns) 숫자가 든 글 조각이 둘이 된다. 굴리기는 글 조각 하나만 다뤄서
+    // 그런 값을 건너뛰었고, 옆의 '−50%'는 굴러 맞춰지는데 '3시간 30분'만 그냥 서 있었다
     const src = motionEngine.toString()
-    for (const name of ['count', 'tally']) {
-      const at = src.indexOf(`const ${name} = (`)
-      const body = src.slice(at, src.indexOf('\n    }', at))
-      expect(body, name).toMatch(/digitTexts\(el\) > 1/)
-    }
+    const at = src.indexOf('const count = (')
+    const count = src.slice(at, src.indexOf('\n    }', at))
+    expect(count).toMatch(/digitTexts\(el\)/)
+    // 조각마다 몇째 조각인지 넘겨 굴린다
+    expect(count).toMatch(/roll\(el, s\(at\), [^\n]*restores, \w+\)/)
+    expect(src.slice(src.indexOf('function roll('), src.indexOf('function roll(') + 200)).toMatch(/nth/)
+    // 합계 올리기는 숫자 하나만 다루니 숫자가 둘인 합계는 그대로 둔다
+    const t = src.indexOf('const tally = (')
+    expect(src.slice(t, src.indexOf('\n    }', t))).toMatch(/digitTexts\(el\) > 1/)
   })
 
   it('고를 수 있는 장면마다 엔진이 짠 컷이 있다 (없으면 장면을 골라도 소리 없이 연출표만 움직인다)', () => {
