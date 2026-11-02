@@ -4,7 +4,7 @@ import { agenda, closing, each, plainCover, summary, type Blueprint } from './re
 export const proposal: Blueprint = {
   type: 'proposal',
   name: '대외 제안',
-  description: '외부의 듣는 분께 해결 방법과 진행 방식을 제안해요',
+  description: '외부에 해결 방법과 진행 방식을 제안해요',
   storyline: ['필요', '제안', '진행 방식', '다음 단계'],
   showcase: ['필요와 목표', '제안 내용', '진행 일정', '다음 단계'],
   defaultTitle: '대외 제안',
