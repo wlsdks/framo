@@ -97,7 +97,11 @@ export const report: Blueprint = {
       priority: 3,
       focus: 'detail',
       guide: '많이 빠지는 단계가 다음 계획의 근거가 돼요.',
-      hints: { title: '제안까지 간 고객 다섯 중 한 곳이 계약했어요', unit: '곳' },
+      hints: {
+        title: '제안까지 간 고객 다섯 중 한 곳이 계약했어요',
+        unit: '곳',
+        ...each({ title: ['문의', '미팅', '제안', '계약'], value: ['80', '32', '15', '3'] }),
+      },
     },
     {
       layout: 'points',

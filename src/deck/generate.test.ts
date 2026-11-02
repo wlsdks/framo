@@ -238,6 +238,33 @@ describe('createDeck', () => {
     expect(scores.filter((s) => s.met)).toHaveLength(3)
   })
 
+  it('예시 제목이 세는 수와 장의 줄 수가 같다', () => {
+    // 주간 업무 보고의 '이슈와 대응'은 제목 예시가 '두 가지가 막혀 있어요'인데 예시 줄은 셋이었다.
+    // 예시가 어긋나 있으면 쓰는 사람도 제목과 줄 수가 맞지 않는 채로 따라 적는다
+    const NUM: Record<string, number> = { 두: 2, 세: 3, 네: 4, 다섯: 5, 여섯: 6 }
+    const wrong = new Set<string>()
+    for (const type of DECK_TYPES) {
+      for (const a of AUDIENCES) {
+        for (const d of DURATIONS) {
+          for (const s of createDeck({ ...input, type, audience: a.id, minutes: d.minutes }).slides) {
+            const m = (s.hints.title ?? '').match(/(두|세|네|다섯|여섯) ?(가지|과제|단계|팀|목표|지표)/)
+            if (m && s.items.length !== NUM[m[1]]) wrong.add(`${type} ${s.layout} '${s.hints.title}' 줄 ${s.items.length}`)
+          }
+        }
+      }
+    }
+    expect([...wrong]).toEqual([])
+  })
+
+  it('실적 보고의 깔때기 예시는 제목대로 제안까지 간 다섯 곳 중 한 곳이 계약한다', () => {
+    // 줄마다 예시가 없어 레이아웃의 예시(지원, 서류 통과, 면접, 최종 합격)가 보였다: 제목은 고객과 계약인데 줄은 채용 이야기였고, 단위는 '곳'이었다
+    const recipe = BLUEPRINTS.report.recipes.find((r) => r.layout === 'funnel')!
+    expect(recipe.hints?.title).toBe('제안까지 간 고객 다섯 중 한 곳이 계약했어요')
+    const rows = [0, 1, 2, 3].map((i) => ({ title: hintFor('funnel', recipe.hints!, 'title', 'title', i), value: Number(hintFor('funnel', recipe.hints!, 'value', 'value', i)) }))
+    expect(rows.map((r) => r.title)).toEqual(['문의', '미팅', '제안', '계약'])
+    expect(rows[2].value / rows[3].value).toBe(5)
+  })
+
   it('제목을 비우면 보고 종류의 기본 제목을 쓴다', () => {
     const deck = createDeck({ ...input, type: 'report', title: '', ask: '' })
     expect(deck.title).toBe('실적 보고')
