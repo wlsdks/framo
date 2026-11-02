@@ -1,14 +1,13 @@
-import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type Announcements, type DragEndEvent, type UniqueIdentifier } from '@dnd-kit/core'
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent, type UniqueIdentifier } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
-import { keys } from '../../lib/keys'
 import { slideName } from '../../deck/blocks'
 import { missingFields, pageInfo } from '../../deck/fields'
 import type { Deck, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { josa } from '../../lib/josa'
-import { useListDrag } from '../../lib/listDrag'
+import { listAccessibility, useListDrag } from '../../lib/listDrag'
 import { slideOverflow } from '../../slides/overflow'
 import { ScaledSlide, SlideCanvas, useStableSections } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
@@ -45,17 +44,7 @@ export function SlideList({ deck, selectedId }: { deck: Deck; selectedId: string
     return i < 0 ? '슬라이드' : `${i + 1}번째 슬라이드 ‘${slideName(deck.slides[i])}’`
   }
   const placeOf = (id: UniqueIdentifier) => deck.slides.findIndex((s) => s.id === id) + 1
-  const announcements: Announcements = {
-    onDragStart: ({ active }) => `${josa(nameOf(active.id), '을', '를')} 집었어요.`,
-    onDragOver: ({ over }) => (over ? `${placeOf(over.id)}번째 자리 위에 있어요.` : '목록 밖에 있어요.'),
-    onDragEnd: ({ active, over }) =>
-      over && over.id !== active.id ? `${josa(nameOf(active.id), '을', '를')} ${placeOf(over.id)}번째 자리에 놓았어요.` : `${josa(nameOf(active.id), '은', '는')} 제자리에 있어요.`,
-    onDragCancel: ({ active }) => `옮기기를 그만뒀어요. ${josa(nameOf(active.id), '은', '는')} 제자리에 있어요.`,
-  }
-  const accessibility = {
-    announcements,
-    screenReaderInstructions: { draggable: `마우스로 끌어 순서를 바꿔요. 키보드로는 ${keys('alt+↑')}, ${keys('alt+↓')}로 한 칸씩 옮겨요.` },
-  }
+  const accessibility = listAccessibility(nameOf, placeOf)
 
   const onDragEnd = (e: DragEndEvent) => {
     drag.end()
