@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { autoPlace, makeBlock } from '../deck/blocks'
 import { makeSlide } from '../deck/generate'
 import { createSampleDeck } from '../deck/sample'
+import { cssSource } from './cssSource'
 import { SlideCanvas } from './SlideCanvas'
 
 function render(causes: string[], opts: { variant?: string; mode?: 'final' | 'edit'; problem?: string } = {}): string {
@@ -51,6 +52,16 @@ describe('원인 캐기', () => {
     expect(html).toContain('월간 보고가 매달 이틀 늦어요')
     expect(html).not.toContain('근본 원인')
     expect(html).not.toContain('왜?')
+  })
+
+  it('단 사이는 장이 덜 찰 때 넓히는 줄 사이(--bk-air)를 받지 않는다', () => {
+    // 단 사이(--wy-gap)는 앞 단에서 갈고리가 꺾여 들어올 자리라 이미 글 높이의 1.3배쯤이다. 장이 덜 차서 맞추기(fitBlocks)가 줄 사이를
+    // 12px 넓히면 그대로 더해져, 그려진 글 사이가 글 높이의 두 배를 넘었다(docs/VISUAL-RULES.md 6. 강조 상자 4칸 옆 원인 캐기 8칸에서
+    // 글 27px, 사이 59px). 명조 제목처럼 글자가 낮은 글꼴은 반만 더해도 넘어서 받지 않는다
+    const css = cssSource(new URL('./styles/blocks/whys.css', import.meta.url)).replace(/\/\*[\s\S]*?\*\//g, '')
+    const gaps = [...css.matchAll(/--wy-gap:\s*([^;]+);/g)].map((m) => m[1])
+    expect(gaps.length).toBeGreaterThan(0)
+    for (const gap of gaps) expect(gap).not.toContain('--bk-air')
   })
 
   it('가로 모양은 같은 차례로 그리고 모양 표시만 다르다', () => {
