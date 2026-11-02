@@ -9,7 +9,8 @@ import { blockDrawn, blockEdgeSeen, blockFigures, blockTextLines } from '../slid
  * 그려진 장마다(발표 화면 모습, mode=final) 셋을 본다. 길이는 모두 캔버스 px(1920×1080 기준).
  * - 위계: 장 제목이 있으면, 부품 장만의 부품의 글이 제목만 하거나(같은 크기 이상) 제목과 같은 색, 굵기로 한 단계 안쪽이면(제목 ÷ 1.2 이상)
  *   제목과 다투는 것으로 본다. 강조색이나 버금 글자색의 글은 답이나 딸린 글이라,
- *   숫자와 단위는 답이라 제목과 다투지 않는다. 핵심 한 줄이 있으면 다른 부품의 문장이 그보다 크지 않아야 한다(결론이 넘어간다)
+ *   숫자와 단위는 답이라 제목과 다투지 않는다. 핵심 한 줄과 강조 상자의 글(답 글)이 있으면 다른 부품의 문장이 그보다 크지 않아야 한다
+ *   (근거가 결론보다 크면 위계가 거꾸로 읽힌다)
  * - 빈 띠와 세로 리듬(docs/VISUAL-RULES.md 6): 장 머리 아래와 부품 내용 사이, 부품 사이에 위아래로 빈 띠가 GAP_MAX(--body-gap의 1.5배)보다
  *   넓은 곳, 묶음 사이가 줄마다 다른 것, 줄이 내용의 두 배 넘게 늘어난 것. 남는 높이는 맨 아래 한곳에 모인다.
  *   내용은 칸이 아니라 그려진 것으로 잰다: 바탕 없는 칸은 글과 그림, 칠한 상자가 그려진 범위, 면이 있는 칸은 면 전체
@@ -72,32 +73,53 @@ const numeric = (s: string) => {
   return words.length <= 2 || (/\d/.test(s) && words.length <= 3)
 }
 
-/** 위계: 핵심 한 줄보다 큰 다른 부품의 글. 핵심 한 줄은 그 장의 결론이라(장 제목이 없으면 곧 제목) 다른 부품의 문장이 더 크면 결론이 넘어간다 */
-function overMessage(area: HTMLElement): string[] {
-  const msg = area.querySelector<HTMLElement>(':scope > .bk-message .bk-msg-t')
-  if (!msg) return []
-  const mfs = parseFloat(getComputedStyle(msg).fontSize)
+/**
+ * 답 글: 핵심 한 줄은 그 장의 결론이고(장 제목이 없으면 곧 제목), 강조 상자의 글은 꼭 알아야 할 것(결정 요청)이다. 답 글을 가린 글자,
+ * 이름, 견주지 않는 부품(다른 답), 본문 단계 밑에서 시작한 글(근거)하고만 견주는지. 강조 상자는 핵심 한 줄보다 크지 않으면 되고,
+ * 강조 상자끼리는 견주지 않고, 소제목처럼 본문보다 큰 단계에서 시작한 글은 묶음의 이름이라 강조 상자보다 커도 된다(fitBlocks의 answers와 같다)
+ */
+const ANSWERS = [
+  { text: '.bk-msg-t', name: '핵심 한 줄', skip: '.bk-message', bodyOnly: false },
+  { text: '.bk-call-t', name: '강조 상자의 글', skip: '.bk-message, .bk-callout', bodyOnly: true },
+]
+
+/**
+ * 위계: 답 글보다 큰 다른 부품의 글. 답보다 근거의 문장이 크면 결론이 넘어간다(강조 상자의 결정 요청 30px 아래에 준비 상황의 항목이 36px.
+ * 강조 상자는 긴 글과 낮은 칸에서 한 단계씩 줄고, 옆 목록은 장에 자리가 남아 키워졌다)
+ */
+function overAnswer(area: HTMLElement): string[] {
   const out = new Set<string>()
-  for (const cell of area.querySelectorAll<HTMLElement>(':scope > .bk:not(.bk-layout):not(.bk-message)')) {
-    // 그림 안의 이름표(연결도의 가운데 상자 같은)는 문장이 아니라 그림의 일부라 견주지 않는다
-    if (FIGURE_TYPES.has(cell.dataset.type ?? '')) continue
-    const inner = cell.querySelector<HTMLElement>(':scope > .bk-in')
-    if (!inner) continue
-    for (const q of blockTextLines(inner)) {
-      const el = q.n.parentElement
-      const text = (q.n.textContent ?? '').trim()
-      if (!el || !hangul(text) || numeric(text)) continue
-      const fs = parseFloat(getComputedStyle(el).fontSize)
-      if (fs > mfs + 0.5) out.add(`${cell.dataset.type}: 글이 핵심 한 줄보다 커요(${Math.round(fs)} > ${Math.round(mfs)}) 「${text.slice(0, 12)}」`)
+  const body = parseFloat(getComputedStyle(area).getPropertyValue('--t-body')) || 30
+  for (const { text: sel, name, skip, bodyOnly } of ANSWERS)
+    for (const answer of area.querySelectorAll<HTMLElement>(`:scope > .bk ${sel}`)) {
+      const own = answer.closest<HTMLElement>('.bk')!
+      const ownInner = own.querySelector<HTMLElement>(':scope > .bk-in')
+      // 글이 그려진 답만 (편집 화면의 빈칸 안내는 쓸 글의 자리라 보지 않는다)
+      if (!ownInner || !blockTextLines(ownInner).some((q) => answer.contains(q.n) && hangul(q.n.textContent ?? ''))) continue
+      const afs = parseFloat(getComputedStyle(answer).fontSize)
+      for (const cell of area.querySelectorAll<HTMLElement>(':scope > .bk:not(.bk-layout)')) {
+        // 그림 안의 이름표(연결도의 가운데 상자 같은)는 문장이 아니라 그림의 일부라 견주지 않는다
+        if (cell === own || cell.matches(skip) || FIGURE_TYPES.has(cell.dataset.type ?? '')) continue
+        const inner = cell.querySelector<HTMLElement>(':scope > .bk-in')
+        if (!inner) continue
+        for (const q of blockTextLines(inner)) {
+          const el = q.n.parentElement
+          const text = (q.n.textContent ?? '').trim()
+          if (!el || !hangul(text) || numeric(text)) continue
+          const cs = getComputedStyle(el)
+          if (bodyOnly && !(parseFloat(cs.getPropertyValue('--fs')) <= body + 0.5)) continue
+          const fs = parseFloat(cs.fontSize)
+          if (fs > afs + 0.5) out.add(`${cell.dataset.type}: 글이 ${name}보다 커요(${Math.round(fs)} > ${Math.round(afs)}) 「${text.slice(0, 12)}」`)
+        }
+      }
     }
-  }
   return [...out]
 }
 
 /** 위계: 장 제목과 다투는 부품의 글 */
 function rivals(slide: HTMLElement, area: HTMLElement): string[] {
   const title = slide.querySelector<HTMLElement>('.s-title')
-  if (!title || title.matches('.is-hint, .is-empty') || !title.textContent?.trim()) return overMessage(area)
+  if (!title || title.matches('.is-hint, .is-empty') || !title.textContent?.trim()) return overAnswer(area)
   const ts = getComputedStyle(title)
   const tfs = parseFloat(ts.fontSize)
   const out = new Set<string>()
@@ -118,7 +140,7 @@ function rivals(slide: HTMLElement, area: HTMLElement): string[] {
       else if (same && fs * 1.2 >= tfs - 0.5) out.add(`${cell.dataset.type}: 장 제목과 같은 색, 굵기에 크기가 한 단계 안쪽이라 제목과 다퉈요(${Math.round(fs)}, 제목 ${Math.round(tfs)}) 「${text.slice(0, 12)}」`)
     }
   }
-  return [...out, ...overMessage(area)]
+  return [...out, ...overAnswer(area)]
 }
 
 /** 빈 띠: 장 머리 아래와 내용 사이 */
