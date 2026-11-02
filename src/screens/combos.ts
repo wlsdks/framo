@@ -93,6 +93,10 @@ const SCENES: BlockType[][][] = [
   [['likert'], ['callout', 'bullets', 'text']],
   // 원인 캐기와 대책: 근본 원인 옆이나 아래에 고칠 것
   [['whys'], ['callout', 'bullets', 'checks']],
+  // 도는 주기와 이번 차례: 고리 옆에 지금 하는 일이나 한마디
+  [['cycle'], ['callout', 'bullets', 'text', 'checks']],
+  // 주기를 돌린 결과: 숫자 하나 옆에 고리. 글과 짝지으면 글이 한 줄을 다 써서 고리가 늘 낮은 줄(가로)에만 놓였다
+  [['number', 'stat', 'ring'], ['cycle']],
 ]
 
 /** 어느 장면에도 없는 부품은 설명 글과 짝지은 장면으로 (새 부품을 더해도 시험에서 빠지지 않게) */

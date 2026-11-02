@@ -167,6 +167,7 @@ export type NativeBlockType =
   | 'flow'
   | 'decision'
   | 'whys'
+  | 'cycle'
   | 'network'
   | 'split'
   | 'merge'

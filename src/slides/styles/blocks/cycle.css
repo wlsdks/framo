@@ -1,0 +1,427 @@
+/* ---------- 순환 ----------
+   단계를 차례로 거쳐 처음으로 돌아오는 고리. 칸에 따라 짜임을 바꾼다(docs/DESIGN.md의 '짜임 바꾸기'):
+   넓고 높은 칸은 고리 둘레에 12시부터 시계 방향으로(고리), 넓고 낮은 칸은 왼쪽에서 오른쪽으로 놓고 위로 돌아가는 선(가로),
+   좁은 칸은 위에서 아래로 놓고 왼쪽의 괄호 선(⊏)으로 처음 단계에 돌아간다(세로).
+   잇는 선은 흐름, 연결도와 같다: 옅은 글자색, 줄 선의 1.5배 굵기, 꽉 찬 머리와 점(flow.css). 선은 단계끼리의 관계라 답이 아니어서
+   강조색을 쓰지 않는다 */
+.bk-cy {
+  --cy-c: var(--ink-3);
+  --cy-line: calc(var(--rule-hair) * 1.5);
+  --cy-head: 16px;
+  --cy-port: 12px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.bk-cy > .bk-h {
+  margin-bottom: 20px;
+}
+
+/* 단계를 담는 판. 글자 크기(base.css의 --fs)는 단계의 이름과 같아서, 고리 반지름과 이름표 자리(em)를 이름 글자에 맞춰 잡는다.
+   em으로 자리를 잡는 것(고리, 점, 머리, 가운데 이름의 상자, 단계)은 모두 이 글자 크기를 물려받는다 */
+.bk-cy-stage {
+  --fs: var(--t-body);
+  /* 괄호 선이 서는 너비와 단계 사이 */
+  --cy-in: 1.5em;
+  --cy-row: calc(20px * var(--bk-fit, 1) + var(--bk-air, 0px));
+  position: relative;
+}
+
+.bk-cy-ring,
+.bk-cy-marks {
+  display: none;
+}
+
+.bk-cy-line {
+  fill: none;
+  stroke: var(--cy-c);
+  stroke-width: var(--cy-line);
+  vector-effect: non-scaling-stroke;
+}
+
+/* 이 순환의 이름: 세로와 가로에서는 목록 위의 이름표(번호와 같은 왼쪽 끝), 고리에서는 고리 가운데 */
+.bk-cy-mid {
+  margin-bottom: 16px;
+  padding-left: var(--cy-in);
+}
+
+.bk-cy-c {
+  --fs: var(--t-small);
+  display: block;
+  color: var(--ink-3);
+  font-weight: 700;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.bk-cy-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cy-row);
+  margin: 0;
+  padding: 0 0 0 var(--cy-in);
+  list-style: none;
+}
+
+/* 단계 하나: 번호와 이름(그 아래 설명). 번호는 이름의 첫 줄에 기준선을 맞춘다.
+   번호 둘레의 선(.bk-cy-mark)은 세로에서는 상자 없이(contents) 단계의 칸에 그대로 놓이고, 가로에서는 번호와 잇는 선의 한 줄이 된다 */
+.bk-cy-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.6em minmax(0, 1fr);
+  align-items: baseline;
+  line-height: 1.35;
+}
+
+.bk-cy-mark {
+  display: contents;
+}
+
+.bk-cy-to {
+  display: none;
+}
+
+.bk-cy-n {
+  --fs: var(--t-source);
+  color: var(--ink-3);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+.bk-cy-text {
+  min-width: 0;
+}
+
+.bk-cy-t {
+  --fs: var(--t-body);
+  display: block;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.bk-cy-m {
+  --fs: var(--t-small);
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-2);
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+/* ---------- 세로: 돌아가는 괄호 선 ----------
+   단계마다 한 조각. 첫 단계는 이름의 첫 줄 높이에서 꺾여(┌) 머리로 들어가고, 가운데 단계는 옆을 지나고, 마지막 단계는 첫 줄
+   높이에서 꺾여(└) 나온다. 조각이 단계 사이(--cy-row)까지 내려가 이어지므로 이름이 몇 줄이든 끊기지 않는다.
+   선 끝은 머리의 가운데까지 들어가 머리 밑에 숨고, 머리 끝은 번호 0.3em 앞에 닿는다 */
+.bk-cy-rail {
+  position: absolute;
+  top: 0;
+  bottom: calc(-1 * var(--cy-row));
+  left: calc(-1 * var(--cy-in));
+  width: calc(var(--cy-in) - 0.3em - var(--cy-head) / 2);
+  border-left: var(--cy-line) solid var(--cy-c);
+}
+
+.bk-cy-step:first-child .bk-cy-rail {
+  top: 0.68em;
+  border-top: var(--cy-line) solid var(--cy-c);
+}
+
+.bk-cy-step:last-child .bk-cy-rail {
+  bottom: auto;
+  height: 0.68em;
+  border-bottom: var(--cy-line) solid var(--cy-c);
+}
+
+.bk-cy-step:only-child .bk-cy-rail {
+  display: none;
+}
+
+/* 처음 단계로 들어가는 꽉 찬 머리 */
+.bk-cy-step:first-child .bk-cy-rail::after {
+  position: absolute;
+  top: calc(var(--cy-line) / -2);
+  right: calc(var(--cy-head) / -2);
+  width: var(--cy-head);
+  height: var(--cy-head);
+  background: var(--cy-c);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  content: '';
+  translate: 0 -50%;
+}
+
+/* ---------- 고리 ----------
+   넓고 높은 칸: 판에 고리를 두고 단계 이름표를 고리 바깥에. 반지름과 고리 가운데의 자리는 Cycle.tsx(cycleFit)가 이름표마다 어림한
+   크기로 만든 식(--cy-fit, --cy-dx, --cy-dy)으로 정한다: 이름표까지 판 안에 드는 가장 큰 고리를, 그림의 위아래·좌우 끝이 판
+   가운데에 오도록. 너무 작으면 고리가 점처럼 보여 2.6em, 너무 크면 이름표가 고리에 비해 작아 보여 8em까지.
+   이름표는 점에서 바깥쪽으로 --cy-gap 떨어진 닻에 걸린다(--fx, --fy: Cycle.tsx의 cycleRing) */
+@container bk (min-width: 720px) and (min-height: 520px) {
+  .bk-cy {
+    --cy-ring: 1;
+  }
+}
+
+@container style(--cy-ring: 1) {
+  .bk-cy-stage {
+    /* Cycle.tsx의 CYCLE_GAP_EM */
+    --cy-gap: 0.7em;
+    --cy-r: clamp(2.6em, var(--cy-fit), 8em);
+    flex: 1;
+    min-height: 0;
+    container-type: size;
+  }
+
+  .bk-cy-ring {
+    position: absolute;
+    top: calc(50% + var(--cy-dy));
+    left: calc(50% + var(--cy-dx));
+    display: block;
+    width: calc(2 * var(--cy-r));
+    height: calc(2 * var(--cy-r));
+    overflow: visible;
+    translate: -50% -50%;
+  }
+
+  /* 단계 점과 구간 끝의 머리: 크기가 고리를 따라 늘고 줄지 않게(흐름과 같은 크기) 고리 그림 밖에 따로 둔다 */
+  .bk-cy-marks {
+    position: absolute;
+    inset: 0;
+    display: block;
+    pointer-events: none;
+  }
+
+  .bk-cy-port,
+  .bk-cy-tip {
+    position: absolute;
+    top: calc(50% + var(--cy-dy) - cos(var(--a)) * var(--cy-r));
+    left: calc(50% + var(--cy-dx) + sin(var(--a)) * var(--cy-r));
+    background: var(--cy-c);
+  }
+
+  .bk-cy-port {
+    width: var(--cy-port);
+    height: var(--cy-port);
+    border-radius: 50%;
+    translate: -50% -50%;
+  }
+
+  /* 머리 끝이 고리 위의 자리에 오고, 그 자리의 시계 방향(접선)을 가리킨다 */
+  .bk-cy-tip {
+    width: var(--cy-head);
+    height: var(--cy-head);
+    margin: calc(var(--cy-head) / -2) 0 0 calc(-1 * var(--cy-head));
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+    transform-origin: 100% 50%;
+    rotate: var(--a);
+  }
+
+  .bk-cy-mid {
+    position: absolute;
+    top: calc(50% + var(--cy-dy));
+    left: calc(50% + var(--cy-dx));
+    width: calc(var(--cy-r) * 1.3);
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    translate: -50% -50%;
+  }
+
+  .bk-cy-c {
+    color: var(--ink-2);
+  }
+
+  .bk-cy-list {
+    position: absolute;
+    inset: 0;
+    display: block;
+    padding: 0;
+  }
+
+  .bk-cy-step {
+    position: absolute;
+    top: calc(50% + var(--cy-dy) - cos(var(--a)) * (var(--cy-r) + var(--cy-gap)));
+    left: calc(50% + var(--cy-dx) + sin(var(--a)) * (var(--cy-r) + var(--cy-gap)));
+    display: block;
+    width: max-content;
+    /* Cycle.tsx의 CYCLE_LABEL_EM */
+    max-width: 9em;
+    translate: calc(var(--fx) * -100%) calc(var(--fy) * -100%);
+  }
+
+  /* 편집 화면은 항목마다 빼기 단추의 자리를 잡으려고 항목을 relative로 두지만(edit.css), 고리의 단계는 판 위의 자리로 찍는다
+     (위치 비교의 점과 같다). relative가 되면 단계가 목록의 흐름에 쌓인 자리에서 다시 옮겨져 아래 단계일수록 밀려 내려갔다 */
+  .slide.m-edit .bk-cy-step.it {
+    position: absolute;
+  }
+
+  .bk-cy-step.is-r {
+    text-align: left;
+  }
+
+  .bk-cy-step.is-l {
+    text-align: right;
+  }
+
+  .bk-cy-step:is(.is-t, .is-b) {
+    text-align: center;
+  }
+
+  .bk-cy-mark,
+  .bk-cy-n {
+    display: block;
+  }
+
+  .bk-cy-n {
+    margin-bottom: 0.2em;
+  }
+
+  .bk-cy-step .bk-cy-rail {
+    display: none;
+  }
+}
+
+/* ---------- 가로 ----------
+   넓고 낮은 칸: 단계를 왼쪽에서 오른쪽으로 같은 너비에 놓고, 번호 줄을 따라 다음 번호의 머리까지 선을 잇는다.
+   마지막 단계의 선은 칸 끝에서 위로 꺾여 번호 줄 위(--cy-loop)를 거꾸로 건너, 처음 단계 앞에서 내려와 머리로 들어간다(⊓).
+   01 ──▶ 02 ──▶ 03 ──▶ 04 ─┘. 칸이 좁으면(단계 넷까지 960px, 다섯부터 1300px 밑) 세로로 쌓는다: 한 칸이 240px 밑이면
+   이름이 네댓 글자마다 꺾였다(원인 캐기의 가로와 같은 기준) */
+@container bk (min-width: 960px) and (max-height: 519.98px) {
+  .bk-cy:is([data-steps='2'], [data-steps='3'], [data-steps='4']) {
+    --cy-flat: 1;
+  }
+}
+
+@container bk (min-width: 1300px) and (max-height: 519.98px) {
+  .bk-cy:not([data-steps='1']) {
+    --cy-flat: 1;
+  }
+}
+
+@container style(--cy-flat: 1) {
+  .bk-cy-stage {
+    /* 번호 줄 위로 돌아가는 길의 높이와 꺾이는 모서리의 둥근 정도: 모서리를 각지게 두면 번호 줄 위에 빈 납작한 상자가 놓인 것처럼
+       보였다. 둥글게 꺾여야 한 바퀴 도는 길(트랙)로 읽힌다 */
+    --cy-loop: calc(30px * var(--bk-fit, 1));
+    --cy-bend: 12px;
+  }
+
+  .bk-cy-list {
+    position: relative;
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    padding: var(--cy-loop) 0 0 var(--cy-in);
+  }
+
+  /* 돌아가는 길의 윗부분(╭──╮): 번호 줄 위의 높이만큼. 그 아래(번호 줄까지)는 처음과 마지막 단계의 조각이 잇는다 */
+  .bk-cy-list::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: var(--cy-loop);
+    border: var(--cy-line) solid var(--cy-c);
+    border-bottom: none;
+    border-radius: var(--cy-bend) var(--cy-bend) 0 0;
+    content: '';
+  }
+
+  /* 윗부분 가운데의 왼쪽을 가리키는 머리: 번호 줄은 오른쪽으로 가고 윗길은 거꾸로 돌아온다는 것. 머리가 없으면 윗길이 번호 줄 위에
+     놓인 빈 납작한 상자로 읽혔다 */
+  .bk-cy-list::after {
+    position: absolute;
+    top: calc(var(--cy-line) / 2);
+    left: 50%;
+    width: var(--cy-head);
+    height: var(--cy-head);
+    background: var(--cy-c);
+    clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    content: '';
+    translate: -50% -50%;
+  }
+
+  .bk-cy-step {
+    display: block;
+  }
+
+  .bk-cy-mark {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .bk-cy-n {
+    flex: none;
+  }
+
+  /* 다음 단계로 가는 선: 번호 뒤에서 다음 칸의 번호 앞까지, 끝에 꽉 찬 머리 */
+  .bk-cy-to {
+    position: relative;
+    display: block;
+    flex: 1;
+    margin: 0 0.45em;
+    border-top: var(--cy-line) solid var(--cy-c);
+  }
+
+  .bk-cy-to::after {
+    position: absolute;
+    top: calc(var(--cy-line) / -2);
+    right: 0;
+    width: var(--cy-head);
+    height: var(--cy-head);
+    background: var(--cy-c);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+    content: '';
+    translate: 0 -50%;
+  }
+
+  /* 마지막 단계의 선은 머리 없이 칸 끝의 둥근 모서리까지 */
+  .bk-cy-step:last-child .bk-cy-to {
+    margin-right: var(--cy-bend);
+  }
+
+  .bk-cy-step:last-child .bk-cy-to::after {
+    display: none;
+  }
+
+  .bk-cy-step .bk-cy-rail {
+    display: none;
+  }
+
+  /* 처음 단계: 윗부분의 왼쪽 끝에서 번호 줄까지 내려와 둥글게 꺾여 번호 앞의 머리로 들어간다(╰▶) */
+  .bk-cy-step:first-child .bk-cy-rail {
+    top: 0;
+    bottom: calc(50% - var(--cy-line) / 2);
+    display: block;
+    border-top: none;
+    border-bottom: var(--cy-line) solid var(--cy-c);
+    border-bottom-left-radius: var(--cy-bend);
+  }
+
+  .bk-cy-step:first-child .bk-cy-rail::after {
+    top: calc(100% + var(--cy-line) / 2);
+  }
+
+  /* 마지막 단계: 번호 줄의 선이 칸 오른쪽 끝에서 둥글게 위로 꺾여 윗부분에 닿는다(─╯) */
+  .bk-cy-step:last-child .bk-cy-rail {
+    top: 0;
+    right: 0;
+    bottom: calc(50% - var(--cy-line) / 2);
+    left: auto;
+    display: block;
+    width: var(--cy-bend);
+    height: auto;
+    border: none;
+    border-right: var(--cy-line) solid var(--cy-c);
+    border-bottom: var(--cy-line) solid var(--cy-c);
+    border-bottom-right-radius: var(--cy-bend);
+  }
+
+  .bk-cy-text {
+    margin-top: 0.35em;
+    padding-right: 1.2em;
+  }
+}

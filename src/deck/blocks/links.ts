@@ -98,7 +98,7 @@ const KINDS: Record<Kind, BlockType[]> = {
   words: ['message', 'text', 'callout', 'quote', 'heading', 'note', 'summary'],
   list: ['bullets', 'points', 'facts', 'risks', 'faq', 'checks', 'people', 'status', 'date', 'agenda'],
   chart: ['bars', 'bridge', 'trend', 'versus', 'share', 'funnel', 'pareto', 'attain', 'diverge', 'likert', 'stack', 'heat', 'sparks', 'market', 'split', 'merge', 'scorecard', 'progress'],
-  flow: ['flow', 'decision', 'whys', 'network', 'process', 'timeline', 'gantt', 'steps'],
+  flow: ['flow', 'decision', 'whys', 'cycle', 'network', 'process', 'timeline', 'gantt', 'steps'],
   table: ['table', 'compare', 'pricing', 'rating', 'matrix', 'position', 'swot'],
   image: ['image', 'logos'],
 }
