@@ -445,6 +445,15 @@ button.wz-step:hover {
   box-shadow: 0 0 0 1px var(--line);
 }
 
+/* 2단계: 칸 높이는 왼쪽 고르는 것이 정하고, 장이 많으면 이 칸 안에서 스크롤한다. 틀은 가운데에 서므로 발표 시간을 바꿔 구성이 한 줄
+   늘 때마다 칸이 자라면 묻는 말과 고르는 것이 통째로 30~100px 올라가, 이어서 누르려던 자리(발표 방식, 다음)가 비켜 갔다.
+   크기 가둠(contain: size)으로 칸이 줄 높이를 정하는 데서 빠지고, 늘이기(stretch)로 왼쪽과 같은 높이가 된다 */
+.wz-split-plan .wz-plan {
+  contain: size;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .wz-plan-k {
   margin: 0;
   color: var(--ink-3);
