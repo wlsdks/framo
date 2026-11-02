@@ -181,3 +181,13 @@ describe('쌓은 핵심 숫자', () => {
     expect(body(".va-cards > .bk-in > .kp:not([data-n='1'])")).toMatch(/--kp-row-gap:\s*var\(--kp-gy\)\s*;/)
   })
 })
+
+describe('진행 현황의 상태 색', () => {
+  it('완료 줄의 막대는 상태 점, 머리줄 범례와 같은 옅은 글자색이다', () => {
+    // 상태 색을 예외(지연)에만 남길 때 완료 표시는 옅게 바꿨지만 막대에 따로 준 강조색이 남아, 범례(완료는 회색 점, 진행 중은
+    // 강조색 점)로 읽으면 100% 막대가 '진행 중'처럼 보였다. 준비 상황, 추진 일정도 완료는 옅게 그린다
+    expect(rules(slides).find((r) => r.selector === '.is-done')?.body).toMatch(/--ps-c:\s*var\(--ink-3\)/)
+    const fills = rules(slides).filter((r) => r.selector.includes('.is-done') && r.selector.includes('.ps-fill'))
+    for (const r of fills) expect(r.body).not.toContain('--accent')
+  })
+})
