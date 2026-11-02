@@ -1216,6 +1216,66 @@ export function blockFitter() {
   }
 
   /**
+   * 답 글의 크기 (docs/DESIGN.md '부품끼리의 위계'): 강조 상자의 글(꼭 알아야 할 것, 결정 요청)과 핵심 한 줄은 장의 답이라 옆 컴포넌트의
+   * 글보다 작으면 위계가 거꾸로 읽힌다. 강조 상자는 긴 글(30자 넘게)과 좁거나 낮은 칸에서 한 단계씩 줄고, 옆 목록은 넓은 칸과 남는 자리로
+   * 키워져서 결정 요청 30px 아래에 준비 상황의 항목이 36px였다. 그래서 답 글을 옆 컴포넌트의 가장 큰 글만큼 키운다. 강조 상자는 본문
+   * 단계(--t-body) 밑에서 시작한 글(근거)과 견준다: 소제목처럼 본문보다 큰 단계에서 시작한 글은 묶음의 이름이라 답보다 커도 된다.
+   * 핵심 한 줄은 다른 핵심 한 줄 밖의 모든 글(강조 상자까지)과 견준다. 숫자와 그림의 이름표(흐름, 연결도 같은)는 견주지 않는다.
+   * 칸이 넘치거나 장 제목과 다투게 되면 그대로 둔다. CSS의 상한(바탕 없는 강조 상자의 44, 핵심 한 줄의 --msg-cap)도 그대로다.
+   * 편집 화면의 빈칸 안내도 글로 본다: 안내를 빼면 첫 글자를 치는 순간 답 글이 한 단계 커졌다
+   */
+  const ANSWERS = [
+    { cell: 'bk-callout', text: '.bk-call-t', skip: '.bk-callout, .bk-message', bodyOnly: true },
+    { cell: 'bk-message', text: '.bk-msg-t', skip: '.bk-message', bodyOnly: false },
+  ] as const
+  const ANSWER_TEXT = ANSWERS.map((a) => a.text).join(', ')
+  // 글이 문장이 아니라 그림의 이름표인 부품 (screens/assembly.ts의 FIGURE_TYPES와 같다)
+  const PICTURES = new Set(['flow', 'network', 'merge', 'split', 'tiles'])
+  // 숫자와 단위('2.4조 원', '억 원')는 답이라 견주지 않는다 (screens/assembly.ts의 numeric과 같다)
+  const numberish = (s: string) => {
+    const words = s.replace(/[\d.,%+\-~()\s]/g, '')
+    return words.length <= 2 || (/\d/.test(s) && words.length <= 3)
+  }
+  function answers(cells: HTMLElement[], area: HTMLElement): void {
+    const body = parseFloat(getComputedStyle(area).getPropertyValue('--t-body')) || 30
+    const largest = (own: HTMLElement, skip: string, bodyOnly: boolean) => {
+      let top = 0
+      for (const c of cells) {
+        if (c === own || c.matches(skip) || c.classList.contains('bk-layout') || PICTURES.has(c.dataset.type ?? '')) continue
+        const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
+        if (!inner) continue
+        for (const q of lines(inner, true)) {
+          const el = q.n.parentElement
+          const text = (q.n.textContent || '').trim()
+          if (!el || !/[가-힣]/.test(text) || numberish(text)) continue
+          const cs = getComputedStyle(el)
+          if (bodyOnly && !(parseFloat(cs.getPropertyValue('--fs')) <= body + 0.5)) continue
+          top = Math.max(top, parseFloat(cs.fontSize))
+        }
+      }
+      return top
+    }
+    for (const a of ANSWERS)
+      for (const c of cells) {
+        if (!c.classList.contains(a.cell)) continue
+        const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
+        const el = inner?.querySelector<HTMLElement>(a.text)
+        if (!inner || !el || !el.offsetHeight) continue
+        const top = largest(c, a.skip, a.bodyOnly)
+        const cs = getComputedStyle(el)
+        const now = parseFloat(cs.fontSize)
+        const fs = parseFloat(cs.getPropertyValue('--fs'))
+        if (!(top > now + 0.5) || !(fs > 0) || !(now > 0)) continue
+        el.style.setProperty('--fs', (fs * top) / now + 'px')
+        place(inner)
+        if (crowded(inner) || rivals(area.parentElement, [inner])) {
+          el.style.removeProperty('--fs')
+          place(inner)
+        }
+      }
+  }
+
+  /**
    * 같은 장의 숫자 말투 (docs/VISUAL-RULES.md 5): 큰 숫자, 숫자 한 줄, 숫자와 흐름의 숫자는 한 장에 둘 이상이면 같은 크기로 맞춘다. 큰 숫자는
    * 칸 크기로 108~154, 숫자 한 줄은 62에서 시작해서, 한 장에 둘이 같이 서면 하나는 크게, 하나는 작게 따로 놀았다(로고 모음 아래의 숫자 둘,
    * 추이 옆의 큰 숫자와 숫자 한 줄). 맞추는 크기는 지금 크기들에서 글자 비율(1.2)의 단계로 오르내린 값 가운데, 모든 칸이 넘치지 않는
@@ -1628,6 +1688,8 @@ export function blockFitter() {
         const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
         inner?.style.removeProperty('--bk-content-shift')
         inner?.style.removeProperty('--bk-content-limit')
+        // 답 글을 키운 크기(answers)는 맞출 때마다 처음부터: 첫 단계(줄이기, 키우기)는 CSS가 정한 크기로 잰다
+        for (const el of Array.from(c.querySelectorAll<HTMLElement>(ANSWER_TEXT))) el.style.removeProperty('--fs')
       }
       delete area.dataset.eye
       // 편집 화면의 편집 표시(칸 옆으로 나온 단추 같은)는 재는 동안 뺀다 (edit.css)
@@ -1726,6 +1788,7 @@ export function blockFitter() {
       }
       lift(cells)
       tone(cells)
+      answers(cells, area)
       pack(cells, area)
       balance(cells, area, hold?.xs, hold?.contentXs)
       // 키우고 쌓은 뒤에도 내용이 본문 높이의 60%에 못 미치면(docs/VISUAL-RULES.md 6) 한 단계 더 키운다. 사이를 벌려 채우지 않고
@@ -1741,6 +1804,8 @@ export function blockFitter() {
           const inners = cells.map((c) => c.querySelector<HTMLElement>(':scope > .bk-in')).filter((el): el is HTMLElement => !!el)
           const reset = () => {
             for (const c of cells) for (const v of ['--bk-lift', '--bk-shift', '--bk-shift-x', '--bk-trim']) c.style.removeProperty(v)
+            // 한 단계 더 키울 수 있는지는 CSS가 정한 답 글 크기로 잰다(키운 답 글은 settle의 answers가 다시 맞춘다)
+            for (const el of Array.from(area.querySelectorAll<HTMLElement>(ANSWER_TEXT))) el.style.removeProperty('--fs')
             for (const inner of inners) {
               inner.style.removeProperty('--bk-content-shift')
               inner.style.removeProperty('--bk-content-limit')
@@ -1757,6 +1822,7 @@ export function blockFitter() {
           const settle = () => {
             lift(cells)
             tone(cells)
+            answers(cells, area)
             pack(cells, area)
             balance(cells, area, hold?.xs, hold?.contentXs)
           }
