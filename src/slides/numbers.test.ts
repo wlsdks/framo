@@ -127,6 +127,15 @@ describe('숫자 읽기', () => {
   it('계산한 값은 천 단위 쉼표와 소수 둘째 자리까지', () => {
     expect(formatNumber(131)).toBe('131')
     expect(formatNumber(1234.567)).toBe('1,234.57')
+    expect(formatNumber(-1.5)).toBe('-1.5')
+  })
+
+  it("반올림해 0이 되는 작은 음수는 '-0'이 아니라 '0'이다", () => {
+    // 더하고 뺀 끝 값의 부동소수 찌꺼기(0.3 - 0.1 - 0.2 = -2.8e-17)나 소수 둘째 자리 아래의 음수가 '−0'으로 그려졌다
+    expect(formatNumber(0.3 - 0.1 - 0.2)).toBe('0')
+    expect(formatNumber(-0.004)).toBe('0')
+    expect(formatNumber(-0)).toBe('0')
+    expect(formatNumber(-0.005)).toBe('-0.01')
   })
 
   it('표에서 오른쪽에 맞출 숫자 칸은 금액, 비율, 건수만', () => {

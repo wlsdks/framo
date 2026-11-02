@@ -346,9 +346,13 @@ export function lineAxis(values: number[], n: number): { floor: number; ceil: nu
   return { floor, ceil, y: (v) => ((v - floor) / (ceil - floor || 1)) * 100, x: (i) => ((i + 0.5) / n) * 100 }
 }
 
-/** 계산한 값을 보이는 꼴: 천 단위 쉼표, 소수 둘째 자리까지 */
+/**
+ * 계산한 값을 보이는 꼴: 천 단위 쉼표, 소수 둘째 자리까지.
+ * 반올림해 0이 되는 음수는 부호를 떼고 '0'이다(signDisplay 'negative'): 더하고 뺀 끝 값의 부동소수 찌꺼기
+ * (0.3 − 0.1 − 0.2 = −2.8e-17)가 폭포의 끝 값에 '−0'으로 그려졌다
+ */
 export function formatNumber(n: number): string {
-  return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(n)
+  return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2, signDisplay: 'negative' }).format(n)
 }
 
 const NUMERIC_CELL = /^[+\-−–▲▼△]?\s?[\d.,]+\s?(%p?|배|건|명|곳|개|점|원|[천만억조]\s?원?|시간|kg|톤)?$/
