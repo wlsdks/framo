@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { amountPair, changeOf, colsOf, dateParts, formatNumber, gradeOf, gradesOf, isNumericCell, lineAxis, lowerIsBetter, optionIndex, periodRest, readAmount, readNumber, seriesIn, spanIn, statusOf, unitAfter } from './numbers'
+import { amountPair, changeOf, colsOf, dateParts, formatNumber, gradeOf, gradesOf, isNumericCell, lineAxis, lowerIsBetter, optionIndex, periodRest, readAmount, readNumber, scoreOf, seriesIn, spanIn, statusOf, unitAfter } from './numbers'
 
 describe('숫자 읽기', () => {
   it('표현 범위를 넘는 숫자는 무한대로 계산하지 않는다', () => {
@@ -377,5 +377,28 @@ describe('날짜 나누기', () => {
     expect(dateParts('11월 32일')).toBe(null)
     expect(dateParts('3.5')).toBe(null)
     expect(dateParts('')).toBe(null)
+  })
+})
+
+describe('목표 대비 실적 한 줄 (scoreOf)', () => {
+  it('높을수록 좋은 지표는 목표 이상이면 달성, 달성률은 실적 ÷ 목표', () => {
+    const s = scoreOf('117억 원', '131억 원')
+    expect(s).toMatchObject({ known: true, met: true })
+    expect(s.rate).toBeCloseTo(131 / 117, 5)
+    expect(scoreOf('5곳', '4곳').met).toBe(false)
+  })
+
+  it('낮을수록 좋은 지표(이하, 이내)는 목표 이하면 달성, 달성률은 목표 ÷ 실적', () => {
+    const s = scoreOf('5일 이하', '4.2일')
+    expect(s.met).toBe(true)
+    expect(s.rate).toBeCloseTo(5 / 4.2, 5)
+    expect(scoreOf('7분 이하', '7분 30초').met).toBe(false)
+  })
+
+  it('견줄 수 없는 단위, 빈 실적, 0인 목표는 셈하지 않는다', () => {
+    expect(scoreOf('3건', '40%').known).toBe(false)
+    expect(scoreOf('5곳', '').known).toBe(false)
+    expect(scoreOf('0건', '3건').known).toBe(false)
+    expect(scoreOf('3건', '40%').rate).toBeNull()
   })
 })

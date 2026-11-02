@@ -247,6 +247,23 @@ export function amountPair(a: string, b: string, unit = ''): { a: Amount; b: Amo
 }
 
 /**
+ * 목표 대비 실적 한 줄. 목표와 실적은 단위까지 읽어 같은 기준으로 견준다('7분 이하'와 '6분 30초', '1.2억 원'과 '9,500만 원').
+ * 견줄 수 없는 단위이거나 실적이 비었거나, 목표가 0 이하, 실적이 음수면 known이 false(달성률과 달성 여부를 말하지 않는다).
+ * 낮을수록 좋은 지표(목표에 '이하', '이내' 같은 말)는 목표보다 작아야 달성이고 달성률은 목표 ÷ 실적.
+ * 장(Scorecard)과 발표 종류의 예시가 같은 셈을 쓴다: 예시 제목('네 목표 중 세 개를 이뤘어요')과 장의 달성 수가 어긋나지 않게
+ */
+export function scoreOf(target: string, actual: string): { known: boolean; met: boolean; rate: number | null; target: number; actual: number } {
+  const p = amountPair(target, actual)
+  const t = p?.a.base ?? 0
+  const a = p?.b.base ?? 0
+  const known = !!p && t > 0 && a >= 0 && actual.trim() !== ''
+  const lower = lowerIsBetter(target)
+  const met = lower ? a <= t : a >= t
+  const rate = known ? (lower ? (a > 0 ? t / a : null) : a / t) : null
+  return { known, met, rate, target: t, actual: a }
+}
+
+/**
  * 전과 후가 얼마나 바뀌었는지. 둘 다 %면 %p, 아니면 전 값에 대한 %.
  * 견줄 수 없는 단위이거나 전 값이 0이면 null (비율을 말할 수 없다)
  */
