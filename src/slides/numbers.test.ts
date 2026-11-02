@@ -244,6 +244,22 @@ describe('추진 일정의 기간', () => {
     expect(spanIn('12월 2주 ~ 2월 1주', cols)).toEqual([1, 3])
   })
 
+  it('범위의 끝이 처음보다 앞 칸이면(1월~12월 칸에 12월~2월) 해를 넘긴 기간이라 처음 칸부터 마지막 칸까지다', () => {
+    // 칸 순서의 가장 앞과 뒤만 보던 때는 2월부터 12월까지 거꾸로 열 달짜리 막대가 섰다
+    const year = colsOf('1월 2월 3월 4월 5월 6월 7월 8월 9월 10월 11월 12월')
+    expect(spanIn('12월~2월', year)).toEqual([11, 11])
+    expect(spanIn('11월부터 1월까지', year)).toEqual([10, 11])
+    expect(spanIn('12~2월', year)).toEqual([11, 11])
+    expect(spanIn('4분기~1분기', colsOf('1분기 2분기 3분기 4분기'))).toEqual([3, 3])
+    // 칸이 해를 넘겨 놓였으면 그대로 (11월~3월 칸의 12월~2월)
+    expect(spanIn('12월~2월', cols)).toEqual([1, 3])
+    // 범위가 아니라 늘어놓은 것은 처음과 끝 칸 그대로
+    expect(spanIn('3월 시작, 1월 준비', year)).toEqual([0, 2])
+    // 막대가 칸 끝에서 잘려 기간을 다 보여 주지 못하니 기간 글을 같이 보인다
+    expect(periodRest('12월~2월', year)).toBe('12월~2월')
+    expect(periodRest('12월~2월', cols)).toBe('')
+  })
+
   it('앞쪽 단위를 생략한 구간도 처음부터 끝까지 찾는다', () => {
     expect(spanIn('12~2월', cols)).toEqual([1, 3])
     expect(spanIn('2~3주', colsOf('1주 2주 3주 4주'))).toEqual([1, 2])
