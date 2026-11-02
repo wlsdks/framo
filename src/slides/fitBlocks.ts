@@ -1988,7 +1988,16 @@ export function blockFitter() {
       later(slide, mover, () => fitLayout(slide))
       return
     }
-    for (const part of parts) fitPart(slide, part)
+    // 편집 표시(칸 둘레의 면 .ed-halo, 항목 손잡이, 빼기 단추)는 장의 내용이 아니다: 맞추는 동안 숨긴다(edit.css. 부품 장의
+    // .bk-area.is-fitting과 같다). 칸 둘레의 면은 글 밖으로 띄운 그림이라 본문 왼쪽으로 19px 나와서, 숨기지 않으면 넘친 것으로 보고
+    // 글자를 키우지 않았다: 덜 찬 장의 글자가 편집 화면에서만 발표 화면보다 한 단계 작았다(다섯 단계 흐름의 설명 26px, 발표 화면 31px)
+    const was = slide.classList.contains('is-fitting')
+    slide.classList.add('is-fitting')
+    try {
+      for (const part of parts) fitPart(slide, part)
+    } finally {
+      if (!was) slide.classList.remove('is-fitting')
+    }
   }
 
   function fitPart(slide: HTMLElement, { body, head, box, ups: steps }: ReturnType<typeof layoutParts>[number]): void {

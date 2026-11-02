@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { cssSource } from './cssSource'
 import * as fit from './fitBlocks'
 
 describe('부품 장 글자 맞추기', () => {
@@ -59,5 +60,19 @@ describe('부품 장 글자 맞추기', () => {
     const short = balance.slice(balance.indexOf('shortText.has'), balance.indexOf('balanced.add'))
     expect(short).toMatch(/paddingRight/)
     expect(short).toMatch(/over\(inner\)/)
+  })
+
+  it('레이아웃 장을 맞추는 동안 편집 표시를 숨긴다: 편집 화면과 발표 화면의 글자 크기가 같다', () => {
+    // 칸 둘레의 면(.ed-halo)은 글 밖으로 띄운 그림이라 본문 왼쪽으로 19px 나온다. 맞추는 동안 그대로 두면 넘친 것으로 보고 글자를 키우지 않아,
+    // 덜 찬 장(다섯 단계 흐름, 짧은 사례)의 글자가 편집 화면에서만 발표 화면보다 한 단계 작았다(설명 26px, 발표 화면 31px).
+    // 부품 장은 이미 맞추는 동안 숨긴다(.bk-area.is-fitting)
+    const src = fit.blockFitter.toString()
+    const i = src.indexOf('function fitLayoutNow(')
+    expect(i).toBeGreaterThan(0)
+    const now = src.slice(i, src.indexOf('function fitPart(', i))
+    expect(now).toMatch(/slide\.classList\.add\(['"]is-fitting['"]\)/)
+    expect(now).toMatch(/finally\s*\{[^}]*slide\.classList\.remove\(['"]is-fitting['"]\)/)
+    const css = cssSource(new URL('./edit.css', import.meta.url))
+    expect(css).toMatch(/:is\([^)]*\.slide\.is-fitting[^)]*\)\s*:is\(\.ed-halo[^)]*\)\s*\{\s*display:\s*none/)
   })
 })

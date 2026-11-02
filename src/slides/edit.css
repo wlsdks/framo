@@ -30,10 +30,11 @@
   pointer-events: none;
 }
 
-/* 넘침을 재는 동안(Editor의 useOverflow, 부품 장을 맞추는 fitBlocks): 글 밖으로 나온 편집 표시는 넘침이 아니다.
-   빼지 않으면 칸 옆으로 나온 '이 항목 빼기' 단추나 그림 칸의 '바꾸기' 단추 때문에 부품의 글자를 줄인다.
+/* 넘침을 재는 동안(Editor의 useOverflow, 부품 장을 맞추는 fitBlocks, 레이아웃 장을 채우는 fitLayout): 글 밖으로 나온 편집 표시는 넘침이 아니다.
+   빼지 않으면 칸 옆으로 나온 '이 항목 빼기' 단추나 그림 칸의 '바꾸기' 단추 때문에 부품의 글자를 줄인다. 레이아웃 장은 칸 둘레의 면이
+   본문 왼쪽으로 나와 덜 찬 장의 글자를 편집 화면에서만 키우지 않았다.
    그림 위에 겹쳐 둔 칸(.on-chart)도 뺀다: 숨긴 글이 기간 칸 이름과 겹친 것으로 보인다 */
-:is(.slide.is-measuring, .bk-area.is-fitting) :is(.ed-halo, .it-remove, .it-grip, .pn-tools, .img-tools, .on-chart) {
+:is(.slide.is-measuring, .slide.is-fitting, .bk-area.is-fitting) :is(.ed-halo, .it-remove, .it-grip, .pn-tools, .img-tools, .on-chart) {
   display: none;
 }
 
