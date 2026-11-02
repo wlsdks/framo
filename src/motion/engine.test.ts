@@ -91,6 +91,33 @@ describe('움직임 엔진', () => {
     expect(whys).toMatch(/["']left center["'],\s*["']::after["']/)
   })
 
+  it('순환은 마지막 단계에서 처음 단계로 돌아오는 길까지 긋고, 데이터 조각이 그 길을 탄다', () => {
+    const src = motionEngine.toString()
+    const native = src.slice(src.indexOf('function nativeAuto'))
+    const i = native.search(/case ["']cycle["']/)
+    expect(i).toBeGreaterThan(0)
+    const cycle = native.slice(i, native.search(/case ["']flow["']/))
+    // 고리: 구간마다 선이 그어지고(stroke-dasharray) 조각이 그 구간을 탄다. 마지막 구간도 첫 점까지 다른 구간과 같이
+    expect(cycle).toMatch(/strokeDasharray/)
+    expect(cycle).toMatch(/packet\(stage, legs\[n\]/)
+    // 가로: 윗길(::before)을 오른쪽에서 왼쪽으로 열고, 가운데의 머리(::after)가 그 자리를 지날 때 맺힌다
+    expect(cycle).toMatch(/inset\(-12px 0 -12px 100%\)["'],\s*per\(lens\[2\]\),\s*["']::before["']/)
+    expect(cycle).toMatch(/pop\(list,[^;\n]*["']::after["']\)/)
+    // 한 바퀴를 받으며 부푸는 것은 transform으로: 나타날 때 쓴 scale과 같은 속성이면 늦게 만든 것이 나타나기를 덮는다
+    expect(cycle).toMatch(/transform: ["']scale\(1\.6\)["']/)
+    expect(cycle).not.toMatch(/scale: ["']1\.6["']/)
+  })
+
+  it('순환 가로의 돌아오는 길은 선 끝과 데이터 조각이 같은 빠르기로 간다 (조각만 곡선이면 윗길 가운데에서 선보다 앞서 달렸다)', () => {
+    const src = motionEngine.toString()
+    const native = src.slice(src.indexOf('function nativeAuto'))
+    const cycle = native.slice(native.search(/case ["']cycle["']/), native.search(/case ["']flow["']/))
+    const flat = cycle.slice(cycle.indexOf('--cy-flat'))
+    // 선의 토막은 곡선 없이(linear) 열리니 조각도, 처음 단계로 내려오는 꺾인 선도 곡선 없이
+    expect(flat).toMatch(/packet\(stage, path, at, T, ["']linear["']\)/)
+    expect(flat).toMatch(/bend\(down, [^;\n]*["']linear["']\)/)
+  })
+
   it('추이는 바닥줄이 왼쪽부터 그어지고 달 이름은 선이 그 달에 닿을 때 하나씩 나온다 (빈 축과 달 이름을 먼저 깔지 않는다)', () => {
     const src = motionEngine.toString()
     const choreo = src.slice(src.indexOf('function choreo'), src.indexOf('function nativeAuto'))

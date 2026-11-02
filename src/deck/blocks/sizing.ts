@@ -170,6 +170,8 @@ const STRETCHY = new Set<BlockType>([
   'table',
   'image',
   'logos',
+  // 순환은 높이를 받으면 세로 목록에서 고리로 짜임을 바꾸고 고리가 칸 높이만큼 커진다(cycle.css)
+  'cycle',
 ])
 export const isStretchy = (type: BlockType) => STRETCHY.has(type)
 

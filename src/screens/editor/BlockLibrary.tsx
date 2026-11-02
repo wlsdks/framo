@@ -23,6 +23,11 @@ import { SavedParts } from './SavedParts'
 // 카드를 슬라이드로 끌어다 놓거나, 누르면 알맞은 자리에 넣는다.
 
 const THUMB_RATIO = 1.5
+/**
+ * 그 부품의 얼굴인 짜임이 넓고 높은 칸에서만 나오는 부품은 작은 그림을 그만큼 크게 그린다. 순환은 칸이 낮으면 세로 목록이라
+ * (cycle.css의 고리는 720×520부터), 부품 고르기에서 고리를 보지 못하고 목록으로만 알았다
+ */
+const THUMB_H: Partial<Record<BlockType, number>> = { cycle: 620 }
 
 /**
  * 아직 그리지 않은 카드들. 한가할 때 하나씩 그린다(한 번에 하나: 여럿을 한꺼번에 깨우면 한 번에 그려져 다시 멈춘다).
@@ -131,7 +136,7 @@ export const BlockThumb = memo(function BlockThumb({ deck, type, blank, mode = '
   const slide = useMemo(() => soloSlide(block), [block])
   // 부품이 들어갈 수 있는 가장 좁은 칸보다 좁게 그리지 않는다 (표나 차트가 찌그러져 보이지 않게)
   const minW = BLOCKS[type].minSpan * (COL_W + BLOCK_COL_GAP) - BLOCK_COL_GAP + 80
-  const h = Math.max(480, blockPrefH(block) + 80, Math.round(minW / THUMB_RATIO))
+  const h = Math.max(480, blockPrefH(block) + 80, Math.round(minW / THUMB_RATIO), THUMB_H[type] ?? 0)
   const canvas = { w: Math.round(h * THUMB_RATIO), h }
   const [ref, width] = useThumbWidth(lazy)
   return (

@@ -18,6 +18,7 @@ import { Checks } from './blocks/Checks'
 import { Delta } from './blocks/Delta'
 import { Decision } from './blocks/Decision'
 import { Whys } from './blocks/Whys'
+import { Cycle } from './blocks/Cycle'
 import { Diverge } from './blocks/Diverge'
 import { Facts } from './blocks/Facts'
 import { Flow } from './blocks/Flow'
@@ -92,6 +93,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   flow: Flow,
   decision: Decision,
   whys: Whys,
+  cycle: Cycle,
   network: Network,
   split: Split,
   merge: Merge,

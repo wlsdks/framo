@@ -789,6 +789,45 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  cycle: {
+    name: '순환',
+    description: '단계를 거쳐 처음으로 돌아오는 고리예요. 매달 도는 개선 주기, 운영 절차에',
+    motion: '고리가 시계 방향으로 한 구간씩 그어지며 닿는 단계가 나오고, 처음으로 돌아와 한 바퀴가 닫혀요',
+    // 모양은 고르지 않는다: 칸 모양에 따라 고리, 가로, 세로를 스스로 고른다(cycle.css). '세로' 모양을 따로 두었을 때는 한 줄을 다
+    // 쓰는 칸에서 세로 목록이 왼쪽에 몰려 본문 오른쪽이 60% 넘게 비었고, 좁은 칸에서는 기본이 이미 세로라 고를 일이 없었다
+    fields: [
+      { key: 'heading', label: '소제목', hint: '예: 매달 도는 개선 주기', optional: true },
+      { key: 'center', label: '가운데', hint: '이 순환의 이름 (예: 한 달 주기)', optional: true },
+    ],
+    items: {
+      label: '단계',
+      // 둘이면 고리가 아니라 오가는 것이다. 일곱부터는 고리 둘레의 이름표끼리 부딪힌다
+      min: 3,
+      max: 6,
+      default: 4,
+      fields: [
+        { key: 'title', label: '단계', hint: '단계 이름', hints: ['계획', '실행', '점검', '개선', '공유', '정리'], multiline: true },
+        {
+          key: 'meta',
+          label: '설명',
+          hint: '짧은 설명',
+          hints: ['목표와 방법을 정해요', '작게 먼저 해 봐요', '숫자로 결과를 봐요', '고칠 것을 정해요', '배운 것을 나눠요', '다음 주기를 준비해요'],
+          optional: true,
+        },
+      ],
+    },
+    minSpan: 4,
+    prefSpan: 6,
+    sample: {
+      fields: { center: '한 달 주기' },
+      items: [
+        { title: '계획', meta: '목표와 방법을 정해요' },
+        { title: '실행', meta: '작게 먼저 해 봐요' },
+        { title: '점검', meta: '숫자로 결과를 봐요' },
+        { title: '개선', meta: '고칠 것을 정해요' },
+      ],
+    },
+  },
   network: {
     name: '연결도',
     description: '가운데 하나에 여러 시스템이나 팀이 이어진 모습',

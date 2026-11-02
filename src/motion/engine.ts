@@ -1266,7 +1266,8 @@ export function motionEngine(): MotionEngine {
      * 같은 빠르기로 지난다. 떠날 때와 닿을 때 흐려져서 앞 상자에서 나와 다음 상자로 들어가는 것처럼 보인다.
      * 끝 모습에는 없다: 움직이는 동안만 붙였다가 뗀다
      */
-    const packet = (host: Element | null, path: [number, number][], at: number, duration: number) => {
+    /** easing: 조각이 길을 타는 빠르기. 선이 곡선 없이(linear) 그어지는 길에서는 조각도 linear여야 선 끝과 함께 간다 */
+    const packet = (host: Element | null, path: [number, number][], at: number, duration: number, easing: string = CARRY) => {
       if (!host || path.length < 2) return
       const p = document.createElement('span')
       p.className = 'mo-pk'
@@ -1280,7 +1281,7 @@ export function motionEngine(): MotionEngine {
         walked += i ? lens[i - 1] : 0
         return { translate: `${q[0]}px ${q[1]}px`, offset: walked / total }
       })
-      run(anims, p, frames, s(at), { easing: CARRY, duration: d(duration) })
+      run(anims, p, frames, s(at), { easing, duration: d(duration) })
       run(anims, p, [{ opacity: 0, scale: '0.5' }, { opacity: 1, scale: '1', offset: 0.14 }, { opacity: 1, scale: '1', offset: 0.86 }, { opacity: 0, scale: '0.5' }], s(at), { easing: 'linear', duration: d(duration) })
     }
     /** 부품 안 상자의 자리(host 기준, 장의 px). 장은 줄여 그려지기도 해서 화면 px를 host의 비율로 되돌린다 */
@@ -1296,7 +1297,7 @@ export function motionEngine(): MotionEngine {
      * 꺾인 선(테두리 둘로 그린 꺾쇠)을 한쪽 끝에서 다른 끝으로 긋는다: 세로 토막(꺾이는 쪽의 띠)을 먼저 펼치고 가로 토막을 잇는다.
      * from은 긋기 시작하는 끝(top, bottom), side는 세로 토막이 있는 쪽(left, right). 두 토막을 길이대로 나눠 같은 빠르기로
      */
-    const bend = (el: HTMLElement, at: number, duration: number, from: 'top' | 'bottom' | 'none', side: 'left' | 'right', band: number) => {
+    const bend = (el: HTMLElement, at: number, duration: number, from: 'top' | 'bottom' | 'none', side: 'left' | 'right', band: number, easing: string = CARRY) => {
       const strip = `calc(100% - ${band}px)`
       const keep = side === 'left' ? `0 ${strip} 0 0` : `0 0 0 ${strip}`
       const flat = side === 'left' ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)'
@@ -1305,7 +1306,7 @@ export function motionEngine(): MotionEngine {
       const frames: Keyframe[] = [{ clipPath: start }]
       if (v) frames.push({ clipPath: `inset(${keep})`, offset: v })
       frames.push({ clipPath: 'inset(0 0 0 0)' })
-      run(anims, el, frames, s(at), { easing: CARRY, duration: d(duration) })
+      run(anims, el, frames, s(at), { easing, duration: d(duration) })
     }
     /** 선 하나를 긋는다(요소나 가짜 요소). 조각과 같은 이징, 같은 시간이라 조각이 그어지는 선 끝을 탄다 */
     const draw = (el: Element | null, at: number, duration: number, origin: string, pseudo?: string) => {
@@ -1781,6 +1782,139 @@ export function motionEngine(): MotionEngine {
             } else rise(text, at + seg * 0.75, L.y * 0.4)
             rise(note, at + seg * 0.75 + 90, L.y * 0.3)
           })
+          break
+        }
+        case 'cycle': {
+          // 순환의 요점은 끝이 처음에 이어지는 것이라, 짜임마다 마지막 단계에서 처음 단계로 돌아오는 길을 끝까지 긋고 그 길을 데이터 조각이
+          // 한 번 탄다. 고리(넓고 높은 칸): 12시의 첫 단계 점이 맺히면 구간이 시계 방향으로 하나씩 그어지고 조각이 선 끝을 타고 건너가
+          // 머리가 맺힐 때 다음 단계가 나온다. 마지막 구간이 첫 점으로 돌아오면 조각이 고리를 한 번 더 빠르게 돌고, 첫 점이 받으며
+          // 부풀었다 돌아온다. 가로(넓고 낮은 칸): 단계가 왼쪽부터 나오며 번호 사이 선이 그어지고, 마지막 단계에서 선이 위로 꺾여 거꾸로
+          // 건너와 처음 단계로 들어간다. 세로(좁은 칸): 단계가 위에서부터 나오고, 괄호 선이 아래에서 위로 그어져 처음 단계로 들어간다.
+          // 단계가 많아도 한 바퀴는 1.8초 안에. 되풀이하지 않는다(흐름과 같은 까닭)
+          lines(one('.bk-h'), 60)
+          const steps = $('.bk-cy-step')
+          const ring = one('.bk-cy-ring')
+          const stage = one('.bk-cy-stage')
+          const root = one('.bk-cy')
+          if (!stage || !root || !steps.length) break
+          const hop = Math.min(levelName === 'lively' ? 480 : 420, 1800 / steps.length)
+          fade(one('.bk-cy-c'), 100, 600)
+          const line = parseFloat(getComputedStyle(root).getPropertyValue('--cy-line')) || 1.5
+          const head = parseFloat(getComputedStyle(root).getPropertyValue('--cy-head')) || 16
+          // 첫 단계 점(고리)이나 첫 번호(가로, 세로)가 한 바퀴를 받으며 부풀었다 돌아온다. 나타날 때 쓴 scale과 겹치지 않게 transform으로
+          const land = (el: Element | null, at: number) => {
+            if (el) run(anims, el, [{ transform: 'scale(1)' }, { transform: 'scale(1.6)' }, { transform: 'scale(1)' }], s(at), { easing: 'ease-in-out', duration: d(460) })
+          }
+          if (ring && getComputedStyle(ring).display !== 'none') {
+            const arcs = $('.bk-cy-line')
+            const ports = $('.bk-cy-port')
+            const tips = $('.bk-cy-tip')
+            // 조각이 지나갈 길: 고리 가운데와 반지름(판의 px)은 움직이기 전에 잰다
+            const box = spot(ring, stage)
+            const cx = (box.l + box.r) / 2
+            const cy = (box.t + box.b) / 2
+            const R = (box.r - box.l) / 2
+            const deg = (el: HTMLElement | undefined) => parseFloat(el?.style.getPropertyValue('--a') ?? '') || 0
+            const arc = (from: number, to: number): [number, number][] => {
+              const k = Math.max(2, Math.ceil((to - from) / 6))
+              return Array.from({ length: k + 1 }, (_, i) => {
+                const a = ((from + ((to - from) * i) / k) * Math.PI) / 180
+                return [cx + R * Math.sin(a), cy - R * Math.cos(a)] as [number, number]
+              })
+            }
+            const legs = steps.map((_, n) => arc(deg(ports[n]), deg(tips[n])))
+            steps.forEach((step, n) => {
+              const at = 140 + n * hop
+              pop(ports[n] ?? null, at)
+              rise(step, at + 40, L.y * 0.4)
+              if (!arcs[n]) return
+              run(anims, arcs[n], [{ strokeDasharray: '0 100' }, { strokeDasharray: '100 0' }], s(at + 80), { easing: CARRY, duration: d(hop * 0.92) })
+              packet(stage, legs[n], at + 80, hop * 0.92)
+              pop(tips[n] ?? null, at + 80 + hop * 0.85)
+            })
+            // 한 번 더: 조각이 구간마다 이어 건너간다(점에서 나와 다음 점 앞에서 들어간다)
+            const fast = hop * 0.6
+            let again = 140 + steps.length * hop + 260
+            for (const leg of legs) {
+              packet(stage, leg, again, fast)
+              again += fast
+            }
+            land(ports[0] ?? null, again - 80)
+          } else if (getComputedStyle(root).getPropertyValue('--cy-flat').trim() === '1') {
+            steps.forEach((step, n) => {
+              const at = 120 + n * hop
+              rise(step.querySelector('.bk-cy-n'), at, L.y * 0.4)
+              rise(step.querySelector('.bk-cy-text'), at + 40, L.y * 0.4)
+              if (n === steps.length - 1) return
+              const to = step.querySelector('.bk-cy-to')
+              draw(to, at + 120, hop * 0.8, 'left center')
+              pop(to, at + 120 + hop * 0.8, '::after')
+            })
+            // 돌아가는 길: 마지막 번호 뒤의 선 → 위로 꺾임 → 윗변을 거꾸로 → 처음 단계 앞에서 내려와 머리로. 조각과 같은 빠르기로
+            // 이어 그어지게 조각마다 길이대로 시간을 나누고 곡선 없이(linear) 긋는다
+            const last = steps[steps.length - 1]
+            const first = steps[0]
+            const list = one('.bk-cy-list')
+            const outTo = last.querySelector<HTMLElement>('.bk-cy-to')
+            const up = last.querySelector<HTMLElement>('.bk-cy-rail')
+            const down = first.querySelector<HTMLElement>('.bk-cy-rail')
+            if (!list || !outTo || !up || !down || steps.length < 2) break
+            const a = spot(outTo, stage)
+            const u = spot(up, stage)
+            const w = spot(down, stage)
+            const L0 = spot(list, stage)
+            const yLine = a.t + line / 2
+            const top = L0.t + line / 2
+            const xLeft = w.l + line / 2
+            const yIn = w.b - line / 2
+            const path: [number, number][] = [
+              [a.l, yLine],
+              [u.r - line / 2, yLine],
+              [u.r - line / 2, top],
+              [xLeft, top],
+              [xLeft, yIn],
+              [w.r + head / 2, yIn],
+            ]
+            const lens = path.slice(1).map((q, i) => Math.hypot(q[0] - path[i][0], q[1] - path[i][1]))
+            const total = lens.reduce((x, y) => x + y, 0) || 1
+            const T = Math.max(700, Math.min(1200, total * 0.45))
+            const per = (len: number) => (T * len) / total
+            let at = 120 + steps.length * hop + 60
+            const linear = (el: Element, from: string, ms: number, pseudo?: string) =>
+              run(anims, el, [{ clipPath: from }, { clipPath: 'inset(-12px -12px -12px -12px)' }], s(at), { easing: 'linear', duration: d(ms) }, pseudo)
+            // 조각은 곡선 없이: 선이 그어지는 끝과 같은 빠르기로 탄다. 조각만 CARRY로 타면 윗길 가운데에서 선 끝보다 300px 남짓 앞서 달렸다
+            packet(stage, path, at, T, 'linear')
+            linear(outTo, 'inset(-12px 100% -12px 0)', per(lens[0]))
+            at += per(lens[0])
+            linear(up, 'inset(100% -12px 0 -12px)', per(lens[1]))
+            at += per(lens[1])
+            linear(list, 'inset(-12px 0 -12px 100%)', per(lens[2]), '::before')
+            // 윗길 가운데의 머리는 선이 그 자리를 지날 때 맺힌다
+            pop(list, at + per(lens[2]) / 2, '::after')
+            at += per(lens[2])
+            bend(down, at, per(lens[3] + lens[4]), 'top', 'left', line + 4, 'linear')
+            at += per(lens[3] + lens[4])
+            pop(down, at - 40, '::after')
+            land(first.querySelector('.bk-cy-n'), at + 60)
+          } else {
+            const lead = hop * 0.6
+            steps.forEach((step, n) => rise(step, 120 + n * lead, L.y * 0.4))
+            // 괄호 선은 단계가 다 나온 뒤에 마지막 단계의 조각부터 위로 이어 긋는다. 머리는 조각 밖으로 걸려 있어서 걷는 창을
+            // 둘레로 넉넉히 둔다
+            const rails = steps.map((st) => st.querySelector('.bk-cy-rail')).filter((r): r is HTMLElement => !!r)
+            if (rails.length < 2) break
+            const start = 120 + steps.length * lead
+            const seg = Math.min(240, 900 / rails.length)
+            ;[...rails].reverse().forEach((rail, k) =>
+              run(anims, rail, [{ clipPath: 'inset(100% -0.5em -0.5em -0.5em)' }, { clipPath: 'inset(-0.5em -0.5em -0.5em -0.5em)' }], s(start + k * seg), {
+                easing: 'linear',
+                duration: d(seg),
+              }),
+            )
+            const shut = start + rails.length * seg
+            pop(rails[0], shut, '::after')
+            land(steps[0].querySelector('.bk-cy-n'), shut + 80)
+          }
           break
         }
         case 'flow': {
