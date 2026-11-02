@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { BLUEPRINTS, DECK_TYPES } from '../deck/blueprints'
 
 const css = readFileSync(new URL('../styles/wizard.css', import.meta.url), 'utf8')
 /** 미디어 쿼리 밖(줄 맨 앞에서 시작하는) 규칙의 본문 */
@@ -12,5 +13,11 @@ describe('새 발표 마법사', () => {
     const rule = topRule('.wz-split-plan .wz-plan')
     expect(rule).toMatch(/contain:\s*size/)
     expect(rule).toMatch(/overflow-y:\s*auto/)
+  })
+
+  it('1단계 종류 설명은 1280×600의 좁은 단에서도 한 줄로 선다 (24자까지)', () => {
+    // 대외 제안의 설명(28자)만 두 줄로 꺾여, 여섯 종류가 든 첫 묶음의 끝 '연간·반기 계획'이 아래 줄(다음 단추)에 가렸다.
+    // 24자(개선 제안, 조사·분석 보고)는 1280에서 한 줄에 든다
+    for (const type of DECK_TYPES) expect([...BLUEPRINTS[type].description].length, type).toBeLessThanOrEqual(24)
   })
 })
