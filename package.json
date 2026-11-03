@@ -1,7 +1,7 @@
 {
   "name": "gyeol",
   "private": true,
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Framo: 발표 종류를 고르고 내용만 채우면 만드는 HTML 발표 빌더",
   "type": "module",
   "engines": {
