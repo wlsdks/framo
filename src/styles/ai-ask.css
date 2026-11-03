@@ -397,7 +397,7 @@
   display: grid;
   place-items: center;
   margin-bottom: 30px;
-  color: #ffc94d;
+  color: var(--ink-3);
 }
 
 .air-arrow .icon {
@@ -409,8 +409,8 @@
   grid-column: 1 / -1;
   margin: 12px 0 -8px;
   padding-top: 20px;
-  border-top: 1px solid rgb(255 255 255 / 0.12);
-  color: #cbcbcb;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
   font-size: 13px;
   font-weight: 600;
 }
