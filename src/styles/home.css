@@ -218,6 +218,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 남은 빈칸: 장 목록, 이 슬라이드 설정의 빈칸 표시와 같은 점 */
+.card-blanks {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.card-blanks-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blank);
+}
+
 .card-meta > span + span::before {
   margin: 0 7px;
   color: var(--line-2);

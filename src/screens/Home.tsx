@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BLUEPRINTS } from '../deck/blueprints'
 import { knownOnly, unknownParts } from '../deck/compat'
+import { missingFields } from '../deck/fields'
 import { createSampleDeck } from '../deck/sample'
 import type { Deck } from '../deck/types'
 import { readDeckFromHtml } from '../export/exportHtml'
@@ -227,6 +228,9 @@ function DeckCard({ deck, onDuplicate, onDelete }: { deck: Deck; onDuplicate: ()
   const shown = unknownParts(deck) ? knownOnly(deck) : deck
   const first = shown.slides.find((s) => !s.hidden) ?? shown.slides[0]
   const typeName = BLUEPRINTS[deck.meta.type]?.name ?? ''
+  // 아직 채울 칸이 남은 발표는 슬라이드 수 대신 남은 빈칸 수를: 어느 발표를 이어서 하면 되는지 들어가 보지 않아도 보이게.
+  // 발표에서 뺀 장은 세지 않는다(발표 전 확인과 같다). 다 채운 발표는 예전처럼 슬라이드 수
+  const blanks = deck.slides.reduce((n, s) => (s.hidden ? n : n + missingFields(s, deck.meta).length), 0)
   return (
     <article className="card">
       <a className="card-link" href={`#/edit/${deck.id}`} aria-label={`${deck.title} 열기`}>
@@ -240,7 +244,14 @@ function DeckCard({ deck, onDuplicate, onDelete }: { deck: Deck; onDuplicate: ()
           {/* 한 줄로: 두 줄이면 카드마다 글이 길어져 그림보다 글이 먼저 읽힌다 */}
           <p className="card-meta">
             {typeName && <span>{typeName}</span>}
-            <span>슬라이드 {deck.slides.length}장</span>
+            {blanks > 0 ? (
+              <span className="card-blanks">
+                <span className="card-blanks-dot" aria-hidden="true" />
+                빈칸 {blanks}곳
+              </span>
+            ) : (
+              <span>슬라이드 {deck.slides.length}장</span>
+            )}
             <span>{timeAgo(deck.updatedAt)} 수정</span>
           </p>
         </div>
