@@ -531,11 +531,12 @@ body:not(.is-block-dragging, .is-block-resizing) .slide.m-edit .bk-area.is-live:
   opacity: 1;
 }
 
+/* 그림 위의 바꾸기, 지우기: 알약 대신 모서리가 작은 네모(앱의 다른 단추와 같은 꼴). 그림 위에서도 읽히게 짙은 면은 둔다 */
 .img-tools button {
   all: unset;
   padding: 14px 22px;
-  border-radius: 999px;
-  background: rgb(25 28 34 / 0.88);
+  border-radius: 8px;
+  background: rgb(20 20 20 / 0.86);
   color: #fff;
   font: 600 22px/1 var(--font-body);
   cursor: pointer;
