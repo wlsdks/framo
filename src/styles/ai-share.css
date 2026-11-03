@@ -368,14 +368,14 @@
   }
 }
 
+/* 앞의 아이콘은 칠한 원 없이 글자색으로, 제목 첫 줄 높이에 맞춘다. 옅은 파란 원 안의 아이콘은 흔한 알림 카드의 꼴이었다 */
 .ai-inbox-icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--sel-soft);
-  color: var(--sel);
+  align-self: start;
+  width: 20px;
+  height: 24px;
+  color: var(--ink-2);
 }
 
 .ai-inbox-h {
