@@ -179,8 +179,9 @@ button.wz-step:hover {
 
 /* 1단계: 발표 종류. 회사에서 PPT를 만드는 자리 셋을 세로 칸으로 나란히 */
 /*
- * 열넷을 상자 열넷으로 늘어놓지 않고, 묶음마다 먹선 아래 가는 선으로 나눈 줄로. 차례표처럼 읽힌다.
- * 고른 줄은 흰 바탕에 왼쪽 먹색 띠
+ * 책의 차례처럼 읽히게: 묶음 이름은 명조, 종류는 이름과 설명 두 줄. 묶음과 줄은 선 없이 여백으로만 나눈다.
+ * 예전에는 묶음 이름 밑 먹선 + 줄마다 회색 선(선 밑에 선)에, 고른 줄을 흰 면과 왼쪽 먹색 띠로 표시해
+ * 흔한 템플릿처럼 보였다(VISUAL-RULES: 검정 장식 선, 면 칠한 강조). 고른 것은 이름이 짙어지고 옆에 체크 하나
  */
 .wz-kinds {
   display: grid;
@@ -197,70 +198,68 @@ button.wz-step:hover {
 
 .wz-kind-h {
   margin: 0;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--ink);
-  color: var(--ink-2);
-  font-size: 13px;
+  padding-bottom: 10px;
+  color: var(--ink);
+  font-family: 'Hahmlet Variable', 'AppleMyungjo', 'Batang', serif;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.5;
+  letter-spacing: -0.03em;
 }
 
 .wz-type {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
   min-width: 0;
-  padding: 13px 14px 14px 16px;
+  padding: 9px 0;
   border: 0;
-  border-bottom: 1px solid var(--line-2);
   border-radius: 0;
-  background: transparent;
+  background: none;
   text-align: left;
   cursor: pointer;
-  transition: background 0.18s;
 }
 
-/* 왼쪽 띠: 고르면 위에서 아래로 그어진다 */
-.wz-type::before {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3px;
-  background: var(--ink);
-  content: '';
-  transform: scaleY(0);
-  transform-origin: top;
-  transition: transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.wz-type:hover {
-  background: color-mix(in srgb, var(--panel) 55%, transparent);
-}
-
-.wz-type:active {
-  background: var(--panel);
-}
-
-.wz-type.is-on {
-  background: var(--panel);
-}
-
-.wz-type.is-on::before {
-  transform: scaleY(1);
-}
-
-/* 초점 고리는 줄 안쪽에: 바깥에 그리면 위아래 줄의 선과 겹친다 */
+/* 초점 고리는 글 둘레에 바짝: 줄 사이 여백을 넘어 이웃 줄에 닿지 않게 */
 .wz-type:focus-visible {
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .wz-type-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
+  transition: color 0.18s;
+}
+
+/* 고른 표시는 이름 옆 체크 하나(선택 색). 다른 줄을 밀지 않게 늘 자리를 두고 옅어졌다 나타난다 */
+.wz-type-name .icon {
+  width: 15px;
+  height: 15px;
+  color: var(--sel);
+  stroke-width: 2.6;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.2s, transform 0.24s var(--ease-out);
+}
+
+.wz-type:hover .wz-type-name,
+.wz-type.is-on .wz-type-name {
+  color: var(--ink);
+}
+
+.wz-type.is-on .wz-type-name {
+  font-weight: 700;
+}
+
+.wz-type.is-on .wz-type-name .icon {
+  opacity: 1;
+  transform: none;
 }
 
 .wz-type-desc {
@@ -270,6 +269,7 @@ button.wz-step:hover {
   transition: color 0.18s;
 }
 
+.wz-type:hover .wz-type-desc,
 .wz-type.is-on .wz-type-desc {
   color: var(--ink-2);
 }
@@ -434,15 +434,12 @@ button.wz-step:hover {
 
 /* 오른쪽 칸: 고른 것으로 만들어질 장.
    칸은 왼쪽 고르는 것과 높이를 맞추므로, 장이 적어 두 줄이면 아래만 비었다(1280×600에서 47px). 내용을 칸 가운데로 */
+/* 오른쪽 결과 칸: 흰 카드로 두르지 않고 왼쪽과의 여백으로만 나눈다. 칸 안의 작은 장 그림이 이미 흰 면이라 카드가 겹쳐 보였다 */
 .wz-plan {
   display: flex;
   flex-direction: column;
   justify-content: safe center;
   min-width: 0;
-  padding: 22px;
-  border-radius: var(--r);
-  background: var(--panel);
-  box-shadow: 0 0 0 1px var(--line);
 }
 
 /* 2단계: 칸 높이는 왼쪽 고르는 것이 정하고, 장이 많으면 이 칸 안에서 스크롤한다. 틀은 가운데에 서므로 발표 시간을 바꿔 구성이 한 줄
@@ -452,6 +449,10 @@ button.wz-step:hover {
   contain: size;
   overflow-x: hidden;
   overflow-y: auto;
+  /* 카드 테 없이 칸 끝에서 장 그림이 칼로 자른 듯 끊기지 않게 아래 32px를 옅게 흐린다.
+     같은 만큼 아래 여백을 두어 끝까지 내리면 마지막 줄은 흐린 띠 위에 선다 */
+  padding-bottom: 32px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
 }
 
 .wz-plan-k {
@@ -463,9 +464,10 @@ button.wz-step:hover {
 
 .wz-plan-h {
   margin: 2px 0 16px;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: 'Hahmlet Variable', 'AppleMyungjo', 'Batang', serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
 }
 
 /* 낮은 화면에서 이 칸에 윈도우 스크롤바(17px)가 생겨도 가로로 넘치지 않게 칸 너비에 맞춰 나눈다 */
@@ -501,7 +503,7 @@ button.wz-step:hover {
     animation: none;
   }
 
-  .wz-type::before {
+  .wz-type-name .icon {
     transition: none;
   }
 }
@@ -698,7 +700,7 @@ button.wz-step:hover {
   }
 
   .wz-type {
-    padding: 8px 12px 9px 14px;
+    padding: 7px 0;
   }
 
   .wz-group {
@@ -724,10 +726,6 @@ button.wz-step:hover {
 
   .wz-pair {
     gap: 12px;
-  }
-
-  .wz-plan {
-    padding: 18px;
   }
 
   .wz-plan-h {
@@ -759,7 +757,7 @@ button.wz-step:hover {
    760px 아래 여백 그대로는 마지막 '연간·반기 계획'이 아래 줄(다음 단추)에 9px 가렸다 */
 @media (max-height: 640px) {
   .wz-type {
-    padding-block: 6px 7px;
+    padding-block: 5px;
   }
 }
 
@@ -801,16 +799,16 @@ button.wz-step:hover {
   }
 
   .wz-kinds {
-    gap: 24px;
+    gap: 32px;
   }
 
   .wz-kind-h {
-    font-size: 14px;
+    font-size: 18px;
   }
 
   .wz-type {
     gap: 4px;
-    padding: 16px 18px;
+    padding: 13px 0;
   }
 
   .wz-type-name {
@@ -828,10 +826,6 @@ button.wz-step:hover {
   .wz-film-cap,
   .wz-plan-name {
     font-size: 13px;
-  }
-
-  .wz-plan {
-    padding: 26px;
   }
 
   .wz-plan-k {

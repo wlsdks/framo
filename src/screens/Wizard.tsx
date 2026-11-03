@@ -219,7 +219,10 @@ export function Wizard() {
                           setStep(1)
                         }}
                       >
-                        <span className="wz-type-name">{BLUEPRINTS[t].name}</span>
+                        <span className="wz-type-name">
+                          {BLUEPRINTS[t].name}
+                          <CheckIcon />
+                        </span>
                         <span className="wz-type-desc">{BLUEPRINTS[t].description}</span>
                       </button>
                     ))}
