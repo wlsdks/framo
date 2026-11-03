@@ -187,15 +187,18 @@ export function CheckDialog({
   const first = check.rows[0]
   if (!first) return null
   return (
+    // 초점은 창 자체에 둔다. 검은 '그대로 …' 단추에 두면 그 위에 파란 초점 테가 둘려 테가 두 겹으로 보였고,
+    // Enter 한 번에 빈칸을 남긴 채 넘어갈 수도 있었다. Esc는 창을 닫고, Tab을 누르면 단추로 간다
     <Modal
       title={checkTitle(check)}
       onClose={onClose}
+      focusSelf
       actions={
         <>
           <button type="button" className="btn btn-ghost" onClick={() => onGoTo(first.id, first.missing[0])}>
             {check.missing ? '빈칸 채우기' : '고치러 가기'}
           </button>
-          <button type="button" className="btn btn-primary" data-autofocus onClick={onProceed}>
+          <button type="button" className="btn btn-primary" onClick={onProceed}>
             {proceed}
           </button>
         </>
