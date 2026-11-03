@@ -658,8 +658,9 @@ html.ms-vt[data-mo-swap]::view-transition {
 }
 
 .ms-preset.is-on {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  /* 고른 것은 다른 그림 고르기(모양, 장면, 장 목록)와 같은 선택 색 테. 먹색 두 겹 테는 여기만 남아 있었다 */
+  border-color: var(--sel);
+  box-shadow: inset 0 0 0 1px var(--sel);
   color: var(--ink);
 }
 
@@ -763,8 +764,9 @@ html.ms-vt[data-mo-swap]::view-transition {
 }
 
 .ms-fx.is-on {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  /* 고른 것은 다른 그림 고르기(모양, 장면, 장 목록)와 같은 선택 색 테. 먹색 두 겹 테는 여기만 남아 있었다 */
+  border-color: var(--sel);
+  box-shadow: inset 0 0 0 1px var(--sel);
   color: var(--ink);
 }
 
