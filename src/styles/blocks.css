@@ -374,21 +374,22 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
 }
 
 /* 바탕 견본: 도구 단추 안에서는 작게, 바탕 메뉴에서는 설명 옆에 크게 */
+/* 바탕 견본: 작은 장 한 장(가로로 긴 직사각형). 정사각형이면 도구 줄에서 체크 상자처럼 보였다 */
 .bk-look {
   flex: none;
   box-sizing: border-box;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 12px;
   border: 1px solid var(--line-2);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .bk-menu-item > .bk-look {
   grid-row: 1 / span 2;
   justify-self: center;
   width: 34px;
-  height: 24px;
-  border-radius: 6px;
+  height: 22px;
+  border-radius: 2px;
 }
 
 .bk-menu.is-looks {

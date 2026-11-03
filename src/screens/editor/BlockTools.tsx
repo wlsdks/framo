@@ -216,7 +216,8 @@ export function BlockTools({
       <div className="bk-tool-menu">
         <button type="button" className={cx(B, menu === 'look' && 'is-on')} aria-expanded={menu === 'look'} title="컴포넌트의 바탕" onClick={() => setMenu(menu === 'look' ? null : 'look')}>
           <span className={cx('bk-look', `is-${look}`)} aria-hidden="true" />
-          <span className="btn-t">{BLOCK_LOOKS.find((l) => l.id === look)?.name}</span>
+          {/* '들여 쓰기', '강조'만 보이면 무엇을 고르는 단추인지 알 수 없었다. '바탕 없음'이 아니면 앞에 '바탕:'을 붙인다 */}
+          <span className="btn-t">{lookLabel(BLOCK_LOOKS.find((l) => l.id === look)?.name ?? '')}</span>
         </button>
         {menu === 'look' && (
           <ul ref={menuRef} className="bk-menu is-looks" role="menu" onKeyDown={onMenuKeys}>
@@ -357,4 +358,9 @@ export function BlockTools({
       </button>
     </div>
   )
+}
+
+/** 도구 줄의 바탕 이름: '바탕 없음'은 그대로, 나머지는 '바탕: 강조'처럼 */
+function lookLabel(name: string): string {
+  return name.startsWith('바탕') ? name : `바탕: ${name}`
 }
