@@ -4,7 +4,7 @@ import { pageInfo } from '../deck/fields'
 import type { Deck } from '../deck/types'
 import { cx } from '../lib/cx'
 import { isMac } from '../lib/keys'
-import { presentAction, presentKey } from '../lib/presentKeys'
+import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
 import { hasSecondScreen, presentChannel, type Blank, type PresentMessage } from '../present/link'
 import { FitSlide, pageProps, ScaledSlide, SlideCanvas } from '../slides/SlideCanvas'
 
@@ -131,6 +131,8 @@ export function Presenter({ id }: { id: string }) {
   }, [])
 
   useEffect(() => {
+    // 번호를 치고 Enter면 그 장으로 (PowerPoint와 같게)
+    const num = slideNumber()
     const onKey = (e: KeyboardEvent) => {
       // F5로 새로 고치면 발표 화면과 끊긴다 (발표 화면과 같게 막는다)
       if (e.key === 'F5') {
@@ -139,7 +141,12 @@ export function Presenter({ id }: { id: string }) {
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const { index: i, blank: b } = now.current
-      const act = presentAction(presentKey(e), b, i, slides.length - 1)
+      const k = presentKey(e)
+      if (num.push(k, e.timeStamp)) {
+        e.preventDefault()
+        return
+      }
+      const act = presentAction(k, b, i, slides.length - 1, num.take(e.timeStamp))
       if (!act) return
       e.preventDefault()
       if (act.kind === 'blank') sendBlank(act.blank)

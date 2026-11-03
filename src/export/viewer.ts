@@ -2,7 +2,7 @@
 // 발표할 때의 움직임은 앱의 발표 화면과 같은 엔진(motion/engine.ts)을 쓴다. 엔진은 소스를 그대로 넣는다.
 // 부품 장에서 넘치는 부품 맞추기(slides/fitBlocks.ts의 blockFitter)도 같다. 처음에는 모든 장이 보이므로 열 때 한 번, 폰트가 오면 한 번 더.
 
-import { presentAction, presentKey } from '../lib/presentKeys'
+import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
 import { motionEngine } from '../motion/engine'
 import { blockFitter } from '../slides/fitBlocks'
 
@@ -51,7 +51,7 @@ body.is-present .v-blank.is-white{background:#fff}
 export const VIEWER_JS = `(function(){
 var engine=(${motionEngine.toString()})();
 var fitBlocks=(${blockFitter.toString()})().fit;
-var presentKey=(${presentKey.toString()}),presentAction=(${presentAction.toString()});
+var presentKey=(${presentKey.toString()}),presentAction=(${presentAction.toString()}),slideNumber=(${slideNumber.toString()}),num=slideNumber();
 var slides=[].slice.call(document.querySelectorAll('.v-slide'));
 var body=document.body,root=document.documentElement,count=document.querySelector('.v-count'),blank=document.querySelector('.v-blank');
 var i=0,timer=0,stopMotion=null;
@@ -118,7 +118,9 @@ document.addEventListener('keydown',function(e){
   if(k==='F5'){e.preventDefault();if(!presenting())start(0);return}
   if(!presenting())return;
   if(e.ctrlKey||e.metaKey||e.altKey)return;
-  var a=presentAction(k,blank.hidden?null:blank.className.indexOf('is-white')>=0?'white':'black',i,slides.length-1);
+  // 번호를 치고 Enter면 그 장으로 (숫자는 모아 둔다)
+  if(num.push(k,e.timeStamp)){e.preventDefault();return}
+  var a=presentAction(k,blank.hidden?null:blank.className.indexOf('is-white')>=0?'white':'black',i,slides.length-1,num.take(e.timeStamp));
   if(!a)return;
   e.preventDefault();
   if(a.kind==='blank')setBlank(a.blank);else if(a.kind==='go'&&a.index===i+1)forwardOne();else if(a.kind==='go')show(a.index);else stop();

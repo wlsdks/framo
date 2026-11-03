@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { VIEWER_JS } from '../export/viewer'
-import { presentAction, presentKey } from './presentKeys'
+import { presentAction, presentKey, slideNumber } from './presentKeys'
 
 const key = (k: string, code: string) => presentKey({ key: k, code })
 
@@ -48,5 +48,25 @@ describe('발표 중의 키', () => {
     for (const [k, blank] of [['n', null], ['b', 'black'], ['End', null], ['Escape', 'white'], ['x', null]] as const) {
       expect(loose[1](k, blank, 2, 5)).toEqual(presentAction(k, blank, 2, 5))
     }
+  })
+})
+
+describe('번호를 치고 Enter (PowerPoint처럼 그 장으로)', () => {
+  it('친 번호의 장으로 가고, 마지막보다 크면 마지막 장', () => {
+    expect(presentAction('Enter', null, 0, 9, '5')).toEqual({ kind: 'go', index: 4 })
+    expect(presentAction('Enter', null, 0, 9, '42')).toEqual({ kind: 'go', index: 9 })
+    expect(presentAction('Enter', null, 3, 9, '')).toEqual({ kind: 'go', index: 4 })
+    expect(presentAction('Enter', null, 3, 9, '0')).toEqual({ kind: 'go', index: 4 })
+  })
+
+  it('1.5초 안에 이어 친 숫자만 하나로 모으고, 꺼내면 비운다', () => {
+    const num = slideNumber()
+    expect(num.push('1', 0)).toBe(true)
+    expect(num.push('2', 500)).toBe(true)
+    expect(num.push('a', 600)).toBe(false)
+    expect(num.take(800)).toBe('12')
+    expect(num.take(900)).toBe('')
+    num.push('3', 1000)
+    expect(num.take(3000)).toBe('')
   })
 })

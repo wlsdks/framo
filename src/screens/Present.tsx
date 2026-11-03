@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom'
 import { pageInfo } from '../deck/fields'
 import type { Deck } from '../deck/types'
 import { cx } from '../lib/cx'
-import { presentAction, presentKey } from '../lib/presentKeys'
+import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
 import { motionOf, transitionOf } from '../deck/themes'
 import { motionEngine, type MotionPlay } from '../motion/engine'
 import { presentChannel, type Blank, type PresentMessage } from '../present/link'
@@ -167,6 +167,8 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
   }, [deck.id])
 
   useEffect(() => {
+    // 번호를 치고 Enter면 그 장으로 (PowerPoint와 같게)
+    const num = slideNumber()
     const onKey = (e: KeyboardEvent) => {
       // 발표를 시작한 F5(Shift+F5)를 발표 중에 또 누르면 브라우저가 페이지를 새로 고쳐 발표가 끊긴다
       if (e.key === 'F5') {
@@ -175,7 +177,12 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const { index, blank: b } = now.current
-      const act = presentAction(presentKey(e), b, index, slides.length - 1)
+      const k = presentKey(e)
+      if (num.push(k, e.timeStamp)) {
+        e.preventDefault()
+        return
+      }
+      const act = presentAction(k, b, index, slides.length - 1, num.take(e.timeStamp))
       if (!act) return
       e.preventDefault()
       if (act.kind === 'blank') setBlank(act.blank)

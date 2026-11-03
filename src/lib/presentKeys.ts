@@ -23,16 +23,42 @@ export type PresentAction = { kind: 'blank'; blank: Blank } | { kind: 'go'; inde
  * 가린 화면에서는 Esc 말고 아무 키나 누르면 넘기지 않고 그 장으로 돌아온다. 할 일이 없는 키면 null (브라우저에 맡긴다).
  * blank는 지금 가린 화면, index는 지금 장, last는 마지막 장의 차례
  */
-export function presentAction(key: string, blank: Blank, index: number, last: number): PresentAction | null {
+export function presentAction(key: string, blank: Blank, index: number, last: number, typed = ''): PresentAction | null {
   const next = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter', 'n']
   const prev = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace', 'p']
   const cover = ({ b: 'black', B: 'black', '.': 'black', w: 'white', W: 'white', ',': 'white' } as Record<string, 'black' | 'white'>)[key]
   if (cover) return { kind: 'blank', blank: blank === cover ? null : cover }
   if (blank && key !== 'Escape') return { kind: 'blank', blank: null }
+  // 번호를 치고 Enter면 그 차례의 장으로 (PowerPoint와 같게. 숫자는 slideNumber가 모은다). 마지막 장보다 크면 마지막 장
+  if (key === 'Enter' && /^[0-9]+$/.test(typed) && Number(typed) >= 1) return { kind: 'go', index: Math.min(Number(typed), last + 1) - 1 }
   if (next.includes(key)) return { kind: 'go', index: index + 1 }
   if (prev.includes(key)) return { kind: 'go', index: index - 1 }
   if (key === 'Home') return { kind: 'go', index: 0 }
   if (key === 'End') return { kind: 'go', index: last }
   if (key === 'Escape') return { kind: 'exit' }
   return null
+}
+
+/**
+ * 발표 중에 친 숫자를 모은다: '5' '이어서 Enter'로 5번째 장에 간다(presentAction의 typed). 1.5초 안에 이어 친 숫자만 하나로 본다.
+ * 앱의 발표 화면, 발표자 화면, 내보낸 파일의 보기 화면이 같이 쓴다(보기 화면은 소스를 그대로 넣는다: 바깥 이름을 쓰지 않는다)
+ */
+export function slideNumber() {
+  let typed = ''
+  let at = -Infinity
+  return {
+    /** 숫자 키면 모으고 true (그 키로 다른 일을 하지 않는다) */
+    push(key: string, now: number): boolean {
+      if (!/^[0-9]$/.test(key)) return false
+      typed = (now - at < 1500 ? typed : '') + key
+      at = now
+      return true
+    },
+    /** 모아 둔 번호를 꺼내고 비운다. 오래됐으면 빈 글 */
+    take(now: number): string {
+      const t = now - at < 1500 ? typed : ''
+      typed = ''
+      return t
+    },
+  }
 }

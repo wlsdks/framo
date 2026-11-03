@@ -38,6 +38,7 @@ Framo.exe가 열리지 않을 때
 - 다음 슬라이드: → ↓ PageDown 스페이스 Enter (발표용 클리커도 돼요)
 - 이전 슬라이드: ← ↑ PageUp Backspace
 - 화면 가리기: B 또는 . 은 검은 화면, W 또는 , 는 흰 화면. 아무 키나 누르면 돌아와요.
+- 번호로 가기: 번호를 치고 Enter (예: 5 Enter는 다섯째 슬라이드). Home은 처음, End는 마지막.
 - 끝내기: Esc
 
 AI(Claude Code, Codex)에게 구성 맡기기
