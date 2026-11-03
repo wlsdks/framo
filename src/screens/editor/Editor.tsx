@@ -323,7 +323,7 @@ function EditorBody({ deck }: { deck: Deck }) {
                   }}
                 />
               ) : (
-                <Inspector deck={deck} slide={slide} areaHeight={blocks.areaHeight} onFocusField={(m) => focusField(slide.id, m)} onPeekLayout={setLayoutPeek} />
+                <Inspector deck={deck} slide={slide} areaHeight={blocks.areaHeight} onFocusField={(m) => focusField(slide.id, m)} onGoSlide={goToSlide} onPeekLayout={setLayoutPeek} />
               )}
             </aside>
           )

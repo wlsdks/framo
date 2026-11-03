@@ -34,6 +34,7 @@ export function Inspector({
   slide,
   areaHeight,
   onFocusField,
+  onGoSlide,
   onPeekLayout,
 }: {
   deck: Deck
@@ -41,6 +42,8 @@ export function Inspector({
   /** 컴포넌트 편집기에서 잰 현재 본문 높이. 아직 그리지 않았으면 어림값을 쓴다. */
   areaHeight: () => number | undefined
   onFocusField: (m: Missing) => void
+  /** 다른 장으로 가서 그 장의 빈칸 m에 커서를 둔다 ('다음 슬라이드 채우기') */
+  onGoSlide: (slideId: string, m?: Missing) => void
   /** 레이아웃 그림에 마우스를 올리면 슬라이드 자리에 그 레이아웃으로 미리 보인다 (null이면 그만) */
   onPeekLayout: (layout: LayoutId | null) => void
 }) {
@@ -107,7 +110,7 @@ export function Inspector({
             <ChevronIcon />
           </span>
         </button>
-        <Blanks deck={deck} slide={slide} onFocusField={onFocusField} />
+        <Blanks deck={deck} slide={slide} onFocusField={onFocusField} onGoSlide={onGoSlide} />
         <Optional deck={deck} slide={slide} />
         <Unshown slide={slide} />
       </section>
@@ -207,8 +210,16 @@ function Optional({ deck, slide }: { deck: Deck; slide: Slide }) {
 }
 
 /** 빈칸: 몇 곳 남았는지와 '다음 빈칸'. 목록은 펼쳐야 보인다 (빈칸이 열 곳이면 목록만으로 칸이 찬다) */
-function Blanks({ deck, slide, onFocusField }: { deck: Deck; slide: Slide; onFocusField: (m: Missing) => void }) {
+function Blanks({ deck, slide, onFocusField, onGoSlide }: { deck: Deck; slide: Slide; onFocusField: (m: Missing) => void; onGoSlide: (slideId: string, m?: Missing) => void }) {
   const missing = missingFields(slide, deck.meta)
+  // 이 장을 다 채웠으면 빈칸이 남은 다음 장으로 이어 간다. 예전에는 '모두 채웠어요'에서 멈춰, 처음 쓰는 분은 다음에 무엇을 하면
+  // 되는지 몰랐다(마법사를 마치면 이미 채운 표지가 열린다). 발표에서 뺀 장은 건너뛴다. 끝까지 없으면 앞에서부터 찾는다
+  const nextSlide = useMemo(() => {
+    if (missing.length) return null
+    const at = deck.slides.findIndex((s) => s.id === slide.id)
+    const order = [...deck.slides.slice(at + 1), ...deck.slides.slice(0, Math.max(0, at))]
+    return order.find((s) => !s.hidden && missingFields(s, deck.meta).length > 0) ?? null
+  }, [deck, slide.id, missing.length])
   const [open, setOpen] = useState(false)
   const [next, setNext] = useState(0)
   useEffect(() => setNext(0), [slide.id])
@@ -219,10 +230,22 @@ function Blanks({ deck, slide, onFocusField }: { deck: Deck; slide: Slide; onFoc
   if (!missing.length) {
     // 비워 둔 선택 칸이 있으면 '모두 채웠어요'가 틀린 말로 들린다(표지의 부제, 발표자가 비었는데). 꼭 채울 칸만 센 것이라고 밝힌다
     return (
-      <p className="ins-blank is-done">
-        <CheckIcon />
-        {optionalBlanks(slide, deck.meta).length ? '꼭 채울 칸은 모두 채웠어요' : '빈칸을 모두 채웠어요'}
-      </p>
+      <div className="ins-blank is-next">
+        <p className="ins-blank is-done">
+          <CheckIcon />
+          {optionalBlanks(slide, deck.meta).length ? '꼭 채울 칸은 모두 채웠어요' : '빈칸을 모두 채웠어요'}
+        </p>
+        {nextSlide && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm ins-blank-go"
+            title="빈칸이 남은 다음 슬라이드로 가서 첫 빈칸에 커서를 둬요"
+            onClick={() => onGoSlide(nextSlide.id, missingFields(nextSlide, deck.meta)[0])}
+          >
+            다음 슬라이드 채우기
+          </button>
+        )}
+      </div>
     )
   }
   const go = () => {

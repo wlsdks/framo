@@ -1233,6 +1233,16 @@
   rotate: 90deg;
 }
 
+/* 다 채운 장: '모두 채웠어요'와 '다음 슬라이드 채우기'. 좁으면 글을 꺾지 않고 단추가 아랫줄로 */
+.ins-blank.is-next {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.ins-blank.is-next > .is-done {
+  white-space: nowrap;
+}
+
 .ins-blank.is-done {
   justify-content: flex-start;
   gap: 6px;
