@@ -6,6 +6,7 @@ import v050 from './fixtures/deck-v0.5.0.json'
 import v051 from './fixtures/deck-v0.5.1.json'
 import v052 from './fixtures/deck-v0.5.2.json'
 import v053 from './fixtures/deck-v0.5.3.json'
+import v054 from './fixtures/deck-v0.5.4.json'
 import { migrateDeck } from './migrate'
 import type { Deck } from './types'
 
@@ -22,6 +23,7 @@ const RELEASES: [string, Release][] = [
   ['v0.5.1', v051 as unknown as Release],
   ['v0.5.2', v052 as unknown as Release],
   ['v0.5.3', v053 as unknown as Release],
+  ['v0.5.4', v054 as unknown as Release],
 ]
 
 /** 사람이 고른 값: 발표 전체, 장마다, 컴포넌트마다 */
