@@ -377,7 +377,7 @@ export function Wizard() {
                       </FitSlide>
                     </li>
                   ))}
-                  {rest.length > strip && <li className="wz-strip-more">+{rest.length - strip + 1}</li>}
+                  {rest.length > strip && <li className="wz-strip-more">외 {rest.length - strip + 1}장</li>}
                 </ol>
               )}
             </aside>
