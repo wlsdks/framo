@@ -280,7 +280,7 @@ function EditorBody({ deck }: { deck: Deck }) {
       </header>
 
       <div className={cx('ed-body', versionsOpen && 'has-versions', side.shown && !versionsOpen && 'has-side')}>
-        <SlideList deck={deck} selectedId={slide?.id ?? null} />
+        <SlideList deck={deck} selectedId={slide?.id ?? null} onRemove={removeSlide} />
         {slide && <SlideStage deck={deck} slide={slide} ai={ai} ask={ask} blocks={blocks} fileOver={fileOver} side={side} layoutPeek={layoutPeek} onRemove={removeSlide} />}
         {versionsOpen ? (
           <VersionPanel deck={deck} onClose={() => setVersionsOpen(false)} notify={(text) => toast.show(text, undefined, 6000)} />

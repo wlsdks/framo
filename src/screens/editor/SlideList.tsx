@@ -15,7 +15,7 @@ import { AddSlide } from './AddSlide'
 import { useDrawSoon } from '../drawSoon'
 import { useAfterPaint, useLook } from './look'
 
-export function SlideList({ deck, selectedId }: { deck: Deck; selectedId: string | null }) {
+export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selectedId: string | null; onRemove: (slide: Slide) => void }) {
   const select = useDeck((s) => s.select)
   const moveSlide = useDeck((s) => s.moveSlide)
   const addSlide = useDeck((s) => s.addSlide)
@@ -54,6 +54,25 @@ export function SlideList({ deck, selectedId }: { deck: Deck; selectedId: string
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    // PowerPoint처럼 목록에서 고른 장을 Delete(맥은 Backspace도)로 지우고 Ctrl+D(맥은 ⌘D)로 복제한다. 목록에 초점이 있을 때만:
+    // 슬라이드 위에서 컴포넌트를 고른 채 누른 Delete는 컴포넌트를 지우려는 것이다. 지우면 '되돌리기'가 붙은 알림이 뜬다(Editor의 removeSlide)
+    const cur = deck.slides.find((s) => s.id === selectedId)
+    if (cur && (e.key === 'Delete' || e.key === 'Backspace') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault()
+      if (deck.slides.length <= 1) return
+      const i = deck.slides.indexOf(cur)
+      const next = deck.slides[i + 1] ?? deck.slides[i - 1]
+      onRemove(cur)
+      requestAnimationFrame(() => document.getElementById(`thumb-${next.id}`)?.focus())
+      return
+    }
+    if (cur && (e.key === 'd' || e.key === 'D') && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+      e.preventDefault()
+      useDeck.getState().duplicateSlide(cur.id)
+      const id = useDeck.getState().selectedId
+      if (id) requestAnimationFrame(() => document.getElementById(`thumb-${id}`)?.focus())
+      return
+    }
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
     if (e.ctrlKey || e.metaKey || e.shiftKey) return
     const i = deck.slides.findIndex((s) => s.id === selectedId)
