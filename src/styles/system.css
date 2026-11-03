@@ -93,10 +93,11 @@
   color: var(--ink);
 }
 
+/* 지금 보는 곳: 슬라이드 추가 창의 묶음과 같은 꼴(옅은 회색 면, 먹색 굵은 글자). 흰 카드에 테를 두르면 목록에서 혼자 떠 보였다 */
 .sys-nav-item.is-on {
-  background: var(--panel);
-  box-shadow: 0 0 0 1px var(--line);
+  background: var(--hover-2);
   color: var(--ink);
+  font-weight: 700;
 }
 
 .sys-nav-n {
@@ -109,11 +110,13 @@
   min-width: 0;
 }
 
+/* 화면의 큰 제목은 홈('내 발표'), 마법사의 묻는 말과 같은 명조(함렛) 목소리로 */
 .sys-h1 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-family: 'Hahmlet Variable', 'AppleMyungjo', 'Batang', serif;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
 }
 
 .sys-lead {
