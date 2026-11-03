@@ -52,7 +52,7 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #2c313b;
+  background: #35332e;
 }
 
 /* 누르는 동안은 올렸을 때보다 다시 짙게: 눌렀다는 것이 손끝에 보이게 */
@@ -66,8 +66,8 @@
 }
 
 .btn-ghost:hover:not(:disabled) {
-  border-color: #b9bec7;
-  background: #f8f9fa;
+  border-color: #bfbab0;
+  background: #f7f6f2;
 }
 
 .btn-ghost:active:not(:disabled) {
@@ -170,7 +170,7 @@
   display: inline-flex;
   padding: 3px;
   border-radius: 8px;
-  background: #e7e9ed;
+  background: #e9e6df;
 }
 
 .seg-full {
@@ -228,7 +228,7 @@
 
 .seg-btn.is-on {
   background: var(--panel);
-  box-shadow: 0 1px 2px rgb(16 20 31 / 0.12);
+  box-shadow: 0 1px 2px rgb(28 27 24 / 0.12);
   color: var(--ink);
 }
 
@@ -259,11 +259,11 @@
 }
 
 .input::placeholder {
-  color: #a7acb5;
+  color: #aaa59b;
 }
 
 .input:hover {
-  border-color: #b9bec7;
+  border-color: #bfbab0;
 }
 
 .input:focus {
@@ -301,7 +301,7 @@
   width: 34px;
   height: 20px;
   border-radius: 999px;
-  background: #cfd3da;
+  background: #d3cfc6;
   transition: background 0.15s;
 }
 
@@ -585,7 +585,7 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgb(16 20 31 / 0.36);
+  background: rgb(28 27 24 / 0.36);
 }
 
 .modal {

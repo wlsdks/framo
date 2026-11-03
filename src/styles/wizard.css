@@ -22,12 +22,13 @@
 }
 
 /*
- * 단계 표시: 번호와 이름을 가는 선으로 잇는다. 지나온 단계는 체크로 바뀌고 눌러서 돌아갈 수 있다.
- * 지금 단계만 먹색으로 채워, 세 단계 가운데 어디에 있는지 한눈에 보인다
+ * 단계 표시: 번호와 이름을 글자로만 나란히. 지금 단계는 먹색 굵게, 지나온 단계는 번호 자리에 체크가 서고 눌러서 돌아갈 수 있다.
+ * 예전에는 번호를 동그라미에 넣어 가는 선으로 잇고 지금 단계를 먹색 원으로 채웠다. 마법사마다 보이는 흔한 꼴이라 걷어냈다
  */
 .wz-steps {
   display: flex;
   align-items: center;
+  gap: 28px;
   margin: 0;
   padding: 0;
   color: var(--ink-3);
@@ -41,24 +42,10 @@
   align-items: center;
 }
 
-/* 단계 사이의 선. 지나온 쪽은 짙게 */
-.wz-steps li + li::before {
-  width: 32px;
-  height: 1px;
-  margin: 0 12px;
-  background: var(--line-2);
-  content: '';
-  transition: background 0.3s;
-}
-
-.wz-steps li.is-done + li::before {
-  background: var(--ink-3);
-}
-
 .wz-step {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 6px;
   padding: 4px 6px;
   border: 0;
   border-radius: var(--r-sm);
@@ -78,18 +65,15 @@ button.wz-step:hover {
 }
 
 .wz-step-n {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 12px;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 12px;
   font-variant-numeric: tabular-nums;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition: color 0.2s;
 }
 
 .wz-step-n .icon {
+  align-self: center;
   width: 13px;
   height: 13px;
   stroke-width: 2.4;
@@ -97,12 +81,7 @@ button.wz-step:hover {
 
 .wz-steps .is-current {
   color: var(--ink);
-}
-
-.wz-steps .is-current .wz-step-n {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--panel);
+  font-weight: 700;
 }
 
 .wz-steps .is-done {
@@ -582,7 +561,7 @@ button.wz-step:hover {
 
 .wz-cover-shot {
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgb(16 20 31 / 0.06), 0 8px 24px rgb(16 20 31 / 0.1);
+  box-shadow: 0 1px 2px rgb(28 27 24 / 0.06), 0 8px 24px rgb(28 27 24 / 0.1);
 }
 
 .wz-cover-shot .slide-frame {

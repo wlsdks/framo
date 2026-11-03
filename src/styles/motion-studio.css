@@ -105,7 +105,7 @@
 
 .ms-stage .slide-frame {
   border-radius: 6px;
-  box-shadow: 0 1px 2px rgb(16 20 31 / 0.06), 0 12px 36px rgb(16 20 31 / 0.12);
+  box-shadow: 0 1px 2px rgb(28 27 24 / 0.06), 0 12px 36px rgb(28 27 24 / 0.12);
 }
 
 .ms-stage .bk {
@@ -205,7 +205,7 @@
 }
 
 .ms-play:hover:not(:disabled) {
-  background: #2c313b;
+  background: #35332e;
 }
 
 .ms-play:active:not(:disabled) {

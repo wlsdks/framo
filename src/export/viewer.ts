@@ -10,16 +10,16 @@ import { blockFitter } from '../slides/fitBlocks'
 export const VIEWER_TEXT = 'PDF로 저장 발표 시작 0123456789 /'
 
 export const VIEWER_CSS = `
-html,body{margin:0;background:#e9ebef;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased}
-.v-bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:rgb(255 255 255/.94);border-bottom:1px solid #dde1e7;backdrop-filter:blur(8px)}
-.v-title{min-width:0;overflow:hidden;color:#191c22;font-size:15px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+html,body{margin:0;background:#efede8;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased}
+.v-bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:rgb(255 255 255/.94);border-bottom:1px solid #e3dfd7;backdrop-filter:blur(8px)}
+.v-title{min-width:0;overflow:hidden;color:#1c1b18;font-size:15px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
 .v-actions{display:flex;flex:none;gap:8px}
-.v-btn{padding:10px 16px;border:1px solid #d3d7de;border-radius:8px;background:#fff;color:#191c22;font:600 14px/1 inherit;cursor:pointer}
-.v-btn:focus-visible{outline:2px solid #3a6ff8;outline-offset:2px}
-.v-btn-primary{border-color:#191c22;background:#191c22;color:#fff}
+.v-btn{padding:10px 16px;border:1px solid #d4d0c6;border-radius:4px;background:#fff;color:#1c1b18;font:600 14px/1 inherit;cursor:pointer}
+.v-btn:focus-visible{outline:2px solid #2b4fc0;outline-offset:2px}
+.v-btn-primary{border-color:#1c1b18;background:#1c1b18;color:#fff}
 .v-deck{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px 16px 64px}
 .v-slide{width:100%;max-width:1280px}
-.v-frame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:6px;box-shadow:0 1px 2px rgb(0 0 0/.06),0 8px 24px rgb(0 0 0/.08);cursor:pointer}
+.v-frame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:2px;box-shadow:0 0 0 1px rgb(28 27 24/.06),0 4px 16px rgb(28 27 24/.06);cursor:pointer}
 .v-scale{position:absolute;top:0;left:0;width:1920px;height:1080px;transform:scale(var(--s,.5));transform-origin:0 0}
 .v-count{display:none}
 body.is-present{overflow:hidden;background:#000}

@@ -73,15 +73,14 @@
   line-height: 1.5;
 }
 
+/* 단축키는 메뉴의 단축키처럼 글자로만(키 모양 상자 없이) */
 .save-pop-keys kbd {
   flex: none;
-  padding: 1px 6px;
-  border: 1px solid var(--line-2);
-  border-bottom-width: 2px;
-  border-radius: 5px;
-  background: #f8f9fa;
   color: var(--ink);
-  font: 600 12px/1.4 inherit;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 /* 칸에 쓰는 동안은 고른 줄의 면을 걷는다: 쓰는 칸의 실선(edit.css) 한 겹만 남게. 면과 테가 같이 있으면 둘의 끝이 어긋나 보였다 */
