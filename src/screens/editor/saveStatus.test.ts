@@ -16,3 +16,18 @@ describe('저장 상태의 화면 읽기', () => {
     expect(src).toMatch(/<p className="sr-only" role="alert">\s*\{tone === 'bad' \? label : ''\}\s*<\/p>/)
   })
 })
+
+describe('보관 폴더 물음', () => {
+  it('고친 바로 그때가 아니라 손을 쉰 뒤에 묻는다 (첫 글자를 쓰는 중에 떠서 쓰던 칸을 가렸다)', () => {
+    expect(src).toMatch(/const ASK_QUIET = \d{4,}/)
+    expect(src).toMatch(/quiet < ASK_QUIET/)
+  })
+
+  it('띄운 것만으로 물은 것으로 치지 않는다: 답했을 때만 남긴다', () => {
+    // markFolderAsked를 부르는 곳은 answer 하나뿐이다 (정의 한 번, 부르기 한 번)
+    expect(src.match(/markFolderAsked\(\)/g)?.length).toBe(2)
+    expect(src).toMatch(/const answer = \(\) => \{\s*markFolderAsked\(\)/)
+    // 바깥을 누르면 접기만 한다
+    expect(src).toMatch(/contains\(e\.target as Node\)\) setAsking\(false\)/)
+  })
+})

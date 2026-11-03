@@ -5,7 +5,7 @@ import { keys } from '../../lib/keys'
 import { downloadDeckFile } from '../../store/deckFile'
 import { useDeck } from '../../store/deckStore'
 import { saveToBrowser, saveToFolder, useStorage } from '../../store/persist'
-import { AlertIcon, CheckIcon, FOLDER_WHY, FolderIcon, Popover, useEscape } from '../ui'
+import { AlertIcon, CheckIcon, FOLDER_WHY, FolderIcon, Popover, dialogOpen, useEscape } from '../ui'
 
 /** local: 이 브라우저에만 저장했다. 잘못된 것이 아니라 칠하지 않는다 (폴더를 정하는 단추를 옆에 둔다) */
 type Tone = 'ok' | 'local' | 'bad' | 'busy'
@@ -39,28 +39,54 @@ function markFolderAsked() {
   }
 }
 
+/** 마지막으로 고친 뒤 이만큼 손을 쉬면 묻는다 */
+const ASK_QUIET = 4000
+/** 글 칸에 커서를 둔 채면 이만큼 */
+const ASK_QUIET_TYPING = 15000
+function isTypingIn(el: Element | null): boolean {
+  return !!el?.closest('input, textarea, [contenteditable]')
+}
 
 /**
  * 편집기 위쪽의 저장 상태. 누르면 어디에 저장되는지와 할 일을 알려 준다.
- * 보관 폴더를 정하지 않았으면 옆에 '보관 폴더 정하기'를 두고, 이 발표를 처음 고친 때 한 번만 까닭과 함께 묻는다.
+ * 보관 폴더를 정하지 않았으면 옆에 '보관 폴더 정하기'를 두고, 이 발표를 처음 고친 뒤 손이 멈춘 때 까닭과 함께 묻는다(답하면 다시 묻지 않는다).
  * 예전에는 노란 꼬리표(이 브라우저에만 저장됨)가 편집하는 내내 떠 있어 겁만 주고 무엇을 하면 되는지 알기 어려웠다
  */
 export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersions: () => void }) {
   const { tone, label } = useSaveSummary()
   const { folder, choose, allow } = useStorage()
   const [asking, setAsking] = useState(false)
-  // 연 뒤에 처음 고친 때 묻는다: 막 연 발표는 아직 지킬 것이 없고, 예시는 다시 만들 수 있다
+  // 연 뒤에 처음 고친 다음, 손이 멈춘 때 묻는다: 막 연 발표는 아직 지킬 것이 없고, 예시는 다시 만들 수 있다.
+  // 처음 고친 바로 그때 묻던 때는 첫 글자를 쓰는 중에 떠서 발표 이름과 쓰던 칸을 가렸고, 아무 데나 누르면 닫혀 다시 묻지 않았다
   const opened = useRef(deck.updatedAt)
+  const due = deck.updatedAt !== opened.current && deck.id !== 'sample' && folder?.kind === 'none'
+  // 이번에 한 번 띄웠으면 이 편집기에서는 다시 띄우지 않는다 (답하지 않고 닫았으면 다음에 발표를 열 때 다시 묻는다)
+  const shown = useRef(false)
   useEffect(() => {
-    if (deck.updatedAt === opened.current || deck.id === 'sample') return
-    if (folder?.kind !== 'none' || folderAsked()) return
+    if (!due || shown.current || folderAsked()) return
+    // 고칠 때마다 다시 잰다: 마지막으로 고친 뒤 ASK_QUIET 동안 고치지 않으면 묻는다.
+    // 글 칸에 커서가 있으면 생각하며 쉬는 중일 수 있어 더 오래 기다린다. 대화 창이 떠 있으면 그 뒤로 미룬다
+    const since = Date.now()
+    const timer = window.setInterval(() => {
+      const quiet = Date.now() - since
+      const typing = isTypingIn(document.activeElement)
+      if (quiet < ASK_QUIET || (typing && quiet < ASK_QUIET_TYPING) || dialogOpen()) return
+      window.clearInterval(timer)
+      shown.current = true
+      setAsking(true)
+    }, 500)
+    return () => window.clearInterval(timer)
+  }, [due, deck.updatedAt])
+  /** 답했으면(고르기, 나중에, Esc) 다시 묻지 않는다 */
+  const answer = () => {
     markFolderAsked()
-    setAsking(true)
-  }, [deck.updatedAt, deck.id, folder?.kind])
-  // 바깥을 누르거나 Esc면 '나중에'와 같다 (다시 묻지 않고, 머리줄의 '보관 폴더 정하기'는 남는다).
+    setAsking(false)
+  }
+  // 바깥을 누르면 접기만 한다 (머리줄의 '보관 폴더 정하기'는 남는다). 다른 일을 하다 무심코 누른 것일 수 있어 답으로 치지 않는다.
   // 누를 때까지 떠 있으면 장 목록의 첫 장을 가렸다
   const askRef = useRef<HTMLDivElement>(null)
-  useEscape(() => setAsking(false), { active: asking })
+  // 글 칸에서 누른 Esc는 쓰기를 마치는 키라서 답으로 치지 않는다
+  useEscape(answer, { active: asking, typing: false })
   useEffect(() => {
     if (!asking) return
     const onDown = (e: PointerEvent) => {
@@ -75,7 +101,7 @@ export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersion
   }, [folder?.kind])
 
   const pick = async () => {
-    setAsking(false)
+    if (asking) answer()
     if ((await choose()).kind === 'ready') await saveToFolder(useDeck.getState().deck ?? deck)
   }
   const reconnect = async () => {
@@ -136,7 +162,7 @@ export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersion
               <FolderIcon />
               보관 폴더 고르기
             </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAsking(false)}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={answer}>
               나중에
             </button>
           </div>
