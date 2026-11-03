@@ -170,11 +170,11 @@
 }
 
 /* 맡겨 둔 동안 창을 다시 열면: 목록 위에 하는 중인 부탁과 단계 */
+/* 맡긴 일의 진행: 칠한 회색 상자 대신 메뉴 맨 위의 한 묶음으로, 아래 선 하나로 나눈다 */
 .ask-run {
   margin: 0 0 8px;
-  padding: 10px 12px 12px;
-  border-radius: var(--r);
-  background: var(--hover);
+  padding: 6px 10px 12px;
+  border-bottom: 1px solid var(--line);
 }
 
 .ask-run-h {

@@ -209,11 +209,11 @@
   margin: 0;
 }
 
+/* 보여 주기 켜고 끄기: 칠한 회색 상자 대신 위의 설명과 선 하나로 나눈 줄 */
 .ai-pop-toggle {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: var(--r-sm);
-  background: var(--hover);
+  margin-top: 14px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
 }
 
 .ai-pop-cols {

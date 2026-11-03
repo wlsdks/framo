@@ -328,12 +328,11 @@
 }
 
 /* 장면 알아서 고르기: 어느 장에 무엇을 넣는지 먼저 보이고 적용한다 */
+/* 장면 알아서 고르기의 결과: 테 두른 회색 상자 대신 위 선 하나로 나눈 묶음 */
 .sp-plan {
-  margin-top: 12px;
-  padding: 12px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-sm);
-  background: var(--app-bg);
+  margin-top: 14px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line);
 }
 
 .sp-plan-h {

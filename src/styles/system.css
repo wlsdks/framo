@@ -160,11 +160,9 @@
   font-weight: 700;
 }
 
+/* 꼬리표는 칠한 알약 없이 옅은 글자로 */
 .sys-tag {
-  padding: 1px 8px;
-  border-radius: var(--r-sm);
-  background: #e8e8e8;
-  color: var(--ink-2);
+  color: var(--ink-3);
   font-size: 12px;
   font-weight: 600;
 }
