@@ -83,8 +83,10 @@ export function Wizard() {
   }
   const [method, setMethod] = useState<Method>('live')
   const [title, setTitle] = useState('')
-  const [org, setOrg] = useState('')
-  const [presenter, setPresenter] = useState('')
+  // 소속과 발표자는 지난번 마법사에서 적은 것으로 먼저 채운다. 주간 보고처럼 자주 만드는 발표는 매번 같은 것을 다시 쳐야 했다.
+  // 이 브라우저에만 두고, 비워서 만들면 다음에도 비운다
+  const [org, setOrg] = useState(() => lastAuthor().org)
+  const [presenter, setPresenter] = useState(() => lastAuthor().presenter)
   const [ask, setAsk] = useState('')
   const [lead, setLead] = useState('')
   const [theme, setTheme] = useState<ThemeId>('white')
@@ -154,7 +156,10 @@ export function Wizard() {
         theme,
       })
       // 저장하지 못한 채 편집기로 가면 '찾을 수 없는 발표'로 보인다. 여기 머물러 다시 누를 수 있게
-      if (await persistNow(deck)) go({ name: 'edit', id: deck.id })
+      if (await persistNow(deck)) {
+        rememberAuthor(org, presenter)
+        go({ name: 'edit', id: deck.id })
+      }
       else toast.show(`발표를 만들지 못했어요. ${SAVE_HELP}`, undefined, 8000)
     } catch {
       toast.show(`발표를 만들지 못했어요. ${SAVE_HELP}`, undefined, 8000)
@@ -530,4 +535,24 @@ function CoverPreview(props: {
     logo: '',
   }
   return <SlideCanvas deck={{ meta, theme: { id }, title }} slide={slide} mode={mode} />
+}
+
+/** 마법사에서 마지막으로 적은 소속과 발표자 (이 브라우저에만) */
+const AUTHOR_KEY = 'html-maker:last-author'
+
+function lastAuthor(): { org: string; presenter: string } {
+  try {
+    const v = JSON.parse(localStorage.getItem(AUTHOR_KEY) ?? '{}') as { org?: unknown; presenter?: unknown }
+    return { org: typeof v.org === 'string' ? v.org : '', presenter: typeof v.presenter === 'string' ? v.presenter : '' }
+  } catch {
+    return { org: '', presenter: '' }
+  }
+}
+
+function rememberAuthor(org: string, presenter: string) {
+  try {
+    localStorage.setItem(AUTHOR_KEY, JSON.stringify({ org: org.trim(), presenter: presenter.trim() }))
+  } catch {
+    /* 기억하지 못하면 다음에 빈칸으로 */
+  }
 }
