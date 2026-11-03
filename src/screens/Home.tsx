@@ -12,7 +12,7 @@ import { decodeDeckFile, DECK_EXT } from '../store/deckFile'
 import { useDeck } from '../store/deckStore'
 import { listDecks } from '../store/library'
 import { importDeck, persistNow, removeDeck, syncWithFolder, useStorage } from '../store/persist'
-import { Brand, CopyIcon, FOLDER_WHY, FolderIcon, Info, Modal, MoreIcon, noticeAfterGo, PlusIcon, Popover, SAVE_HELP, TrashIcon, UploadIcon, useToast } from './ui'
+import { Brand, FOLDER_WHY, FolderIcon, Info, Modal, MoreIcon, noticeAfterGo, PlusIcon, Popover, SAVE_HELP, UploadIcon, useToast } from './ui'
 import { UpdateNote } from './UpdateNote'
 
 const SAMPLE_ID = 'sample'
@@ -137,6 +137,13 @@ export function Home() {
                 완성된 예시 보기
               </button>
             )}
+            {/* 발표가 있으면 만들기는 머리말 오른쪽 단추 하나로. 예전에는 목록 맨 앞에 테만 두른 빈 카드(+ 새 발표 만들기)를 두어
+                흔한 템플릿의 카드 판처럼 보였고, 발표 그림 사이에서 빈칸처럼 읽혔다 */}
+            {decks && decks.length > 0 && (
+              <button type="button" className="btn btn-primary" onClick={() => go({ name: 'new' })}>
+                <PlusIcon />새 발표 만들기
+              </button>
+            )}
           </div>
         </div>
 
@@ -173,10 +180,6 @@ export function Home() {
 
         {decks && decks.length > 0 && (
           <div className="home-grid">
-            <button type="button" className="home-new" onClick={() => go({ name: 'new' })}>
-              <PlusIcon />
-              <span>새 발표 만들기</span>
-            </button>
             {decks.map((deck) => (
               <DeckCard key={deck.id} deck={deck} onDuplicate={() => duplicate(deck)} onDelete={() => setToDelete(deck)} />
             ))}
@@ -258,7 +261,6 @@ function DeckCard({ deck, onDuplicate, onDelete }: { deck: Deck; onDuplicate: ()
                   onDuplicate()
                 }}
               >
-                <CopyIcon />
                 사본 만들기
               </button>
               <button
@@ -269,7 +271,6 @@ function DeckCard({ deck, onDuplicate, onDelete }: { deck: Deck; onDuplicate: ()
                   onDelete()
                 }}
               >
-                <TrashIcon />
                 지우기
               </button>
             </div>
