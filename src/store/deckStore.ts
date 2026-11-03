@@ -207,7 +207,10 @@ export const useDeck = create<DeckState>((set, get) => {
       }
       // 가져온 파일이나 예전 저장본은 지금 꼴로
       const deck = migrateDeck(raw)
-      set({ deck, newer: null, selectedId: deck.slides[0]?.id ?? null, past: [], future: [], lastKey: null })
+      // 다시 열면 마지막으로 보던 장에서 이어 간다 (어제 7번 장까지 채웠으면 오늘도 7번에서). 그 장이 없어졌으면 첫 장
+      const last = lastSlideOf(deck.id)
+      const selectedId = (last && deck.slides.some((s) => s.id === last) ? last : deck.slides[0]?.id) ?? null
+      set({ deck, newer: null, selectedId, past: [], future: [], lastKey: null })
     },
     close() {
       set({ deck: null, newer: null, selectedId: null, past: [], future: [] })
@@ -453,3 +456,37 @@ export function undoLast(): () => boolean {
 export function useSelectedSlide(): Slide | null {
   return useDeck((s) => s.deck?.slides.find((x) => x.id === s.selectedId) ?? null)
 }
+
+/**
+ * 발표마다 마지막으로 본 장. 이 PC의 이 브라우저에만 두고(발표 파일에는 넣지 않는다) 최근 발표 50개까지만 기억한다.
+ * 저장소를 쓸 수 없으면(사생활 보호 창) 늘 첫 장에서 연다
+ */
+const LAST_SLIDE_KEY = 'html-maker:last-slide'
+const LAST_SLIDE_MAX = 50
+
+function lastSlides(): [string, string][] {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAST_SLIDE_KEY) ?? '[]') as unknown
+    return Array.isArray(v) ? v.filter((x): x is [string, string] => Array.isArray(x) && typeof x[0] === 'string' && typeof x[1] === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+function lastSlideOf(deckId: string): string | null {
+  return lastSlides().find(([d]) => d === deckId)?.[1] ?? null
+}
+
+function rememberSlide(deckId: string, slideId: string) {
+  try {
+    const rest = lastSlides().filter(([d]) => d !== deckId)
+    localStorage.setItem(LAST_SLIDE_KEY, JSON.stringify([[deckId, slideId], ...rest].slice(0, LAST_SLIDE_MAX)))
+  } catch {
+    /* 저장하지 못하면 다음에 첫 장에서 연다 */
+  }
+}
+
+// 고른 장이 바뀔 때마다 적는다 (목록에서 고르기, 장 더하기, 복제, 발표를 끝낸 장 모두)
+useDeck.subscribe((s, prev) => {
+  if (s.deck && s.selectedId && (s.selectedId !== prev.selectedId || s.deck.id !== prev.deck?.id)) rememberSlide(s.deck.id, s.selectedId)
+})
