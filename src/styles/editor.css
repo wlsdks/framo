@@ -567,8 +567,9 @@
   /* hidden이 아니라 clip: 글이 넘쳐 틀 밖으로 나간 칸에 초점이 가거나 커서가 움직여도 브라우저가 틀을 스크롤하지 못하게.
      스크롤되면 장이 틀 안에서 밀린 채 남는다 */
   overflow: clip;
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgb(28 27 24 / 0.06), 0 10px 30px rgb(28 27 24 / 0.1);
+  border-radius: 2px;
+  /* 책상 위의 종이 한 장처럼: 가는 테와 바닥에 붙은 옅은 그림자. 크게 퍼지는 그림자는 장을 화면 위에 띄웠다 */
+  box-shadow: 0 0 0 1px rgb(28 27 24 / 0.06), 0 2px 6px rgb(28 27 24 / 0.06);
 }
 
 /* 완성된 예시(sample)는 비워 둔 로고 칸(edit.css의 .is-optional)을 마우스를 올리기 전까지 감춘다.
