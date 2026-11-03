@@ -503,6 +503,12 @@
   cursor: pointer;
 }
 
+/* 차례를 바꿀 수 없는 줄(제목, 출처, 레이아웃 장의 줄)은 누르거나 끌 수 있는 것처럼 보이지 않게.
+   손 모양 커서가 떠서 막대를 끌어 봐도 아무 일이 없었다 */
+.ms-tl-row.is-fixed .ms-track {
+  cursor: default;
+}
+
 .ms-bar {
   position: absolute;
   top: 50%;

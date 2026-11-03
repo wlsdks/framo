@@ -247,7 +247,7 @@ function Bar({ lane, span }: { lane: Lane; span: number }) {
 /** 제목, 출처처럼 차례를 바꿀 수 없는 줄 */
 function Row({ lane, span }: { lane: Lane; span: number }) {
   return (
-    <div className="ms-tl-row is-fixed">
+    <div className="ms-tl-row is-fixed" title="이 줄은 나오는 차례가 정해져 있어요">
       <span className="ms-lane-l">
         <span className="ms-name">{lane.name}</span>
       </span>
