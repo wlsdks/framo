@@ -10,7 +10,7 @@ import type { AiShare } from '../../ai/useAiShare'
 import { cx } from '../../lib/cx'
 import { onMenuKeys } from '../../lib/menuKeys'
 import { useDeck } from '../../store/deckStore'
-import { AlertIcon, BlocksIcon, CopyIcon, EyeIcon, EyeOffIcon, MoreIcon, PlayIcon, PlusIcon, Popover, ScreenIcon, SlidersIcon, TrashIcon } from '../ui'
+import { AlertIcon, BlocksIcon, MoreIcon, PlayIcon, PlusIcon, Popover, ScreenIcon, SlidersIcon } from '../ui'
 import { SlideAsk } from './AiShare'
 import { openLayoutPicker } from './Inspector'
 import type { Overflow } from './SlideStage'
@@ -326,7 +326,6 @@ export function StageTools({
                   store.duplicateSlide(slide.id)
                 }}
               >
-                <CopyIcon />
                 복제
               </button>
               <button
@@ -338,7 +337,6 @@ export function StageTools({
                   store.setHidden(slide.id, !slide.hidden)
                 }}
               >
-                {slide.hidden ? <EyeIcon /> : <EyeOffIcon />}
                 <span className="menu-item-t">
                   {slide.hidden ? '발표에 다시 넣기' : '발표에서 빼기'}
                   <span className="menu-item-desc">{slide.hidden ? '발표할 때 이 슬라이드를 다시 보여요' : '지우지 않고 발표할 때만 건너뛰어요'}</span>
@@ -357,7 +355,6 @@ export function StageTools({
                   onRemove(slide)
                 }}
               >
-                <TrashIcon />
                 이 슬라이드 지우기
               </button>
             </div>
