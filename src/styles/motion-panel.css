@@ -21,44 +21,48 @@
   height: 12px;
 }
 
-/* 고르는 값이 넷을 넘으면 세 칸씩 줄을 맞춘 격자로 (한 줄 고르기가 꺾여 보이지 않게) */
+/* 고르는 값이 넷을 넘으면 세 칸씩 줄을 맞춘 격자로 (한 줄 고르기가 꺾여 보이지 않게).
+   모양은 다른 고르기(Segmented)와 같은 회색 판 위의 흰 단추: 예전에는 칸마다 테 상자에 고른 것만 두 겹 먹색 테라,
+   바로 위 '모션 세기'와 꼴이 달랐고 고른 것이 굵은 상자로 튀었다 */
 .mp-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: #e7e9ed;
 }
 
 .mp-pick {
   min-width: 0;
-  height: 32px;
+  height: 30px;
   padding: 0 4px;
   overflow: hidden;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-sm);
-  background: var(--panel);
+  border: 0;
+  border-radius: 6px;
+  background: none;
   color: var(--ink-2);
   font-size: 13px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
-  transition: border-color 0.14s, color 0.14s;
+  transition: background var(--t-fast), box-shadow var(--t-fast), color var(--t-fast);
 }
 
 .mp-pick:hover {
-  border-color: var(--ink-3);
   color: var(--ink);
 }
 
 .mp-pick.is-on {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgb(16 20 31 / 0.12);
   color: var(--ink);
 }
 
 .mp-pick:focus-visible {
   outline: 2px solid var(--sel);
-  outline-offset: 1px;
+  outline-offset: -2px;
 }
 
 .mp-empty p {

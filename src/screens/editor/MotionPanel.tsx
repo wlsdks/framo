@@ -11,7 +11,7 @@ import { keys } from '../../lib/keys'
 import { listAccessibility, movedSay, useListDrag } from '../../lib/listDrag'
 import { motionEngine } from '../../motion/engine'
 import { useDeck } from '../../store/deckStore'
-import { ChevronIcon, GripIcon, Icon, PlayIcon, Segmented, type Toast } from '../ui'
+import { ChevronIcon, GripIcon, PlayIcon, Segmented, type Toast } from '../ui'
 import type { BlockEditing } from './BlockEditor'
 import { PREVIEW_MOTION } from './DeckMenus'
 import { Opt } from './Inspector'
@@ -75,7 +75,6 @@ export function MotionPanel({
       </section>
       {/* 크게 보며 고치는 곳: 장을 발표 화면처럼 움직이고 시간표로 차례와 때를 본다 */}
       <button type="button" className="mp-studio" onClick={onOpenStudio}>
-        <StudioIcon />
         <span>
           <b>모션 편집</b>
           <span className="mp-studio-d">크게 보면서 차례와 모션을 고쳐요</span>
@@ -357,4 +356,3 @@ function Row({
 }
 
 /** 움직임 편집: 차례로 나오는 막대 셋 (시간표의 모습) */
-const StudioIcon = () => <Icon className="mp-studio-i" d="M4 7h8M8 12h8M12 17h8" />
