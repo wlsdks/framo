@@ -29,6 +29,21 @@
   justify-content: flex-end;
 }
 
+/* 위 막대에서 테를 두른 것은 '발표하기' 하나. AI 다듬기, 테마, 내보내기까지 모두 테 상자면 상자 넷이 나란히 서서
+   흔한 도구 막대처럼 보였고, 어디가 할 일의 끝(발표)인지도 덜 보였다. 나머지는 되돌리기 아이콘처럼 올리면 옅은 면만 */
+.ed-top-r .btn-ghost {
+  border-color: transparent;
+  background: none;
+  color: var(--ink-2);
+}
+
+.ed-top-r .btn-ghost:hover:not(:disabled),
+.ed-top-r .btn-ghost[aria-expanded='true'] {
+  border-color: transparent;
+  background: var(--hover-2);
+  color: var(--ink);
+}
+
 /* 위 막대의 묶음 사이 가는 선. 단추 높이(36)의 반쯤만 그어 막대를 칸으로 나누지 않고 쉼표처럼 */
 .ed-top-sep {
   flex: none;
@@ -1067,18 +1082,20 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 8px 10px 8px 8px;
-  border: 1px solid var(--line);
+  /* 테 상자로 두르지 않는다: 바로 아래 구역 선과 겹쳐 상자 밑에 선이 되었다. 올리면 옅게만 */
+  margin: -6px -8px;
+  width: calc(100% + 16px);
+  padding: 6px 8px;
+  border: 0;
   border-radius: var(--r);
-  background: var(--panel);
+  background: none;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.14s, background-color 0.14s;
+  transition: background-color 0.14s;
 }
 
 .ins-cur:hover {
-  border-color: var(--line-2);
-  background: #f8f9fa;
+  background: var(--hover);
 }
 
 .ins-cur .slide-frame {
@@ -1503,9 +1520,14 @@
   box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--ink);
 }
 
+/* 직접 고르기: 무지개 원은 장식이 앞서 견본 줄에서 혼자 튀었다. 빈 원에 + 하나. 고르면 그 색으로 칠해진다(인라인) */
 .swatch-custom {
   overflow: hidden;
-  background: conic-gradient(#e5484d, #f5a524, #30a46c, #0b7a75, #3a6ff8, #8e4ec6, #e5484d);
+  background:
+    linear-gradient(var(--ink-2), var(--ink-2)) center / 10px 1.5px no-repeat,
+    linear-gradient(var(--ink-2), var(--ink-2)) center / 1.5px 10px no-repeat,
+    var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
 .swatch-custom input {

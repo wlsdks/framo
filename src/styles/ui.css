@@ -318,8 +318,9 @@
   transition: transform 0.15s;
 }
 
+/* 켠 것은 먹색: 파란색은 장 위에서 고른 것(선택)의 색이라, 설정 줄마다 파란 알약이 서면 선택처럼 읽혔다 */
 .toggle input:checked + .toggle-track {
-  background: var(--sel);
+  background: var(--ink);
 }
 
 .toggle input:checked + .toggle-track::after {
