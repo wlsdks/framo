@@ -1001,18 +1001,17 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   touch-action: none;
 }
 
-.lib-card:hover .lib-thumb,
+/* 올리면 테만 짙게. 예전에는 파란 테와 그림자로 2px 떠올라 카드마다 들떠 보였다. 끌 수 있다는 것은 손 모양(grab)이 알린다 */
+.lib-card:hover .lib-thumb {
+  box-shadow: 0 0 0 1px var(--ink-3);
+}
+
 .lib-card:focus-visible .lib-thumb {
-  box-shadow: 0 0 0 2px var(--sel), 0 10px 22px rgb(16 20 31 / 0.12);
-  translate: 0 -2px;
+  box-shadow: 0 0 0 2px var(--sel);
 }
 
 .lib-card:focus-visible {
   outline: none;
-}
-
-.lib-card:active .lib-thumb {
-  translate: 0 0;
 }
 
 /* 이 장에 함께 넣을 수 없는 부품: 잠근 표시. 그림과 이름을 흐리게 하고 이름 밑에 자물쇠 한 줄. 누르면 아래에 까닭이 나온다.
@@ -1032,7 +1031,6 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
 
 .lib-card.is-blocked:hover .lib-thumb {
   box-shadow: 0 0 0 1px var(--line-2);
-  translate: 0 0;
 }
 
 .lib-card.is-why .lib-thumb {
@@ -1124,7 +1122,7 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   border-radius: 10px;
   box-shadow: 0 0 0 1px var(--line);
   aspect-ratio: 3 / 2;
-  transition: box-shadow 0.16s, translate 0.16s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.16s;
+  transition: box-shadow 0.16s, opacity 0.16s;
 }
 
 .lib-thumb-scale {

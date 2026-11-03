@@ -276,13 +276,16 @@
   overflow: hidden;
   border-radius: var(--r-sm);
   box-shadow: 0 0 0 1px var(--line-2);
-  transition: box-shadow 0.14s, translate 0.14s;
+  transition: box-shadow 0.14s;
 }
 
-.sp-card:hover .sp-thumb,
+/* 올리면 테만 짙게(떠오르지 않는다). 고른 장면은 다른 그림 고르기(모양, 장 목록)와 같은 선택 색 테 */
+.sp-card:hover .sp-thumb {
+  box-shadow: 0 0 0 1px var(--ink-3);
+}
+
 .sp-card:focus-visible .sp-thumb {
-  box-shadow: 0 0 0 2px var(--sel), 0 8px 18px rgb(16 20 31 / 0.1);
-  translate: 0 -1px;
+  box-shadow: 0 0 0 2px var(--sel);
 }
 
 .sp-card:focus-visible {
@@ -294,7 +297,7 @@
 }
 
 .sp-card.is-on .sp-thumb {
-  box-shadow: 0 0 0 2px var(--ink);
+  box-shadow: 0 0 0 2px var(--sel);
 }
 
 .sp-name {

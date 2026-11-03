@@ -339,9 +339,11 @@
   color: var(--ink);
 }
 
+/* 고른 묶음은 옅은 회색 면에 먹색 굵은 글자. 파란 알약은 장 위의 선택 색과 겹쳐 읽혔다 */
 .add-slide-tab.is-on {
-  background: var(--sel-soft);
-  color: var(--sel);
+  background: var(--hover-2);
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .add-slide-n {
@@ -402,13 +404,16 @@
   overflow: hidden;
   border-radius: 6px;
   box-shadow: 0 0 0 1px var(--line);
-  transition: box-shadow 0.14s, translate 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: box-shadow 0.14s;
 }
 
-.add-slide-card:hover .add-slide-pic,
+/* 올리면 테만 짙게(떠오르지 않는다). 키보드로 오면 선택 색 테 */
+.add-slide-card:hover .add-slide-pic {
+  box-shadow: 0 0 0 1px var(--ink-3);
+}
+
 .add-slide-card:focus-visible .add-slide-pic {
-  box-shadow: 0 0 0 2px var(--sel), 0 8px 20px rgb(16 20 31 / 0.1);
-  translate: 0 -2px;
+  box-shadow: 0 0 0 2px var(--sel);
 }
 
 .add-slide-card:hover,
