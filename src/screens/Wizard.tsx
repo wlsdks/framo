@@ -502,7 +502,10 @@ function Catalog({ type, onPick, onNext }: { type: DeckType; onPick: (t: DeckTyp
   const film = useMemo(() => filmOf(type), [type])
   const info = useMemo(() => pageInfo(film.slides), [film])
   const bp = BLUEPRINTS[type]
-  const [hero, ...rest] = film.slides
+  // 크게 보일 장: 이야기 흐름이나 작은 장에 마우스를 올리면 그 장. 종류를 바꾸면 첫 장으로
+  const [shown, setShown] = useState(0)
+  useEffect(() => setShown(0), [type])
+  const big = film.slides[shown] ?? film.slides[0]
   return (
     <section className="wz-sec wzx">
       <nav className="wzx-list" aria-label="발표 종류">
@@ -519,35 +522,39 @@ function Catalog({ type, onPick, onNext }: { type: DeckType; onPick: (t: DeckTyp
         ))}
       </nav>
       <div className="wzx-hero" aria-live="polite">
-        <p className="wzx-k">{groupOf(type)?.name}</p>
-        <h2 className="wzx-h">{bp.name}</h2>
-        <p className="wzx-d">{bp.description}</p>
-        {hero && (
-          <span className="wz-shot wzx-big wz-real" key={type} aria-hidden="true">
-            <FitSlide>
-              <SlideCanvas deck={film.deck} slide={hero} mode="preview" {...pageProps(info, hero.id)} />
-            </FitSlide>
-          </span>
-        )}
-        <ol className="wzx-flow" aria-label="이야기 흐름">
-          {bp.storyline.map((s, i) => (
-            <li key={s} className={cx(i === 0 && 'is-on')}>
-              <span>{i + 1}</span>
-              {s}
-            </li>
-          ))}
-        </ol>
-        {rest.length > 0 && (
-          <ol className="wzx-strip wz-real" aria-hidden="true">
-            {rest.map((s) => (
-              <li key={s.id} className="wz-shot">
-                <FitSlide>
-                  <Later><SlideCanvas deck={film.deck} slide={s} mode="preview" {...pageProps(info, s.id)} /></Later>
-                </FitSlide>
+        <div className="wzx-stage">
+          {big && (
+            <span className="wz-shot wzx-big wz-real" key={`${type}-${big.id}`} aria-hidden="true">
+              <FitSlide>
+                <SlideCanvas deck={film.deck} slide={big} mode="preview" {...pageProps(info, big.id)} />
+              </FitSlide>
+            </span>
+          )}
+          {film.slides.length > 1 && (
+            <ol className="wzx-strip wz-real" aria-hidden="true">
+              {film.slides.map((s, i) => (
+                <li key={s.id} className={cx('wz-shot', i === shown && 'is-on')} onMouseEnter={() => setShown(i)}>
+                  <FitSlide>
+                    <Later><SlideCanvas deck={film.deck} slide={s} mode="preview" {...pageProps(info, s.id)} /></Later>
+                  </FitSlide>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+        <div className="wzx-about">
+          <p className="wzx-k">{groupOf(type)?.name}</p>
+          <h2 className="wzx-h">{bp.name}</h2>
+          <p className="wzx-d">{bp.description}</p>
+          <ol className="wzx-flow" aria-label="이야기 흐름">
+            {bp.storyline.map((s, i) => (
+              <li key={s} className={cx(i === shown && 'is-on')} onMouseEnter={() => setShown(i)}>
+                <span className="wzx-flow-n">{i + 1}</span>
+                {s}
               </li>
             ))}
           </ol>
-        )}
+        </div>
       </div>
     </section>
   )
