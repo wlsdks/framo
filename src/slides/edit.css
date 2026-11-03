@@ -1226,3 +1226,16 @@ body.is-block-dragging .bk-area.is-live > .bk-link:not(.is-preview) {
   width: 38px;
   height: 38px;
 }
+
+/* 견줄 수 없어 그림에서 빠진 값(음수, 읽을 수 없는 값, 다른 단위): 어느 칸을 고치면 되는지 경고 색 물결 밑줄로.
+   그 위의 안내(.ed-warn)도 같은 색. 하나만 틀려도 막대를 모두 그리지 않는데, 옅은 안내 한 줄로는 놓치고 어느 칸인지 몰랐다 */
+.slide .is-unfit .ed-input {
+  text-decoration: underline wavy #d97706;
+  text-decoration-thickness: calc(1.5px / var(--vs, 0.5));
+  text-underline-offset: calc(6px / var(--vs, 0.5));
+}
+
+.slide .ed-warn {
+  color: #d97706;
+  font-weight: 600;
+}

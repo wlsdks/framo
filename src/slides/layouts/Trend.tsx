@@ -79,7 +79,7 @@ export function Trend() {
                 <T k="target" as="span" oneLine />
               </span>
             )}
-            {mode === 'edit' && (!dataSeries.ok || invalidTarget) && <span className="tn-unit" role="status">값과 목표를 같은 단위의 숫자로 적어 주세요.</span>}
+            {mode === 'edit' && (!dataSeries.ok || invalidTarget) && <span className="tn-unit ed-warn" role="status">값과 목표를 같은 단위의 숫자로 적어 주세요.</span>}
           </div>
         )}
         <div className="tn-plot">

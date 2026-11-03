@@ -83,7 +83,7 @@ export function Versus() {
               단위: <T k="unit" as="span" oneLine />
             </span>
           )}
-          {mode === 'edit' && !comparable && <span className="vs-unit" role="status">같은 단위의 숫자를 적어 주세요. 막대는 0 이상이어야 해요.</span>}
+          {mode === 'edit' && !comparable && <span className="vs-unit ed-warn" role="status">같은 단위의 숫자를 적어 주세요. 막대는 0 이상이어야 해요.</span>}
         </div>
         {dots || textFallback ? (
           // 점 두 개: 항목마다 한 줄. 앞 값 점에서 뒤 값 점까지 이어 얼마나, 어느 쪽으로 움직였는지 본다.

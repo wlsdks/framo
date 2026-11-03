@@ -28,6 +28,13 @@ describe('막대 비교의 값', () => {
     }
   })
 
+  it('편집할 때 견줄 수 없는 칸에만 표시를 한다 (발표할 때는 없다)', () => {
+    const edit = render(['20건', '-2건', '', '10%'], 'edit')
+    expect(edit.match(/is-unfit/g)).toHaveLength(2)
+    expect(render(['20건', '-2건'], 'final')).not.toContain('is-unfit')
+    expect(render(['20건', '10건'], 'edit')).not.toContain('is-unfit')
+  })
+
   it('사용자가 0을 적었으면 편집 중에도 임의의 예시 막대로 바꾸지 않는다', () => {
     const html = render(['0', '0'], 'edit')
     expect(html).not.toContain('is-demo')

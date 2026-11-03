@@ -6,7 +6,7 @@ import type { Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
-import { readNumber, seriesIn } from '../numbers'
+import { readNumber, seriesIn, unfitValues } from '../numbers'
 import { Head, useItems, useUnitOpen } from './parts'
 
 /** 숫자를 넣기 전, 편집할 때 흐리게 보여 줄 예시 길이. 어떤 모양의 장인지 알아보게만 한다. */
@@ -34,6 +34,8 @@ export function Bars() {
   // 비어 있는 항목은 작성 중인 칸이므로 나머지 비교를 막지 않는다.
   const comparable = series.ok && series.values.every((v, i) => v === null ? !items[i].value.trim() : v >= 0)
   const values = series.values
+  // 견줄 수 없는 값이 어느 칸인지 (편집할 때만 밑줄로 보인다)
+  const unfit = mode === 'edit' && !comparable ? unfitValues(items.map((it) => it.value), unit) : []
   const max = Math.max(0, ...values.map((v) => v ?? 0))
   const demo = demoOf(mode, items)
   const demoP = demo ? demoBars(slide, items.length) : []
@@ -44,7 +46,7 @@ export function Bars() {
     <>
       <Head lead />
       <div className="s-body br-wrap">
-        {mode === 'edit' && !comparable && <p className="br-unit" role="status">같은 단위의 0 이상 숫자를 적어 주세요.</p>}
+        {mode === 'edit' && !comparable && <p className="br-unit ed-warn" role="status">같은 단위의 0 이상 숫자를 적어 주세요.</p>}
         {unitOpen && (
           <p className="br-top">
             <span className="br-unit">
@@ -74,7 +76,7 @@ export function Bars() {
                     {known && <div className="br-fill" />}
                     {dots && known && <span className="br-dot" />}
                   </div>
-                  <IT i={i} k="value" className="br-value" />
+                  <IT i={i} k="value" className={cx('br-value', unfit[i] && 'is-unfit')} />
                 </div>
                 <ItemTools i={i} />
               </div>

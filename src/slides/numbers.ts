@@ -319,6 +319,18 @@ export function seriesIn(texts: string[], unit = ''): Series {
   return { values, ok, suffix: unit.trim() || ref.suffix }
 }
 
+/**
+ * 한 그림의 값 가운데 견줄 수 없어 그림에서 빠지는 자리: 읽을 수 없거나('미정'), 0보다 작거나, 다른 값과 단위 무리가
+ * 다른 것('20건' 사이의 '10%'). 기준 무리는 단위 칸, 없으면 단위를 적은 첫 값. 비운 칸은 쓰는 중이라 넣지 않는다.
+ * 편집할 때 어느 칸을 고치면 되는지 보이려고 쓴다: 하나만 틀려도 그림 전체를 그리지 않는데, 안내 한 줄만으로는 어느 칸인지 몰랐다
+ */
+export function unfitValues(texts: string[], unit = ''): boolean[] {
+  const amounts = texts.map((t) => (t.trim() ? readAmount(t, unit) : undefined))
+  const u = unit.trim() ? readOwn(`1 ${unit.trim()}`) : null
+  const ref = u?.kind || amounts.find((a) => a?.kind)?.kind || ''
+  return amounts.map((a) => (a === undefined ? false : a === null || a.base < 0 || (!!ref && !!a.kind && a.kind !== ref)))
+}
+
 /** 빈 값으로 끊긴 선을 나눈다. 중간 시점이 없으면 양옆을 임의로 잇지 않는다. */
 export function lineRuns<T>(points: readonly (T | null)[]): T[][] {
   const runs: T[][] = []

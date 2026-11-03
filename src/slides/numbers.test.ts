@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { amountPair, changeOf, colsOf, dateParts, formatNumber, gradeOf, gradesOf, isNumericCell, lineAxis, lowerIsBetter, optionIndex, periodRest, readAmount, readNumber, scoreOf, seriesIn, spanIn, statusOf, unitAfter } from './numbers'
+import { amountPair, changeOf, colsOf, dateParts, formatNumber, gradeOf, gradesOf, isNumericCell, lineAxis, lowerIsBetter, optionIndex, periodRest, readAmount, readNumber, scoreOf, seriesIn, spanIn, statusOf, unfitValues, unitAfter } from './numbers'
 
 describe('숫자 읽기', () => {
   it('표현 범위를 넘는 숫자는 무한대로 계산하지 않는다', () => {
@@ -440,5 +440,15 @@ describe('목표 대비 실적 한 줄 (scoreOf)', () => {
     expect(scoreOf('5곳', '').known).toBe(false)
     expect(scoreOf('0건', '3건').known).toBe(false)
     expect(scoreOf('3건', '40%').rate).toBeNull()
+  })
+})
+
+describe('견줄 수 없는 값의 자리 (unfitValues)', () => {
+  it('음수, 읽을 수 없는 값, 다른 단위를 가리고 비운 칸은 두지 않는다', () => {
+    expect(unfitValues(['20건', '-2건', '', '미정', '10%'])).toEqual([false, true, false, true, true])
+  })
+
+  it('단위 칸이 있으면 그 단위가 기준이고, 숫자만 적은 값은 그 단위로 읽는다', () => {
+    expect(unfitValues(['42', '1,280', '12.5일', '3건'], '일')).toEqual([false, false, false, true])
   })
 })

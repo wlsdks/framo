@@ -143,7 +143,7 @@ export function Share() {
           </div>
         )}
         <div className="sh-legend">
-          {guidance && <p className="sh-unit sh-warning">{guidance}</p>}
+          {guidance && <p className="sh-unit sh-warning ed-warn">{guidance}</p>}
           {items.map((it, i) => (
             <div key={it.id} className={cx('it sh-item', i === highlight && 'is-hl')} style={{ '--c': colors[i] }}>
               <span className="sh-pct">
