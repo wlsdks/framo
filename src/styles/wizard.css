@@ -561,7 +561,7 @@ button.wz-step:hover {
 
 .wz-cover-shot {
   border-radius: var(--r);
-  box-shadow: 0 1px 2px rgb(28 27 24 / 0.06), 0 8px 24px rgb(28 27 24 / 0.1);
+  box-shadow: 0 1px 2px rgb(20 20 20 / 0.06), 0 8px 24px rgb(20 20 20 / 0.1);
 }
 
 .wz-cover-shot .slide-frame {

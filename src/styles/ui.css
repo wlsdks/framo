@@ -58,7 +58,7 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #35332e;
+  background: #333333;
 }
 
 /* 누르는 동안은 올렸을 때보다 다시 짙게: 눌렀다는 것이 손끝에 보이게 */
@@ -72,8 +72,8 @@
 }
 
 .btn-ghost:hover:not(:disabled) {
-  border-color: #bfbab0;
-  background: #f7f6f2;
+  border-color: #bdbdbd;
+  background: #f7f7f7;
 }
 
 .btn-ghost:active:not(:disabled) {
@@ -180,7 +180,7 @@
   display: inline-flex;
   padding: 3px;
   border-radius: var(--r);
-  background: #e9e6df;
+  background: #e8e8e8;
 }
 
 .seg-full {
@@ -238,7 +238,7 @@
 
 .seg-btn.is-on {
   background: var(--panel);
-  box-shadow: 0 1px 2px rgb(28 27 24 / 0.12);
+  box-shadow: 0 1px 2px rgb(20 20 20 / 0.12);
   color: var(--ink);
 }
 
@@ -269,11 +269,11 @@
 }
 
 .input::placeholder {
-  color: #aaa59b;
+  color: #a6a6a6;
 }
 
 .input:hover {
-  border-color: #bfbab0;
+  border-color: #bdbdbd;
 }
 
 .input:focus {
@@ -311,7 +311,7 @@
   width: 34px;
   height: 20px;
   border-radius: 999px;
-  background: #d3cfc6;
+  background: #d0d0d0;
   transition: background 0.15s;
 }
 
@@ -582,6 +582,13 @@
   position: absolute;
   top: 8px;
   right: 8px;
+  /* 줄마다 (i)가 또렷하면 메뉴 오른쪽에 아이콘이 기둥처럼 섰다. 평소엔 옅게, 그 줄에 올리거나 초점이 오면 또렷하게 */
+  opacity: 0.45;
+  transition: opacity var(--t-fast);
+}
+
+.menu-row:is(:hover, :focus-within) > .info {
+  opacity: 1;
 }
 
 .menu-row > .info .info-btn {
@@ -596,7 +603,7 @@
   place-items: center;
   padding: 16px;
   /* 막은 옅게: 짙은 회색 막은 뒤의 화면을 지워 '경고창'처럼 무거웠다. 무엇을 하던 중인지 보이게 둔다 */
-  background: rgb(28 27 24 / 0.22);
+  background: rgb(20 20 20 / 0.22);
   animation: modal-back-in var(--t) var(--ease-out);
 }
 

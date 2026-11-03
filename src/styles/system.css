@@ -163,7 +163,7 @@
 .sys-tag {
   padding: 1px 8px;
   border-radius: var(--r-sm);
-  background: #e9e6df;
+  background: #e8e8e8;
   color: var(--ink-2);
   font-size: 12px;
   font-weight: 600;
@@ -270,7 +270,7 @@
   height: 56px;
   margin-bottom: 8px;
   border-radius: var(--r);
-  box-shadow: inset 0 0 0 1px rgb(28 27 24 / 0.1);
+  box-shadow: inset 0 0 0 1px rgb(20 20 20 / 0.1);
 }
 
 .sys-token b {

@@ -219,7 +219,7 @@
   margin: 16px -18px -16px;
   padding: 12px 18px 14px;
   border-top: 1px solid var(--line);
-  background: #f7f6f2;
+  background: #f7f7f7;
   border-radius: 0 0 var(--r) var(--r);
   font-size: 13px;
 }
@@ -450,6 +450,25 @@
   box-shadow: 0 0 0 2px var(--sel), var(--shadow-pop);
 }
 
+/* 새로 더한 장: 위에서 조금 내려오며 자리 잡는다. 툭 끼어들면 무엇이 늘었는지 눈이 놓쳤다.
+   끌어 옮기는 위치(transform, dnd-kit)와 겹치지 않게 translate로 */
+.thumb.is-new {
+  animation: thumb-in var(--t-slow) var(--ease-out);
+}
+
+@keyframes thumb-in {
+  from {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb.is-new {
+    animation: none;
+  }
+}
+
 .thumb.is-drag .thumb-btn {
   cursor: grabbing;
 }
@@ -482,7 +501,7 @@
 }
 
 .thumb-btn .slide-frame {
-  border-radius: 5px;
+  border-radius: 2px;
   box-shadow: 0 0 0 1px var(--line);
   transition: box-shadow var(--t) var(--ease-out);
 }
@@ -569,7 +588,7 @@
   overflow: clip;
   border-radius: 2px;
   /* 책상 위의 종이 한 장처럼: 가는 테와 바닥에 붙은 옅은 그림자. 크게 퍼지는 그림자는 장을 화면 위에 띄웠다 */
-  box-shadow: 0 0 0 1px rgb(28 27 24 / 0.06), 0 2px 6px rgb(28 27 24 / 0.06);
+  box-shadow: 0 0 0 1px rgb(20 20 20 / 0.06), 0 2px 6px rgb(20 20 20 / 0.06);
 }
 
 /* 완성된 예시(sample)는 비워 둔 로고 칸(edit.css의 .is-optional)을 마우스를 올리기 전까지 감춘다.
@@ -976,7 +995,7 @@
   padding: 6px 10px;
   border-radius: 7px;
   background: var(--ink);
-  box-shadow: 0 6px 18px rgb(28 27 24 / 0.18);
+  box-shadow: 0 6px 18px rgb(20 20 20 / 0.18);
   color: #fff;
   font-size: 12.5px;
   font-weight: 500;
@@ -1051,7 +1070,7 @@
   padding: 8px 11px;
   border-radius: var(--r);
   background: var(--ink);
-  box-shadow: 0 8px 22px rgb(28 27 24 / 0.16);
+  box-shadow: 0 8px 22px rgb(20 20 20 / 0.16);
   color: #fff;
   font-size: 12.5px;
   font-weight: 400;

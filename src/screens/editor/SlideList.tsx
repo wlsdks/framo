@@ -174,7 +174,7 @@ const Thumb = memo(function Thumb(props: ThumbProps) {
   return (
     <div
       ref={setNodeRef}
-      className={cx('thumb', selected && 'is-on', slide.hidden && 'is-hidden', isDragging && 'is-drag')}
+      className={cx('thumb', selected && 'is-on', slide.hidden && 'is-hidden', isDragging && 'is-drag', fresh && 'is-new')}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       <span className="thumb-n">{slide.hidden ? <EyeOffIcon /> : page}</span>
