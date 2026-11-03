@@ -38,7 +38,13 @@
   transition:
     background var(--t-fast),
     border-color var(--t-fast),
-    color var(--t-fast);
+    color var(--t-fast),
+    translate 0.08s;
+}
+
+/* 누르는 동안 1px 내려앉는다: 색만 바뀌던 때는 눌렸는지 손끝에 덜 왔다 */
+.btn:active:not(:disabled) {
+  translate: 0 1px;
 }
 
 .btn:disabled {
@@ -77,6 +83,10 @@
 .btn-danger {
   background: var(--danger);
   color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 86%, var(--ink));
 }
 
 .btn-lg {
@@ -408,7 +418,7 @@
 /* 닫힐 때는 더 짧게 흐려지기만 (Popover의 closing). 그동안 눌리지 않는다 */
 .pop.is-closing {
   pointer-events: none;
-  animation: pop-out var(--t-fast) ease-in forwards;
+  animation: pop-out var(--t-fast) var(--ease-in) forwards;
 }
 
 @keyframes pop-out {
@@ -585,15 +595,39 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgb(28 27 24 / 0.36);
+  /* 막은 옅게: 짙은 회색 막은 뒤의 화면을 지워 '경고창'처럼 무거웠다. 무엇을 하던 중인지 보이게 둔다 */
+  background: rgb(28 27 24 / 0.22);
+  animation: modal-back-in var(--t) var(--ease-out);
 }
 
+/* 확인 창. 예전에는 모션 없이 툭 떠서 다른 창(메뉴, 알림)과 결이 달랐다. 6px 아래에서 조용히 자리 잡는다 */
 .modal {
-  width: min(420px, 100%);
-  padding: 24px;
-  border-radius: var(--r-lg);
+  width: min(440px, 100%);
+  padding: 24px 24px 20px;
+  border-radius: var(--r);
   background: var(--panel);
   box-shadow: var(--shadow-pop);
+  animation: modal-in var(--t-slow) var(--ease-out);
+}
+
+@keyframes modal-back-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-back,
+  .modal {
+    animation: none;
+  }
 }
 
 /* 창을 열 때 단추가 없으면 창 자체로 초점을 옮긴다(useDialog). 그때 창 전체에 테두리가 생기지 않게 */
@@ -621,7 +655,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 24px;
+  margin-top: 28px;
 }
 
 .toast {
@@ -645,7 +679,7 @@
   font-weight: 500;
   /* 가운데 맞춤은 translate로 두고, 나타날 때는 transform만 움직인다 */
   translate: -50% 0;
-  animation: toast-in 0.24s var(--ease-out);
+  animation: toast-in var(--t-slow) var(--ease-out);
   /* 편집기에서는 알림이 발표자 노트 입력칸 바로 위에 뜬다. 글자 쪽은 누름을 그 아래로 흘려보내 노트를 누를 수 있게 한다
      (컴포넌트를 뺀 뒤 4초 동안 노트를 누르면 알림에 막혀 노트가 열리지 않았고, 이어서 친 글이 사라졌다). 단추만 눌린다 */
   pointer-events: none;
@@ -660,7 +694,7 @@
 
 /* 사라질 때: 나타날 때의 반만큼 내려가며 흐려진다 */
 .toast.is-out {
-  animation: toast-out var(--t-fast) ease-in forwards;
+  animation: toast-out var(--t-fast) var(--ease-in) forwards;
 }
 
 @keyframes toast-out {

@@ -619,8 +619,9 @@
   height: 32px;
   padding: 0 12px 0 10px;
   border: 0;
-  border-radius: var(--r);
-  background: var(--warn-bg);
+  border-radius: var(--r-sm);
+  /* 칠한 노란 알약 대신 경고 글자색과 표시만. 면은 올렸을 때만 옅게 */
+  background: none;
   color: var(--warn-ink);
   font-size: 13px;
   font-weight: 600;
@@ -630,7 +631,7 @@
 
 .stage-warn-btn:hover,
 .stage-warn-btn.is-on {
-  background: color-mix(in srgb, var(--warn-ink) 10%, var(--warn-bg));
+  background: var(--warn-bg);
 }
 
 .stage-warn-btn .icon {
@@ -822,7 +823,7 @@
   overflow: hidden;
   resize: none;
   transition:
-    height 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.22s var(--ease-out),
     box-shadow 0.22s,
     border-color 0.12s;
 }

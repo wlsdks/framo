@@ -104,7 +104,7 @@ button.wz-step:hover {
  * 크게 움직이면 보고 도구답지 않게 들뜨니 16px만, 튀지 않는 감속으로
  */
 .wz-sec {
-  animation: wz-step 0.36s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: wz-step var(--t-slow) var(--ease-out) both;
 }
 
 @keyframes wz-step {
@@ -268,7 +268,7 @@ button.wz-step:hover {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-  animation: wz-in 0.24s ease-out both;
+  animation: wz-in var(--t) var(--ease-out) both;
 }
 
 .wz-film-cap {
@@ -477,7 +477,7 @@ button.wz-step:hover {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-  animation: wz-in 0.24s ease-out both;
+  animation: wz-in var(--t) var(--ease-out) both;
 }
 
 /* 고르는 값이 바뀌어 새로 들어온 장만 살짝 나타난다 (그대로인 장은 다시 그리지 않는다) */
@@ -613,7 +613,7 @@ button.wz-step:hover {
 .wz-next .icon {
   width: 16px;
   height: 16px;
-  transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: transform 0.2s var(--ease-out);
 }
 
 .wz-back {
