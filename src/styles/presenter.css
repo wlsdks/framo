@@ -2,13 +2,15 @@
 /* 어두운 방에서 노트북 화면이 눈부시지 않게 어둡게. 슬라이드만 밝다. */
 
 .pv {
-  --pv-bg: #111318;
-  --pv-panel: #1a1d24;
-  --pv-line: #2a2e37;
-  --pv-ink: #eef0f3;
-  --pv-ink-2: #a9aeb8;
-  --pv-ink-3: #6f7581;
-  --pv-ok: #7fd1a2;
+  /* 앱 틀과 같은 중립 회색 계열의 어둠(푸른 기 없이). 남은 시간이 넉넉할 때는 상태 색 없이 글자색:
+     상태 색은 예외(곧 끝남, 넘김)에만 쓴다. 예전의 초록은 넉넉할 때도 늘 켜져 화면에서 가장 밝은 색이었다 */
+  --pv-bg: #121212;
+  --pv-panel: #1b1b1b;
+  --pv-line: #2c2c2c;
+  --pv-ink: #ededed;
+  --pv-ink-2: #a8a8a8;
+  --pv-ink-3: #707070;
+  --pv-ok: var(--pv-ink-2);
   --pv-soon: #f3c76b;
   --pv-over: #ff8a80;
 
@@ -155,8 +157,8 @@
 }
 
 .pv-btn:hover:not(:disabled) {
-  border-color: #3a3f4a;
-  background: #22262e;
+  border-color: #3a3a3a;
+  background: #242424;
 }
 
 .pv-btn:disabled {
@@ -165,7 +167,7 @@
 }
 
 .pv-btn:focus-visible {
-  outline: 2px solid #7aa2ff;
+  outline: 2px solid #8ea5e8;
   outline-offset: 2px;
 }
 
@@ -190,17 +192,17 @@
   background: #fff;
 }
 
+/* 발표 끝내기: 지우는 일이 아니라 붉게 칠하지 않는다. 다른 단추와 같은 꼴에 글자만 한 단계 밝게 */
 .pv-btn-end {
-  border-color: #4a2a2a;
-  background: #2a1a1b;
-  color: #ffb4ab;
+  color: var(--pv-ink);
 }
 
 .pv-hint {
   margin: 0;
   padding: 10px 20px;
-  background: #2b2416;
-  color: #f3d58c;
+  border-bottom: 1px solid var(--pv-line);
+  background: var(--pv-panel);
+  color: var(--pv-soon);
   font-size: 14px;
 }
 
@@ -348,7 +350,7 @@
   overflow-x: auto;
   border-top: 1px solid var(--pv-line);
   list-style: none;
-  scrollbar-color: #3a3f4a transparent;
+  scrollbar-color: #3a3a3a transparent;
 }
 
 .pv-thumb {
