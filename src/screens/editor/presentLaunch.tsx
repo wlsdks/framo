@@ -165,47 +165,79 @@ function checkTitle({ missing, over }: PresentCheck): string {
   return `빈칸이 ${missing}곳 남았어요`
 }
 
+/**
+ * 남은 빈칸과 넘친 글을 알리고 그대로 갈지 묻는 창. 발표하기와 내보내기(발표 파일, PDF, PPT)가 같이 쓴다.
+ * what: 빈칸이 나오지 않는 곳 ('발표 화면', '파일')
+ */
+export function CheckDialog({
+  check,
+  what,
+  proceed,
+  onProceed,
+  onClose,
+  onGoTo,
+}: {
+  check: PresentCheck
+  what: string
+  proceed: string
+  onProceed: () => void
+  onClose: () => void
+  onGoTo: (slideId: string, m?: Missing) => void
+}) {
+  const first = check.rows[0]
+  if (!first) return null
+  return (
+    <Modal
+      title={checkTitle(check)}
+      onClose={onClose}
+      actions={
+        <>
+          <button type="button" className="btn btn-ghost" onClick={() => onGoTo(first.id, first.missing[0])}>
+            {check.missing ? '빈칸 채우기' : '고치러 가기'}
+          </button>
+          <button type="button" className="btn btn-primary" data-autofocus onClick={onProceed}>
+            {proceed}
+          </button>
+        </>
+      }
+    >
+      <p>
+        {check.missing ? `빈칸은 ${what}에 나오지 않아요. ` : ''}
+        {check.over ? '넘친 글은 잘려 보일 수 있어요. ' : ''}슬라이드를 누르면 그 자리로 가요.
+      </p>
+      <ul className="pck-list">
+        {check.rows.map((r) => (
+          <li key={r.id}>
+            <button type="button" className="pck-row" onClick={() => onGoTo(r.id, r.missing[0])}>
+              <span className="pck-n">{r.page}</span>
+              <span className="pck-name">{r.name}</span>
+              <span className="pck-what">
+                {r.over && <span className="pck-over">글이 넘쳤어요</span>}
+                {r.missing.length > 0 && <span className="pck-blank">빈칸 {r.missing.length}곳</span>}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Modal>
+  )
+}
+
 /** 발표를 시작하기 전에 묻는 창: 남은 빈칸, 발표자 화면의 허락 */
 export function PresentDialogs({ launch, onGoTo }: { launch: PresentLaunch; onGoTo: (slideId: string, m?: Missing) => void }) {
   const { confirm, askScreens } = launch
   const check = confirm?.check
-  const first = check?.rows[0]
   return (
     <>
-      {confirm && check && first && (
-        <Modal
-          title={checkTitle(check)}
+      {confirm && check && (
+        <CheckDialog
+          check={check}
+          what="발표 화면"
+          proceed="그대로 발표하기"
+          onProceed={() => void launch.start(confirm.startId, true, confirm.how)}
           onClose={launch.closeConfirm}
-          actions={
-            <>
-              <button type="button" className="btn btn-ghost" onClick={() => onGoTo(first.id, first.missing[0])}>
-                {check.missing ? '빈칸 채우기' : '고치러 가기'}
-              </button>
-              <button type="button" className="btn btn-primary" data-autofocus onClick={() => void launch.start(confirm.startId, true, confirm.how)}>
-                그대로 발표하기
-              </button>
-            </>
-          }
-        >
-          <p>
-            {check.missing ? '빈칸은 발표 화면에 나오지 않아요. ' : ''}
-            {check.over ? '넘친 글은 잘려 보일 수 있어요. ' : ''}슬라이드를 누르면 그 자리로 가요.
-          </p>
-          <ul className="pck-list">
-            {check.rows.map((r) => (
-              <li key={r.id}>
-                <button type="button" className="pck-row" onClick={() => onGoTo(r.id, r.missing[0])}>
-                  <span className="pck-n">{r.page}</span>
-                  <span className="pck-name">{r.name}</span>
-                  <span className="pck-what">
-                    {r.over && <span className="pck-over">글이 넘쳤어요</span>}
-                    {r.missing.length > 0 && <span className="pck-blank">빈칸 {r.missing.length}곳</span>}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Modal>
+          onGoTo={onGoTo}
+        />
       )}
       {askScreens && (
         <Modal

@@ -26,7 +26,7 @@ import { useExports } from './exports'
 import { Inspector } from './Inspector'
 import { MotionPanel } from './MotionPanel'
 import { MotionStudio } from './studio/MotionStudio'
-import { PresentDialogs, usePresentLaunch } from './presentLaunch'
+import { CheckDialog, PresentDialogs, usePresentLaunch } from './presentLaunch'
 import { SaveStatus } from './SaveStatus'
 import { useEditorShortcuts } from './shortcuts'
 import { useSidePanel } from './sidePanel'
@@ -210,6 +210,7 @@ function EditorBody({ deck }: { deck: Deck }) {
   /** 발표 전 확인 창에서 고른 장으로. 빈칸이 있으면 그 장의 첫 빈칸에 커서를 둔다 */
   const goToSlide = (slideId: string, m?: Missing) => {
     launch.closeConfirm()
+    exporting.closeConfirm()
     store.select(slideId)
     if (m) window.setTimeout(() => focusField(slideId, m), 60)
   }
@@ -218,7 +219,7 @@ function EditorBody({ deck }: { deck: Deck }) {
     paused: !!launch.presenting,
     present: (here, how) => void launch.start(here ? slide?.id : undefined, false, how),
     saveNow,
-    print: exporting.printPdf,
+    print: () => exporting.printPdf(),
     toast,
   })
 
@@ -273,7 +274,7 @@ function EditorBody({ deck }: { deck: Deck }) {
           <span className="ed-top-sep" aria-hidden="true" />
           <AiMenu deck={deck} ai={ai} ask={ask} />
           <ThemeMenu deck={deck} />
-          <ExportMenu onHtml={exporting.exportHtml} onPdf={exporting.printPdf} onPpt={() => void exporting.exportPpt()} onDeckFile={exporting.saveDeckFile} />
+          <ExportMenu onHtml={() => void exporting.exportHtml()} onPdf={() => exporting.printPdf()} onPpt={() => void exporting.exportPpt()} onDeckFile={exporting.saveDeckFile} />
           <PresentButton onStart={(how, here) => void launch.start(here ? slide?.id : undefined, false, how)} />
         </div>
       </header>
@@ -341,6 +342,16 @@ function EditorBody({ deck }: { deck: Deck }) {
         />
       )}
       <PresentDialogs launch={launch} onGoTo={goToSlide} />
+      {exporting.confirm && (
+        <CheckDialog
+          check={exporting.confirm}
+          what="파일"
+          proceed="그대로 내보내기"
+          onProceed={exporting.proceed}
+          onClose={exporting.closeConfirm}
+          onGoTo={goToSlide}
+        />
+      )}
       {exporting.print}
       {!reviewing && (job ? <AskStatus deck={deck} job={job} onCancel={ask.cancel} /> : <AiInbox ai={ai} onOpen={setReviewing} />)}
       {reviewing && (

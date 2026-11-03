@@ -11,17 +11,41 @@ import { downloadDeckFile } from '../../store/deckFile'
 import { useDeck } from '../../store/deckStore'
 import type { VersionReason } from '../../store/versions'
 import type { Toast } from '../ui'
+import { presentCheck, type PresentCheck } from './presentLaunch'
 
-/** 내보내기 메뉴(HTML, PDF, PPT, 작업 파일)의 할 일. 내보내기 전에는 버전을 남긴다 */
+type ExportKind = 'html' | 'pdf' | 'ppt'
+
+/**
+ * 내보내기 메뉴(HTML, PDF, PPT, 작업 파일)의 할 일. 내보내기 전에는 버전을 남긴다.
+ * 발표 파일(HTML, PDF, PPT)은 빈칸이나 넘친 글이 남았으면 발표하기처럼 먼저 묻는다(CheckDialog). 예전에는 바로 내보내서
+ * 빈칸이 많은 발표가 거의 빈 슬라이드로 파일에 담겼다. 작업 파일은 이어서 고칠 원본이라 묻지 않는다
+ */
 export function useExports(deck: Deck, markVersion: (reason: VersionReason) => void, toast: Toast) {
   const [printing, setPrinting] = useState(false)
+  const [confirm, setConfirm] = useState<{ kind: ExportKind; check: PresentCheck } | null>(null)
 
-  const printPdf = useCallback(() => {
-    markVersion('export')
-    setPrinting(true)
-  }, [markVersion])
+  /** 빈칸이 남았으면 묻고 멈춘다. 물었으면 true */
+  const asked = (kind: ExportKind, force: boolean) => {
+    setConfirm(null)
+    if (force) return false
+    const check = presentCheck(deck)
+    if (!check.rows.length) return false
+    setConfirm({ kind, check })
+    return true
+  }
 
-  const exportHtml = async () => {
+  const printPdf = useCallback(
+    (force = false) => {
+      if (asked('pdf', force)) return
+      markVersion('export')
+      setPrinting(true)
+    },
+    // asked는 deck만 쓴다
+    [markVersion, deck],
+  )
+
+  const exportHtml = async (force = false) => {
+    if (asked('html', force)) return
     markVersion('export')
     toast.show('발표 파일을 만들고 있어요')
     try {
@@ -34,7 +58,7 @@ export function useExports(deck: Deck, markVersion: (reason: VersionReason) => v
 
   // PPT는 장마다 그림을 그려서 장이 많으면 오래 걸린다. 지금 몇 장째인지 보이고, 두 번 눌러도 한 번만 만든다
   const pptBusy = useRef(false)
-  const exportPpt = async () => {
+  const exportPpt = async (force = false) => {
     if (pptBusy.current) {
       toast.show('PPT를 만들고 있어요. 다 되면 알려 드릴게요.')
       return
@@ -44,6 +68,7 @@ export function useExports(deck: Deck, markVersion: (reason: VersionReason) => v
       toast.show('모든 슬라이드를 숨겨서 PPT에 넣을 슬라이드가 없어요. 슬라이드 하나 이상의 숨기기를 풀어 주세요.')
       return
     }
+    if (asked('ppt', force)) return
     pptBusy.current = true
     markVersion('export')
     try {
@@ -66,11 +91,22 @@ export function useExports(deck: Deck, markVersion: (reason: VersionReason) => v
     toast.show('작업 파일을 저장했어요. 다운로드 폴더를 확인해 주세요.')
   }
 
+  const proceed = () => {
+    if (!confirm) return
+    if (confirm.kind === 'html') void exportHtml(true)
+    else if (confirm.kind === 'pdf') printPdf(true)
+    else void exportPpt(true)
+  }
+
   return {
     exportHtml,
     exportPpt,
     printPdf,
     saveDeckFile,
+    /** 빈칸이 남아 그대로 내보낼지 묻는 중 */
+    confirm: confirm?.check ?? null,
+    proceed,
+    closeConfirm: () => setConfirm(null),
     /** PDF로 내보내는 동안 인쇄할 장들 (body에 붙는다) */
     print: printing ? <PrintDeck deck={deck} onDone={() => setPrinting(false)} /> : null,
   }
