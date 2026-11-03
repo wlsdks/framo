@@ -199,51 +199,7 @@ export function Wizard() {
       </header>
 
       <main className="wz-main" style={{ '--wz-dir': dir }}>
-        {step === 0 && (
-          <section className="wz-sec wz-split wz-split-types">
-            <div className="wz-head">
-              <h1 className="wz-h">어떤 발표인가요?</h1>
-              <p className="wz-sub">고르면 그에 맞는 순서로 슬라이드를 만들어 드려요.</p>
-            </div>
-            <div className="wz-form">
-              {/* 열셋을 한 줄로 늘어놓으면 찾기 어려워서, 회사에서 PPT를 만드는 자리 셋으로 나눠 나란히 둔다 */}
-              <div className="wz-kinds">
-                {DECK_GROUPS.map((g) => (
-                  <div key={g.name} className="wz-kind" role="group" aria-label={g.name}>
-                    <h2 className="wz-kind-h">{g.name}</h2>
-                    {g.types.map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        className={cx('wz-type', type === t && 'is-on')}
-                        aria-pressed={type === t}
-                        onClick={() => setType(t)}
-                        // 두 번 누르면 바로 다음 단계로 (고르고 '다음'을 누르는 것과 같다)
-                        onDoubleClick={() => {
-                          setType(t)
-                          setStep(1)
-                        }}
-                      >
-                        <span className="wz-type-name">
-                          {BLUEPRINTS[t].name}
-                          <CheckIcon />
-                        </span>
-                        <span className="wz-type-desc">{BLUEPRINTS[t].description}</span>
-                      </button>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 고른 종류로 만들어지는 장. 글로 된 흐름(배경 > 제안 > …)보다 무엇이 만들어지는지 바로 보인다 */}
-            <aside className="wz-plan wz-pick" aria-live="polite">
-              <p className="wz-plan-k">이렇게 만들어져요</p>
-              <p className="wz-plan-h">{blueprint.name}</p>
-              <Film key={type} type={type} label={blueprint.storyline} />
-            </aside>
-          </section>
-        )}
+        {step === 0 && <Catalog type={type} onPick={setType} onNext={() => setStep(1)} />}
 
         {step === 1 && (
           <section className="wz-sec wz-split wz-split-plan">
@@ -440,30 +396,6 @@ function Later({ children }: { children: ReactNode }) {
   return useDrawSoon() ? <>{children}</> : null
 }
 
-/** 발표 종류 미리 보기의 작은 그림들. 그림 아래에 이야기 흐름의 이름 */
-function Film({ type, label }: { type: DeckType; label: string[] }) {
-  const film = useMemo(() => filmOf(type), [type])
-  const info = useMemo(() => pageInfo(film.slides), [film])
-  if (!film.slides.length) return null
-  return (
-    <ol className="wz-film wz-real" aria-label={`이야기 흐름: ${label.join(', ')}`}>
-      {film.slides.map((s, i) => (
-        <li key={s.id} className="wz-film-item">
-          <span className="wz-shot" aria-hidden="true">
-            <FitSlide>
-              <Later><SlideCanvas deck={film.deck} slide={s} mode="preview" {...pageProps(info, s.id)} /></Later>
-            </FitSlide>
-          </span>
-          <span className="wz-film-cap">
-            <span className="wz-plan-n">{i + 1}</span>
-            {label[i]}
-          </span>
-        </li>
-      ))}
-    </ol>
-  )
-}
-
 /**
  * 하나를 고르는 줄. 단추에는 이름만 두고, 고른 것이 무엇을 바꾸는지는 아래 한 줄에.
  * 설명을 단추마다 넣으면 다섯 개가 한 줄에 들어가지 않고, 낮은 노트북 화면에서 한 화면을 넘는다
@@ -555,4 +487,68 @@ function rememberAuthor(org: string, presenter: string) {
   } catch {
     /* 기억하지 못하면 다음에 빈칸으로 */
   }
+}
+
+function groupOf(type: DeckType) {
+  return DECK_GROUPS.find((g) => g.types.includes(type))
+}
+
+/**
+ * 1단계: 발표 종류. 견본첩처럼 왼쪽에는 묶음별 이름만, 오른쪽에는 고른 발표가 무엇이 되는지를 크게(그 발표의 첫 내용 장과 이야기 흐름).
+ * 예전에는 종류 열넷을 이름과 설명 두 줄로 세 단에 깔고 작은 그림 넷을 옆에 두어, 모든 것이 같은 무게라 화면에 중심이 없었다.
+ * 두 번 누르면 바로 다음 단계로 (고르고 '다음'을 누르는 것과 같다)
+ */
+function Catalog({ type, onPick, onNext }: { type: DeckType; onPick: (t: DeckType) => void; onNext: () => void }) {
+  const film = useMemo(() => filmOf(type), [type])
+  const info = useMemo(() => pageInfo(film.slides), [film])
+  const bp = BLUEPRINTS[type]
+  const [hero, ...rest] = film.slides
+  return (
+    <section className="wz-sec wzx">
+      <nav className="wzx-list" aria-label="발표 종류">
+        <h1 className="wzx-q">어떤 발표인가요?</h1>
+        {DECK_GROUPS.map((g) => (
+          <div key={g.name} className="wzx-group" role="group" aria-label={g.name}>
+            <h2 className="wzx-gh">{g.name}</h2>
+            {g.types.map((t) => (
+              <button key={t} type="button" className={cx('wzx-item', type === t && 'is-on')} aria-pressed={type === t} onClick={() => onPick(t)} onDoubleClick={onNext}>
+                {BLUEPRINTS[t].name}
+              </button>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div className="wzx-hero" aria-live="polite">
+        <p className="wzx-k">{groupOf(type)?.name}</p>
+        <h2 className="wzx-h">{bp.name}</h2>
+        <p className="wzx-d">{bp.description}</p>
+        {hero && (
+          <span className="wz-shot wzx-big wz-real" key={type} aria-hidden="true">
+            <FitSlide>
+              <SlideCanvas deck={film.deck} slide={hero} mode="preview" {...pageProps(info, hero.id)} />
+            </FitSlide>
+          </span>
+        )}
+        <ol className="wzx-flow" aria-label="이야기 흐름">
+          {bp.storyline.map((s, i) => (
+            <li key={s} className={cx(i === 0 && 'is-on')}>
+              <span>{i + 1}</span>
+              {s}
+            </li>
+          ))}
+        </ol>
+        {rest.length > 0 && (
+          <ol className="wzx-strip wz-real" aria-hidden="true">
+            {rest.map((s) => (
+              <li key={s.id} className="wz-shot">
+                <FitSlide>
+                  <Later><SlideCanvas deck={film.deck} slide={s} mode="preview" {...pageProps(info, s.id)} /></Later>
+                </FitSlide>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </section>
+  )
 }

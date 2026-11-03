@@ -10,6 +10,8 @@
   display: grid;
   grid-template-rows: auto 1fr auto;
   min-height: 100%;
+  /* 마법사는 흰 지면: 회색 바탕 위에 글과 그림이 떠 있으면 흔한 대시보드처럼 보였다. 편지지 한 장에 쓰듯 */
+  background: var(--panel);
 }
 
 .wz-top {
@@ -157,129 +159,6 @@ button.wz-step:hover {
 }
 
 /* 1단계: 발표 종류. 회사에서 PPT를 만드는 자리 셋을 세로 칸으로 나란히 */
-/*
- * 책의 차례처럼 읽히게: 묶음 이름은 명조, 종류는 이름과 설명 두 줄. 묶음과 줄은 선 없이 여백으로만 나눈다.
- * 예전에는 묶음 이름 밑 먹선 + 줄마다 회색 선(선 밑에 선)에, 고른 줄을 흰 면과 왼쪽 먹색 띠로 표시해
- * 흔한 템플릿처럼 보였다(VISUAL-RULES: 검정 장식 선, 면 칠한 강조). 고른 것은 이름이 짙어지고 옆에 체크 하나
- */
-.wz-kinds {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
-  align-items: start;
-}
-
-.wz-kind {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.wz-kind-h {
-  margin: 0;
-  padding-bottom: 10px;
-  color: var(--ink);
-  font-family: 'Hahmlet Variable', 'AppleMyungjo', 'Batang', serif;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.5;
-  letter-spacing: -0.03em;
-}
-
-.wz-type {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  min-width: 0;
-  padding: 9px 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-}
-
-/* 초점 고리는 글 둘레에 바짝: 줄 사이 여백을 넘어 이웃 줄에 닿지 않게 */
-.wz-type:focus-visible {
-  outline-offset: 2px;
-}
-
-.wz-type-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink-2);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  transition: color 0.18s;
-}
-
-/* 고른 표시는 이름 옆 체크 하나(선택 색). 다른 줄을 밀지 않게 늘 자리를 두고 옅어졌다 나타난다 */
-.wz-type-name .icon {
-  width: 15px;
-  height: 15px;
-  color: var(--sel);
-  stroke-width: 2.6;
-  opacity: 0;
-  transform: translateX(-4px);
-  transition: opacity 0.2s, transform 0.24s var(--ease-out);
-}
-
-.wz-type:hover .wz-type-name,
-.wz-type.is-on .wz-type-name {
-  color: var(--ink);
-}
-
-.wz-type.is-on .wz-type-name {
-  font-weight: 700;
-}
-
-.wz-type.is-on .wz-type-name .icon {
-  opacity: 1;
-  transform: none;
-}
-
-.wz-type-desc {
-  color: var(--ink-3);
-  font-size: 13px;
-  line-height: 1.4;
-  transition: color 0.18s;
-}
-
-.wz-type:hover .wz-type-desc,
-.wz-type.is-on .wz-type-desc {
-  color: var(--ink-2);
-}
-
-/* 고른 종류의 미리 보기: 이야기 흐름의 차례대로 네 장을 두 줄로 */
-.wz-film {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.wz-film-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  animation: wz-in var(--t) var(--ease-out) both;
-}
-
-.wz-film-cap {
-  overflow: hidden;
-  color: var(--ink-2);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 /* 작은 장 그림의 자리: 16:9 상자에 맞춰 그린다(FitSlide). 고정 너비로 그리면 좁은 창이나 스크롤바가 생긴 창에서 칸 밖으로 넘친다 */
 .wz-shot {
@@ -491,12 +370,8 @@ button.wz-step:hover {
 @media (prefers-reduced-motion: reduce) {
   .wz-sec,
   .wz-plan-grid li,
-  .wz-film-item {
+  .wzx-big {
     animation: none;
-  }
-
-  .wz-type-name .icon {
-    transition: none;
   }
 }
 
@@ -603,9 +478,9 @@ button.wz-step:hover {
   display: flex;
   justify-content: space-between;
   padding: 16px 32px;
-  border-top: 1px solid var(--line-2);
+  border-top: 1px solid var(--line);
   /* 흐림 유리 대신 바탕색 그대로: 아래로 흘러가는 내용이 비쳐 보이면 어수선하다 */
-  background: var(--app-bg);
+  background: var(--panel);
 }
 
 /* '이전'과 '다음'은 같은 높이로, 화살표는 가는 쪽으로 살짝 */
@@ -656,9 +531,6 @@ button.wz-step:hover {
     row-gap: 24px;
   }
 
-  .wz-kinds {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 /* 윈도우 노트북(1920×1080을 150%로 키운 화면)은 브라우저 안 높이가 600px 남짓이다 */
@@ -684,14 +556,6 @@ button.wz-step:hover {
   .wz-sub {
     margin: 4px 0 16px;
     font-size: 15px;
-  }
-
-  .wz-kinds {
-    gap: 12px;
-  }
-
-  .wz-type {
-    padding: 7px 0;
   }
 
   .wz-group {
@@ -746,12 +610,6 @@ button.wz-step:hover {
 
 /* 1280×600(윈도우 150%): 첫 묶음의 여섯 종류가 아래 줄 위에 다 들어가게 종류 줄을 조금 더 줄인다.
    760px 아래 여백 그대로는 마지막 '연간·반기 계획'이 아래 줄(다음 단추)에 9px 가렸다 */
-@media (max-height: 640px) {
-  .wz-type {
-    padding-block: 5px;
-  }
-}
-
 /*
  * 1920×1080 같은 큰 화면: 틀을 넓히고 단추와 그림을 키운다. 그대로 두면 가운데 작은 덩어리만 남고
  * 위아래, 좌우가 너무 비어 보인다. 2단계는 왼쪽 고르는 줄이 짧아서 오른쪽 구성을 넓혀 두 칸 사이를 메운다.
@@ -771,11 +629,6 @@ button.wz-step:hover {
     --wz-side: 680px;
   }
 
-  /* 1단계: 글자를 키운 설명이 한 줄에 들어가게 오른쪽 그림 칸을 조금 줄인다 (가장 긴 설명 239px) */
-  .wz-split-types {
-    --wz-side: 480px;
-  }
-
   .wz-split-cover {
     --wz-side: 520px;
   }
@@ -789,32 +642,6 @@ button.wz-step:hover {
     font-size: 17px;
   }
 
-  .wz-kinds {
-    gap: 32px;
-  }
-
-  .wz-kind-h {
-    font-size: 18px;
-  }
-
-  .wz-type {
-    gap: 4px;
-    padding: 13px 0;
-  }
-
-  .wz-type-name {
-    font-size: 16px;
-  }
-
-  .wz-type-desc {
-    font-size: 14px;
-  }
-
-  .wz-film {
-    gap: 18px;
-  }
-
-  .wz-film-cap,
   .wz-plan-name {
     font-size: 13px;
   }
@@ -855,5 +682,153 @@ button.wz-step:hover {
   .wz-fields .input {
     height: 48px;
     font-size: 15px;
+  }
+}
+
+/*
+ * 1단계: 견본첩. 왼쪽에 묶음별 이름만, 오른쪽에 고른 발표의 제목과 설명, 그 발표의 첫 내용 장을 크게, 이야기 흐름.
+ * 고른 이름은 선택 색 굵게(면도 띠도 없이). 큰 장은 화면 높이에 맞춰 줄고, 낮은 화면(1280×600)에서는 아래의 작은 장들과
+ * 묻는 말을 감추고 목록을 촘촘히 해 스크롤 없이 한 화면에 든다
+ */
+.wzx {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 0 72px;
+  align-items: start;
+}
+
+.wzx-q {
+  margin: 0 0 8px;
+  font-family: 'Hahmlet Variable', 'AppleMyungjo', 'Batang', serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.wzx-group + .wzx-group {
+  margin-top: 18px;
+}
+
+.wzx-gh {
+  margin: 0 0 4px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wzx-item {
+  display: block;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--t-fast);
+}
+
+.wzx-item:hover {
+  color: var(--ink);
+}
+
+.wzx-item.is-on {
+  color: var(--sel);
+  font-weight: 700;
+}
+
+.wzx-hero {
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.wzx-k {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wzx-h {
+  margin: 4px 0 6px;
+  font-family: 'Hahmlet Variable', 'AppleMyungjo', 'Batang', serif;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.045em;
+}
+
+.wzx-d {
+  margin: 0 0 22px;
+  color: var(--ink-2);
+  font-size: 16px;
+}
+
+.wzx-big {
+  width: min(100%, 760px, calc((100vh - 330px) * 16 / 9));
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--line), 0 6px 24px rgb(20 20 20 / 0.06);
+  animation: wz-in var(--t-slow) var(--ease-out);
+}
+
+.wzx-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 12px 0 0;
+  padding: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  list-style: none;
+}
+
+.wzx-flow span {
+  margin-right: 6px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.wzx-flow .is-on {
+  color: var(--ink);
+}
+
+.wzx-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: min(100%, 760px);
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-height: 760px) {
+  .wzx-strip,
+  .wzx-q {
+    display: none;
+  }
+
+  .wzx-group + .wzx-group {
+    margin-top: 14px;
+  }
+
+  .wzx-gh {
+    margin: 0 0 2px;
+  }
+
+  .wzx-item {
+    padding: 2px 0;
+    font-size: 14px;
+  }
+
+  .wzx-h {
+    font-size: 32px;
+  }
+
+  .wzx-d {
+    margin-bottom: 14px;
   }
 }
