@@ -560,12 +560,12 @@ button.wz-step:hover {
 }
 
 .wz-cover-shot {
-  border-radius: 8px;
+  border-radius: var(--r);
   box-shadow: 0 1px 2px rgb(28 27 24 / 0.06), 0 8px 24px rgb(28 27 24 / 0.1);
 }
 
 .wz-cover-shot .slide-frame {
-  border-radius: 8px;
+  border-radius: var(--r);
 }
 
 /* 표지 뒤에 이어질 장: 한 줄에 넷(낮은 화면은 셋, Wizard의 STRIP). 넘치면 마지막 칸에 남은 장 수 */

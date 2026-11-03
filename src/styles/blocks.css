@@ -48,7 +48,7 @@
   margin: 0;
   padding: 7px 14px;
   /* 한 줄(34px)이면 알약, 좁은 창에서 두 줄로 꺾이면 둥근 네모에 두 줄을 고르게 */
-  border-radius: 17px;
+  border-radius: var(--r);
   background: var(--ink);
   box-shadow: var(--shadow-pop);
   color: #fff;
@@ -79,7 +79,7 @@
   z-index: 1000;
   top: 0;
   left: 0;
-  border-radius: 10px;
+  border-radius: var(--r);
   box-shadow: 0 2px 6px rgb(28 27 24 / 0.12), 0 18px 44px rgb(28 27 24 / 0.24);
   pointer-events: none;
   will-change: translate, rotate, scale;
@@ -116,7 +116,7 @@
   gap: 4px;
   height: 28px;
   padding: 0 11px 0 6px;
-  border-radius: 8px;
+  border-radius: var(--r);
   background: var(--sel);
   box-shadow: 0 6px 18px rgb(28 27 24 / 0.22);
   color: #fff;
@@ -260,7 +260,7 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   gap: 4px;
   padding: 8px 16px;
   border: 1.5px dashed color-mix(in srgb, var(--sel) 38%, transparent);
-  border-radius: 10px;
+  border-radius: var(--r);
   background: color-mix(in srgb, var(--sel) 3%, transparent);
   color: var(--sel);
   font: inherit;
@@ -878,7 +878,7 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   height: 30px;
   padding: 0 11px;
   border: 1px solid var(--line-2);
-  border-radius: 15px;
+  border-radius: var(--r);
   background: var(--panel);
   color: var(--ink);
   font-size: 12.5px;
@@ -1119,7 +1119,7 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   position: relative;
   margin-bottom: 8px;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: var(--r);
   box-shadow: 0 0 0 1px var(--line);
   aspect-ratio: 3 / 2;
   transition: box-shadow 0.16s, opacity 0.16s;

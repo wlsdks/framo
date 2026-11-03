@@ -80,7 +80,7 @@
   gap: 8px;
   padding: 8px 12px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r);
   background: none;
   color: var(--ink-2);
   font-size: 14px;
@@ -162,7 +162,7 @@
 
 .sys-tag {
   padding: 1px 8px;
-  border-radius: 99px;
+  border-radius: var(--r-sm);
   background: #e9e6df;
   color: var(--ink-2);
   font-size: 12px;

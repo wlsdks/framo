@@ -81,7 +81,7 @@
   margin-top: 8px;
   padding: 10px 10px 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r);
 }
 
 .ai-conn .ai-env {
