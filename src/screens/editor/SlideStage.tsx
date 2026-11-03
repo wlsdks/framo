@@ -132,7 +132,8 @@ export function SlideStage({
   return (
     <main className="stage">
       <div
-        className={cx('ed-canvas', fileOver && 'is-file-over')}
+        // 완성된 예시는 비워 둔 로고 칸의 점선을 감춘다 (editor.css의 .is-sample)
+        className={cx('ed-canvas', fileOver && 'is-file-over', deck.id === 'sample' && 'is-sample')}
         ref={canvasRef}
         // 부품 밖을 누르면 부품 고르기를 끝낸다
         onPointerDown={(e) => !(e.target as Element).closest('.bk') && blocks.select(null)}

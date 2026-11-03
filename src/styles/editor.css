@@ -551,6 +551,16 @@
   box-shadow: 0 1px 2px rgb(16 20 31 / 0.06), 0 10px 30px rgb(16 20 31 / 0.1);
 }
 
+/* 완성된 예시(sample)는 비워 둔 로고 칸(edit.css의 .is-optional)을 마우스를 올리기 전까지 감춘다.
+   '완성된' 예시의 표지에 빈 점선 '로고'가 떠 있으면 덜 만든 발표처럼 보였다. 넣으려면 그 자리에 마우스를 올리면 된다 */
+.ed-canvas.is-sample .img-ed.img-empty.is-optional:not(:hover, :focus-within) {
+  outline-color: transparent;
+}
+
+.ed-canvas.is-sample .img-ed.img-empty.is-optional:not(:hover, :focus-within) .img-drop {
+  opacity: 0;
+}
+
 /* 이미지 파일을 장 위로 끌고 올 때: 놓으면 이 장에 들어간다 */
 .ed-canvas.is-file-over .slide-frame {
   outline: 3px solid var(--sel);

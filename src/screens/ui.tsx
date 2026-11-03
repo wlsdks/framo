@@ -419,17 +419,20 @@ export function Modal({
   children,
   actions,
   onClose,
+  focusSelf = false,
 }: {
   title: string
   children?: ReactNode
   actions: ReactNode
   onClose: () => void
+  /** 열 때 초점을 단추가 아니라 창 자체에 둔다 (단추에 테가 두 겹으로 보이지 않게. Tab을 누르면 단추로 간다) */
+  focusSelf?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   useDialog(ref, onClose)
   return (
     <div className="modal-back" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={title} ref={ref} tabIndex={-1}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={title} ref={ref} tabIndex={-1} data-autofocus={focusSelf || undefined}>
         <h2 className="modal-title">{title}</h2>
         {children && <div className="modal-body">{children}</div>}
         <div className="modal-actions">{actions}</div>
