@@ -20,6 +20,8 @@ export function demoOf(mode: SlideMode, items: readonly { [K in ItemKey]: string
 export interface SlideActions {
   setField(key: string, value: string): void
   setItem(index: number, key: ItemKey, value: string): void
+  /** 여러 줄을 붙여 넣으면 항목마다 한 줄씩. 나눌 수 없으면 false (칸 하나에 붙인다). 부품 안의 항목은 아직 없다 */
+  pasteItems?(index: number, key: ItemKey, lines: string[]): boolean
   removeItem(index: number): void
   /** 항목 순서 바꾸기 (끌어 옮길 때). key가 같으면 되돌리기 한 단계로 묶는다 */
   moveItem?(from: number, to: number, key?: string): void

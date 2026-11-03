@@ -59,6 +59,7 @@ export function SlideStage({
     () => ({
       setField: (key, value) => useDeck.getState().setField(slide.id, key, value),
       setItem: (index, key, value) => useDeck.getState().setItem(slide.id, index, key, value),
+      pasteItems: (index, key, lines) => useDeck.getState().pasteItems(slide.id, index, key, lines),
       removeItem: (index) => useDeck.getState().removeItem(slide.id, index),
       moveItem: (from, to, key) => useDeck.getState().moveItem(slide.id, from, to, key),
       setOptions: (options, key) => useDeck.getState().setOptions(slide.id, options, key),

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { asCompose, boardSig, cleanDeckBlocks, copyBlocks, mapBlock, settleDeck, tidyLinks, withLayout } from '../deck/blocks'
 import { unknownParts } from '../deck/compat'
-import { withOneMore } from '../deck/edits'
+import { pastedItems, withOneMore } from '../deck/edits'
 import { makeSlide, uid } from '../deck/generate'
 import { dropIndex, followIndex, isMetaKey, moveIn } from '../deck/fields'
 import { LAYOUTS, variantOf } from '../deck/layouts'
@@ -40,6 +40,8 @@ interface DeckState {
   setField(slideId: string, key: string, value: string): void
   setItem(slideId: string, index: number, key: ItemKey, value: string): void
   addItem(slideId: string): void
+  /** 여러 줄을 붙여 넣으면 항목 index의 key 칸부터 한 줄씩 (모자라면 항목을 늘린다). 나눌 수 없으면 false: 칸 하나에 붙인다 */
+  pasteItems(slideId: string, index: number, key: ItemKey, lines: string[]): boolean
   removeItem(slideId: string, index: number): void
   /** 항목을 바로 뒤에 하나 더 (사람이 장 위에서 고른 항목만. 칸 수가 다 찼으면 그대로) */
   duplicateItem(slideId: string, index: number): void
@@ -271,6 +273,14 @@ export const useDeck = create<DeckState>((set, get) => {
           return items === s.items ? s : { ...s, items }
         }),
       )
+    },
+    pasteItems(slideId, index, key, lines) {
+      const s = get().deck?.slides.find((x) => x.id === slideId)
+      if (!s || key === 'image') return false
+      const items = pastedItems(s.items, LAYOUTS[s.layout].items?.max ?? 0, index, key, lines)
+      if (!items) return false
+      commit((d) => mapSlide(d, slideId, (x) => ({ ...x, items })))
+      return true
     },
     removeItem(slideId, index) {
       commit((d) =>

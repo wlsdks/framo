@@ -38,3 +38,37 @@ export function relayout(slide: Slide, layout: LayoutId, variant?: string): Slid
   while (items.length < min) items.push(emptyItem())
   return { ...slide, layout, items, variant, options: withDefaultOptions(layout, slide.options, items.length) }
 }
+
+/**
+ * 여러 줄을 붙여 넣은 글을 항목 하나에 한 줄씩 나눌 수 있게 줄로 자른다. 메일, 메모, 문서에서 목록을 복사하면 줄마다
+ * 글머리표('•', '-', '1.', '①', '가.')가 따라와서, 그대로 넣으면 장의 목록 표시와 겹쳐 두 번 찍혔다. 빈 줄은 뺀다.
+ * '-'와 번호는 뒤에 빈칸이 있을 때만 글머리표로 본다: '-5% 감소', '1.2억 원'의 앞을 떼면 숫자가 바뀐다
+ */
+export function listLines(raw: string): string[] {
+  return raw
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((l) =>
+      l
+        .replace(/[\t ]/g, ' ')
+        .replace(/^\s*(?:[•·▪◦‣①-⑳]\s*|(?:[-*–—]|\d{1,2}[.)]|\(\d{1,2}\)|[가-하][.)])\s+)/, '')
+        .trim(),
+    )
+    .filter(Boolean)
+}
+
+/**
+ * 항목 index의 key 칸부터 줄마다 다음 항목으로 채운 목록. 모자라면 항목을 늘린다(레이아웃의 max까지).
+ * 사람이 적은 글은 덮지 않는다: 채울 칸 가운데 하나라도 글이 있거나, max를 넘으면 null(부르는 쪽이 칸 하나에 붙인다)
+ */
+export function pastedItems(items: Item[], max: number, index: number, key: Exclude<keyof Item, 'id'>, lines: string[]): Item[] | null {
+  if (lines.length < 2 || index + lines.length > max) return null
+  let next = items
+  while (Math.min(next.length, max) < index + lines.length) {
+    const grown = withOneMore(next, max)
+    if (grown === next) return null
+    next = grown
+  }
+  if (lines.some((_, j) => next[index + j][key].trim())) return null
+  return next.map((it, i) => (i >= index && i < index + lines.length ? { ...it, [key]: lines[i - index] } : it))
+}

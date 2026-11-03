@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ElementType } from 'react'
+import { listLines } from '../deck/edits'
 import { isBlankItem, readField } from '../deck/fields'
 import { hintFor, labelIn, LAYOUTS, rowHint } from '../deck/layouts'
 import type { ItemKey } from '../deck/types'
@@ -248,6 +249,8 @@ interface FieldProps extends TextProps {
   fitText?: string
   /** 비워 둬도 되는 칸. 편집할 때 빈 안내를 한 단계 옅게 그려 꼭 채울 칸과 구분한다 (빈칸으로 세지 않는 칸) */
   optional?: boolean
+  /** 항목 칸: 여러 줄을 붙여 넣으면 줄마다 다음 항목으로 (IT). 나눌 수 없으면 false라서 칸 하나에 붙인다 */
+  onPasteLines?: (lines: string[]) => boolean
 }
 
 /**
@@ -265,7 +268,7 @@ function clean(text: string, multiline?: boolean): string {
   return multiline ? t : t.replace(/\s*\n\s*/g, ' ')
 }
 
-function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional }: FieldProps) {
+function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional, onPasteLines }: FieldProps) {
   const { mode } = useSlide()
   if (mode === 'final') {
     const text = value.trim()
@@ -302,6 +305,7 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
       numeral={numeral}
       enterNext={enterNext}
       optional={optional}
+      onPasteLines={onPasteLines}
     />
   )
 }
@@ -319,6 +323,7 @@ function Editable({
   numeral,
   enterNext,
   optional,
+  onPasteLines,
 }: FieldProps & { style?: CSSProperties }) {
   const ref = useRef<HTMLSpanElement>(null)
   // 이 칸이 마지막으로 저장소에 보낸 값. 쓰는 동안 값이 이것과 다르게 바뀌면 바깥에서 바꾼 것이다(쓰다가 누른 되돌리기)
@@ -407,7 +412,11 @@ function Editable({
         onDoubleClick={(e) => selectWord(e.currentTarget, e.clientX, e.clientY)}
         onPaste={(e) => {
           e.preventDefault()
-          document.execCommand('insertText', false, pastedText(e.clipboardData.getData('text/plain'), !!multiline))
+          const raw = e.clipboardData.getData('text/plain')
+          // 빈 항목 칸에 여러 줄(메일, 메모의 목록)을 붙이면 줄마다 다음 항목으로 나눈다. 글이 있는 칸에 붙이거나
+          // 나눌 수 없으면(채울 칸에 글이 있거나 항목 수를 넘으면) 예전처럼 칸 하나에
+          if (onPasteLines && !clean(e.currentTarget.innerText, multiline).trim() && onPasteLines(listLines(raw))) return
+          document.execCommand('insertText', false, pastedText(raw, !!multiline))
         }}
       />
     </Tag>
@@ -579,6 +588,7 @@ export function IT({ i, k, ...props }: TextProps & { i: number; k: ItemKey }) {
       optional={!!(labels ?? LAYOUTS[slide.layout]).items?.fields.find((f) => f.key === k)?.optional}
       fieldId={`${fieldPrefix}${i}.${k}`}
       onChange={actions && ((v) => actions.setItem(i, k, v))}
+      onPasteLines={actions?.pasteItems && k !== 'image' ? (lines) => actions.pasteItems!(i, k, lines) : undefined}
       fold={folds?.has(`items.${k}`)}
       fitText={fitText}
       {...props}
