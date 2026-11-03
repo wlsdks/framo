@@ -107,8 +107,9 @@
 }
 
 /*
- * 머리말: 잡지의 꼭지처럼 제목 아래에 가는 먹선 하나. 상자로 감싸지 않고 선으로 나눈다.
- * 제목만 명조(함렛)로 써서 앱 틀과 구별되는 얼굴을 준다. 나머지는 본문 글꼴 그대로
+ * 머리말: 상자도 선도 없이 명조(함렛) 제목과 아래 여백으로 나눈다. 예전의 제목 밑 먹선은
+ * 바로 아래 줄(저장 위치, 첫 발표 안내의 줄 선)과 겹쳐 선 밑에 선이 되었다(VISUAL-RULES: 검정 장식 선).
+ * 제목만 명조로 써서 앱 틀과 구별되는 얼굴을 준다. 나머지는 본문 글꼴 그대로
  */
 .home-head {
   display: flex;
@@ -116,8 +117,6 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--ink);
 }
 
 .home-h {
