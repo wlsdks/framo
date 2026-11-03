@@ -23,7 +23,7 @@ import { downloadText, safeFileName } from '../../store/deckFile'
 import { useDeck } from '../../store/deckStore'
 import { decodePartsFile, encodePartsFile, PARTS_EXT } from '../../store/partsFile'
 import { addManySaved, removeSaved, renameSaved, restoreSaved, useSaved } from '../../store/saved'
-import { BookmarkIcon, DownloadIcon, LockIcon, MoreIcon, Popover, UploadIcon, undoAction, type Toast } from '../ui'
+import { DownloadIcon, LockIcon, MoreIcon, Popover, UploadIcon, undoAction, type Toast } from '../ui'
 import { soloSlide, type BlockEditing } from './BlockEditor'
 import { CANVAS, COL_W } from './canvas'
 import { useLook, type Look } from './look'
@@ -211,9 +211,6 @@ export function SavedParts({ deck, slide, blocks, toast }: { deck: Deck; slide: 
       <input ref={fileRef} type="file" accept={`${PARTS_EXT},application/json`} hidden onChange={(e) => void onFile(e)} />
       {loaded && !parts.length ? (
         <div className="mine-empty">
-          <span className="mine-empty-icon" aria-hidden="true">
-            <BookmarkIcon />
-          </span>
           <p className="mine-empty-t">자주 쓰는 조합을 저장해 두세요</p>
           <p className="mine-empty-p">
             슬라이드 위에서 컴포넌트를 고르고, 슬라이드 아래 도구에서 컴포넌트 이름을 눌러 '내 컴포넌트로 저장'을 고르면 그 컴포넌트, 그 줄, 슬라이드 전체를 저장해요. 어느 발표에서든 다시 넣을 수 있어요.
