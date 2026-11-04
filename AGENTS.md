@@ -20,7 +20,7 @@ PPT로 하던 발표를 HTML로 만드는 도구입니다. 회사 발표에만 �
 
 1. **발표 내용은 이 PC 밖으로 나가지 않는다.**
    - 바깥 주소로 연결하는 코드를 넣지 않습니다: 외부 API, CDN의 글꼴·스크립트, 분석·오류 수집 도구.
-   - 이 PC 밖으로 나가는 연결은 둘뿐입니다. 하나는 ‘AI에게 부탁’으로, 사람이 누르면 이 PC의 Claude Code를 띄웁니다(`server/agent.ts`. 그 뒤의 연결은 Claude Code가 합니다). 다른 하나는 새 버전 확인과 받기로, `server/update.ts` 한 파일이 `github.com/wlsdks/gyeol`의 릴리스에만 갑니다: 확인은 `https://api.github.com/repos/wlsdks/gyeol/releases/latest`, 받기는 `https://github.com/wlsdks/gyeol/releases/download/<태그>/<zip>`과 GitHub이 넘겨주는 파일 보관소(`release-assets.githubusercontent.com`, `objects.githubusercontent.com`)입니다. 보내는 것은 Accept와 User-Agent(`Framo/버전`) 머리글뿐이고, 받은 zip은 GitHub이 알려 준 크기와 SHA-256이 맞을 때만 남기며 풀거나 실행하지 않습니다. 브라우저는 바깥으로 가지 않습니다(확인도 로컬 서버가 합니다).
+   - 이 PC 밖으로 나가는 연결은 둘뿐입니다. 하나는 ‘AI에게 부탁’으로, 사람이 누르면 이 PC의 Claude Code를 띄웁니다(`server/agent.ts`. 그 뒤의 연결은 Claude Code가 합니다). 다른 하나는 새 버전 확인과 받기로, `server/update.ts` 한 파일이 `github.com/wlsdks/gyeol`의 릴리스에만 갑니다(저장소 이름을 바꿀 때를 위해 바꿀 이름 `wlsdks/framo`도 압니다. 예전 이름이 200을 주지 않을 때만 같은 꼴로 묻고, 넘겨주기는 따라가지 않습니다): 확인은 `https://api.github.com/repos/wlsdks/gyeol/releases/latest`, 받기는 `https://github.com/wlsdks/gyeol/releases/download/<태그>/<zip>`과 GitHub이 넘겨주는 파일 보관소(`release-assets.githubusercontent.com`, `objects.githubusercontent.com`)입니다. 보내는 것은 Accept와 User-Agent(`Framo/버전`) 머리글뿐이고, 받은 zip은 GitHub이 알려 준 크기와 SHA-256이 맞을 때만 남기며 풀거나 실행하지 않습니다. 브라우저는 바깥으로 가지 않습니다(확인도 로컬 서버가 합니다).
    - 이 밖의 연결을 더하거나 허락 목록을 넓히지 않습니다. 소스는 `scripts/offline.test.ts`가, 빌드 결과는 `scripts/offline.mjs`(pack과 검수가 같이 씀)가 지킵니다.
    - CSP(`server/csp.ts`, `src/export/exportHtml.tsx`의 `exportCsp`)를 느슨하게 바꾸지 않습니다.
    - 서버(`server/serve.ts`)는 `127.0.0.1`에만 묶고 Host 검사를 유지합니다.

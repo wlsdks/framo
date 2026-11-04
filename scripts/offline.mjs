@@ -22,8 +22,9 @@ export const ALLOWED = [
   /^https:\/\/claude\.ai\/install\.(sh|ps1)$/,
   // 새 버전 확인과 받기(server/update.ts). 로컬 서버만 이 주소로 가고 브라우저는 가지 않는다(CSP connect-src 'self').
   // 받을 때 넘겨받는 파일 보관소(release-assets.githubusercontent.com 등)는 주소가 아니라 이름 목록으로만 코드에 있다
-  /^https:\/\/api\.github\.com\/repos\/wlsdks\/gyeol\/releases\/latest$/,
-  /^https:\/\/github\.com\/wlsdks\/gyeol\/releases\/(tag|download)\/$/,
+  // 저장소는 지금 이름(gyeol)과 바꿀 이름(framo) 둘뿐(update.ts의 REPOS)
+  /^https:\/\/api\.github\.com\/repos\/wlsdks\/(gyeol|framo)\/releases\/latest$/,
+  /^https:\/\/github\.com\/wlsdks\/(gyeol|framo)\/releases\/(tag|download)\/$/,
 ]
 
 /** 허락하지 않은 주소를 '파일: 주소'로 */

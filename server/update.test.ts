@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { UpdateStatus } from '../src/update/protocol'
-import { allowedHop, compareVersions, createUpdater, MAX_ASSET_BYTES, parseRelease, type Getter } from './update'
+import { allowedHop, compareVersions, createUpdater, MAX_ASSET_BYTES, parseRelease, REPOS, type Getter } from './update'
 import { createUpdateHandler, type UpdateSetup } from './updateRoutes'
 
 const ZIP = Buffer.from('지어낸 배포본 내용 '.repeat(200))
@@ -59,6 +59,12 @@ function fake(replies: Record<string, Reply | (() => Reply)>) {
 }
 
 const API = 'https://api.github.com/repos/wlsdks/gyeol/releases/latest'
+const API_NEW = 'https://api.github.com/repos/wlsdks/framo/releases/latest'
+
+/** 저장소 이름을 framo로 바꾼 뒤의 릴리스 */
+function renamed() {
+  return JSON.parse(JSON.stringify(release()).replaceAll('wlsdks/gyeol', 'wlsdks/framo'))
+}
 
 describe('버전 견주기', () => {
   it('X.Y.Z를 숫자로 견준다', () => {
@@ -80,6 +86,13 @@ describe('릴리스 정보 고르기', () => {
       page: 'https://github.com/wlsdks/gyeol/releases/tag/v0.9.0',
       asset: { url: DL, size: ZIP.length, sha256: SHA },
     })
+  })
+
+  it('바꾼 이름(framo)의 릴리스는 그 이름으로 받은 답일 때만', () => {
+    expect(parseRelease(renamed(), 'win32', REPOS[1])?.asset?.url).toBe('https://github.com/wlsdks/framo/releases/download/v0.9.0/gyeol-windows.zip')
+    // 예전 이름에 물었는데 새 이름의 주소가 오거나, 그 반대면 받지 않는다
+    expect(parseRelease(renamed(), 'win32', REPOS[0])).toBeNull()
+    expect(parseRelease(release(), 'win32', REPOS[1])).toBeNull()
   })
 
   it('배포본이 없는 OS는 받지 않고 페이지만 알린다', () => {
@@ -128,6 +141,8 @@ describe('받을 때 따라가는 곳', () => {
     expect(allowedHop(new URL(DL), true)).toBe(true)
     expect(allowedHop(new URL('https://github.com/someone/gyeol/releases/download/v1.0.0/x.zip'), true)).toBe(false)
     expect(allowedHop(new URL(ASSET_HOST), true)).toBe(false)
+    expect(allowedHop(new URL('https://github.com/wlsdks/framo/releases/download/v1.0.0/gyeol-windows.zip'), true)).toBe(true)
+    expect(allowedHop(new URL('https://github.com/wlsdks/framo2/releases/download/v1.0.0/x.zip'), true)).toBe(false)
     // ../는 URL이 먼저 풀어서 저장소 경로가 남지 않는다
     expect(allowedHop(new URL('https://github.com/wlsdks/gyeol/releases/download/../../../someone/x'), true)).toBe(false)
   })
@@ -152,15 +167,42 @@ describe('확인', () => {
     expect(calls).toEqual([{ url: API, headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Framo/0.4.2' } }])
   })
 
+  it('지금 이름이 200이면 바꿀 이름에는 묻지 않는다', async () => {
+    const { get, calls } = fake({ [API]: { status: 200, body: JSON.stringify(release()) }, [API_NEW]: { status: 200, body: JSON.stringify(renamed()) } })
+    expect((await createUpdater({ version: '0.4.2', platform: 'win32', get }).latest())?.page).toBe('https://github.com/wlsdks/gyeol/releases/tag/v0.9.0')
+    expect(calls.map((c) => c.url)).toEqual([API])
+  })
+
+  it('저장소 이름을 바꿔 예전 이름이 넘겨주면 넘겨준 곳은 따라가지 않고 바꿀 이름에 묻는다', async () => {
+    const { get, calls } = fake({
+      [API]: { status: 301, location: 'https://api.github.com/repositories/1/releases/latest' },
+      [API_NEW]: { status: 200, body: JSON.stringify(renamed()) },
+    })
+    const r = await createUpdater({ version: '0.4.2', platform: 'win32', get }).latest()
+    expect(r?.page).toBe('https://github.com/wlsdks/framo/releases/tag/v0.9.0')
+    expect(r?.asset?.url).toBe('https://github.com/wlsdks/framo/releases/download/v0.9.0/gyeol-windows.zip')
+    expect(calls.map((c) => c.url)).toEqual([API, API_NEW])
+    for (const c of calls) expect(c.headers).toEqual({ Accept: 'application/vnd.github+json', 'User-Agent': 'Framo/0.4.2' })
+  })
+
+  it('바꿀 이름이 다른 저장소의 답을 주면 받지 않는다', async () => {
+    const { get } = fake({ [API]: { status: 404 }, [API_NEW]: { status: 200, body: JSON.stringify(release()) } })
+    expect(await createUpdater({ version: '0.4.2', platform: 'win32', get }).latest()).toBeNull()
+  })
+
   it('닿지 못하거나, 넘겨주거나, 답이 이상하면 조용히 null', async () => {
-    const cases: Reply[] = [
-      { status: 500 },
-      { status: 301, location: 'https://evil.example/' },
+    // 200이 아닌 답은 두 이름 모두에 묻고 그만둔다
+    for (const reply of [{ status: 500 }, { status: 301, location: 'https://evil.example/' }] as Reply[]) {
+      const { get, calls } = fake({ [API]: reply, [API_NEW]: reply })
+      expect(await createUpdater({ version: '0.4.2', get }).latest()).toBeNull()
+      expect(calls.map((c) => c.url)).toEqual([API, API_NEW])
+    }
+    // 200을 받은 뒤 답이 이상하면 다른 이름에 더 묻지 않는다
+    for (const reply of [
       { status: 200, body: '<html>회사 네트워크 차단 안내</html>' },
       { status: 200, body: Buffer.alloc(2 * 1024 * 1024, 32) },
-    ]
-    for (const reply of cases) {
-      const { get, calls } = fake({ [API]: reply })
+    ] as Reply[]) {
+      const { get, calls } = fake({ [API]: reply, [API_NEW]: { status: 200, body: JSON.stringify(renamed()) } })
       expect(await createUpdater({ version: '0.4.2', get }).latest()).toBeNull()
       expect(calls).toHaveLength(1)
     }

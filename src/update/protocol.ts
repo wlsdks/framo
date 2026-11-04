@@ -16,7 +16,7 @@ export type UpdateCheck =
       checkedAt: number
       /** 새 버전 (X.Y.Z) */
       version: string
-      /** 바뀐 점을 보는 GitHub 릴리스 주소. 서버가 https://github.com/wlsdks/gyeol/releases/tag/vX.Y.Z 꼴인지 확인한 것 */
+      /** 바뀐 점을 보는 GitHub 릴리스 주소. 서버가 https://github.com/wlsdks/gyeol(또는 framo)/releases/tag/vX.Y.Z 꼴인지 확인한 것 */
       page: string
       /** 이 PC에서 받을 수 있는지. 받을 파일이 없거나, 지문(SHA-256)이 없거나, 개발 서버면 false */
       download: boolean

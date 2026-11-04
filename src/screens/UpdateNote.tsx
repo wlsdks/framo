@@ -7,7 +7,8 @@ import type { DownloadError, UpdateStatus } from '../update/protocol'
 import { Info, Modal, Popover, Toggle } from './ui'
 
 /** 바뀐 점을 보는 주소. 서버가 확인한 것이지만, 화면도 이 저장소의 릴리스 페이지가 아니면 열지 않는다 */
-const RELEASE_PAGE = /^https:\/\/github\.com\/wlsdks\/gyeol\/releases\/tag\/v\d+\.\d+\.\d+$/
+// 저장소 이름을 framo로 바꿀 때를 위해 두 이름을 받는다(server/update.ts의 REPOS)
+const RELEASE_PAGE = /^https:\/\/github\.com\/wlsdks\/(gyeol|framo)\/releases\/tag\/v\d+\.\d+\.\d+$/
 
 const DOWNLOAD_HELP: Record<DownloadError, string> = {
   network: '인터넷 연결이 끊겼거나 회사 네트워크가 막았어요. 연결을 확인하고 다시 받아 보세요.',
