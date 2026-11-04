@@ -691,11 +691,6 @@ button.wz-step:hover {
  * 예전에는 이름과 설명을 장 위에 쌓아 높이를 먹어서, 1280×600에서 장이 칸의 절반(480px)에 그치고 오른쪽이 비었다.
  * 칸 사이와 목록 너비는 화면 너비에 비례한다(clamp). 고른 이름은 선택 색 굵게(면도 띠도 없이)
  */
-/* 1단계는 마법사의 다른 단계보다 넓게: 큰 장이 넓은 화면에서 오히려 작아지지 않게(다른 단계의 폭 1360·1480에 묶이면 1536에서 705px) */
-.wz-main:has(.wzx) {
-  max-width: 1760px;
-}
-
 /*
  * 큰 장의 너비 = 남는 높이로 정한 장 높이 × 16/9. 남는 높이는 화면 높이에서 머리줄·아래 줄·여백(약 245)을 뺀 것인데,
  * 아래에 작은 장 넷(장 높이의 4분의 1과 틈)이 같이 서므로 1.25로 나눈다(× 16/9 ÷ 1.25 = × 1.4222)
@@ -921,5 +916,118 @@ button.wz-step:hover {
   .wzx-d,
   .wzx-flow li {
     font-size: 16px;
+  }
+}
+
+/*
+ * 2단계: 1단계와 같은 짜임(목록 | 장 | 설명). 가운데에 만들어질 장을 모두: 장 수에 따라 셋, 넷, 다섯 단.
+ * 칸 높이는 화면 높이로 고정하고 넘치면 칸 안에서 스크롤한다: 발표 시간을 바꿔 장이 한 줄 늘 때마다 칸이 자라면
+ * 틀 전체가 위아래로 움직여 이어 누르려던 자리가 비켜 갔다(예전 contain: size와 같은 까닭)
+ */
+/* 1·2단계는 다른 단계보다 넓게: 큰 장이 넓은 화면에서 오히려 작아지지 않게(1360·1480에 묶이면 1536에서 705px) */
+.wz-main:has(.wzx) {
+  max-width: 1760px;
+}
+
+.wzp-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+  gap: 16px 12px;
+  align-content: start;
+  height: calc(100vh - 250px);
+  margin: 0;
+  padding: 2px 2px 32px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  list-style: none;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+}
+
+.wzp-grid li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  animation: wz-in var(--t) var(--ease-out) both;
+}
+
+.wzp-why {
+  margin: 0;
+}
+
+.wzp-why dt {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.wzp-why dd {
+  margin: 2px 0 16px;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+@media (max-height: 760px) {
+  .wzp-grid {
+    height: calc(100vh - 165px);
+  }
+}
+
+@media (min-width: 1700px) and (min-height: 900px) {
+  .wzp-why dt {
+    font-size: 16px;
+  }
+
+  .wzp-why dd {
+    font-size: 15px;
+  }
+}
+
+/*
+ * 3단계: 입력은 알맞은 폭의 왼쪽 단, 표지는 오른쪽에 크게(1·2단계처럼 만들어질 것이 중심).
+ * 예전에는 입력 칸이 화면 대부분을 차지하고 표지 미리 보기가 오른쪽 480px 칸에 작게 있어 무게가 거꾸로였다.
+ * 표지는 남는 높이로 크기를 정한다(아래 작은 장 줄까지 셈)
+ */
+.wz-split-cover {
+  grid-template-columns: clamp(320px, 30vw, 440px) minmax(0, 1fr);
+  column-gap: clamp(40px, 5vw, 88px);
+}
+
+.wz:has(.wz-split-cover) .wz-main {
+  max-width: 1760px;
+}
+
+.wz-cover-shot,
+.wz-cover .wz-strip {
+  /* 남는 높이 = 화면 높이 − 머리줄·묻는 말·아래 줄·여백(약 420). 아래 작은 장 줄까지 서므로 × 16/9 ÷ 1.25 */
+  width: min(100%, calc((100vh - 420px) * 1.4222));
+}
+
+.wz-cover-shot {
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--line), 0 8px 28px rgb(20 20 20 / 0.07);
+}
+
+.wz-cover-shot .slide-frame {
+  border-radius: 2px;
+}
+
+/* 낮은 화면: 아래 작은 장 줄은 감춘다(바로 앞 2단계에서 모두 보였다). 그만큼 표지를 크게 */
+@media (max-height: 760px) {
+  .wz-cover .wz-strip {
+    display: none;
+  }
+
+  .wz-cover-shot {
+    width: min(100%, calc((100vh - 270px) * 16 / 9));
+  }
+}
+
+/* 1280×600: 3단계 테마 줄이 아래 줄에 2px 걸려 세로 스크롤이 생겼다 */
+@media (max-height: 640px) {
+  .wz-split-cover .opt {
+    padding-block: 4px;
   }
 }

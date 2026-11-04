@@ -10,7 +10,7 @@ import { go } from '../lib/router'
 import { FitSlide, pageProps, SlideCanvas } from '../slides/SlideCanvas'
 import { persistNow } from '../store/persist'
 import { useDrawSoon } from './drawSoon'
-import { BackIcon, Brand, CheckIcon, ChevronIcon, Info, SAVE_HELP, Segmented, useToast } from './ui'
+import { BackIcon, Brand, CheckIcon, ChevronIcon, Info, SAVE_HELP, useToast } from './ui'
 
 // 발표 상황: 누구에게, 얼마나, 어떻게 발표하는지. 표지: 제목, 결정 요청(또는 부제), 발표자와 테마
 const STEPS = ['발표 종류', '발표 상황', '표지']
@@ -202,30 +202,17 @@ export function Wizard() {
         {step === 0 && <Catalog type={type} onPick={setType} onNext={() => setStep(1)} />}
 
         {step === 1 && (
-          <section className="wz-sec wz-split wz-split-plan">
-            <div className="wz-head">
-              <h1 className="wz-h">누구에게, 얼마나 발표하나요?</h1>
-              <p className="wz-sub">고르는 대로 오른쪽 구성이 바뀌어요.</p>
-            </div>
-            <div className="wz-form">
-              <Choice
-                legend="듣는 사람"
-                options={AUDIENCES}
-                value={audience}
-                onChange={setAudience}
-                note={AUDIENCES.find((a) => a.id === audience)?.description}
-              />
-              <Choice legend="발표 시간" options={DURATIONS.map((d) => ({ id: d.minutes, name: d.name }))} value={minutes} onChange={setMinutes} />
-              <Choice legend="발표 방식" options={METHODS} value={method} onChange={setMethod} note={METHODS.find((m) => m.id === method)?.description} />
-            </div>
-
-            <aside className="wz-plan">
-              <p className="wz-plan-k">{blueprint.name}</p>
-              <p className="wz-plan-h" aria-live="polite">
-                슬라이드 {preview.slides.length}장으로 만들어요
-              </p>
-              {/* 실제로 만들어질 장을 작게 그린다. 칸마다 들어갈 예시가 보이고, 편집기에서는 이 자리에 회색 안내로 남는다 */}
-              <ol className="wz-plan-grid wz-real">
+          // 2단계: 1단계와 같은 짜임. 왼쪽에 고르는 것 셋을 글 목록으로, 가운데에 만들어질 장을 모두, 오른쪽에 장 수와 고른 것이 바꾸는 것.
+          // 예전에는 테 두른 칩 줄 셋과 작은 장 판을 나란히 두어 1단계와 말투가 달랐고, 설명은 칩 아래 옅은 한 줄뿐이었다
+          <section className="wz-sec wzx wzp">
+            <nav className="wzx-list" aria-label="발표 상황">
+              <h1 className="wzx-q">누구에게, 얼마나?</h1>
+              <PlanGroup legend="듣는 사람" options={AUDIENCES} value={audience} onChange={setAudience} />
+              <PlanGroup legend="발표 시간" options={DURATIONS.map((d) => ({ id: d.minutes, name: d.name }))} value={minutes} onChange={setMinutes} />
+              <PlanGroup legend="발표 방식" options={METHODS} value={method} onChange={setMethod} />
+            </nav>
+            <div className="wzx-hero">
+              <ol className="wzp-grid wz-real" style={{ '--cols': preview.slides.length > 12 ? 5 : preview.slides.length > 6 ? 4 : 3 }}>
                 {planKeys(preview.slides).map(([key, s], i) => (
                   <li key={key} className={cx(s.layout === 'section' && 'is-section')} title={LAYOUTS[s.layout].name}>
                     <span className="wz-shot" aria-hidden="true">
@@ -240,7 +227,17 @@ export function Wizard() {
                   </li>
                 ))}
               </ol>
-            </aside>
+              <div className="wzx-about" aria-live="polite">
+                <p className="wzx-k">{blueprint.name}</p>
+                <h2 className="wzx-h">슬라이드 {preview.slides.length}장</h2>
+                <dl className="wzp-why">
+                  <dt>{AUDIENCES.find((a) => a.id === audience)?.name}</dt>
+                  <dd>{AUDIENCES.find((a) => a.id === audience)?.description}</dd>
+                  <dt>{METHODS.find((m) => m.id === method)?.name}</dt>
+                  <dd>{METHODS.find((m) => m.id === method)?.description}</dd>
+                </dl>
+              </div>
+            </div>
           </section>
         )}
 
@@ -396,33 +393,6 @@ function Later({ children }: { children: ReactNode }) {
   return useDrawSoon() ? <>{children}</> : null
 }
 
-/**
- * 하나를 고르는 줄. 단추에는 이름만 두고, 고른 것이 무엇을 바꾸는지는 아래 한 줄에.
- * 설명을 단추마다 넣으면 다섯 개가 한 줄에 들어가지 않고, 낮은 노트북 화면에서 한 화면을 넘는다
- */
-function Choice<T extends string | number>({
-  legend,
-  options,
-  value,
-  onChange,
-  note,
-}: {
-  legend: string
-  options: { id: T; name: string }[]
-  value: T
-  onChange: (v: T) => void
-  note?: string
-}) {
-  return (
-    <fieldset className="wz-group">
-      <legend>{legend}</legend>
-      {/* 설명은 단추의 말풍선이 아니라 아래 한 줄에: 이름만 넘긴다 */}
-      <Segmented chips className="wz-chips" options={options.map((o) => ({ id: o.id, name: o.name }))} value={value} onPick={onChange} />
-      {note && <p className="wz-note">{note}</p>}
-    </fieldset>
-  )
-}
-
 function Option({ on, onClick, name, desc, swatch }: { on: boolean; onClick: () => void; name: string; desc: string; swatch?: ThemeId }) {
   return (
     <button type="button" className={cx('opt', on && 'is-on')} aria-pressed={on} onClick={onClick}>
@@ -557,5 +527,19 @@ function Catalog({ type, onPick, onNext }: { type: DeckType; onPick: (t: DeckTyp
         </div>
       </div>
     </section>
+  )
+}
+
+/** 2단계의 고르는 묶음 하나: 1단계 목록과 같은 글 줄. 고른 것은 선택 색 굵게 */
+function PlanGroup<T extends string | number>({ legend, options, value, onChange }: { legend: string; options: { id: T; name: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="wzx-group" role="radiogroup" aria-label={legend}>
+      <h2 className="wzx-gh">{legend}</h2>
+      {options.map((o) => (
+        <button key={String(o.id)} type="button" role="radio" aria-checked={value === o.id} className={cx('wzx-item', value === o.id && 'is-on')} onClick={() => onChange(o.id)}>
+          {o.name}
+        </button>
+      ))}
+    </div>
   )
 }
