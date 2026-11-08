@@ -275,7 +275,8 @@ function measure(area: HTMLElement, k: number): string[] {
  * 맞추기처럼 줄여 보지 않고 그려진 것으로 어림한다: 글 칸마다 한 줄 너비는 꺾인 줄의 글 너비에 줄 사이의 띄어쓰기 몫을 더한 것이다.
  * 단계 칸(격자의 열)은 글 너비만큼이고 모자라면 남는 너비를 고르게 나눠 받으므로(flow.css), 한 단계 작게 한 단계마다의 너비로
  * 지금 단계 칸들의 너비 합을 다시 나눠 본다. 세로로 쌓은 흐름은 지금 글 칸 너비와 견준다.
- * 번호(이름 한 단계 아래)가 바닥(--fs-min) 밑으로 가는 단계는 보지 않는다: 그보다 작게는 내리지 않고 꺾인다
+ * 번호(이름 한 단계 아래)가 바닥(--fs-min) 밑으로 가는 단계와, 판을 혼자 쓰는 흐름에서 이름이 --fw-least(flow.css) 밑으로 가는 단계는
+ * 보지 않는다: 그보다 작게는 내리지 않고 꺾인다
  */
 function labelWraps(area: HTMLElement, k: number): string[] {
   const out: string[] = []
@@ -309,7 +310,8 @@ function labelWraps(area: HTMLElement, k: number): string[] {
     const wrapped = steps.filter((x) => x.name.rows > 1)
     if (!wrapped.length || !wrapped[0].t) continue
     const fs = parseFloat(getComputedStyle(wrapped[0].t).fontSize)
-    if (fs / 1.44 < (parseFloat(getComputedStyle(fw).getPropertyValue('--fs-min')) || 0) - 0.5) continue
+    const fcs = getComputedStyle(fw)
+    if (fs / 1.44 < (parseFloat(fcs.getPropertyValue('--fs-min')) || 0) - 0.5 || fs / 1.2 < (parseFloat(fcs.getPropertyValue('--fw-least')) || 0) - 0.5) continue
     let room: (x: (typeof steps)[number]) => number
     if (getComputedStyle(fw.querySelector('.bk-fw-list') ?? fw).display === 'grid') {
       // 단계 칸들의 너비 합을 바라는 너비가 작은 칸부터 채우고 남는 것을 고르게 나눈다

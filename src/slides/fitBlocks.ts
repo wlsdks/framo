@@ -311,7 +311,8 @@ export function blockFitter() {
    * 모든 이름이 한 줄에 드는 가장 큰 단계를 고른다(--fw-fit, flow.css). 판을 혼자 쓰는 흐름은 이름을 52까지 키워서, 다섯 단계면 단계 칸이
    * 좁아 '각자 / 만들기'처럼 두 낱말 이름이 반으로 꺾이고 한 낱말 이름만 한 줄이라 이름과 설명의 윗선이 들쭉날쭉했고 설명도 꺾였다.
    * 이름마다 크기를 따로 두지 않는다(흐름 안의 이름은 한 크기). 번호(이름 한 단계 아래)가 바닥(--fs-min) 밑으로 가지 않는 만큼까지만
-   * 내린다. 그래도 한 줄에 들지 않는 긴 이름이 있으면 꺾이는 줄이 가장 적어지는 단계 가운데 가장 큰 단계: 긴 이름만 낱말 사이에서
+   * 내리고, 판을 혼자 쓰는 흐름은 이름이 --fw-least(52에서 두 단계 아래, flow.css) 밑으로 가지 않게: 긴 이름 하나 때문에 흐름 전체가
+   * 30으로 작아져 판이 휑했다. 그래도 한 줄에 들지 않는 긴 이름이 있으면 꺾이는 줄이 가장 적어지는 단계 가운데 가장 큰 단계: 긴 이름만 낱말 사이에서
    * 꺾이고(word-break: keep-all) 다른 이름은 한 줄이다. 처음 크기로 두면 짧은 이름까지 모두 반으로 꺾였고, 바닥까지 내리면 덜 꺾이지도
    * 않는데 흐름 전체가 작아졌다. 좁은 칸에서 세로로 쌓은 흐름도 같다(이름이 칸 너비보다 길면 꺾인다).
    * 편집 화면에서 글을 쓰는 동안은 쓰기 전의 단계 그대로(typing): 글자마다 고르면 이름이 꺾이는 글자에서 흐름 전체가 한 단계 작아지고,
@@ -335,8 +336,9 @@ export function blockFitter() {
         put(1)
         continue
       }
-      // 고를 수 있는 단계: 처음 크기(1)부터 1.2씩 나눠, 번호가 바닥에 닿기 전까지
+      // 고를 수 있는 단계: 처음 크기(1)부터 1.2씩 나눠, 번호가 바닥에 닿기 전까지(판을 혼자 쓰면 이름이 --fw-least에 닿기 전까지)
       const floor = (parseFloat(cs.getPropertyValue('--fs-min')) || 0) - 0.5
+      const bottom = (parseFloat(cs.getPropertyValue('--fw-least')) || 0) - 0.5
       let now = Number(fw.style.getPropertyValue('--fw-fit')) || 1
       let fs = parseFloat(getComputedStyle(names[0]).fontSize)
       // 지금 단계에서 이름이 바닥에 걸려 있으면(칸이 줄어 글자가 작아졌다) 처음 크기를 거꾸로 셈할 수 없어 처음 크기로 돌려 잰다
@@ -347,7 +349,7 @@ export function blockFitter() {
       }
       const base = fs / now
       const ks = [1]
-      while ((base * ks[ks.length - 1]) / 1.44 >= floor && ks.length < 6) ks.push(ks[ks.length - 1] / 1.2)
+      while ((base * ks[ks.length - 1]) / 1.44 >= floor && (base * ks[ks.length - 1]) / 1.2 >= bottom && ks.length < 6) ks.push(ks[ks.length - 1] / 1.2)
       // 이름들이 그려진 줄 수의 합. 글자가 작을수록 줄지 않으니 가장 작은 단계의 합이 가장 적다
       const rows = () => names.reduce((n, el) => n + rowsOf(el), 0)
       // 지금 단계에서 시작한다: 맞춘 뒤 다시 고를 때(칸을 옮기고 높이를 맞추는 동안 여러 번) 처음부터 내려 보지 않게
