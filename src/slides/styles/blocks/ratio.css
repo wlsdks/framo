@@ -185,7 +185,7 @@
   }
 }
 
-/* 넓은 칸에 한 줄로 늘어선 점: 점은 32px 그대로 두고 사이만 벌려 점 칸 너비를 쓴다(사이는 점 지름의 2.6배까지). 사이를 그대로 두면
+/* 넓은 칸에 한 줄로 늘어선 점: 점은 32px(키운 단계를 따라) 그대로 두고 사이만 벌려 점 칸 너비를 쓴다(사이는 점 지름의 2.6배까지). 사이를 그대로 두면
    한 줄을 다 쓰는 칸에서 숫자와 점이 왼쪽 45% 안에 몰리고 오른쪽이 30% 넘게 비었다(checkAssembly). 점을 키우지 않는 까닭은
    위(32px까지)와 같다 */
 @container bk (min-aspect-ratio: 16 / 9) and (min-width: 900px) {
@@ -212,21 +212,43 @@
   flex-basis: calc(var(--rt-cap) * (var(--rows-t) * 3.3 - 0.3));
 }
 
-/* 판을 혼자 쓰면 숫자와 막대를 한 묶음으로 본문 가운데에: 막대 칸이 남는 너비를 다 가져가면 막대 다섯 개가 왼쪽에 서고
-   그 오른쪽이 통째로 비었다(사용자: '5곳 중 2곳'의 막대 오른쪽이 휑하다). 막대 칸은 막대가 가장 클 때의 너비만 */
-@container bk (min-aspect-ratio: 16 / 9) and (min-width: 1200px) {
-  /* 묶음의 너비로 줄이지(fit-content) 않고 줄 안에서 가운데로: 막대 칸은 크기를 재지 않는 상자(container-type: size)라 너비를 줄이면
-     막대 칸과 글이 가장 좁게 접혔다 */
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-rt:has(.bk-rt-dots[data-flat]:not(.is-pct)) {
-    justify-content: center;
+/* 넓고 높은 칸(판을 혼자 쓸 때 같은): 막대 자체를 굵고 크게(칸 46px까지, 너비 56%) 하고 사이는 막대 지름의 2.4배까지만 벌린다.
+   가는 막대가 사이만 벌어져 장 너비에 흩어지면 울타리 말뚝이나 자의 눈금처럼 보였다(검수). 묶음은 장 제목 축(왼쪽 끝)에서 시작한다:
+   판을 혼자 쓸 때만 가운데에 두면 같은 컴포넌트가 막대 수에 따라 가운데와 왼쪽을 오갔다(검수). 막대가 많아 줄 너비가 모자라면
+   막대 칸이 줄어든다(글은 꺾지 않는다) */
+@container bk (min-aspect-ratio: 16 / 9) and (min-width: 1200px) and (min-height: 400px) {
+  .bk-rt {
+    --rt-cap: calc(46px * var(--bk-fit, 1));
   }
 
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-rt:has(.bk-rt-dots[data-flat]:not(.is-pct)) .bk-rt-box {
-    flex: 0 1 calc(var(--cols) * var(--rt-cap) * 3.4);
+  .bk-rt-dots[data-flat]:not(.is-pct, [data-kind='person']) {
+    width: min(100%, calc(var(--c) * var(--d) * 2.4));
   }
 
-  /* 막대가 많아 줄 너비가 모자라면 막대 칸이 줄어든다(글은 꺾지 않는다) */
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-rt:has(.bk-rt-dots[data-flat]:not(.is-pct)) .bk-rt-text {
+  .bk-rt-dots:not(.is-pct, [data-kind='person']) .bk-rt-d {
+    background-size: 56% 100%;
+  }
+
+  .bk-rt-text {
     flex-shrink: 0;
+  }
+}
+
+/* 숫자 아래에 막대를 둔 칸(16:9보다 덜 넓은 칸, 옆에 글이 선 판 같은)도 넓고 높으면 막대를 같은 크기로 키워 칸 너비에 고르게 편다:
+   32px 막대가 숫자 아래 왼쪽에만 서서 막대 끝과 옆 글 사이가 550px 비었다(검수) */
+@container bk (max-aspect-ratio: 16 / 9) and (min-width: 800px) and (min-height: 500px) {
+  .bk-rt {
+    --rt-cap: calc(46px * var(--bk-fit, 1));
+  }
+
+  .bk-rt-dots[data-flat]:not(.is-pct, [data-kind='person']) {
+    --c: var(--cols);
+    --r: var(--rows);
+    justify-content: space-between;
+    width: min(100%, calc(var(--c) * var(--d) * 2.4));
+  }
+
+  .bk-rt-dots:not(.is-pct, [data-kind='person']) .bk-rt-d {
+    background-size: 56% 100%;
   }
 }
