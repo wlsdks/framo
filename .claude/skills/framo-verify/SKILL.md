@@ -13,7 +13,7 @@ description: Framo에서 작업을 끝내거나 커밋하기 전의 검수 묶�
 npm run typecheck && npm test
 ```
 
-- 이번 작업으로 쓰지 않게 된 코드, 내보내기, 파일, CSS, 패키지를 남기지 않았는지 본다(AGENTS.md '유지보수하기 쉽게').
+- 이번 작업으로 쓰지 않게 된 코드, 내보내기, 파일, CSS, 패키지를 남기지 않았는지 본다(AGENTS.md '유지보수하기 쉽게'). `npm test`의 `scripts/unused.test.ts`가 찾고, 그것만 돌릴 때는 `npx vitest run scripts/unused.test.ts`. 남겨야 하면 까닭과 함께 허락 목록에(docs/ARCHITECTURE.md '쓰지 않는 것 찾기').
 - 보안에 닿는 변경(저장, 내보내기, 서버, AI 공유, MCP)은 AGENTS.md '꼭 지킬 것'을 다시 읽는다.
 
 ## 바꾼 것에 따라
