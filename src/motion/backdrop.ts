@@ -704,12 +704,15 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
 
   // ---------- 글 둘레 비우기 ----------
   /**
-   * 배경은 글의 자리를 모르고 그려진다(자리 크기만 안다). 그래서 그린 뒤에 장의 글(글자가 든 요소와 이미지)이 놓인 자리를 재서,
-   * 그 둘레를 흐린 구멍으로 뚫은 마스크(SVG 그림)를 배경에 씌운다: 구멍 안에서는 배경이 거의 사라진다. 끝 모습(SVG)과 움직이는
-   * 캔버스가 같은 상자 안이라 둘 다 비킨다. 재지 않던 때는 선과 망점이 글, 표의 줄 선, 큰 숫자를 가로질렀다(검수)
+   * 배경은 글의 자리를 모르고 그려진다(자리 크기만 안다). 그래서 그린 뒤에 장의 내용이 놓인 자리를 재서, 그 둘레를 흐린 구멍으로 뚫은
+   * 마스크(SVG 그림)를 배경에 씌운다: 구멍 안에서는 배경이 거의 사라진다. 끝 모습(SVG)과 움직이는 캔버스가 같은 상자 안이라 둘 다
+   * 비킨다. 구멍은 글이 든 묶음(장의 4분의 1보다 작은 것: 단계 하나, 표의 줄 하나, 제목 묶음)을 통째로 뚫는다. 그 안의 줄 선, 강조 선,
+   * 칸 사이까지 비어서, 배경의 선이 데이터의 선과 나란히 서지 않는다(검수: 등고선과 단계의 강조 선 가운데 어느 것이 데이터인지
+   * 헷갈렸다). 큰 묶음은 그 안의 작은 묶음과 글이 맡는다. 그림, 영상, 차트(svg)는 크기와 상관없이 통째로
    */
   const cleared = new WeakMap<Element, string>()
-  const PAD = 22
+  const PAD = 34
+  const SMALL = 1920 * 1080 * 0.25
   function clear(slide: Element) {
     const el = slide.querySelector(':scope > .s-bd') as HTMLElement | null
     if (!el) return
@@ -721,25 +724,31 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     const bx = el.offsetLeft
     const by = el.offsetTop
     const holes: string[] = []
+    const taken: number[][] = []
     const all = slide.querySelectorAll('*')
-    for (let i = 0; i < all.length && holes.length < 160; i++) {
-      const node = all[i] as HTMLElement
+    for (let i = 0; i < all.length && holes.length < 240; i++) {
+      const node = all[i]
       if (node === el || el.contains(node)) continue
-      let text = node.tagName === 'IMG'
-      if (!text)
-        for (let c = node.firstChild; c; c = c.nextSibling)
-          if (c.nodeType === 3 && /\S/.test(c.textContent || '')) {
-            text = true
-            break
-          }
-      if (!text) continue
+      const tag = node.tagName.toLowerCase()
+      const media = tag === 'img' || tag === 'video' || tag === 'canvas' || tag === 'svg'
+      // 차트 안의 모양과 글은 차트(svg)가 통째로 맡는다
+      if (!media && node.closest('svg')) continue
+      if (!media && !/\S/.test(node.textContent || '')) continue
       const r = node.getBoundingClientRect()
       if (!r.width || !r.height) continue
-      const x = (r.left - sr.left) / k - bx - PAD
-      const y = (r.top - sr.top) / k - by - PAD
-      const w = r.width / k + PAD * 2
-      const h = r.height / k + PAD * 2
+      const x0 = (r.left - sr.left) / k - bx
+      const y0 = (r.top - sr.top) / k - by
+      const w0 = r.width / k
+      const h0 = r.height / k
+      if (!media && w0 * h0 > SMALL) continue
+      // 이미 뚫은 구멍 안의 것(묶음 안의 글)은 건너뛴다: 요소는 문서 차례라 묶음이 먼저 온다
+      if (taken.some((t) => x0 >= t[0] && y0 >= t[1] && x0 + w0 <= t[0] + t[2] && y0 + h0 <= t[1] + t[3])) continue
+      const x = x0 - PAD
+      const y = y0 - PAD
+      const w = w0 + PAD * 2
+      const h = h0 + PAD * 2
       if (x > W || y > H || x + w < 0 || y + h < 0) continue
+      taken.push([x0, y0, w0, h0])
       holes.push(`<rect x="${Math.round(x)}" y="${Math.round(y)}" width="${Math.round(w)}" height="${Math.round(h)}" rx="16"/>`)
     }
     const key = holes.join('')
