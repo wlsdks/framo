@@ -102,6 +102,30 @@ export async function removeCine(lineage: string): Promise<{ entry: CineEntry; i
   return { entry: entries[index], index }
 }
 
+/**
+ * 파일에서 가져온 모션 그래픽을 더한다. 같은 갈래가 있으면 버전을 합치고(같은 버전은 한 번, 남긴 때 차례로, 최근 CINE_KEEP개),
+ * 없으면 새 갈래로 앞에 둔다. 더하거나 합친 갈래 수
+ */
+export async function importCines(incoming: CineEntry[]): Promise<number> {
+  let entries = useCines.getState().entries
+  let n = 0
+  for (const e of incoming) {
+    const was = entries.find((x) => x.lineage === e.lineage)
+    if (!was) {
+      entries = [e, ...entries]
+      n++
+      continue
+    }
+    const fresh = e.versions.filter((v) => !was.versions.some((w) => w.id === v.id))
+    if (!fresh.length) continue
+    const versions = [...was.versions, ...fresh].sort((a, b) => a.savedAt - b.savedAt).slice(-CINE_KEEP)
+    entries = entries.map((x) => (x === was ? { ...was, versions } : x))
+    n++
+  }
+  if (n) await write(entries)
+  return n
+}
+
 export function restoreCine(entry: CineEntry, index: number): Promise<boolean> {
   const entries = useCines.getState().entries.filter((e) => e.lineage !== entry.lineage)
   entries.splice(Math.min(index, entries.length), 0, entry)

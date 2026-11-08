@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { makeBlock } from '../../deck/blocks'
 import { CINE_PRESETS, cineId, presetRecipe, presetSpec } from '../../deck/cine'
 import { makeSlide, uid } from '../../deck/generate'
@@ -7,9 +7,10 @@ import type { CinePresetId, CineRecipe, Deck, Slide } from '../../deck/types'
 import { particle } from '../../lib/josa'
 import { cines } from '../../slides/blocks/Cine'
 import { ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
-import { CINE_NAME_MAX, type CineEntry } from '../../store/cinesFile'
-import { loadCines, removeCine, renameCine, restoreCine, useCines } from '../../store/cines'
-import { BackIcon, Info, MoreIcon, PlusIcon, Popover, type Toast } from '../ui'
+import { CINE_NAME_MAX, CINES_EXT, decodeCinesFile, encodeCinesFile, type CineEntry } from '../../store/cinesFile'
+import { importCines, loadCines, removeCine, renameCine, restoreCine, useCines } from '../../store/cines'
+import { downloadText } from '../../store/deckFile'
+import { BackIcon, DownloadIcon, Info, MoreIcon, PlusIcon, Popover, UploadIcon, type Toast } from '../ui'
 import type { BlockEditing } from './BlockEditor'
 import { insertCine } from './cineEdit'
 import { useLook, type Look } from './look'
@@ -69,6 +70,7 @@ export function CineSection({ deck, slide, blocks, toast }: { deck: Deck; slide:
   const look = useLook(deck)
   const [picking, setPicking] = useState(false)
   const [renaming, setRenaming] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const hover = usePlayOnHover(motionOf(deck, slide))
   useEffect(() => void loadCines(), [])
 
@@ -80,6 +82,21 @@ export function CineSection({ deck, slide, blocks, toast }: { deck: Deck; slide:
   const remove = async (e: CineEntry) => {
     const gone = await removeCine(e.lineage)
     if (gone) toast.show(`‘${e.name}’${particle(e.name, '을', '를')} 지웠어요. 이미 넣은 발표에서는 그대로 보여요`, { label: '되돌리기', run: () => void restoreCine(gone.entry, gone.index) }, 6000)
+  }
+
+  // 파일로 주고받기: 다른 사람과 나누거나 다른 PC로 옮길 때. 파일에는 레시피(정해진 값)와 이름만 들어간다
+  const exportAll = () => downloadText(encodeCinesFile(entries), `내 모션 그래픽${CINES_EXT}`, 'application/json')
+  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const read = decodeCinesFile(await file.text().catch(() => ''))
+    if (!read || !read.entries.length) {
+      toast.show(`모션 그래픽 파일을 읽지 못했어요. Framo에서 저장한 ${CINES_EXT} 파일을 골라 주세요.`, undefined, 6000)
+      return
+    }
+    const n = await importCines(read.entries)
+    toast.show(n ? `모션 그래픽 ${n}개를 가져왔어요` : '이미 모두 있는 모션 그래픽이에요', undefined, 5000)
   }
 
   if (picking)
@@ -109,6 +126,7 @@ export function CineSection({ deck, slide, blocks, toast }: { deck: Deck; slide:
 
   return (
     <section className="cn-lib" aria-label="모션 그래픽">
+      <input ref={fileRef} type="file" accept={`${CINES_EXT},application/json`} hidden onChange={(e) => void onFile(e)} />
       <div className="cn-lib-h">
         <h3 className="lib-group">
           모션 그래픽<span className="lib-group-n">{entries.length || ''}</span>
@@ -200,6 +218,18 @@ export function CineSection({ deck, slide, blocks, toast }: { deck: Deck; slide:
           })}
         </ul>
       )}
+      <div className="cn-lib-f">
+        <button type="button" className="mine-head-btn" title={`${CINES_EXT} 파일의 모션 그래픽을 더해요`} onClick={() => fileRef.current?.click()}>
+          <UploadIcon />
+          가져오기
+        </button>
+        {entries.length > 0 && (
+          <button type="button" className="mine-head-btn" title="모두 한 파일로 저장해요. 다른 사람과 주고받거나 다른 PC로 옮길 때 써요" onClick={exportAll}>
+            <DownloadIcon />
+            파일로 저장
+          </button>
+        )}
+      </div>
     </section>
   )
 }
