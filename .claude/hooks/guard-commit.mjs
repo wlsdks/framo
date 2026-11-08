@@ -8,14 +8,25 @@ import { execFileSync } from 'node:child_process'
 let input = ''
 for await (const chunk of process.stdin) input += chunk
 let command = ''
+let cwd = ''
 try {
-  command = JSON.parse(input).tool_input?.command ?? ''
+  const data = JSON.parse(input)
+  command = data.tool_input?.command ?? ''
+  cwd = data.cwd ?? ''
 } catch {
   process.exit(0)
 }
 const commit = /\bgit\b[^\n;&|]*\bcommit\b/.test(command)
 const push = /\bgit\b[^\n;&|]*\bpush\b/.test(command)
 if (!commit && !push) process.exit(0)
+
+// 서브 에이전트의 작업 폴더(.claude/worktrees/…)에서는 올리지 않는다. 합치기와 올리기는 검수를 마친 뒤 본 저장소에서만 한다
+// (.claude/skills/framo-agents). 작업 폴더도 같은 저장소의 main을 함께 보므로, 거기서 push하면 검수 전의 main이 올라갔다
+const inWorktree = (p) => /\/\.claude\/worktrees\//.test(p)
+if (push && (inWorktree(cwd) || inWorktree(command))) {
+  process.stderr.write('서브 에이전트의 작업 폴더에서는 git push를 하지 않아요. 커밋은 작업 브랜치에만 두고, 합치기와 올리기는 검수 뒤 본 저장소에서 해요.\n')
+  process.exit(2)
+}
 
 const git = (...args) => {
   try {

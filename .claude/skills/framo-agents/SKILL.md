@@ -9,6 +9,7 @@ description: Framo 작업을 서브 에이전트에게 나눠 맡기고 결과�
 
 - 서로 다른 파일을 고치는 일끼리만 동시에 돌린다. 겹치면 한쪽에 "이 경로는 건드리지 말고 보고만" 목록을 준다. 자주 겹치는 곳은 `src/motion/engine.ts`, `src/slides/blocks/**`, `src/slides/styles/blocks/**`, `src/deck/blocks/**`, `src/screens/**`, `src/styles/**`다.
 - 고치는 에이전트는 `isolation: worktree`로 띄우고, **원격에 올리거나 main에 합치지 말라고** 적는다. 합치기는 내가 검토한 뒤에 한다.
+  - worktree도 같은 저장소의 `main`을 함께 본다. 에이전트가 거기서 `git push`를 하면 검수 전의 main이 올라간다(2026-11-08에 실제로 있었다). 훅(`guard-commit.mjs`)이 작업 폴더에서의 push를 막지만, 브리프에도 'git push, main 체크아웃, main을 바꾸는 merge/rebase 금지'를 적는다.
 - 조사나 설계만 하는 일은 코드를 고치지 않는 에이전트(Plan 같은)로 띄운다.
 - 감성 검수는 만든 에이전트가 아닌 `framo-reviewer`에게 그림만 주고 맡긴다(`/framo-review`).
 
