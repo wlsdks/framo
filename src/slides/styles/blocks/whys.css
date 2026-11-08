@@ -177,3 +177,14 @@
 .bk-look-bold > .bk-in .bk-wy-step.is-root .bk-wy-t {
   color: var(--accent);
 }
+
+/* 장에 원인 캐기 하나뿐이면 계단 묶음째 가운데에: 계단은 왼쪽에서 시작해 오른쪽 아래로 내려가서, 왼쪽 끝에 붙이면 왼쪽 여백에 견줘
+   오른쪽이 크게 비었다(사용자). 다른 컴포넌트와 나란하거나 소제목이 있으면(소제목과 계단의 왼쪽 끝이 어긋나므로) 왼쪽 끝을 맞춘다 */
+.bk-area:not(:has(> .bk ~ .bk)) .bk-wy:not(.is-across, :has(> .bk-h)) {
+  align-items: center;
+}
+
+.bk-area:not(:has(> .bk ~ .bk)) .bk-wy:not(.is-across, :has(> .bk-h)) > .bk-wy-list {
+  width: fit-content;
+  max-width: 100%;
+}

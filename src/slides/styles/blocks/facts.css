@@ -18,7 +18,7 @@
 .bk-fc-list {
   display: grid;
   grid-template-columns: fit-content(34%) minmax(0, 1fr);
-  column-gap: 40px;
+  column-gap: 56px;
 }
 
 .bk-fc-row {
@@ -27,10 +27,12 @@
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   align-items: baseline;
-  column-gap: 40px;
+  column-gap: 56px;
   /* 줄 사이는 글자와 함께 크되 한 줄 내용의 두 배를 넘지 않게(VISUAL-RULES 6). 24px씩 위아래에 두고 바람(--bk-air)도 위아래에 다 더하던 때는
      글자를 키운 장에서 한 줄짜리 줄 사이가 109px로 내용(36px)의 세 배였다. 바람은 줄 사이 하나에 한 번만 들어가게 반씩 나눈다 */
-  padding: calc(10px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
+  /* 10px이던 때는 줄이 선에 붙어 표가 빽빽했다(사용자: 다 붙어 있다). 다만 칸을 키우면(--bk-fit) 바람(--bk-air)까지 더해져
+     15px만 돼도 줄 사이가 내용 높이의 두 배를 넘었다(VISUAL-RULES 6). 13px */
+  padding: calc(13px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
 }
 
 /* 줄 사이 선: 옅은 1px, 줄 사이에만(VISUAL-RULES 2). 발표할 때 왼쪽에서부터 그어진다.
@@ -54,7 +56,7 @@
 
 .bk-fc-list[data-n='5'] .bk-fc-row,
 .bk-fc-list[data-n='6'] .bk-fc-row {
-  padding: calc(10px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
+  padding: calc(14px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
 }
 
 .bk-fc-k {
@@ -70,7 +72,8 @@
   grid-column: 2;
   /* 글 폭(--measure)에서 꺾는다: 문장을 쓰는 글 칸과 같다(blocks/base.css) */
   max-width: var(--measure);
-  font-weight: 500;
+  /* 보통 굵기: 500이면 줄마다 글이 두꺼워 표 전체가 무겁고 커 보였다(사용자) */
+  font-weight: 400;
   line-height: 1.45;
   text-wrap: pretty;
 }

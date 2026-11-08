@@ -39,7 +39,8 @@
   /* 남은 눈금의 색. 모션이 칠해지기 전 색으로도 쓴다(engine.ts) */
   --sp-off: color-mix(in srgb, var(--ink) 14%, transparent);
   justify-self: center;
-  width: 3px;
+  /* 3px이면 눈금이 머리카락처럼 얇아 칠한 것과 안 칠한 것의 차이가 약했다(사용자: 너무 얇다) */
+  width: 7px;
   height: 100%;
   background: var(--sp-off);
 }

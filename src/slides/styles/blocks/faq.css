@@ -1,10 +1,11 @@
 /* ---------- 예상 질문 ---------- */
 
-/* 질문 사이는 칸 높이를 따라 고르게 좁힌다 (질문 넷을 한 줄씩 쌓으면 장 높이의 반을 넘는다) */
+/* 질문 사이는 칸 높이를 따라 고르게 좁힌다 (질문 넷을 한 줄씩 쌓으면 장 높이의 반을 넘는다). 질문 묶음끼리는 질문과 답 사이보다
+   서너 배 넓게: 비슷하게 두면 다음 질문이 앞 답에 붙어 한 덩어리로 보였다(사용자: 다 붙어 있다) */
 .bk-qa-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: calc(clamp(16px, 3.6cqh, 32px) + var(--bk-air, 0px) * 2) 64px;
+  gap: calc(clamp(24px, 5cqh, 52px) + var(--bk-air, 0px) * 2) 96px;
 }
 
 .bk-qa-item {
@@ -12,8 +13,8 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-content: start;
-  gap: clamp(6px, 1.4cqh, 12px) 20px;
-  padding-top: clamp(14px, 3cqh, 26px);
+  gap: clamp(8px, 1.6cqh, 14px) 20px;
+  padding-top: clamp(18px, 3.6cqh, 32px);
   border-top: var(--rule-hair) solid var(--line);
 }
 

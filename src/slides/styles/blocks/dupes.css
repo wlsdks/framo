@@ -11,9 +11,10 @@
 .bk-dp-list {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  row-gap: calc(22px * var(--bk-fit, 1));
-  column-gap: 48px;
-  margin: 0;
+  /* 소제목 아래를 띄우고 줄 사이를 조금 넓게(키운 칸에서도 내용 높이의 두 배 안): 22px, 0이던 때는 소제목에 첫 줄이 붙고 줄끼리 빽빽했다(사용자: 붙어 있다) */
+  row-gap: calc(26px * var(--bk-fit, 1));
+  column-gap: 64px;
+  margin: calc(24px * var(--bk-fit, 1)) 0 0;
   padding: 0;
   list-style: none;
 }
