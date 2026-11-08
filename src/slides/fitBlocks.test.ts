@@ -96,7 +96,7 @@ describe('부품 장 글자 맞추기', () => {
 
     it('넘치게 하는 글자 단계와 줄 사이는 고르지 않는다', () => {
       const part = src.slice(src.indexOf('function fitPart('), src.indexOf('function labels('))
-      const bad = part.slice(part.indexOf('const bad = '), part.indexOf('const eye = '))
+      const bad = part.slice(part.indexOf('const bad = '), part.indexOf('(가)'))
       expect(bad).toMatch(/spill\(/)
     })
 
