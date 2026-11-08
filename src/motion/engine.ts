@@ -577,29 +577,17 @@ export function motionEngine(): MotionEngine {
    * 낱말마다 아래에서 올라오는 제목. 생동감은 번진 먹이 가라앉듯 조금 흐린 데서 또렷해지며 선다(L.ink).
    * 예전에는 기울었다가(3도) 바로 섰는데, 낱말마다 고개를 까딱여서 흔한 프레젠테이션 효과처럼 보였다
    */
-    const words = (el: Element | null, at: number, gap = L.word, blur = false) => {
+    /**
+     * 제목: 제자리에서 짧게 또렷해진다(옮기지 않는다). 낱말마다 아래에서 올라오던 때는 장마다 제목이 날아 들어와(사용자: 글자가
+     * 날아오는 모션은 필요 없다, 장표라 바로 깔끔하게 나오는 게 보기 좋다) 눈이 그림보다 글의 움직임에 먼저 갔다. 움직임은 그림(막대,
+     * 선, 조각)이 맡고 글은 조용히 선다. 장면이 이 글을 초점으로 삼았을 때만 한 글자씩(letters, 사람이 고른 연출)
+     */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const words = (el: Element | null, at: number, _gap = L.word, _blur = false) => {
       if (!el || still || el.closest('[data-mo-keep]')) return at
-      // 장면이 이 글을 초점으로 삼았으면 낱말 대신 한 글자씩 (결론이 한 자씩 내려앉게)
       if (el === lettersFor) return letters(el, at)
-      // 편집 중인 칸의 글자는 나누지 않는다 (입력 칸을 건드리지 않게). 통째로 올라온다
-      if (el.closest('.m-edit')) {
-        rise(el, at, L.y * 0.6)
-        return at + 240
-      }
-      const split = splitWords(el)
-      restores.push(split.restore)
-      split.words.forEach((w, i) => {
-        const frames: Keyframe[] = blur
-          ? // 흐림은 먹이 가라앉는 만큼만(6px). 18px이던 때는 녹화해 보니 한 문장 장의 제목이 1초 넘게 뿌연 덩어리로 떠 있어서
-            // 흔한 AI 데모처럼 보였다
-            [{ opacity: 0, translate: '0 0.2em', filter: 'blur(6px)' }, { opacity: 1, translate: '0 0', filter: 'blur(0px)' }]
-          : L.ink
-            ? [{ translate: '0 105%', filter: `blur(${L.ink}px)` }, { translate: '0 0', filter: 'blur(0px)' }]
-            : [{ translate: '0 105%' }, { translate: '0 0' }]
-        run(anims, w, frames, s(at + i * gap), blur ? { easing: OUT, duration: 900 } : L.move)
-      })
-      // 다음 차례는 마지막 낱말이 반쯤 올라왔을 때
-      return at + split.words.length * gap + 160
+      fade(el, at, d(360))
+      return at + 160
     }
     /**
      * 한 글자씩(글자 결): 글자마다 아주 조금(0.12em) 아래에서 옅게 시작해 제자리에 내려앉는다. 넘치지 않는 감속 곡선.
@@ -625,8 +613,10 @@ export function motionEngine(): MotionEngine {
         step = Math.min(L.word, cap / Math.max(1, split.words.length))
       }
       restores.push(split.restore)
-      const from: Keyframe = lively ? { opacity: 0, translate: '0 0.12em', filter: 'blur(1.5px)' } : { opacity: 0, translate: '0 0.12em' }
-      const to: Keyframe = lively ? { opacity: 1, translate: '0 0', filter: 'blur(0px)' } : { opacity: 1, translate: '0 0' }
+      // 글자는 제자리에서 나타나기만 한다(써지는 것처럼): 아래에서 올라오며 흐렸다 또렷해지던 때는 첫 장 제목이 날아오는 것처럼
+      // 보였다(사용자: 글자가 날아오는 모션은 필요 없다)
+      const from: Keyframe = { opacity: 0 }
+      const to: Keyframe = { opacity: 1 }
       let t = at
       split.words.forEach((w, i) => {
         if (i > 0 && !split.marks[i]) t += step
@@ -644,35 +634,9 @@ export function motionEngine(): MotionEngine {
     const lines = (el: Element | null, at: number) => {
       if (!el || still || el.closest('[data-mo-keep]')) return at
       if (el === lettersFor) return letters(el, at)
-      // 편집 중인 칸의 글자는 나누지 않는다 (입력 칸을 건드리지 않게). 통째로 올라온다
-      if (el.closest('.m-edit') || el.querySelector('[contenteditable]')) {
-        rise(el, at, L.y * 0.6)
-        return at + 240
-      }
-      const split = splitWords(el)
-      if (!split.words.length) return at
-      restores.push(split.restore)
-      // 같은 줄: 나누기 전 글자 상자의 윗변으로 가른다(한 줄의 글은 윗변이 같다). 나눈 낱말 상자를 다시 재면 칸마다
-      // 장 전체를 다시 배치했다(낱말 상자는 아직 장에 넣지 않았다: 모아 둔 쓰기)
-      const rows: HTMLElement[][] = []
-      let top = NaN
-      split.words.forEach((w, i) => {
-        const b = split.was[i] || { top: NaN, height: NaN }
-        if (!rows.length || Math.abs(b.top - top) > b.height / 2) {
-          rows.push([])
-          top = b.top
-        } else if (Number.isNaN(top)) top = b.top
-        rows[rows.length - 1].push(w)
-      })
-      const lively = levelName === 'lively'
-      const gap = Math.min(lively ? 130 : 90, (lively ? 900 : 700) / rows.length)
-      const ripple = lively ? 12 : 8
-      // 생동감은 먹이 가라앉듯 아주 조금 흐린 데서(한 글자씩과 같은 1.5px). 낱말마다의 제목(5px)만큼 흐리면 긴 글이 뿌옇게 떠 보인다
-      const frames: Keyframe[] = lively
-        ? [{ translate: '0 105%', filter: 'blur(1.5px)' }, { translate: '0 0', filter: 'blur(0px)' }]
-        : [{ translate: '0 105%' }, { translate: '0 0' }]
-      rows.forEach((row, k) => row.forEach((w, i) => run(anims, w, frames, s(at + k * gap + Math.min(i, 6) * ripple), L.move)))
-      return at + rows.length * gap + 160
+      // 글은 줄마다 밀어 올리지 않고 제자리에서 짧게 또렷해진다(words와 같은 까닭)
+      fade(el, at, d(360))
+      return at + 160
     }
     /**
      * 칸 안에서 숫자가 든 글 조각 수. 숫자가 둘인 값('6분 30초', '3억 5,000만 원')은 단위를 작게 떼어 그려서(fields.tsx의 numberRuns)
@@ -819,7 +783,7 @@ export function motionEngine(): MotionEngine {
     const head = () => {
       if (scope !== slide) return 0
       const t = words(one(':scope > .s-head .s-title'), 0)
-      rise(one(':scope > .s-head .s-lead'), Math.min(t, 420), L.y * 0.6)
+      fade(one(':scope > .s-head .s-lead'), Math.min(t, 420), d(360))
       const body = Math.min(t, 520)
       fade(one(':scope > .s-body'), Math.max(0, body - 120), 360)
       return body
@@ -959,20 +923,20 @@ export function motionEngine(): MotionEngine {
       }
       case 'cover': {
         // 띠는 아래에서, 오른쪽 면은 오른쪽에서 밀려 들어온다. 색 면 모양은 면이 장 전체라 줄만 나타난다
-        if (variant === 'full') fade(one('.cv-side'), 300, 700)
-        else if (levelName === 'lively') wipe(one('.cv-side'), 0, variant === 'band' ? 'bottom' : flipped ? 'left' : 'right', 1100)
-        else fade(one('.cv-side'), 0, 700)
-        fade(one('.cv-logo'), 200)
-        const t = words(one('.cv-title'), 180)
-        rise(one('.cv-lead'), t, L.y * 0.6)
-        rise(one('.cv-ask'), levelName === 'lively' ? 760 : 420)
-        items('.cv-meta > *', levelName === 'lively' ? 980 : 600, (el, at) => rise(el, at, L.y * 0.5), 70)
+        // 표지는 밀어 넣지 않고 제자리에서 차례로 또렷해진다: 오른쪽 면이 밀려 들어오고 제목이 낱말마다 올라오던 때는 첫 장부터
+        // 글자가 날아왔다(사용자). 면, 제목, 부제, 발표자 정보 차례로 짧게
+        fade(one('.cv-side'), 0, d(500))
+        fade(one('.cv-logo'), 120)
+        const t = words(one('.cv-title'), 120)
+        fade(one('.cv-lead'), t, d(360))
+        fade(one('.cv-ask'), t + 120, d(360))
+        items('.cv-meta > *', t + 200, (el, at) => fade(el, at, d(360)), 50)
         break
       }
       case 'section': {
         run(anims, one('.sc-num') ?? scope, [{ opacity: 0, translate: '0 22%' }], s(0), levelName === 'lively' ? SPRINGS.soft : SPRINGS.glide)
-        const t = words(one('.sc-title'), 160, L.word * 1.2)
-        rise(one('.sc-lead'), t, L.y * 0.6)
+        const t = words(one('.sc-title'), 160)
+        fade(one('.sc-lead'), t, d(360))
         fade(one('.sc-map'), t, 400)
         items('.sc-map li', t + 120, (el, at) => fade(el, at, 500), 60)
         break
@@ -990,8 +954,8 @@ export function motionEngine(): MotionEngine {
         break
       }
       case 'statement': {
-        const t = words(one('.st-title'), 0, L.word * 1.4, levelName === 'lively')
-        rise(one('.st-lead'), t + 80, L.y * 0.6)
+        const t = words(one('.st-title'), 0)
+        fade(one('.st-lead'), t + 80, d(360))
         break
       }
       case 'summary': {
