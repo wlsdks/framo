@@ -12,7 +12,7 @@
 //   생동감도 들어오기 한 번 뒤로 멈춘다(계속 움직이는 것은 한 장에 하나). 움직임 없음과 '동작 줄이기'에서는 끝 모습 그대로다.
 // - 색은 장의 글자색(currentColor) 하나이고 옅게만 쓴다(글이 그 위에서 읽혀야 한다). 강조색은 쓰지 않는다: 강조색은 장의 답에만
 //   쓰는데(AGENTS.md), 배경에 강조색 씨앗, 고리, 가닥을 두던 때는 장마다 강조가 두 곳이 되어 답이 흐려졌다(검수).
-//   번짐 빛, 칠한 면, 그러데이션은 없다.
+//   번짐 빛, 칠한 면, 그러데이션은 없다. 글 칸 둘레에서는 배경이 비켜 옅어진다(clear: 글이 놓인 자리를 재서 마스크로)
 // - 움직임은 처음부터 직접 만들었다. 이징은 엔진의 쓰임새 표(EASE)와 같은 곡선이다.
 //
 // 뷰어에는 이 함수와 drawKit의 소스(toString)가 그대로 들어간다. 그래서 바깥의 아무것도 참조하지 않고(받는 것은 kit뿐), 필요한 것은
@@ -39,6 +39,8 @@ interface BackdropRuntime {
   listen(root: Document): void
   /** 들어오기가 끝나는 때(ms, 생동감 기준). 모르는 배경이면 0 */
   endOf(kind: string, w: number, h: number): number
+  /** 장(.slide)의 글이 놓인 자리를 재서, 그 둘레에서 배경이 비켜 옅어지게 한다(마스크). 배경이 없거나 그리지 않은 장이면 그대로 */
+  clear(slide: Element): void
 }
 
 export function backdropMotion(kit: DrawKit): BackdropRuntime {
@@ -683,6 +685,63 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     return stop
   }
 
+  // ---------- 글 둘레 비우기 ----------
+  /**
+   * 배경은 글의 자리를 모르고 그려진다(자리 크기만 안다). 그래서 그린 뒤에 장의 글(글자가 든 요소와 이미지)이 놓인 자리를 재서,
+   * 그 둘레를 흐린 구멍으로 뚫은 마스크(SVG 그림)를 배경에 씌운다: 구멍 안에서는 배경이 거의 사라진다. 끝 모습(SVG)과 움직이는
+   * 캔버스가 같은 상자 안이라 둘 다 비킨다. 재지 않던 때는 선과 망점이 글, 표의 줄 선, 큰 숫자를 가로질렀다(검수)
+   */
+  const cleared = new WeakMap<Element, string>()
+  const PAD = 22
+  function clear(slide: Element) {
+    const el = slide.querySelector(':scope > .s-bd') as HTMLElement | null
+    if (!el) return
+    const sr = slide.getBoundingClientRect()
+    if (!sr.width) return
+    const k = sr.width / 1920
+    const W = Number(el.dataset.w)
+    const H = Number(el.dataset.h)
+    const bx = el.offsetLeft
+    const by = el.offsetTop
+    const holes: string[] = []
+    const all = slide.querySelectorAll('*')
+    for (let i = 0; i < all.length && holes.length < 160; i++) {
+      const node = all[i] as HTMLElement
+      if (node === el || el.contains(node)) continue
+      let text = node.tagName === 'IMG'
+      if (!text)
+        for (let c = node.firstChild; c; c = c.nextSibling)
+          if (c.nodeType === 3 && /\S/.test(c.textContent || '')) {
+            text = true
+            break
+          }
+      if (!text) continue
+      const r = node.getBoundingClientRect()
+      if (!r.width || !r.height) continue
+      const x = (r.left - sr.left) / k - bx - PAD
+      const y = (r.top - sr.top) / k - by - PAD
+      const w = r.width / k + PAD * 2
+      const h = r.height / k + PAD * 2
+      if (x > W || y > H || x + w < 0 || y + h < 0) continue
+      holes.push(`<rect x="${Math.round(x)}" y="${Math.round(y)}" width="${Math.round(w)}" height="${Math.round(h)}" rx="16"/>`)
+    }
+    const key = holes.join('')
+    if (cleared.get(el) === key) return
+    cleared.set(el, key)
+    if (!holes.length) {
+      el.style.removeProperty('--bd-clear')
+      return
+    }
+    // 마스크는 알파로 읽힌다: 검은 판을 안쪽 마스크(흰 바탕에 흐린 회색 구멍)로 덮어, 구멍에서만 투명하게
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+      `<defs><filter id="b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>` +
+      `<mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/>` +
+      `<g filter="url(#b)" fill="#000" fill-opacity="0.8">${key}</g></mask></defs>` +
+      `<rect width="${W}" height="${H}" mask="url(#m)"/></svg>`
+    el.style.setProperty('--bd-clear', `url("data:image/svg+xml,${encodeURIComponent(svg)}")`)
+  }
+
   function listen(root: Document) {
     const box = root as Document & { __bdListen?: boolean }
     if (box.__bdListen) return
@@ -696,5 +755,5 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     })
   }
 
-  return { kinds: Object.keys(KINDS), still, play, listen, endOf: (kind, w, h) => sceneOf(kind, w, h)?.end ?? 0 }
+  return { kinds: Object.keys(KINDS), still, play, listen, clear, endOf: (kind, w, h) => sceneOf(kind, w, h)?.end ?? 0 }
 }
