@@ -1106,3 +1106,221 @@ h3 {
     transition-duration: 0s !important;
   }
 }
+
+/* ---------- 세 단계 (만드는 순서) ----------
+   고르는 판(발표 종류 13가지 × 듣는 사람 × 시간과 장 그림 일곱 장)은 길고 지루했다(사용자). 한 줄씩의 세 단계와 화면 그림 둘로 */
+.steps3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 40px;
+  margin: 48px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps3 li {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.steps3-n {
+  display: block;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.steps3 h3 {
+  margin: 6px 0 8px;
+  color: var(--ink);
+  font-size: 26px;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.steps3 p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.steps3-shots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  margin-top: 56px;
+}
+
+.steps3-shots .shot {
+  margin: 0;
+}
+
+/* ---------- 보안: 네 줄과 '자세히 보기' ---------- */
+.trust {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trust li {
+  padding-top: 18px;
+  border-top: 1px solid var(--line-2);
+}
+
+.trust h3 {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.trust p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.more-link {
+  margin-top: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.more-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* ---------- 다운로드: 단추와 한 줄 ---------- */
+.dl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.dl-meta {
+  margin: 20px 0 0;
+  color: rgb(255 255 255 / 0.72);
+  font-size: 15px;
+}
+
+/* 흰 바탕 위의 글자 단추(맨 위 '설치 방법') */
+.btn-text {
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-text:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+button.btn {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ---------- 팝업 ---------- */
+.pop {
+  width: min(1040px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 40px clamp(20px, 4vw, 48px) 48px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--ink-2);
+  overflow: auto;
+}
+
+.pop::backdrop {
+  background: rgb(16 18 24 / 0.55);
+}
+
+.pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.pop-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+
+.pop-x {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pop-deep {
+  background: var(--deep);
+  color: rgb(255 255 255 / 0.86);
+}
+
+.pop-deep .pop-head h2,
+.pop-deep h3,
+.pop-deep h4,
+.pop-deep b {
+  color: #fff;
+}
+
+.pop-deep .pop-x {
+  background: rgb(255 255 255 / 0.12);
+  color: #fff;
+}
+
+.pop-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 48px;
+}
+
+.pop-cols h3 {
+  margin: 8px 0 12px;
+  font-size: 22px;
+}
+
+@media (max-width: 860px) {
+  .steps3,
+  .trust,
+  .steps3-shots,
+  .pop-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 861px) and (max-width: 1100px) {
+  .trust {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

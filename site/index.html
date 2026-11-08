@@ -46,8 +46,8 @@
   <main id="main">
     <section class="hero" aria-labelledby="hero-title">
       <div class="wrap">
-        <h1 id="hero-title">Framo는 발표 자료를 쉽게 만드는 프로그램이에요</h1>
-        <p class="lede"><span>발표 종류와 듣는 사람, 발표 시간을 고르면 슬라이드 순서와 레이아웃이 먼저 잡혀요.</span> <span>칸마다 예시가 적혀 있어서 내용만 채우면 되고, 글상자를 옮기거나 줄을 맞출 일은 없어요.</span></p>
+        <h1 id="hero-title">칸만 채우면, 움직이는 발표가 돼요</h1>
+        <p class="lede">발표 종류를 고르면 구성이 잡히고, 숫자와 그림은 내용에 맞게 움직여요. 이 PC 안에서만 돌아가요.</p>
         <div class="cta">
           <a class="btn btn-dark" data-os="win" href="https://github.com/wlsdks/framo/releases/latest/download/gyeol-windows.zip">
             <svg class="btn-i" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9.5m0 0 3.75-3.75M10 12.5 6.25 8.75M4 16h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -57,7 +57,8 @@
             <svg class="btn-i" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9.5m0 0 3.75-3.75M10 12.5 6.25 8.75M4 16h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             맥용 다운로드
           </a>
-          <p class="cta-note">무료 오픈소스예요. 설치 없이 압축만 풀면 되고, 크롬이나 엣지에서 열려요.</p>
+          <button type="button" class="btn btn-text" data-open="install">설치 방법</button>
+          <p class="cta-note">무료 오픈소스 · 압축만 풀면 돼요 · 크롬, 엣지</p>
         </div>
 
         <figure class="shot hero-shot">
@@ -72,104 +73,31 @@
 
     <section class="how" id="how" aria-labelledby="how-title">
       <div class="wrap">
-        <h2 id="how-title">만드는 순서</h2>
-
-        <div class="sim" data-sim>
-          <div class="sim-pick">
-            <div class="step-head">
-              <span class="step-n" aria-hidden="true">1</span>
-              <h3>발표 종류를 골라요</h3>
-            </div>
-            <p class="step-text">자주 하는 발표 13가지가 준비되어 있어요.</p>
-            <div class="pick" data-pick hidden>
-              <fieldset class="choice">
-                <legend>제안하고 결정받기</legend>
-                <label><input type="radio" name="type" value="business"><span>사업 제안</span></label>
-                <label><input type="radio" name="type" value="improve"><span>개선 제안</span></label>
-                <label><input type="radio" name="type" value="decide"><span>검토 보고</span></label>
-                <label><input type="radio" name="type" value="deal"><span>고객 제안 계획</span></label>
-                <label><input type="radio" name="type" value="plan"><span>연간·반기 계획</span></label>
-              </fieldset>
-              <fieldset class="choice">
-                <legend>진행과 결과 보고하기</legend>
-                <label><input type="radio" name="type" value="weekly" checked><span>주간·월간 업무 보고</span></label>
-                <label><input type="radio" name="type" value="report"><span>실적 보고</span></label>
-                <label><input type="radio" name="type" value="result"><span>결과 보고</span></label>
-                <label><input type="radio" name="type" value="issue"><span>문제·장애 보고</span></label>
-              </fieldset>
-              <fieldset class="choice">
-                <legend>알리고 나누기</legend>
-                <label><input type="radio" name="type" value="kickoff"><span>프로젝트 착수</span></label>
-                <label><input type="radio" name="type" value="research"><span>조사·분석 보고</span></label>
-                <label><input type="radio" name="type" value="study"><span>지식 공유·교육</span></label>
-                <label><input type="radio" name="type" value="intro"><span>팀·업무 소개</span></label>
-              </fieldset>
-            </div>
-
-            <div class="step-head step-head-2">
-              <span class="step-n" aria-hidden="true">2</span>
-              <h3>듣는 사람과 시간을 골라요</h3>
-            </div>
-            <p class="step-text">본부장님께 짧게 하는 보고면 결론과 숫자 위주로 줄이고, 팀 동료와 길게 보는 자리면 진행 방법을 더 넣어요.</p>
-            <div class="pick" data-pick hidden>
-              <fieldset class="choice">
-                <legend>듣는 사람</legend>
-                <label><input type="radio" name="audience" value="exec"><span>본부장·임원</span></label>
-                <label><input type="radio" name="audience" value="practitioner" checked><span>팀장</span></label>
-                <label><input type="radio" name="audience" value="peers"><span>팀 동료</span></label>
-                <label><input type="radio" name="audience" value="partners"><span>다른 부서</span></label>
-                <label><input type="radio" name="audience" value="mixed"><span>여러 분이 함께</span></label>
-              </fieldset>
-              <fieldset class="choice">
-                <legend>발표 시간</legend>
-                <label><input type="radio" name="minutes" value="5"><span>5분</span></label>
-                <label><input type="radio" name="minutes" value="10" checked><span>10분</span></label>
-                <label><input type="radio" name="minutes" value="20"><span>20분</span></label>
-                <label><input type="radio" name="minutes" value="30"><span>30분 이상</span></label>
-              </fieldset>
-            </div>
-          </div>
-
-          <div class="sim-out">
-            <div class="sim-head">
-              <p class="sim-type"><strong data-type-name>주간·월간 업무 보고</strong><span data-type-note>한 일과 할 일, 이슈를 알려요</span></p>
-              <p class="sim-count" data-count aria-live="polite">슬라이드 7장으로 만들어요</p>
-            </div>
-            <ol class="deck" data-deck data-key="weekly-practitioner-10">
-              <li><img src="images/decks/weekly-0.webp" width="512" height="288" alt=""><span>표지</span></li>
-              <li><img src="images/decks/weekly-1.webp" width="512" height="288" alt=""><span>한 장 요약</span></li>
-              <li><img src="images/decks/weekly-2.webp" width="512" height="288" alt=""><span>진행 현황</span></li>
-              <li><img src="images/decks/weekly-3.webp" width="512" height="288" alt=""><span>주요 숫자</span></li>
-              <li><img src="images/decks/weekly-5.webp" width="512" height="288" alt=""><span>이슈와 대응</span></li>
-              <li><img src="images/decks/weekly-6.webp" width="512" height="288" alt=""><span>다음 할 일</span></li>
-              <li><img src="images/decks/weekly-7.webp" width="512" height="288" alt=""><span>요청 사항</span></li>
-            </ol>
-            <p class="sim-note" data-fallback>주간·월간 업무 보고를 팀장에게 10분 동안 할 때의 구성이에요. 그림 속 글과 숫자는 칸마다 미리 적혀 있는 예시예요.</p>
-            <p class="sim-note" data-live-note hidden>그림 속 글과 숫자는 칸마다 미리 적혀 있는 예시예요. Framo에서 고른 대로 같은 슬라이드가 만들어져요.</p>
-          </div>
-        </div>
-
-        <div class="later">
-          <article class="later-step">
-            <figure class="shot">
-              <img src="images/step-fill.webp" width="1440" height="930" loading="lazy" alt="편집 중인 슬라이드. 제목과 첫 숫자 381건은 채웠고, 아직 채우지 않은 숫자 두 개는 흐린 예시 글씨로 남아 있어요.">
-            </figure>
-            <div class="step-head">
-              <span class="step-n" aria-hidden="true">3</span>
-              <h3>칸을 채워요</h3>
-            </div>
-            <p class="step-text">흐린 글씨가 그 칸에 들어갈 내용의 예시예요. 눌러서 고쳐 쓰면 되고, 간격과 글자 크기는 Framo가 맞춰요. 고칠 때마다 자동으로 저장돼요.</p>
-          </article>
-          <article class="later-step">
-            <figure class="shot shot-dark">
-              <img src="images/presenter.webp" width="1440" height="900" loading="lazy" alt="발표자 화면. 지금 슬라이드, 다음 슬라이드, 큰 글씨의 발표자 노트, 지난 시간과 남은 시간이 있고 아래에 모든 슬라이드의 작은 그림이 있어요.">
-            </figure>
-            <div class="step-head">
-              <span class="step-n" aria-hidden="true">4</span>
-              <h3>발표해요</h3>
-            </div>
-            <p class="step-text">F5를 누르면 전체 화면으로 시작해요. 방향키나 클리커로 넘기고, 노트북에는 다음 슬라이드와 발표자 노트, 경과 시간이 보이는 발표자 화면이 따로 떠요.</p>
-          </article>
+        <h2 id="how-title">세 단계면 끝나요</h2>
+        <ol class="steps3">
+          <li>
+            <span class="steps3-n">1</span>
+            <h3>고르기</h3>
+            <p>발표 종류, 듣는 사람, 시간을 고르면 슬라이드 순서가 잡혀요.</p>
+          </li>
+          <li>
+            <span class="steps3-n">2</span>
+            <h3>채우기</h3>
+            <p>흐린 예시 글씨를 고쳐 쓰면 돼요. 간격과 크기는 Framo가 맞춰요.</p>
+          </li>
+          <li>
+            <span class="steps3-n">3</span>
+            <h3>발표하기</h3>
+            <p>F5로 시작해요. 파일 하나(HTML)나 영상(MP4)으로도 보내요.</p>
+          </li>
+        </ol>
+        <div class="steps3-shots">
+          <figure class="shot">
+            <img src="images/step-fill.webp" width="1440" height="930" loading="lazy" alt="편집 중인 슬라이드. 채우지 않은 칸은 흐린 예시 글씨로 남아 있어요.">
+          </figure>
+          <figure class="shot shot-dark">
+            <img src="images/presenter.webp" width="1440" height="900" loading="lazy" alt="발표자 화면. 지금 슬라이드, 다음 슬라이드, 발표자 노트, 지난 시간이 보여요.">
+          </figure>
         </div>
       </div>
     </section>
@@ -214,11 +142,23 @@
 
     <section class="security" id="security" aria-labelledby="security-title">
       <div class="wrap">
-        <h2 id="security-title">작성한 내용은 이 PC 밖으로 나가지 않아요</h2>
-        <p class="section-lede">보안 자료로 만들어도 안심할 수 있게, 처음부터 발표 내용이 외부로 나가지 않도록 만들었어요.</p>
+        <h2 id="security-title">발표 내용은 이 PC 밖으로 나가지 않아요</h2>
+        <ul class="trust">
+          <li><h3>이 PC에서만 열려요</h3><p>127.0.0.1에서만 실행돼요.</p></li>
+          <li><h3>인터넷으로 보내지 않아요</h3><p>글꼴까지 프로그램 안에 있어요.</p></li>
+          <li><h3>AI에게는 모양만</h3><p>글과 숫자는 보이지 않아요.</p></li>
+          <li><h3>모두 공개된 소스</h3><p>MIT 라이선스 오픈소스예요.</p></li>
+        </ul>
+        <button type="button" class="more-link" data-open="security-more">자세히 보기</button>
+      </div>
+    </section>
 
-        <!-- 앱의 '한 장 요약' 장과 같은 짜임: 왼쪽에 한 줄 결론, 오른쪽에 그 근거 -->
-        <div class="summary">
+    <dialog class="pop" id="security-more" aria-labelledby="security-more-title">
+      <div class="pop-head">
+        <h2 id="security-more-title">보안을 이렇게 지켜요</h2>
+        <button type="button" class="pop-x" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="summary">
           <div class="row">
             <h3>이 PC에서만 열려요</h3>
             <div class="row-body">
@@ -266,9 +206,8 @@
               </p>
             </div>
           </div>
-        </div>
       </div>
-    </section>
+    </dialog>
 
     <section class="download" id="download" aria-labelledby="download-title">
       <div class="wrap">
@@ -277,25 +216,30 @@
           <!-- 새 버전을 올리면 버전과 날짜, 아래 두 파일의 크기를 같이 고친다. 버전이 package.json의 version과 같은지 scripts/site.test.ts가 본다 -->
           <p class="dl-ver" data-version="0.5.5">최신 버전 0.5.5<span>2026년 11월 4일</span></p>
         </div>
-        <p class="section-lede">압축만 풀면 바로 쓸 수 있어요. 설치도, 관리자 권한도 필요 없어요.</p>
+        <div class="dl-row">
+          <a class="btn btn-light" data-os="win" href="https://github.com/wlsdks/framo/releases/latest/download/gyeol-windows.zip">
+            <svg class="btn-i" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9.5m0 0 3.75-3.75M10 12.5 6.25 8.75M4 16h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            윈도우용 다운로드
+          </a>
+          <a class="btn btn-light" data-os="mac" href="https://github.com/wlsdks/framo/releases/latest/download/gyeol-mac.zip">
+            <svg class="btn-i" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9.5m0 0 3.75-3.75M10 12.5 6.25 8.75M4 16h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            맥용 다운로드
+          </a>
+          <button type="button" class="btn btn-ghost" data-open="install">설치 방법</button>
+        </div>
+        <p class="dl-meta">Windows 10, 11 (64비트) · 81MB&nbsp;&nbsp;&nbsp;macOS 13.5 이상 (애플 실리콘, 인텔) · 90MB</p>
+      </div>
+    </section>
 
-        <div class="os">
-          <article class="os-col" data-os="win" aria-labelledby="os-win">
-            <div class="os-head">
-              <div class="os-title">
-                <h3 id="os-win">윈도우</h3>
-                <span class="os-mine" hidden>지금 쓰는 컴퓨터</span>
-              </div>
-              <a class="btn btn-light" href="https://github.com/wlsdks/framo/releases/latest/download/gyeol-windows.zip">
-                <svg class="btn-i" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9.5m0 0 3.75-3.75M10 12.5 6.25 8.75M4 16h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                윈도우용 다운로드
-              </a>
-            </div>
-            <dl class="os-meta">
-              <div><dt>사용 환경</dt><dd>Windows 10, 11 (64비트)</dd></div>
-              <div><dt>파일</dt><dd>gyeol-windows.zip (81MB)</dd></div>
-            </dl>
-            <ol class="howto">
+    <dialog class="pop pop-deep" id="install" aria-labelledby="install-title">
+      <div class="pop-head">
+        <h2 id="install-title">설치 방법</h2>
+        <button type="button" class="pop-x" data-close aria-label="닫기">×</button>
+      </div>
+      <div class="pop-cols">
+        <article data-os="win">
+          <h3>윈도우 <span class="os-mine" hidden>지금 쓰는 컴퓨터</span></h3>
+          <ol class="howto">
               <li>다운로드한 파일을 마우스 오른쪽 버튼으로 눌러 <b>모두 압축 풀기</b>를 해요. 압축 파일 안에서 바로 열면 실행되지 않아요.</li>
               <li>압축을 푼 폴더에서 <span class="file">Framo.exe</span>를 더블클릭해요.</li>
               <li>크롬이나 엣지가 탭과 주소창 없는 Framo 창으로 열려요. 같이 뜨는 검은 ‘Framo’ 창을 닫으면 종료돼요.</li>
@@ -304,24 +248,10 @@
               <h4>처음 실행할 때</h4>
               <p>‘Windows의 PC 보호’ 창이 뜨면 <b>추가 정보</b>를 누르고 <b>실행</b>을 눌러요. 인터넷이나 메신저로 받은 파일이면 뜨는 안내예요. 회사 백신이 <span class="file">Framo.exe</span>를 막으면 같은 폴더의 <span class="file">Framo 시작.bat</span>으로 켜요.</p>
             </div>
-          </article>
-
-          <article class="os-col" data-os="mac" aria-labelledby="os-mac">
-            <div class="os-head">
-              <div class="os-title">
-                <h3 id="os-mac">맥</h3>
-                <span class="os-mine" hidden>지금 쓰는 컴퓨터</span>
-              </div>
-              <a class="btn btn-light" href="https://github.com/wlsdks/framo/releases/latest/download/gyeol-mac.zip">
-                <svg class="btn-i" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9.5m0 0 3.75-3.75M10 12.5 6.25 8.75M4 16h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                맥용 다운로드
-              </a>
-            </div>
-            <dl class="os-meta">
-              <div><dt>사용 환경</dt><dd>macOS 13.5 이상 (애플 실리콘, 인텔 모두)</dd></div>
-              <div><dt>파일</dt><dd>gyeol-mac.zip (90MB)</dd></div>
-            </dl>
-            <ol class="howto">
+        </article>
+        <article data-os="mac">
+          <h3>맥 <span class="os-mine" hidden>지금 쓰는 컴퓨터</span></h3>
+          <ol class="howto">
               <li>다운로드한 파일을 더블클릭해 압축을 풀어요.</li>
               <li>압축을 푼 폴더에서 <span class="file">Framo 시작.command</span>를 더블클릭해요.</li>
               <li>크롬이나 엣지에서 Framo가 열려요. 주소는 <span class="file">127.0.0.1:41580</span>이고, 함께 열린 터미널 창을 닫으면 종료돼요.</li>
@@ -330,10 +260,9 @@
               <h4>처음 실행할 때</h4>
               <p>애플 인증을 받지 않은 앱이라 처음에는 macOS가 실행을 막아요. <b>시스템 설정 › 개인정보 보호 및 보안</b> 아래쪽의 <b>그래도 열기</b>를 누른 뒤, 다시 더블클릭해서 <b>열기</b>를 눌러요.</p>
             </div>
-          </article>
-        </div>
-
-        <div class="dl-more">
+        </article>
+      </div>
+      <div class="dl-more">
           <div>
             <h4>새 버전으로 업데이트할 때</h4>
             <p>새 버전이 나오면 Framo 첫 화면에 알림이 떠요. <b>받기</b>를 누르면 GitHub에서 받아 파일이 맞는지 확인한 뒤 폴더를 열어 줘요. 켜 둔 Framo 창을 닫고, 받은 zip을 바탕 화면 같은 곳에 풀어 새 폴더의 <span class="file">Framo.exe</span>(맥은 ‘Framo 시작’)를 실행해요. 예전 폴더는 그다음에 지워요. 지금 쓰는 버전은 Framo 첫 화면의 이름 옆에서 볼 수 있고, 버전별 업데이트 내역은 <a href="https://github.com/wlsdks/framo/releases">GitHub</a>에 있어요.</p>
@@ -343,8 +272,7 @@
             <p>발표는 브라우저와 직접 고른 보관 폴더에 저장돼서, 프로그램 폴더를 지워도 사라지지 않아요. 새 버전에서 만든 발표는 예전 버전에서 열리지 않으니, 발표 파일을 주고받는 사람끼리는 같은 버전을 써 주세요.</p>
           </div>
         </div>
-      </div>
-    </section>
+    </dialog>
   </main>
 
   <footer class="foot">
