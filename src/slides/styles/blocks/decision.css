@@ -161,7 +161,8 @@
 
 .bk-dc-fork {
   fill: none;
-  stroke: var(--line-strong);
+  /* 갈래 곡선은 그림의 뼈대라 줄 선보다 한 단계 짙게(VISUAL-RULES 2-1): 옅은 선(--line-strong)은 흰 바탕에서도 흐렸다(검수) */
+  stroke: color-mix(in srgb, var(--ink-3) 70%, var(--bg));
   stroke-width: var(--rule-hair);
   vector-effect: non-scaling-stroke;
 }
