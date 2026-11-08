@@ -23,7 +23,7 @@ export function SlideMenuItems({ deck, slide, close, onRemove }: { deck: Deck; s
           store.duplicateSlide(slide.id)
         }}
       >
-        복제
+        복제하기
       </button>
       <button
         type="button"

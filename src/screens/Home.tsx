@@ -353,7 +353,7 @@ function StorageNote({ hasDecks, onSynced }: { hasDecks: boolean; onSynced: () =
           </Info>
         </span>
         <button type="button" className="btn-link" onClick={() => run(choose)}>
-          보관 폴더 정하기
+          보관 폴더 고르기
         </button>
       </p>
     )
