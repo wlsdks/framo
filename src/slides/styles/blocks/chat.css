@@ -54,6 +54,26 @@
   font-weight: 700;
 }
 
+/* 넓은 칸, 말하는 사람이 둘 넘으면: 왼쪽 반과 오른쪽 반에 번갈아(Chat.tsx). 줄마다 말은 하나라 지그재그로 읽힌다.
+   두 반의 이름 단과 말 단은 같은 너비라 오른쪽 말들도 서로 가지런하다 */
+@container bk (min-width: 1100px) {
+  .bk-ch.is-two .bk-ch-list {
+    grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr);
+  }
+
+  .bk-ch.is-two .bk-ch-turn {
+    /* 줄은 말의 차례대로 하나씩: 정하지 않으면 오른쪽 말이 앞 줄의 빈 오른쪽 반에 끼어 들어 두 말이 한 줄에 섰다 */
+    grid-row: calc(var(--k) + 1);
+    grid-column: 1 / 3;
+    padding-right: 48px;
+  }
+
+  .bk-ch.is-two .bk-ch-turn.is-b {
+    grid-column: 3 / 5;
+    padding-right: 0;
+  }
+}
+
 /* 좁은 칸: 이름을 말 위에 쌓는다 */
 @container bk (max-width: 640px) {
   .bk-ch-list {
