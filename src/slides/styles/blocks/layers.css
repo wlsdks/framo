@@ -16,9 +16,10 @@
 }
 
 .bk-ly-list {
-  /* 판 사이: 판 두께보다 좁게 두어야 따로 떨어진 목록이 아니라 한 더미로 읽힌다 */
-  --ly-gap: calc(36px * var(--bk-fit, 1));
+  /* 판 사이: 판 두께(윗면 높이의 0.12)의 두 배 남짓. 판마다 넉넉히 띄우면(36px × 키운 단계) 같은 판 넷이 따로 떠 '나란한 넷'으로만
+     읽히고 쌓인 덩어리로 읽히지 않았다(검수). 사이는 판 너비를 따른다(윗면 높이가 너비의 0.2라 두께의 두 배 남짓) */
   --ly-pw: clamp(200px, 40cqw, calc(640px * var(--bk-fit, 1)));
+  --ly-gap: max(12px, calc(var(--ly-pw) * 0.05));
   --ly-ph: max(48px, min(calc(var(--ly-pw) * 0.2), calc((100cqh - 200px) / var(--n, 3) - var(--ly-gap))));
   display: grid;
   row-gap: var(--ly-gap);
@@ -116,21 +117,11 @@
   text-wrap: pretty;
 }
 
-/* 판을 혼자 쓰면 판 더미와 이름표를 한 묶음으로 본문 가운데에: 이름표 뒤가 칸 끝까지 비면 오른쪽 3분의 1이 통째로 빈다.
-   소제목도 묶음의 왼쪽 끝에 같이 선다. 다른 컴포넌트와 같이 있으면 왼쪽 끝을 맞춘다(한 단의 글은 왼쪽 끝 하나에) */
+/* 넓은 칸(판을 혼자 쓸 때 같은): 판을 넓혀 그림이 제목 축(왼쪽 끝)에서 오른쪽으로 커진다. 묶음째 가운데에 두면 소제목과 판의
+   왼쪽 끝이 장 제목 축에서 떨어져(460) 장을 넘길 때 내용이 왼쪽과 가운데를 오갔다(검수: 머리말이 있는 그림은 제목 축에서 시작) */
 @container bk (min-width: 1200px) {
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-ly {
-    width: fit-content;
-    max-width: 100%;
-    margin-inline: auto;
-  }
-
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-ly-row {
-    grid-template-columns: var(--ly-pw) minmax(0, max-content);
-  }
-
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-ly-txt {
-    max-width: 14em;
+  .bk-ly-list {
+    --ly-pw: clamp(200px, 48cqw, calc(760px * var(--bk-fit, 1)));
   }
 }
 

@@ -7,10 +7,9 @@ import { cx } from '../../lib/cx'
 import { useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
 
-/** 강조할 층: 고른 것이 있으면 그것(-1은 강조 없음), 없으면 둘째 층(쓰는 화면과 바탕 사이, 대개 새로 놓는 층). 층이 하나면 그것 */
+/** 강조할 층: 고른 것이 있으면 그것, 없으면 강조 없음(-1). 층에는 정해진 답이 없어서 둘째 층을 기본으로 칠하면 뜻 없는 강조가 됐다 */
 function layersHighlight(chosen: number | undefined, n: number): number {
-  if (Number.isInteger(chosen) && chosen! >= -1 && chosen! < n) return chosen!
-  return Math.min(1, n - 1)
+  return Number.isInteger(chosen) && chosen! >= -1 && chosen! < n ? chosen! : -1
 }
 
 /**

@@ -997,7 +997,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
         { key: 'meta', label: '무엇이 있나', hint: '이 층에 있는 것', hints: ['사내 포털, 메신저', '하나의 연결 창구', '정리한 문서와 기록', '인사, 결재, 일정', '백업과 기록'], optional: true },
       ],
     },
-    highlight: { label: '강조할 층', fallback: 1 },
+    highlight: { label: '강조할 층', fallback: -1 },
     minSpan: 6,
     prefSpan: 12,
     sample: {
