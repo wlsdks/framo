@@ -2327,10 +2327,25 @@ export function motionEngine(): MotionEngine {
           if (!root || !its.length) break
           const W = root.offsetWidth || 1
           const H = root.offsetHeight || 1
+          // 흩어진 자리는 컴포넌트 칸 안으로만: 칸 밖(장의 아래 단락 표시, 옆 컴포넌트)까지 날아가 겹쳤다(발표 녹화)
+          const boxes = its.map((it) => spot(it, root))
+          // 흩어진 자리끼리도 겹치지 않게, 칸을 나눈 자리(왼쪽 위 기준, 칸의 비율)에 하나씩. 제자리와 다른 줄·단이 되도록 섞어 둔 차례다
+          const SPOTS = [
+            [0.62, 0.06],
+            [0.04, 0.5],
+            [0.38, 0.82],
+            [0.78, 0.46],
+            [0.2, 0.12],
+            [0.5, 0.36],
+            [0.86, 0.84],
+            [0.06, 0.86],
+          ]
           const spread = (k: number) => {
-            const a = (k * 137.5 * Math.PI) / 180
-            const r = 0.28 + ((k * 0.61803) % 1) * 0.22
-            return { x: Math.cos(a) * W * r, y: Math.sin(a) * H * r * 0.9, rot: ((k % 3) - 1) * 5 }
+            const b = boxes[k]
+            const [fx, fy] = SPOTS[k % SPOTS.length]
+            const x = fx * Math.max(0, W - (b.r - b.l)) - b.l
+            const y = fy * Math.max(0, H - (b.b - b.t)) - b.t
+            return { x, y, rot: ((k % 3) - 1) * 4 }
           }
           const fly = 80 + its.length * 70 + 420
           // 한 조각의 움직임을 한 애니메이션으로: 흩어진 자리에 나타나 머물다 제자리로. 둘로 나누면 그 사이에 제자리에 잠깐 보였다
