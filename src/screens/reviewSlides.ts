@@ -75,7 +75,7 @@ function shortListNote(long: boolean): Slide {
 /** 나란한 글의 보이는 여백을 맞출 때 왼쪽 입력 칸이 오른쪽까지 넘어가던 장 */
 function messageList(look?: Look): Slide {
   const slide = scene('message-list', { title: '주간 보고를 간결하게 바꿔요' }, [
-    { type: 'message', fields: { text: '주간 보고를 한 양식으로 맞추면 회의가 20분 줄어요', sub: '기획팀 시범 3개월 결과 기준' } },
+    { type: 'message', fields: { text: '주간 보고 양식을 하나로 맞춰요', sub: '팀마다 다른 양식을 다시 정리하는 일이 없도록' } },
     { type: 'bullets', n: 3 },
   ], look)
   return { ...slide, blocks: slide.blocks!.map((b, i) => ({ ...b, at: { x: i * 6, y: 0, w: 6, h: 12 } })) }
@@ -83,7 +83,7 @@ function messageList(look?: Look): Slide {
 
 /** 핵심 문장 아래 낮고 넓은 목록: 항목 수와 글 길이에 따라 단과 여백이 바뀌는 사례 */
 function messageListStacked(n: number, long: boolean): Slide {
-  const message = block({ type: 'message', fields: { text: '주간 보고를 한 양식으로 맞추면 회의가 20분 줄어요', sub: '가상의 시범 운영 3개월 기준' } }, `message-stack-${n}-message`)
+  const message = block({ type: 'message', fields: { text: '주간 보고 양식을 하나로 맞춰요', sub: '팀마다 다른 양식을 다시 정리하는 일이 없도록' } }, `message-stack-${n}-message`)
   const list = block({ type: 'bullets', n }, `message-stack-${n}-list`)
   const short = ['주문이 많은 품목부터 적용해요', '단가 기록을 한곳에 모아요', '매달 처리 시간을 살펴봐요', '담당자에게 결과를 공유해요', '분기마다 효과를 다시 봐요', '결과에 따라 적용 범위를 넓혀요']
   const extended = ['주문이 많은 품목부터 적용하고 처리 시간을 함께 살펴봐요', '단가 기록을 한곳에 모아 담당자가 쉽게 확인하도록 해요', '매달 처리 시간을 살펴보고 지연된 원인을 찾아요', '담당자에게 결과를 공유하고 개선할 점을 정해요', '분기마다 효과를 다시 보고 다음 계획에 반영해요', '결과에 따라 적용 범위를 넓히고 참여 팀을 정해요']

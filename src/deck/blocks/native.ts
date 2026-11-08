@@ -15,7 +15,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
     ],
     minSpan: 6,
     prefSpan: 12,
-    sample: { fields: { text: '주간 보고를 한 양식으로 맞추면 회의가 20분 줄어요', sub: '기획팀 시범 3개월 결과 기준' } },
+    sample: { fields: { text: '주간 보고 양식을 하나로 맞춰요', sub: '팀마다 다른 양식을 다시 정리하는 일이 없도록' } },
   },
   text: {
     name: '제목과 글',

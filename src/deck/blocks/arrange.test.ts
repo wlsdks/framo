@@ -30,7 +30,7 @@ describe('짜임 틀 고르기', () => {
     expect(at(bs, 'b').x).toBe(at(bs, 't').x + at(bs, 't').w)
   })
   it('핵심 문장과 적은 목록 둘은 자동으로 나란히 놓는다', () => {
-    const message = { ...sampleBlock('message'), id: 'm', fields: { text: '주간 보고를 한 양식으로 맞추면 회의가 20분 줄어요', sub: '가상의 시범 운영 3개월 기준' } }
+    const message = { ...sampleBlock('message'), id: 'm', fields: { text: '주간 보고 양식을 하나로 맞춰요', sub: '팀마다 다른 양식을 다시 정리하는 일이 없도록' } }
     for (const n of [2, 3, 4]) {
       const sample = sampleBlock('bullets')
       const bullets = { ...sample, id: 'b', items: Array.from({ length: n }, (_, i) => ({ ...sample.items[i % sample.items.length], id: `item-${i}` })) }
