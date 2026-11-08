@@ -10,6 +10,7 @@ import { motionEngine } from '../../motion/engine'
 import { BlockEditContext } from '../../slides/blockEdit'
 import type { SlideActions } from '../../slides/context'
 import { selectWord } from '../../slides/fields'
+import { liveMoving } from '../../slides/liveMotion'
 import { overflowAt, type OverField } from '../../slides/overflow'
 import { FitSlide, pageProps, SlideCanvas } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
@@ -238,8 +239,10 @@ function useOverflow(ref: RefObject<HTMLDivElement | null>, slide: Slide, look: 
     let active = true
     const check = () => {
       if (!active) return
-      // 끌거나 컴포넌트가 새 자리로 움직이는 동안에는 들어갈 글도 잠깐 넘쳐 보인다. 움직임이 끝난 자리를 잰다
-      const moving = slide.layout === 'compose' && [...root.querySelectorAll<HTMLElement>('.bk')].some((cell) => cell.getAnimations().some((a) => a.playState === 'running'))
+      // 끌거나 컴포넌트가 새 자리로 움직이는 동안, 쓰는 동안 다시 맞춘 자리로 미끄러지는 동안(liveMotion.ts)에는 들어갈 글도 잠깐
+      // 넘쳐 보인다(작아지는 글 칸은 옛 크기에서 줄어든다). 움직임이 끝난 자리를 잰다
+      const moving =
+        liveMoving(root) || (slide.layout === 'compose' && [...root.querySelectorAll<HTMLElement>('.bk')].some((cell) => cell.getAnimations().some((a) => a.playState === 'running')))
       if (document.body.matches('.is-block-resizing, .is-block-dragging') || moving) {
         window.clearTimeout(wait)
         wait = window.setTimeout(check, 120)

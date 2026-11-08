@@ -34,8 +34,25 @@
    빼지 않으면 칸 옆으로 나온 '이 항목 빼기' 단추나 그림 칸의 '바꾸기' 단추 때문에 부품의 글자를 줄인다. 레이아웃 장은 칸 둘레의 면이
    본문 왼쪽으로 나와 덜 찬 장의 글자를 편집 화면에서만 키우지 않았다.
    그림 위에 겹쳐 둔 칸(.on-chart)도 뺀다: 숨긴 글이 기간 칸 이름과 겹친 것으로 보인다 */
-:is(.slide.is-measuring, .slide.is-fitting, .bk-area.is-fitting) :is(.ed-halo, .it-remove, .it-grip, .pn-tools, .img-tools, .on-chart) {
+:is(.slide.is-measuring, .slide.is-fitting, .bk-area.is-fitting) :is(.ed-halo, .ed-ghost, .it-remove, .it-grip, .pn-tools, .img-tools, .on-chart) {
   display: none;
+}
+
+/* 쓰는 칸은 쓰는 동안 줄을 고르게 다시 나누지 않는다(이어 쓰는 글은 줄 끝에 붙고 넘치면 다음 줄로). 고르게 나누기(balance)와 끝 줄 고치기
+   (pretty)는 글자 하나마다 줄을 처음부터 다시 나눠서, 쓰는 줄의 낱말이 윗줄과 아랫줄을 오가고 글 상자 너비가 키마다 흔들렸다.
+   다 쓰고 나가면 다시 고르게 나뉜다(그때는 옛 줄에서 새 줄로 겹쳐 바뀐다, liveMotion.ts의 liveRewrap) */
+.slide.m-edit .ed-input:focus {
+  text-wrap-style: auto;
+}
+
+/* 쓰기를 끝낸 칸의 줄이 다시 나뉠 때 잠깐 겹쳐 두는 쓰던 모습(liveRewrap). 칸 상자 크기에 닿지 않게 띄워 같은 자리에 둔다 */
+.slide.m-edit .ed > .ed-ghost {
+  position: absolute;
+  inset: 0;
+  white-space: pre-wrap;
+  text-wrap-style: auto;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* 넘침을 재는 동안 부품 장의 칸은 판의 자리로 본다. 덜 찬 장을 눈높이로 내린 만큼(--bk-shift)은 칸 상자째 내려가서, 그려진 글은

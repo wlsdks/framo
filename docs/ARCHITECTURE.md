@@ -71,6 +71,7 @@
 | 조각 색의 단계(구성비, 쌓은 막대) | `src/slides/tints.ts` |
 | 빈 차트를 예시 값으로 옅게 그릴지 | `src/slides/context.ts`의 `demoOf` |
 | 발표할 때의 움직임 | `src/motion/engine.ts` |
+| 편집 화면에서 다시 맞춘 자리로 미끄러지기(쓰는 동안의 조립. 부품 칸의 FLIP도 같은 시간과 곡선) | `src/slides/liveMotion.ts` |
 | 단축키 표기 | `src/lib/keys.ts` |
 | 발표 중의 키(앱의 발표 화면, 발표자 화면, 내보낸 HTML) | `src/lib/presentKeys.ts`의 `presentAction`. 내보낸 HTML에는 소스째 들어간다 |
 | 발표의 사본(복제, 버전 꺼내기): 새 id, AI 공유 끄기 | `src/store/copy.ts`의 `copyDeck` |

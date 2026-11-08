@@ -73,6 +73,7 @@ import { placeHandle } from './handleSpot'
 import { clearLinks, frameCells } from './blockFrame'
 import { fitBlocks } from './fitBlocks'
 import { LAYOUT_VIEWS } from './layouts'
+import { LIVE_EASING, LIVE_ID, LIVE_MS, liveAfter, liveBefore, liveFirst, liveStill } from './liveMotion'
 
 const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   message: Message,
@@ -418,27 +419,16 @@ type Box = { x: number; y: number; w: number; h: number }
 /** 본문 상자 안의 모든 부품 */
 const CELLS = ':scope > .bk'
 
-/** 칸들이 지금 화면에 보이는 자리 (움직이는 중이면 움직이는 중의 자리). 캔버스 px, 본문 상자 기준 */
-function visualBoxes(area: HTMLElement): Map<string, Box> {
-  const a = area.getBoundingClientRect()
-  const k = area.offsetWidth ? a.width / area.offsetWidth : 1
-  const out = new Map<string, Box>()
-  for (const el of area.querySelectorAll<HTMLElement>(CELLS)) {
-    const r = el.getBoundingClientRect()
-    out.set(el.dataset.block!, { x: (r.left - a.left) / k, y: (r.top - a.top) / k, w: r.width / k, h: r.height / k })
-  }
-  return out
-}
-
 /**
  * 편집할 때 칸이 자리를 옮기면 원래 자리에서 새 자리로 미끄러지게 (FLIP). 새로 생긴 칸은 제자리에서 맞춰 들어온다.
  * 판의 자리가 바뀔 때만이 아니라 그릴 때마다 본다: 편집 화면도 부품을 위로 올려 붙여서(fitBlocks.ts의 pack), 글을 써서 위 부품이
  * 한 줄 늘거나, 끌기를 시작해 판의 칸으로 내려가거나, 놓아서 다시 올라붙을 때도 칸이 움직인다. 예전에는 그때 칸이 한 번에 튀었다.
  * 자리가 그대로인 칸은 건드리지 않는다. 끝에서 넘었다 돌아오지 않고 부드럽게 멈춘다(--ease-out과 같은 곡선): 둘레의 칸이
- * 비켜 나는 것이라 튀면 장 전체가 출렁여 보였다
+ * 비켜 나는 것이라 튀면 장 전체가 출렁여 보였다.
+ * 옛 자리는 liveMotion.ts가 바뀌기 직전에 잰 것을 쓰고, 칸 안의 글 칸과 항목은 거기서 칸에 대한 몫만큼 미끄러진다(시간과 곡선도 같다)
  */
-const FLIP_EASING = 'cubic-bezier(0.2, 0.8, 0.2, 1)'
-const FLIP_MS = 360
+const FLIP_EASING = LIVE_EASING
+const FLIP_MS = LIVE_MS
 
 /**
  * 빠진 칸이 제자리에서 옅어지며 사라지게. 예전에는 빼자마자 없어지고 옆 칸만 미끄러져 와서, 무엇이 빠졌는지 눈으로 따라가기 어려웠다.
@@ -471,18 +461,17 @@ function fadeOut(area: HTMLElement, cell: HTMLElement, at: Box | undefined) {
 }
 
 function useFlip(area: React.RefObject<HTMLDivElement | null>, on: boolean, scope: string) {
-  const before = useRef<Map<string, Box> | null>(null)
   // 칸마다 지난번에 맞춘 끝자리. 끝자리가 그대로면 움직이는 중이어도 그대로 둔다 (글자 하나 칠 때마다 움직임이 처음부터 다시 돌지 않게)
   const targets = useRef(new Map<string, Box>())
   // 지난번에 그린 칸 (빠진 칸을 사라지게 하려고)과 그때의 장. 다른 장으로 넘어가면 움직이지 않는다
   const nodes = useRef(new Map<string, HTMLElement>())
   const shown = useRef(scope)
-  // 그리기 전에(아직 옛 모습일 때) 지금 보이는 자리를 재 둔다
-  if (on && area.current) before.current = visualBoxes(area.current)
+  // 그리기 전에(아직 옛 모습일 때) 지금 보이는 자리를 재 둔다. 글을 쓴 키면 키가 들어가기 직전에 이미 재 두었다(SlideCanvas)
+  if (on) liveBefore(area.current, shown.current)
   useLayoutEffect(() => {
     const el = area.current
-    const first = before.current
-    before.current = null
+    // 바뀌기 직전의 자리 (다른 장으로 넘어왔으면 없다)
+    const first = el ? liveFirst(el, scope) : undefined
     const cells = el ? Array.from(el.querySelectorAll<HTMLElement>(CELLS)) : []
     const was = nodes.current
     nodes.current = new Map(cells.map((c) => [c.dataset.block!, c]))
@@ -490,6 +479,7 @@ function useFlip(area: React.RefObject<HTMLDivElement | null>, on: boolean, scop
     shown.current = scope
     if (!on || !el || !first || !same || matchMedia('(prefers-reduced-motion: reduce)').matches) {
       targets.current = new Map()
+      liveAfter(el, scope)
       return
     }
     was.forEach((cell, id) => {
@@ -506,7 +496,7 @@ function useFlip(area: React.RefObject<HTMLDivElement | null>, on: boolean, scop
       if (prev && prev.x === last.x && prev.y === last.y && prev.w === last.w && prev.h === last.h) continue
       cell.getAnimations().forEach((a) => a.cancel())
       if (!f) {
-        cell.animate([{ opacity: 0, scale: '0.96' }, { opacity: 1, scale: '1' }], { duration: FLIP_MS, easing: FLIP_EASING })
+        cell.animate([{ opacity: 0, scale: '0.96' }, { opacity: 1, scale: '1' }], { duration: FLIP_MS, easing: FLIP_EASING, id: LIVE_ID })
         continue
       }
       const dx = f.x - last.x
@@ -518,7 +508,7 @@ function useFlip(area: React.RefObject<HTMLDivElement | null>, on: boolean, scop
       // 0.1초 남짓 그 글 위에 반투명하게 겹쳐 보였다 (손에 든 컴포넌트가 이미 그 자리로 가는 것을 보여 준다)
       // 비켜 나는 이웃이 거의 다 빠진 뒤에 나타난다: 바로 나타나면 아직 그 자리를 떠나는 이웃의 글과 겹쳤다
       if (cell.classList.contains('is-slot')) {
-        cell.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FLIP_MS * 0.5, delay: FLIP_MS * 0.6, easing: FLIP_EASING, fill: 'backwards' })
+        cell.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FLIP_MS * 0.5, delay: FLIP_MS * 0.6, easing: FLIP_EASING, fill: 'backwards', id: LIVE_ID })
         continue
       }
       // 자리는 미끄러지고, 크기는 늘이지 않는다(가로세로를 다르게 늘이면 글자가 찌그러져 보인다).
@@ -531,10 +521,12 @@ function useFlip(area: React.RefObject<HTMLDivElement | null>, on: boolean, scop
           { translate: `${dx}px ${dy}px`, ...(grow ? { clipPath: clip(f.w, f.h) } : {}) },
           { translate: '0 0', ...(grow ? { clipPath: clip(last.w, last.h) } : {}) },
         ],
-        { duration: FLIP_MS, easing: FLIP_EASING },
+        { duration: FLIP_MS, easing: FLIP_EASING, id: LIVE_ID },
       )
     }
     targets.current = seen
+    // 칸 안의 글 칸과 항목은 칸에 대한 몫만큼 (칸의 움직임을 건 뒤에: 칸이 옮겨 보이는 몫을 같은 옛 자리에서 잰다)
+    liveAfter(el, scope)
   })
 }
 
@@ -622,8 +614,11 @@ function BlockArea() {
     if (cells) for (const c of [...active, ...touched.current]) if (c) cells.add(c)
     touched.current = active
     fitBlocks(el, cells)
-    frameCells(el)
-    clearLinks(el)
+    // 칸 안의 것이 다시 맞춘 자리로 미끄러지는 중이면 끝자리로 잰다 (맞추기는 스스로 그렇게 한다)
+    liveStill(el, () => {
+      frameCells(el)
+      clearLinks(el)
+    })
     // 맞추며 바꾼 값(칸의 스타일, 이름표 자리)은 바뀐 것으로 세지 않는다. 지켜보지 못하면 늘 다시 맞춘다
     watch.current?.takeRecords()
     changed.current = !watch.current

@@ -9,8 +9,8 @@
 /** 테두리를 내용에서 띄우는 너비 (캔버스 px). 예전 outline-offset(14)과 비슷하게. 끄는 동안 손 아래를 잴 때도 쓴다(BlockEditor) */
 export const FRAME_PAD = 14
 
-/** 칸 안의 그린 것을 모을 때 건너뛰는 편집 표시 (칸 밖으로 나온 단추, 올렸을 때만 깔리는 빈칸의 면) */
-const SKIP = '.it-remove, .it-grip, .img-tools, .ed-halo, .bk-handle'
+/** 칸 안의 그린 것을 모을 때 건너뛰는 편집 표시 (칸 밖으로 나온 단추, 올렸을 때만 깔리는 빈칸의 면, 줄이 다시 나뉘는 동안 겹쳐 둔 사본) */
+const SKIP = '.it-remove, .it-grip, .img-tools, .ed-halo, .ed-ghost, .bk-handle'
 
 /** 보이는 색인지 (계산된 색 글: rgb(), rgba(), color(srgb … / a), transparent) */
 const seen = (c: string) => !!c && c !== 'transparent' && !/rgba\(.*,\s*0\)$/.test(c) && !/\/\s*0\)$/.test(c)
