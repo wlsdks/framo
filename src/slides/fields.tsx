@@ -144,9 +144,11 @@ function oneLineProps(text: string, oneLine?: boolean, units?: number, numeral?:
  * 브라우저는 줄을 낱말 단위로 꺾어도(keep-all) '%' 같은 뒤붙이 기호 다음은 꺾을 수 있는 자리로 보아서,
  * 좁은 칸이나 크게, 명조에서 '본부 평균 18% / 보다 높아요'처럼 숫자와 조사가 두 줄로 갈렸다
  */
-const GLUED = /[^\s]*[%‰℃℉°][가-힣]+/g
+const GLUED = /[^\s]*[%‰℃℉°][가-힣]+|[^\s]*[가-힣A-Za-z0-9][&+/·・][가-힣A-Za-z0-9][^\s]*/g
 /** 괄호 묶음까지(keepParens): 스물네 글자까지의 괄호와 거기 붙은 글. 더 길면 칸보다 넓어질 수 있어 묶지 않는다 */
-const GLUED_PARENS = /\([^()\n]{1,24}\)[^\s]*|[^\s]*[%‰℃℉°][가-힣]+/g
+const GLUED_PARENS = /\([^()\n]{1,24}\)[^\s]*|[^\s]*[%‰℃℉°][가-힣]+|[^\s]*[가-힣A-Za-z0-9][&+/·・][가-힣A-Za-z0-9][^\s]*/g
+/** 기호로 이은 낱말('사진&영상,', '기획·개발', 'R&D팀')은 이 길이까지만 묶는다: 주소처럼 긴 것은 칸보다 넓어질 수 있다 */
+const JOINED_MAX = 24
 
 /** 글을 그대로 둔 채 묶을 낱말만 떼어 낸 조각들. 묶을 것이 없으면 null */
 export function gluedParts(text: string, parens = false): (string | { nb: string })[] | null {
@@ -155,12 +157,13 @@ export function gluedParts(text: string, parens = false): (string | { nb: string
   const out: (string | { nb: string })[] = []
   let at = 0
   for (const m of found) {
+    if (m[0].length > JOINED_MAX && !/[%‰℃℉°][가-힣]+$/.test(m[0]) && !m[0].startsWith('(')) continue
     if (m.index! > at) out.push(text.slice(at, m.index))
     out.push({ nb: m[0] })
     at = m.index! + m[0].length
   }
   if (at < text.length) out.push(text.slice(at))
-  return out
+  return out.length === 1 && typeof out[0] === 'string' ? null : out
 }
 
 /** 묶을 낱말은 줄을 꺾지 않는 조각(.nb)에. 글자는 하나도 바꾸지 않는다 */

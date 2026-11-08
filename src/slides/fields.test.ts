@@ -91,6 +91,14 @@ describe('줄을 꺾지 않는 낱말', () => {
     expect(gluedParts('기온 3℃나 올랐고 습도 40%도')).toEqual(['기온 ', { nb: '3℃나' }, ' 올랐고 습도 ', { nb: '40%도' }])
   })
 
+  it('기호로 이은 낱말도 한 낱말로: 브라우저는 keep-all이어도 &, /, +, · 앞뒤에서 줄을 꺾는다', () => {
+    expect(gluedParts('새로 여는 사진&영상 모임, 둘째 시즌')).toEqual(['새로 여는 ', { nb: '사진&영상' }, ' 모임, 둘째 시즌'])
+    expect(gluedParts('기획·개발 함께')).toEqual([{ nb: '기획·개발' }, ' 함께'])
+    expect(gluedParts('R&D팀 소개')).toEqual([{ nb: 'R&D팀' }, ' 소개'])
+    // 주소처럼 긴 것은 묶지 않는다(칸보다 넓어질 수 있다)
+    expect(gluedParts('자료는 example.org/team/notes/2026/plan 에')).toBeNull()
+  })
+
   it('묶을 것이 없으면 그대로', () => {
     expect(gluedParts('본부 평균 18% 높아요')).toBeNull()
     expect(gluedParts('첫해 구축비, 3개 라인 기준')).toBeNull()

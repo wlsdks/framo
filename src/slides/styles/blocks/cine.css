@@ -154,6 +154,34 @@
   display: none;
 }
 
+/* 큰 글자를 비우면(발표 모습) 제목이 주인공: 한 단으로 크게 선다. 입자는 제목 글줄로 모인다(motion/cine.ts의 shapeField) */
+.fr-mark .bk-cn-txt:not(:has(> .f-glyph:not(:empty))) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.fr-mark .bk-cn-txt:not(:has(> .f-glyph:not(:empty))) .bk-cn-title {
+  --fs: 108px;
+  line-height: 1.12;
+}
+
+@container bk (max-height: 560px) {
+  .fr-mark .bk-cn-txt:not(:has(> .f-glyph:not(:empty))) .bk-cn-title {
+    --fs: 90px;
+  }
+}
+
+@container bk (max-height: 400px) {
+  .fr-mark .bk-cn-txt:not(:has(> .f-glyph:not(:empty))) .bk-cn-title {
+    --fs: 62px;
+  }
+}
+
+@container bk (min-height: 760px) {
+  .fr-mark .bk-cn-txt:not(:has(> .f-glyph:not(:empty))) .bk-cn-title {
+    --fs: 128px;
+  }
+}
+
 /* 좁은 칸: 큰 글자 아래에 제목을 쌓는다(옆에 두면 제목이 한 줄에 두세 글자씩 꺾였다) */
 @container bk (max-width: 900px) {
   .fr-mark .bk-cn-txt {

@@ -203,6 +203,27 @@ export function cineMotion(kit: DrawKit): CineRuntime {
    * 모양 딴 것의 캐시: 같은 글, 같은 글꼴, 같은 크기면 같은 점들이다(글 칸 기준 좌표). 다음 장의 모양을 앞 장 동안 미리 따 두고(prewarm)
    * 장을 넘길 때는 꺼내 쓴다. 점은 정해진 씨앗으로 섞은 차례라 앞에서부터 n개를 쓰면 어느 수든 고르게 뽑은 것이다
    */
+  /** 칸에 보이는 글이 있는지 */
+  const filled = (w: Element | null): w is HTMLElement => !!w && /\S/.test(w.textContent || '')
+  /** 모양을 딸 칸이 비었을 때 대신 주인공이 되는 칸의 차례 */
+  const STAND_IN = ['title', 'value', 'text', 'lead', 'sub']
+
+  /**
+   * 모양을 딸 칸: 레시피의 칸(큰 글자 같은)이 비었으면 글이 있는 다음 칸이 주인공이 된다. 큰 글자를 비운 '빛에서 글자로'는 입자가 제목
+   * 글줄로 모인다(빈 칸이면 입자가 빈 고리로 모였다가 사라지고 제목은 따로 써졌다). [모양을 딸 칸의 이름, 그 칸]
+   */
+  function shapeField(el: HTMLElement, s: CineScript): [string, HTMLElement] | null {
+    if (s.shape !== 'glyph' || !s.field) return null
+    const own = el.querySelector(`[data-cn="${s.field}"]`)
+    if (filled(own)) return [s.field, own]
+    for (const k of STAND_IN) {
+      if (!s.texts.some((t) => t.key === k)) continue
+      const w = el.querySelector(`[data-cn="${k}"]`)
+      if (filled(w)) return [k, w]
+    }
+    return null
+  }
+
   interface Shape {
     /** 점(입자가 모일 자리): 정해진 씨앗으로 섞은 차례 */
     pts: Float32Array
@@ -374,7 +395,14 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const spans: Scene['spans'] = {}
     for (const k of ['seed', 'spread', 'gather', 'resolve', 'write', 'pull']) spans[k] = spanOf(s, k)
     const texts: TextBox[] = []
-    for (const cue of s.texts) {
+    const shaped = shapeField(el, s)
+    // 대신 주인공이 된 칸은 비운 칸의 때에 제자리에서 맺힌다(입자가 그 글줄로 모인 뒤에): 펜이 다시 쓰면 모인 글자를 한 번 더 그리게 된다
+    const standIn = shaped && shaped[0] !== s.field ? s.texts.find((t) => t.key === s.field) : undefined
+    for (const raw of s.texts) {
+      const cue: CineTextCue =
+        standIn && raw.key === shaped![0]
+          ? { ...raw, enter: 'settle', start: standIn.start, end: standIn.end, ...(raw.accent !== undefined ? { accent: standIn.end + raw.accent - raw.end } : {}) }
+          : raw
       const wrap = el.querySelector<HTMLElement>(`[data-cn="${cue.key}"]`)
       if (!wrap || !/\S/.test(wrap.textContent || '')) continue
       const wr = wrap.getBoundingClientRect()
@@ -391,9 +419,9 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       }
       texts.push(tb)
     }
-    const shapeWrap = s.field ? el.querySelector<HTMLElement>(`[data-cn="${s.field}"]`) : null
-    // 시작점: 큰 글자의 가운데, 가운데 짜임은 큰 글의 가운데, 선은 길의 시작
-    const bigKey = s.frame === 'center' ? (s.field ?? (s.texts.some((t) => t.key === 'value') ? 'value' : 'title')) : 'glyph'
+    const shapeWrap = shaped ? shaped[1] : null
+    // 시작점: 큰 글자의 가운데, 가운데 짜임은 큰 글의 가운데, 선은 길의 시작. 큰 글자를 비웠으면 대신 주인공이 된 칸의 가운데
+    const bigKey = standIn ? shaped![0] : s.frame === 'center' ? (s.field ?? (s.texts.some((t) => t.key === 'value') ? 'value' : 'title')) : 'glyph'
     const big = el.querySelector<HTMLElement>(`[data-cn="${bigKey}"]`)
     const bigBox = big && /\S/.test(big.textContent || '') ? toHost(big.getBoundingClientRect()) : null
     let fx = ox + cw * (s.frame === 'mark' ? 0.3 : 0.5)
@@ -501,6 +529,11 @@ export function cineMotion(kit: DrawKit): CineRuntime {
         }
         gb = [wx + got.box[0], wy + got.box[1], got.box[2], got.box[3]]
         sampled = true
+        // 대신 주인공이 된 글줄은 칸보다 짧다: 빛은 칸의 가운데가 아니라 글자의 가운데에서 맺힌다
+        if (standIn) {
+          fx = gb[0] + gb[2] / 2
+          fy = gb[1] + gb[3] / 2
+        }
       }
     }
     // 그어지는 선은 입자 없이 선과 글로 그린다(모일 자리가 없다): 상자는 선 둘레
@@ -1615,10 +1648,10 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       } catch {
         s = null
       }
-      if (!s || s.shape !== 'glyph' || !s.field || (s.material !== 'particles' && s.material !== 'threads')) continue
-      const wrap = el.querySelector<HTMLElement>(`[data-cn="${s.field}"]`)
+      if (!s || !Array.isArray(s.texts) || (s.material !== 'particles' && s.material !== 'threads')) continue
+      const wrap = shapeField(el, s)?.[1]
       const slide = el.closest('.slide')
-      if (wrap && slide && /\S/.test(wrap.textContent || '') && wrap.getBoundingClientRect().width > 0) shapeOf(wrap, zoomOf(slide))
+      if (wrap && slide && wrap.getBoundingClientRect().width > 0) shapeOf(wrap, zoomOf(slide))
     }
   }
 

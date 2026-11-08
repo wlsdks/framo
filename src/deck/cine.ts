@@ -147,7 +147,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       pace: 'normal',
       texts: [
         { key: 'glyph', enter: 'settle', on: 'resolve', lag: 0.2 },
-        { key: 'title', enter: 'write', on: 'write', answer: true },
+        { key: 'title', enter: 'write', on: 'write' },
         { key: 'lead', enter: 'settle', on: 'write', lag: 0.55 },
       ],
       handoff: true,
@@ -187,7 +187,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
     name: '모여 맺힘',
     description: '장 밖 여러 곳에서 가는 선들이 건너와 한 줄로 모이고, 그 자리에서 한 문장이 맺혀요.',
     fits: '결론, 통합, 하나로 모으기',
-    sample: { title: '한곳에서 찾아요', sub: '흩어진 고객 정보를 하나로' },
+    sample: { title: '한곳에서 찾아요', sub: '팀마다 따로 두던 문서를 하나로' },
     recipe: {
       frame: 'center',
       material: 'threads',
@@ -199,7 +199,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       camera: 'none',
       pace: 'normal',
       texts: [
-        { key: 'title', enter: 'settle', on: 'resolve', answer: true },
+        { key: 'title', enter: 'settle', on: 'resolve' },
         { key: 'sub', enter: 'settle', on: 'write' },
       ],
       handoff: false,
