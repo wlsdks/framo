@@ -376,8 +376,10 @@ export function cineMotion(kit: DrawKit): CineRuntime {
         // 고르지 않게(먹 얼룩의 가장자리처럼 몇 군데가 더 나간다): 갈래가 있으면 은하나 바람개비로 읽혔다(필름)
         arm[i] = -1
         ang[i] = R() * TAU
-        rad[i] = Math.min(1.4, Math.sqrt(-2 * Math.log(1 - R() * 0.995)) * (spans.gather ? 0.34 : 0.5))
-        if (!spans.gather) rad[i] *= 1 + 0.16 * Math.sin(3 * ang[i] + turn) + 0.09 * Math.sin(5 * ang[i] + turn * 2.3)
+        // 번짐으로 끝나는 장면은 바깥 쪽에 더 많이: 번지는 앞(물결)이 두껍게 보여야 '퍼진다'가 3~5m에서도 읽힌다(가운데가 짙은 분포는
+        // 장 가득 옅은 먼지로만 보였다, 필름)
+        rad[i] = spans.gather ? Math.min(1.4, Math.sqrt(-2 * Math.log(1 - R() * 0.995)) * 0.34) : 0.22 + 0.95 * Math.pow(R(), 0.55)
+        if (!spans.gather) rad[i] *= 1 + 0.07 * Math.sin(3 * ang[i] + turn) + 0.05 * Math.sin(7 * ang[i] + turn * 2.3)
       }
       z[i] = R()
       const near = (1 - z[i]) * s.depth
@@ -1186,9 +1188,11 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         if (tmp[3] <= 0.004) continue
         b[m * 5] = tmp[0]
         b[m * 5 + 1] = tmp[1]
-        // 밝은 바탕의 먹 알갱이는 조금 크고 옅게: 작고 짙으면 먼지 티끌로 읽혔다(필름)
-        b[m * 5 + 2] = c.dark ? tmp[2] : tmp[2] * 1.7
-        b[m * 5 + 3] = Math.min(1, tmp[3]) * (c.dark ? 0.78 : 0.42)
+        // 밝은 바탕의 먹 알갱이는 조금 크고 옅게: 작고 짙으면 먼지 티끌로 읽혔다(필름). 번짐으로 끝나는 장면(모일 곳이 없다)은 물결이
+        // 주인공이라 조금 크고 짙게
+        const wave = c.spans.gather ? 1 : 1.3
+        b[m * 5 + 2] = (c.dark ? tmp[2] : tmp[2] * 1.7) * wave
+        b[m * 5 + 3] = Math.min(1, tmp[3] * wave) * (c.dark ? 0.78 : 0.42)
         b[m * 5 + 4] = c.tone[i]
         m++
         if (moving && i % 2 === 0) {
