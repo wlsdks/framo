@@ -1027,8 +1027,9 @@ export function motionEngine(): MotionEngine {
       // 가운데에서 잠깐 옅어졌다가 새 쪽에 서던 때는 셈하는 도중 답 숫자가 한 프레임 거의 투명해져 깜빡임으로 보였다(3차 감성 검수).
       // 추이는 프레임마다 숫자가 선이나 목표 점선과 겹치는지 보고 자리를 옮긴다. 옮길 때는 미끄러지지 않고 한 번에 옮긴다: 위아래를 바꾸는
       // 숫자는 어떤 길로 가도 점을 지나는 선을 가로지른다(값과 같은 진행으로 미끄러지던 때는 0.16~0.32초에, 짧게 미끄러져도 끝 무렵에 선을
-      // 뚫고 지나갔다. 4·5차 감성 검수). 새 쪽이 비면 값이 움직이는 동안 바로 새 쪽으로 가고, 지금 자리가 겹치면 새 쪽, 앞 쪽, 위아래를 바꾼
-      // 자리 가운데 비어 있는 곳으로 간다. 한 번 옮기면 잠깐(시계의 12%) 그 자리를 지킨다(두 자리 사이를 오가며 깜빡이지 않게).
+      // 뚫고 지나갔다. 4·5차 감성 검수). 지금 자리가 겹치면 새 쪽, 앞 쪽, 위아래를 바꾼 자리 가운데 비어 있는 곳으로 바로 가고, 겹치지
+      // 않으면 선이 새 모양에 가까워진 뒤(값의 60%) 새 쪽이 넉넉히 비었을 때 새 쪽으로 간다. 한 번 옮기면 잠깐(시계의 12%) 그 자리를
+      // 지킨다(두 자리 사이를 오가며 깜빡이지 않게).
       // 끝 무렵(시계의 90%)에는 새 쪽으로 간다(끝 모습과 같게). 쪽마다의 자리는 점에서 글자 상자까지로 처음에 한 번 잰다(장을 줄여 그려도 장의 px로)
       if (sides.length) {
         const box = el.getBoundingClientRect()
@@ -1102,15 +1103,15 @@ export function motionEngine(): MotionEngine {
               return [o[0], o[1] + (nums[k][i] ? lift(lists[side], hl, y, ty, h, em[i]) : 0)]
             }
             /** 쪽(side)에 선 숫자가 선이나 목표 점선과 겹치는지(그림 상자의 px). 숫자의 잉크는 글자 상자(줄 높이 1.1em)의 가운데쯤이라
-                위아래를 조금 덜고, 둘레 3px 넉넉히 본다 */
-            const hits = (side: number, i: number) => {
+                위아래를 조금 덜고, 둘레(pad)를 넉넉히 본다 */
+            const hits = (side: number, i: number, pad = 3) => {
               const o = spots[side][k][i]
               if (!canvas || !o || !Number.isFinite(px) || !Number.isFinite(py)) return false
               const at = spot(side, i)
-              const l = px + at[0] - 3
-              const r = l + o[2] + 6
-              const top = py + at[1] + o[3] * 0.12 - 3
-              const b = top + o[3] * 0.76 + 6
+              const l = px + at[0] - pad
+              const r = l + o[2] + pad * 2
+              const top = py + at[1] + o[3] * 0.12 - pad
+              const b = top + o[3] * 0.76 + pad * 2
               if (Number.isFinite(ty) && top < (1 - ty / 100) * h && (1 - ty / 100) * h < b) return true
               for (const list of pts)
                 for (let j = 0; j + 3 < list.length; j += 2) {
@@ -1135,10 +1136,14 @@ export function motionEngine(): MotionEngine {
               if (!a || !b) return
               let want = st.side
               if (!canvas || t.raw >= 0.9) want = 1
-              // 지금 자리가 겹치면 새 쪽, 앞 쪽, 비켜설 자리 차례로 비어 있는 곳으로
-              else if (hits(st.side, i)) want = [1, 0, 2].find((x) => x !== st.side && !hits(x, i)) ?? st.side
-              // 값이 움직이기 시작했고 새 쪽이 비었으면 새 쪽으로
-              else if (st.side !== 1 && t.raw > 0 && (st.at < 0 || t.raw - st.at >= 0.12) && !hits(1, i)) want = 1
+              // 지금 자리가 겹치면 새 쪽, 앞 쪽, 비켜설 자리 차례로 비어 있는 곳으로(둘레가 넉넉한 곳 먼저)
+              else if (hits(st.side, i)) {
+                const others = [1, 0, 2].filter((x) => x !== st.side)
+                want = others.find((x) => !hits(x, i, 8)) ?? others.find((x) => !hits(x, i)) ?? st.side
+              }
+              // 선이 새 모양에 가까워졌고(값의 60%) 새 쪽이 넉넉히 비었으면 새 쪽으로. 값이 움직이기 시작하자마자 옮기던 때는 아직 앞 모양인
+              // 선의 V 사이에 숫자가 한 프레임 끼어 보였다(5차 감성 검수)
+              else if (st.side !== 1 && t.v >= 0.6 && (st.at < 0 || t.raw - st.at >= 0.12) && !hits(1, i, 8)) want = 1
               if (want !== st.side) {
                 st.side = want
                 st.at = t.raw
