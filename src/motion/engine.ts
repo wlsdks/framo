@@ -1470,6 +1470,28 @@ export function motionEngine(): MotionEngine {
         p.remove()
       })
     }
+    /**
+     * 굵기를 지키는 선(vector-effect: non-scaling-stroke)에 건 점선의 단위 바로잡기. 길이를 100으로 맞춘 길(pathLength) 위의 점선을
+     * 크롬은 그림을 늘인 뒤의 좌표(칸의 px)에서 긋는데, 100을 늘이기 전의 길이로 셈한다. 그래서 늘어난 그림에서는 100이 선 전체가
+     * 아니었다(필름): 모이고 퍼지기의 선은 긋기 전부터 가운데 쪽 끝 토막이 보였고(점선의 다음 마디), 다 그었을 때도 63%까지만 그려져
+     * 있다가 움직임이 끝날 때 나머지가 한꺼번에 나타났다. 순환의 고리와 확산 곡선의 종 모양도 조각보다 앞선 토막이 먼저 보였다.
+     * 돌려주는 수를 pathLength 단위의 점선 값에 곱하면 100이 늘인 뒤에도 선 전체다. 그림 안의 좌표(getCTM)로 재서 발표 화면이 장을
+     * 줄여 그리거나(바깥 transform) 화면 배율이 달라도 같다
+     */
+    const dashK = (el: Element | null) => {
+      if (!(el instanceof SVGGeometryElement) || !el.hasAttribute('pathLength') || getComputedStyle(el).vectorEffect !== 'non-scaling-stroke') return 1
+      const len = el.getTotalLength()
+      const m = el.getCTM()
+      if (!len || !m) return 1
+      let drawn = 0
+      let prev: DOMPoint | null = null
+      for (let i = 0; i <= 48; i++) {
+        const q = el.getPointAtLength((len * i) / 48).matrixTransform(m)
+        if (prev) drawn += Math.hypot(q.x - prev.x, q.y - prev.y)
+        prev = q
+      }
+      return drawn > 0 ? drawn / len : 1
+    }
     /** 부품 안 상자의 자리(host 기준, 장의 px). 장은 줄여 그려지기도 해서 화면 px를 host의 비율로 되돌린다 */
     const spot = (el: Element, host: HTMLElement) => {
       const h = host.getBoundingClientRect()
@@ -2103,7 +2125,9 @@ export function motionEngine(): MotionEngine {
               pop(ports[n] ?? null, at)
               rise(step, at + 40, L.y * 0.4)
               if (!arcs[n]) return
-              run(anims, arcs[n], [{ strokeDasharray: '0 100' }, { strokeDasharray: '100 0' }], s(at + 80), { easing: CARRY, duration: d(hop * 0.92) })
+              // 길이 단위는 늘어난 고리에 맞춘다(dashK): 그대로 두면 한 구간이 여러 마디로 끊겨 조각보다 앞선 토막이 먼저 그어졌다
+              const k = dashK(arcs[n]) * 100
+              run(anims, arcs[n], [{ strokeDasharray: `0 ${k}` }, { strokeDasharray: `${k} 0` }], s(at + 80), { easing: CARRY, duration: d(hop * 0.92) })
               packet(stage, legs[n], at + 80, hop * 0.92)
               pop(tips[n] ?? null, at + 80 + hop * 0.85)
             })
@@ -2285,33 +2309,53 @@ export function motionEngine(): MotionEngine {
             const neu = row.querySelector<HTMLElement>('.bk-wp-new')
             return { old, neu, o: old ? spot(old, root) : null, n: neu ? spot(neu, root) : null }
           })
-          fade(one('.bk-wp-hf'), 60, 400)
+          const hf = one('.bk-wp-hf')
+          const ht = one('.bk-wp-ht')
+          const frame = one('.bk-wp-frame')
+          // 선은 글이 있는 자리만 훑는다: 위아래는 글 묶음(.bk-wp-frame), 옆은 맨 왼쪽 글에서 맨 오른쪽 글까지. 칸 전체(높이 100%, 칸 너비)를
+          // 훑던 때는 칸이 높으면 글 아래 빈 자리까지 긴 선이 서 있었고(필름: 글보다 선이 몇 배 길었다), 글 밖의 빈 너비를 지나는 동안
+          // 듣는 사람을 기다리게 했다. 끝에서는 0.04만에 사라져 오른쪽 끝에서 뚝 끊겼다. 이제 마지막 5분의 1 동안 옅어지며 빠져나간다
+          const boxes = [...spots.flatMap((sp) => [sp.o, sp.n]), hf ? spot(hf, root) : null, ht ? spot(ht, root) : null].filter((b): b is ReturnType<typeof spot> => !!b)
+          const L0 = boxes.length ? Math.max(0, Math.min(...boxes.map((b) => b.l)) - 24) : 0
+          const R0 = boxes.length ? Math.min(W, Math.max(...boxes.map((b) => b.r)) + 24) : W
+          const span = Math.max(1, R0 - L0)
+          fade(hf, 60, 400)
           rows.forEach((row, k) => rise(row.querySelector('.bk-wp-was'), 120 + k * 90, L.y * 0.4))
           const t0 = 260 + rows.length * 90
-          const T = levelName === 'lively' ? 1500 : 1200
-          const x = (px: number) => t0 + (T * Math.max(0, Math.min(W, px))) / W
+          // 훑는 빠르기는 예전(칸 너비를 1.2초)과 같게 두되 너무 짧게 끝나지 않게
+          const T = (levelName === 'lively' ? 1500 : 1200) * Math.max(0.6, Math.min(1, span / W))
+          const x = (px: number) => t0 + (T * Math.max(0, Math.min(span, px - L0))) / span
           if (bar && !still) {
+            const fr = frame ? spot(frame, root) : null
+            if (fr) {
+              const style = bar.getAttribute('style')
+              bar.style.top = fr.t - 12 + 'px'
+              bar.style.bottom = 'auto'
+              bar.style.height = fr.b - fr.t + 24 + 'px'
+              restores.push(() => (style === null ? bar.removeAttribute('style') : bar.setAttribute('style', style)))
+            }
             run(
               anims,
               bar,
               [
-                { opacity: 0, translate: '0 0', offset: 0 },
-                { opacity: 1, translate: `${W * 0.04}px 0`, offset: 0.04 },
-                { opacity: 1, translate: `${W * 0.96}px 0`, offset: 0.96 },
-                { opacity: 0, translate: `${W}px 0`, offset: 1 },
+                { opacity: 0, translate: `${L0}px 0`, offset: 0 },
+                { opacity: 1, translate: `${L0 + span * 0.06}px 0`, offset: 0.06 },
+                { opacity: 1, translate: `${L0 + span * 0.8}px 0`, offset: 0.8 },
+                { opacity: 0, translate: `${R0}px 0`, offset: 1 },
               ],
               s(t0),
               { easing: 'linear', duration: d(T) },
             )
           }
-          fade(one('.bk-wp-ht'), x(W * 0.4), 300)
+          fade(ht, ht ? x(spot(ht, root).l) : x(L0 + span * 0.4), 300)
           for (const sp of spots) {
             if (sp.old && sp.o) {
               const ink = getComputedStyle(sp.old).color
               run(anims, sp.old, [{ textDecorationColor: 'transparent', color: getComputedStyle(root).getPropertyValue('--ink-2').trim() || ink }], s(x(sp.o.r)), { easing: OUT, duration: d(260) })
             }
             if (sp.neu && sp.n)
-              run(anims, sp.neu, [{ clipPath: 'inset(-20% 100% -20% 0)' }, { clipPath: 'inset(-20% 0% -20% 0)' }], s(x(sp.n.l)), {
+              // 끝은 글 상자보다 조금 넓게: 상자 끝에 딱 맞추면 상자 밖으로 조금 나온 마지막 글자의 끝이 움직임이 끝날 때까지 잘려 있다가 튀었다
+              run(anims, sp.neu, [{ clipPath: 'inset(-20% 100% -20% 0)' }, { clipPath: 'inset(-20% -0.25em -20% 0)' }], s(x(sp.n.l)), {
                 easing: 'linear',
                 duration: d(Math.max(80, x(sp.n.r) - x(sp.n.l))),
               })
@@ -2579,8 +2623,11 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-ad-n'), 160, 500)
           fade(one('.bk-ad-base'), 120, 400)
           const bell = one('.bk-ad-bell')
-          if (bell && !still)
-            run(anims, bell, [{ strokeDasharray: '100 100', strokeDashoffset: '100' }, { strokeDasharray: '100 100', strokeDashoffset: '0' }], s(160), { easing: OUT, duration: d(900) })
+          if (bell && !still) {
+            // 길이 단위는 늘어난 그림에 맞춘다(dashK): 그대로 두면 긋기 전부터 종의 오른쪽 꼬리가 보였다
+            const k = dashK(bell) * 100
+            run(anims, bell, [{ strokeDasharray: `${k} ${k}`, strokeDashoffset: k }, { strokeDasharray: `${k} ${k}`, strokeDashoffset: 0 }], s(160), { easing: OUT, duration: d(900) })
+          }
           const t0 = 620
           const T = levelName === 'lively' ? 2400 : 2000
           const x = (px: number) => t0 + (T * Math.max(0, Math.min(W, px))) / W
@@ -2724,9 +2771,13 @@ export function motionEngine(): MotionEngine {
           const grow = (el: Element | null, at: number) => {
             if (el) run(anims, el, [{ opacity: 0, scale: '0.4' }], s(at), L.pop)
           }
-          const stroke = (el: Element, at: number) =>
-            run(anims, el, [{ strokeDasharray: '100 100', strokeDashoffset: 100 }, { strokeDasharray: '100 100', strokeDashoffset: 0 }], s(at), { easing: OUT, duration: lineDur })
-          const coreAt = out ? 60 : 200 + (n - 1) * step + 420
+          const stroke = (el: Element, at: number) => {
+            const k = dashK(el) * 100
+            run(anims, el, [{ strokeDasharray: `${k} ${k}`, strokeDashoffset: k }, { strokeDasharray: `${k} ${k}`, strokeDashoffset: 0 }], s(at), { easing: OUT, duration: lineDur })
+          }
+          // 모이기: 계기판은 마지막 선이 가운데에 거의 닿을 때 그 자리에서 선다. 선이 다 닿은 뒤에 세우면 선 끝이 한 점에 모인 꺾쇠(>)가
+          // 0.2~0.3초 혼자 보였다(필름)
+          const coreAt = out ? 60 : 200 + (n - 1) * step + 240
           // 계기판: 테가 먼저 서고 눈금이 한 바퀴 그어진다
           grow(core, coreAt)
           if (ticks) run(anims, ticks, [{ strokeDasharray: '0 1' }, { strokeDasharray: '0.35 0.65' }], s(coreAt + 80), { easing: OUT, duration: d(700) })
@@ -2758,9 +2809,13 @@ export function motionEngine(): MotionEngine {
             const delay = start + ((way * 380) % 1300) + (k % 2) * (period / 2)
             const timing = { duration: period, delay, iterations: Infinity, easing: EASE.breathe }
             const fadeIn = [{ opacity: 0, offset: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.84 }, { opacity: 0, offset: 1 }]
-            loops.push(head.animate(fadeIn.map((f, i) => ({ ...f, strokeDashoffset: [0.4, -9.6, -84, -99.6][i] })), timing))
+            // 획의 길이와 자리는 길 전체를 100으로 본 값(hub.css). 늘어난 그림에서 100이 길 전체가 되게 dashK를 곱한다: 곱하지 않으면 무늬가
+            // 길의 63%마다 되풀이되어 조각이 길 가운데에서 하나 더 나타났고, 가운데에 닿기 전에 사라졌다(닿는 순간의 밝아짐과 어긋났다)
+            const kh = dashK(head)
+            loops.push(head.animate(fadeIn.map((f, i) => ({ ...f, strokeDasharray: `${0.4 * kh} ${99.6 * kh}`, strokeDashoffset: [0.4, -9.6, -84, -99.6][i] * kh })), timing))
             const tail = tails[k]
-            if (tail) loops.push(tail.animate(fadeIn.map((f, i) => ({ ...f, opacity: f.opacity * 0.6, strokeDashoffset: [9, -1, -75, -91][i] })), timing))
+            const kt = dashK(tail)
+            if (tail) loops.push(tail.animate(fadeIn.map((f, i) => ({ ...f, opacity: f.opacity * 0.6, strokeDasharray: `${9 * kt} ${91 * kt}`, strokeDashoffset: [9, -1, -75, -91][i] * kt })), timing))
             // 닿는 순간: 모이기는 그 길의 가운데 테, 퍼지기는 그 길의 끝점이 잠깐 강조색. 떠나는 쪽 끝점(모이기)은 출발할 때
             // 한 길의 조각 둘은 반 주기 엇갈려 있으니, 반 주기마다 한 번 밝히는 움직임 하나로 둘 다 받는다(같은 요소에 둘을 걸면 뒤의 것이 덮는다)
             if (k % 2) return
@@ -2987,14 +3042,14 @@ export function motionEngine(): MotionEngine {
           // 흩어져 있던 칸이 단마다 왼쪽부터 날아와 한 판으로 맞춰지고(모두 옅은 칸으로), 다 맞춰질 즈음 채운 칸이 차례로(왼쪽 단부터,
           // 단마다 아래에서 위로) 물든다. 숫자는 칸이 물드는 만큼 오른다
           fade(one('.bk-tl-l'), 60, 500)
-          rise(one('.bk-tl-v'), 120, L.y * 0.4)
-          fade(one('.bk-tl-of'), 200, 500)
-          fade(one('.bk-tl-n'), 260, 500)
           const root = one('.bk-tl')
           const grid = one('.bk-tl-grid')
           const sqs = $('.bk-tl-sq')
           if (!root || !grid || !sqs.length) {
+            rise(one('.bk-tl-v'), 120, L.y * 0.4)
             count(one('.bk-tl-v'), 160)
+            fade(one('.bk-tl-of'), 200, 500)
+            fade(one('.bk-tl-n'), 260, 500)
             break
           }
           const lively = levelName === 'lively'
@@ -3028,6 +3083,12 @@ export function motionEngine(): MotionEngine {
           // 채운 칸이 물드는 차례: 판이 거의 다 맞춰진 뒤(옅은 판이 한 번 보이게) 0.6초 안에
           const on = sqs.filter((sq) => sq.classList.contains('is-on'))
           const paint = 140 + (cols - 1) * wave + 420
+          // 숫자는 칸이 물들기 시작할 때 나타나 바로 오르고, 전체와 덧붙임이 뒤따른다. 처음부터 두면 옅은 판이 맞춰지는 동안(생동감 1.2초
+          // 남짓) '0%'가 답처럼 서 있었다(필름)
+          const shown = Math.max(120, paint - 160)
+          rise(one('.bk-tl-v'), shown, L.y * 0.4)
+          fade(one('.bk-tl-of'), shown + 80, 500)
+          fade(one('.bk-tl-n'), shown + 140, 500)
           const each = Math.min(14, 600 / Math.max(1, on.length))
           if (off) on.forEach((sq, i) => run(anims, sq, [{ backgroundColor: off }], s(paint + i * each), { easing: OUT, duration: d(260) }))
           // 숫자는 단마다 그 단까지 물든 몫만큼
