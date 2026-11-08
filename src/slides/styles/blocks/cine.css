@@ -76,7 +76,9 @@
   line-height: 1.3;
 }
 
-.bk-cn-value {
+.bk-cn-value,
+.bk-cn-before,
+.bk-cn-after {
   --fs: 184px;
   font-family: var(--font-head);
   font-variant-numeric: tabular-nums;
@@ -84,6 +86,12 @@
   letter-spacing: -0.03em;
   line-height: 1.05;
   white-space: nowrap;
+}
+
+/* 장의 답: 강조색 글자(docs/VISUAL-RULES.md 3: 강조는 글자 크기, 굵기, 강조색 글자로). 장면에서 강조색은 이것 하나다.
+   발표할 때는 다 들어온 순간 글자색에서 강조색으로 한 번 바뀌고 그대로 고요하다 */
+.bk-cn-f.is-answer {
+  color: var(--accent);
 }
 
 /* ---------- 큰 글자와 옆의 제목 (mark) ---------- */
@@ -231,25 +239,52 @@
 }
 
 /* ---------- 선과 두 끝 (line) ----------
-   선은 칸 높이의 56%(motion/cine.ts의 PATH_Y)에 칸 너비를 건너간다. 두 끝의 이름은 선 아래 양 끝에, 제목은 위 왼쪽에 */
+   선은 칸 높이의 60%(motion/cine.ts의 PATH_Y)에 칸 너비를 건너간다. 선 위 왼쪽에 지금 값, 오른쪽에 바뀐 값(장의 답), 그 위에 제목,
+   선 아래 양 끝에 두 이름. 발표할 때는 지금 값에서 선이 그어지고 값이 펜 끝을 타고 건너가며 굴러 바뀐 값에 닿는다 */
 
-/* 제목은 선 위 왼쪽에 붙여 선과 한 묶음으로 읽게(위 끝에 두면 선과 제목 사이가 비어 따로 놀았다) */
+/* 제목과 두 값은 선 위에 붙여 선과 한 묶음으로 읽게(위 끝에 두면 선과 제목 사이가 비어 따로 놀았다) */
 .fr-line .bk-cn-txt {
   position: static;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 20px;
-  height: calc(56% - 56px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-content: end;
+  row-gap: 40px;
+  height: calc(60% - 32px);
+}
+
+.fr-line .f-title {
+  grid-column: 1 / -1;
+}
+
+.fr-line .f-before {
+  grid-row: 2;
+  grid-column: 1;
+  color: var(--ink-3);
+}
+
+.fr-line .f-after {
+  grid-row: 2;
+  grid-column: 3;
+  text-align: right;
 }
 
 .fr-line .bk-cn-title {
   --fs: 62px;
 }
 
+/* 값의 상자는 글자 윗선과 바닥선으로 자른다: 선까지의 틈이 글자에서 32px로 보인다 */
+.fr-line :is(.bk-cn-before, .bk-cn-after) {
+  --fs: 154px;
+}
+
+.fr-line :is(.bk-cn-before, .bk-cn-after),
+.fr-line :is(.bk-cn-before, .bk-cn-after) > :is(.ed-input, .ed-hint) {
+  text-box: trim-both cap alphabetic;
+}
+
 .fr-line :is(.f-label, .f-note) {
   position: absolute;
-  top: calc(56% + 40px);
+  top: calc(60% + 40px);
   max-width: 44%;
 }
 
@@ -267,13 +302,33 @@
   color: var(--ink);
 }
 
+@container bk (max-height: 560px) {
+  .fr-line :is(.bk-cn-before, .bk-cn-after) {
+    --fs: 128px;
+  }
+}
+
 @container bk (max-height: 420px) {
   .fr-line .bk-cn-title {
     --fs: 52px;
   }
 
+  .fr-line :is(.bk-cn-before, .bk-cn-after) {
+    --fs: 89px;
+  }
+
+  .fr-line .bk-cn-txt {
+    row-gap: 28px;
+  }
+
   .fr-line :is(.f-label, .f-note) {
-    top: calc(56% + 28px);
+    top: calc(60% + 28px);
+  }
+}
+
+@container bk (max-width: 900px) {
+  .fr-line :is(.bk-cn-before, .bk-cn-after) {
+    --fs: 89px;
   }
 }
 

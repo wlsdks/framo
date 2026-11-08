@@ -14,7 +14,7 @@ const strings = (v: unknown): Record<string, string> =>
   isRecord(v) ? Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === 'string')) : {}
 
 /** 이 버전이 아는 부품의 값. 이 밖의 값은 새 버전에서 더한 것이라, 예전 버전이 고치면 빠진다 */
-const BLOCK_KEYS = ['id', 'type', 'fields', 'items', 'hints', 'look', 'effect', 'when', 'speed', 'reveal', 'from', 'variant', 'highlight', 'link', 'linkBelow', 'at', 'cine']
+const BLOCK_KEYS = ['id', 'type', 'fields', 'items', 'hints', 'look', 'effect', 'when', 'speed', 'reveal', 'from', 'variant', 'highlight', 'link', 'linkBelow', 'at', 'cine', 'examples']
 
 /**
  * 부품 하나를 정해진 꼴로. 모르는 부품이거나 개수(count: 남은 수와 남은 큰 부품 수)가 넘치면 null.
@@ -59,6 +59,11 @@ export function cleanBlock(b: Record<string, unknown>, count: { left: number; la
   // 모션 그래픽이 쓰는 레시피의 버전 id (해시 꼴만)
   if (type === 'cine' && isCineId(b.cine)) block.cine = b.cine
   else if (b.cine !== undefined) drop()
+  // 예시 글인 칸: 글이 있는 칸 이름만. 표시일 뿐이라 버려도 세지 않는다(글은 칸에 그대로 있다)
+  if (Array.isArray(b.examples)) {
+    const keys = b.examples.filter((k, i, a): k is string => typeof k === 'string' && a.indexOf(k) === i && !!block.fields[k])
+    if (keys.length) block.examples = keys
+  }
   // 자리는 바로잡을 수 있는 값이라 버려도 세지 않는다 (판을 다시 나눈다)
   if (isArea(b.at)) block.at = { x: b.at.x, y: b.at.y, w: b.at.w, h: b.at.h }
   drop(Object.keys(b).filter((k) => !BLOCK_KEYS.includes(k)).length)

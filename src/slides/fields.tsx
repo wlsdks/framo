@@ -259,6 +259,8 @@ interface FieldProps extends TextProps {
   optional?: boolean
   /** 항목 칸: 여러 줄을 붙여 넣으면 줄마다 다음 항목으로 (IT). 나눌 수 없으면 false라서 칸 하나에 붙인다 */
   onPasteLines?: (lines: string[]) => boolean
+  /** 아직 예시 글인 칸: 안내 색으로 그리고, 누르면 글 전체를 골라 처음 친 글자가 예시를 덮어 쓰게 한다 */
+  example?: boolean
 }
 
 /**
@@ -276,7 +278,7 @@ function clean(text: string, multiline?: boolean): string {
   return multiline ? t : t.replace(/\s*\n\s*/g, ' ')
 }
 
-function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional, onPasteLines, keepParens }: FieldProps) {
+function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional, onPasteLines, keepParens, example }: FieldProps) {
   const { mode } = useSlide()
   if (mode === 'final') {
     const text = value.trim()
@@ -315,6 +317,7 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
       optional={optional}
       onPasteLines={onPasteLines}
       keepParens={keepParens}
+      example={example && !!value}
     />
   )
 }
@@ -334,6 +337,7 @@ function Editable({
   optional,
   onPasteLines,
   keepParens,
+  example,
 }: FieldProps & { style?: CSSProperties }) {
   const ref = useRef<HTMLSpanElement>(null)
   // 이 칸이 마지막으로 저장소에 보낸 값. 쓰는 동안 값이 이것과 다르게 바뀌면 바깥에서 바꾼 것이다(쓰다가 누른 되돌리기)
@@ -361,7 +365,7 @@ function Editable({
   }, [value, numeral, multiline, keepParens])
 
   return (
-    <Tag className={cx(className, 'ed', !value && 'is-empty', optional && 'is-optional')} style={style}>
+    <Tag className={cx(className, 'ed', !value && 'is-empty', optional && 'is-optional', example && 'is-example')} style={style}>
       {/* 칸에 두르는 면과 점선. 넓이는 이웃한 칸과의 틈에 맞춘다 (halos.ts) */}
       <span className="ed-halo" aria-hidden="true" />
       <span className="ed-hint" aria-hidden="true">
@@ -422,6 +426,16 @@ function Editable({
           if (e.key === 'Tab' && !e.nativeEvent.isComposing && focusNextField(e.currentTarget, e.shiftKey ? -1 : 1)) e.preventDefault()
         }}
         onDoubleClick={(e) => selectWord(e.currentTarget, e.clientX, e.clientY)}
+        // 예시 글은 누르면 전체를 고른다: 처음 친 글자가 예시를 덮어 쓴다(지우고 쓰지 않아도 된다)
+        onFocus={example ? (e) => getSelection()?.selectAllChildren(e.currentTarget) : undefined}
+        onMouseUp={
+          example
+            ? (e) => {
+                const sel = getSelection()
+                if (sel?.isCollapsed) sel.selectAllChildren(e.currentTarget)
+              }
+            : undefined
+        }
         onPaste={(e) => {
           e.preventDefault()
           const raw = e.clipboardData.getData('text/plain')
@@ -566,7 +580,7 @@ function isOptional(spec: { fields: { key: string; optional?: boolean; named?: b
 
 /** 슬라이드 칸 또는 덱 단위 값(`$org` 등) */
 export function T({ k, ...props }: TextProps & { k: string }) {
-  const { slide, meta, actions, fieldPrefix = '', folds, labels } = useSlide()
+  const { slide, meta, actions, fieldPrefix = '', folds, labels, examples } = useSlide()
   if (!fieldPrefix && slide.options.hideHead === true && (k === 'title' || k === 'lead')) return null
   return (
     <Field
@@ -577,6 +591,7 @@ export function T({ k, ...props }: TextProps & { k: string }) {
       fieldId={fieldPrefix + k}
       onChange={actions && ((v) => actions.setField(k, v))}
       fold={folds?.has(k)}
+      example={!!fieldPrefix && !!examples?.includes(k)}
       {...props}
     />
   )

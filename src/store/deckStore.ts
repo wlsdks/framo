@@ -160,16 +160,30 @@ export function stageCine(recipe: CineRecipe): string {
   return id
 }
 
+/**
+ * 새로 넣는 모션 그래픽 부품(id): 넣고 나서 장에 혼자면 장 제목과 부제를 숨긴다(영화 타이틀처럼 장면이 장 전체가 된다). 넣는 고침에
+ * 같이 들어가 되돌리기 한 번에 함께 돌아간다. 장 제목은 '이 슬라이드 설정'에서 다시 켠다
+ */
+const heads = new Set<string>()
+
+/** 이 부품을 넣는 다음 고침에서 장에 혼자면 장 제목을 숨긴다 */
+export function stageHead(blockId: string): void {
+  heads.add(blockId)
+}
+
 function withStaged(deck: Deck): Deck {
-  if (!staged.size) return deck
+  if (!staged.size && !heads.size) return deck
   let cines = deck.cines
+  let slides = deck.slides
   for (const s of deck.slides)
     for (const b of s.blocks ?? []) {
       const r = b.type === 'cine' && b.cine && !cines?.[b.cine] ? staged.get(b.cine) : undefined
       if (r) cines = { ...cines, [b.cine!]: r }
+      if (heads.has(b.id) && s.blocks!.length === 1 && s.options.hideHead !== true) slides = slides.map((x) => (x === s ? { ...s, options: { ...s.options, hideHead: true } } : x))
     }
   staged.clear()
-  return cines === deck.cines ? deck : { ...deck, cines }
+  heads.clear()
+  return cines === deck.cines && slides === deck.slides ? deck : { ...deck, cines, slides }
 }
 
 export const useDeck = create<DeckState>((set, get) => {

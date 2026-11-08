@@ -113,9 +113,14 @@ export type CinePhaseKind = 'seed' | 'spread' | 'gather' | 'resolve' | 'write' |
 /** 입자가 모이는 모양: 칸의 글자, 고리, 선, 물결, 한 점 */
 export type CineShape = 'glyph' | 'ring' | 'line' | 'wave' | 'point'
 /** 모션 그래픽의 글 칸. 정해진 낱말뿐이다(사람이 쓴 글은 컴포넌트의 fields에) */
-export type CineFieldKey = 'glyph' | 'title' | 'lead' | 'label' | 'text' | 'sub' | 'value' | 'note'
-/** 글이 들어오는 모습: 맺힘, 써짐(왼쪽부터 펜 끝을 따라), 한 글자씩, 숫자 굴리기 */
-export type CineEnter = 'settle' | 'write' | 'letters' | 'count'
+export type CineFieldKey = 'glyph' | 'title' | 'lead' | 'label' | 'text' | 'sub' | 'value' | 'note' | 'before' | 'after'
+/** 글이 들어오는 모습: 맺힘, 써짐(왼쪽부터 펜 끝을 따라), 한 글자씩, 숫자 굴리기, 건너오기(선 끝을 타고 앞 값에서 굴러 오며 건너온다) */
+export type CineEnter = 'settle' | 'write' | 'letters' | 'count' | 'carry'
+/**
+ * 재료: 틀마다 다른 몸짓이라 한 발표에 함께 나와도 서로 다르게 읽힌다. 입자(빛에서 글자로), 번지는 먹의 면(확산),
+ * 모여드는 가는 선(모여 맺힘), 그어지는 선과 그 위를 건너가는 값(그어지는 선)
+ */
+export type CineMaterial = 'particles' | 'wash' | 'threads' | 'line'
 export type CineAmount = 'few' | 'normal' | 'many'
 /** 번지는 모양: 둥글게, 옆으로 길게, 위로 */
 export type CineSpread = 'round' | 'side' | 'rise'
@@ -141,6 +146,8 @@ export interface CineText {
   on?: CinePhaseKind
   /** 그 구간 안에서 늦추는 몫(0~1) */
   lag?: number
+  /** 장의 답: 맺히는 순간 강조색이 한 번(짧은 선이나 강조색 값) 들어온다. 한 레시피에 하나 */
+  answer?: boolean
 }
 
 interface CineParticles {
@@ -181,6 +188,10 @@ export interface CineRecipe {
   loop: boolean
   /** 입자가 칸 밖, 장 전체로 번진다(글 칸은 늘 제 칸 안) */
   bleed: boolean
+  /** 재료. 없으면 틀(preset)의 재료 */
+  material?: CineMaterial
+  /** 장 제목이 보일 때 장 제목은 모션 그래픽이 다 맺힌 뒤에 들어온다(장면이 장을 연다). 없으면 장 제목 먼저 */
+  headAfter?: boolean
 }
 
 /** 제목 덩어리의 자리 (표지, 섹션). 값 목록은 themes.ts의 PLACES */
@@ -395,6 +406,11 @@ export interface Block {
   linkBelow?: BlockLink
   /** 모션 그래픽(cine)만: 쓰는 레시피의 버전 id(내용 해시, deck.cines의 열쇠). 발표마다 쓰던 버전에 고정된다 */
   cine?: string
+  /**
+   * 아직 예시 글인 칸(넣을 때 틀이 채운 지어낸 글). 편집 화면에서 안내 색으로 보이고, 그 칸에 처음 쓰면 이 목록에서 빠진다.
+   * 발표 모습에는 다른 글과 같게 그린다(장면에 그릴 글자가 있게)
+   */
+  examples?: string[]
 }
 
 export interface Slide {

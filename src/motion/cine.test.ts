@@ -17,7 +17,7 @@ describe('모션 그래픽 엔진', () => {
   it('멈춘 그림(끝 모습)에는 남는 선만: 선 틀은 칸 너비를 건너는 선, 나머지는 아무것도 남지 않는다', () => {
     const line = cines.still(cineScript(presetRecipe('stroke', 'l1')))
     // 칸을 0~1000으로 늘린 좌표에 굵기를 지켜 긋는다(편집 화면, PDF, PPT가 같은 선)
-    expect(line).toMatch(/^<path d="M0 560L1000 560"/)
+    expect(line).toMatch(/^<path d="M0 600L1000 600"/)
     expect(line).toContain('vector-effect="non-scaling-stroke"')
     expect(line).toContain('stroke="currentColor"')
     const wave = cines.still(cineScript(withKnob(presetRecipe('stroke', 'l1'), 'shape', 'wave')))

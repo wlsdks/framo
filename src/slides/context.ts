@@ -66,6 +66,8 @@ interface SlideCtx {
   cines?: Readonly<Record<string, CineRecipe>>
   /** 모션 그래픽 부품 안: 그 부품이 쓰는 레시피의 버전 id */
   cineId?: string
+  /** 부품 안: 아직 예시 글인 칸(편집할 때 안내 색으로, 누르면 글 전체를 골라 바로 덮어 쓰게) */
+  examples?: readonly string[]
 }
 
 export const SlideContext = createContext<SlideCtx | null>(null)

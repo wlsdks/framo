@@ -13,6 +13,7 @@ import {
   knobValue,
   mainText,
   presetSpec,
+  SHAPES_OF,
   type CineKnob,
 } from '../../../deck/cine'
 import type { Block, BlockWhen, CineEnter, Slide } from '../../../deck/types'
@@ -24,9 +25,6 @@ import { Opt } from '../Inspector'
 
 // 모션 편집의 오른쪽 칸: 모션 그래픽을 고르면 쉬운 손잡이가 보인다. 손잡이 하나가 레시피의 몇 군데를 함께 바꾼다(deck/cine.ts의 withKnob).
 // 저장 단추는 없다: 고친 것은 이 발표에 바로 들어가고, 모션 편집을 닫거나 장을 옮기면 내 라이브러리에 새 버전으로 남는다
-
-/** 짜임마다 고를 수 있는 모일 모양: 글자를 두는 짜임은 글자, 고리, 한 점. 선 짜임은 선과 물결 */
-const SHAPES_FOR = { mark: ['glyph', 'ring', 'point'], center: ['glyph', 'ring', 'point'], line: ['line', 'wave'] } as const
 
 export function CineKnobs({ slide, block, n, disabled, onWhen, onPlay }: { slide: Slide; block: Block; n: number; disabled: boolean; onWhen(w: BlockWhen): void; onPlay(): void }) {
   const cines = useDeck((s) => s.deck?.cines)
@@ -48,7 +46,7 @@ export function CineKnobs({ slide, block, n, disabled, onWhen, onPlay }: { slide
   const set = (k: CineKnob, v: string | boolean) => setKnob(slide.id, block, r, k, v)
   const knobs = knobsFor(r)
   const main = mainText(r)
-  const shapes = CINE_SHAPES.filter((s) => (SHAPES_FOR[r.frame] as readonly string[]).includes(s.id))
+  const shapes = CINE_SHAPES.filter((s) => SHAPES_OF[r.material ?? 'particles'].includes(s.id))
   const on = (k: CineKnob) => knobValue(r, k) as string
   return (
     <section className="ms-sec ms-block cn-knobs">
@@ -77,20 +75,26 @@ export function CineKnobs({ slide, block, n, disabled, onWhen, onPlay }: { slide
         <Opt label="언제" wide>
           <Segmented<BlockWhen> className="seg-fill" label="언제 나오는지" options={BLOCK_WHENS} value={whenOf(block)} onPick={onWhen} />
         </Opt>
-        <Opt label="모일 모양" wide>
-          <Segmented className="seg-fill" label="모일 모양" options={shapes} value={on('shape')} onPick={(v) => set('shape', v)} />
-        </Opt>
-        <Opt label="입자" wide>
-          <Segmented className="seg-fill" label="입자" options={CINE_AMOUNTS} value={on('amount')} onPick={(v) => set('amount', v)} />
-        </Opt>
+        {knobs.includes('shape') && (
+          <Opt label={r.material === 'line' ? '선 모양' : '모일 모양'} wide>
+            <Segmented className="seg-fill" label="모일 모양" options={shapes} value={on('shape')} onPick={(v) => set('shape', v)} />
+          </Opt>
+        )}
+        {knobs.includes('amount') && (
+          <Opt label={r.material === 'particles' || !r.material ? '입자' : '촘촘하기'} wide>
+            <Segmented className="seg-fill" label="촘촘하기" options={CINE_AMOUNTS} value={on('amount')} onPick={(v) => set('amount', v)} />
+          </Opt>
+        )}
         {knobs.includes('spread') && (
           <Opt label="번지는 모양" wide>
             <Segmented className="seg-fill" label="번지는 모양" options={CINE_SPREADS} value={on('spread')} onPick={(v) => set('spread', v)} />
           </Opt>
         )}
-        <Opt label="카메라" wide>
-          <Segmented className="seg-fill" label="카메라" options={CINE_CAMERAS} value={on('camera')} onPick={(v) => set('camera', v)} />
-        </Opt>
+        {knobs.includes('camera') && (
+          <Opt label="카메라" wide>
+            <Segmented className="seg-fill" label="카메라" options={CINE_CAMERAS} value={on('camera')} onPick={(v) => set('camera', v)} />
+          </Opt>
+        )}
         <Opt label="빠르기" wide>
           <Segmented className="seg-fill" label="빠르기" options={CINE_PACES} value={on('pace')} onPick={(v) => set('pace', v)} />
         </Opt>
@@ -100,10 +104,12 @@ export function CineKnobs({ slide, block, n, disabled, onWhen, onPlay }: { slide
           </Opt>
         )}
         <div className="cn-toggles">
-          <Toggle label="한 점의 빛 (밝은 바탕에서는 번지는 먹)" on={knobValue(r, 'light') === true} onChange={(v) => set('light', v)} />
-          <Toggle label="잔상" on={knobValue(r, 'trail') === true} onChange={(v) => set('trail', v)} />
-          <Toggle label="슬라이드 전체로 번지기" on={knobValue(r, 'bleed') === true} onChange={(v) => set('bleed', v)} />
-          <Toggle label="생동감에서 가끔 다시 빛나기" on={knobValue(r, 'loop') === true} onChange={(v) => set('loop', v)} />
+          {knobs.includes('light') && <Toggle label="한 점의 빛 (밝은 바탕에서는 번지는 먹)" on={knobValue(r, 'light') === true} onChange={(v) => set('light', v)} />}
+          {knobs.includes('trail') && <Toggle label="잔상" on={knobValue(r, 'trail') === true} onChange={(v) => set('trail', v)} />}
+          {knobs.includes('bleed') && <Toggle label="슬라이드 전체로 번지기" on={knobValue(r, 'bleed') === true} onChange={(v) => set('bleed', v)} />}
+          {knobs.includes('loop') && <Toggle label="생동감에서 가끔 다시 빛나기" on={knobValue(r, 'loop') === true} onChange={(v) => set('loop', v)} />}
+          {/* 장 제목이 보일 때만: 숨긴 장에서는 고를 것이 없다 */}
+          {knobs.includes('headAfter') && slide.options.hideHead !== true && <Toggle label="장 제목은 모션 그래픽 다음에" on={knobValue(r, 'headAfter') === true} onChange={(v) => set('headAfter', v)} />}
         </div>
       </fieldset>
     </section>

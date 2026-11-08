@@ -17,7 +17,7 @@ vi.mock('./folder', () => ({
   },
 }))
 
-const { loadCines, newerFor, removeCine, restoreCine, sealCine, useCines, versionNumber } = await import('./cines')
+const { importCines, loadCines, newerFor, removeCine, restoreCine, sealCine, useCines, versionNumber } = await import('./cines')
 const { decodeCinesFile, encodeCinesFile } = await import('./cinesFile')
 
 beforeEach(() => {
@@ -67,6 +67,22 @@ describe('내 모션 그래픽', () => {
     expect(useCines.getState().entries.map((e) => e.lineage)).toEqual(['l1'])
     await restoreCine(gone!.entry, gone!.index)
     expect(useCines.getState().entries.map((e) => e.lineage)).toEqual(['l2', 'l1'])
+  })
+
+  it('파일에서 가져오면 없는 갈래는 더하고, 있는 갈래는 버전을 합친다(같은 버전은 한 번)', async () => {
+    const v1 = presetRecipe('gather', 'l1')
+    const v2 = withKnob(v1, 'pace', 'fast')
+    await sealCine(v1)
+    const theirs = decodeCinesFile(encodeCinesFile([
+      { lineage: 'l1', name: '모여 맺힘', versions: [{ id: cineId(v1), savedAt: 1, recipe: v1 }, { id: cineId(v2), savedAt: Date.now() + 1000, recipe: v2 }] },
+      { lineage: 'l9', name: '받은 장면', versions: [{ id: cineId(presetRecipe('stroke', 'l9')), savedAt: 5, recipe: presetRecipe('stroke', 'l9') }] },
+    ]))!
+    expect(await importCines(theirs.entries)).toBe(2)
+    const entries = useCines.getState().entries
+    expect(entries.map((e) => e.lineage)).toEqual(['l9', 'l1'])
+    expect(entries[1].versions.map((v) => v.id)).toEqual([cineId(v1), cineId(v2)])
+    // 다시 가져오면 바뀌는 것이 없다
+    expect(await importCines(theirs.entries)).toBe(0)
   })
 
   it('파일은 꼴이 맞는 것만 읽는다: 버전 id는 내용으로 다시 셈하고, 레시피에 섞인 글은 뺀다', () => {
