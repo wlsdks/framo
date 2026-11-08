@@ -53,9 +53,14 @@ const states = new WeakMap<Element, State>()
 
 const quiet = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
+/** root 안에서 도는 움직임 모두 (요소마다 묻지 않고 한 번에: 물을 때마다 스타일을 다시 계산한다) */
+function animationsIn(root: Element): Animation[] {
+  return typeof root.getAnimations === 'function' ? root.getAnimations({ subtree: true }) : []
+}
+
 /** root 안의 이 움직임들 */
 function liveAnimations(root: Element): Animation[] {
-  return typeof root.getAnimations === 'function' ? root.getAnimations({ subtree: true }).filter((a) => a.id === LIVE_ID) : []
+  return animationsIn(root).filter((a) => a.id === LIVE_ID)
 }
 
 /**
@@ -63,7 +68,10 @@ function liveAnimations(root: Element): Animation[] {
  * 자리를 재는 일(넘침 알림, 칸 둘레의 테, 부품 테두리)이 움직이는 중의 자리를 끝자리로 알지 않게
  */
 export function liveStill<T>(root: Element, fn: () => T): T {
-  const runs = liveAnimations(root)
+  return atEnd(liveAnimations(root), fn)
+}
+
+function atEnd<T>(runs: Animation[], fn: () => T): T {
   const times = runs.map((a) => a.currentTime)
   for (const a of runs) {
     const end = a.effect?.getComputedTiming().endTime
@@ -176,11 +184,15 @@ export function liveAfter(root: Element | null | undefined, scope: string): void
   const k = scaleOf(root)
   if (!k) return
   const list = piecesOf(root)
-  const finals = liveStill(root, () => measure(list))
+  const running = animationsIn(root)
+  const finals = atEnd(
+    running.filter((a) => a.id === LIVE_ID),
+    () => measure(list),
+  )
   const set = new Set<Element>(list)
-  // 요소마다 도는 움직임 (한 번에 모은다: 요소마다 물으면 그때마다 스타일을 다시 계산한다)
+  // 요소마다 도는 움직임
   const anims = new Map<Element, Animation[]>()
-  for (const a of root.getAnimations({ subtree: true })) {
+  for (const a of running) {
     const t = a.effect instanceof KeyframeEffect ? a.effect.target : null
     if (t) anims.set(t, [...(anims.get(t) ?? []), a])
   }
