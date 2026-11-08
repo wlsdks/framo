@@ -23,7 +23,7 @@ import { downloadText, safeFileName } from '../../store/deckFile'
 import { useDeck } from '../../store/deckStore'
 import { decodePartsFile, encodePartsFile, PARTS_EXT } from '../../store/partsFile'
 import { addManySaved, removeSaved, renameSaved, restoreSaved, useSaved } from '../../store/saved'
-import { DownloadIcon, LockIcon, MoreIcon, Popover, UploadIcon, undoAction, type Toast } from '../ui'
+import { DownloadIcon, MoreIcon, NewSlideIcon, Popover, UploadIcon, undoAction, type Toast } from '../ui'
 import { soloSlide, type BlockEditing } from './BlockEditor'
 import { CANVAS, COL_W } from './canvas'
 import { useLook, type Look } from './look'
@@ -287,12 +287,12 @@ export function SavedParts({ deck, slide, blocks, toast }: { deck: Deck; slide: 
                         {part.name}
                       </span>
                     )}
-                    {/* 기본 컴포넌트의 잠근 카드와 같은 말과 자물쇠 */}
+                    {/* 기본 컴포넌트의 넣을 수 없는 카드와 같은 말과 표시 (자물쇠는 'AI에게 숨기기'의 표시라 쓰지 않는다) */}
                     <span className="mine-kind">
                       {locked ? (
                         <>
-                          <LockIcon />
-                          {closed ? '이 슬라이드에는 넣지 않아요' : '이 슬라이드에 함께 넣을 수 없어요'}
+                          <NewSlideIcon />
+                          새 슬라이드에 넣을 수 있어요
                         </>
                       ) : (
                         kindText(part)

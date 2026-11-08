@@ -28,8 +28,10 @@
     background: #fff;
   }
 
-  /* 인쇄할 장(PrintDeck)이 붙어 있을 때만 화면을 숨긴다. 그 밖의 화면에서 브라우저 인쇄를 쓰면 빈 쪽 대신 화면이 그대로 나온다 */
-  body:has(> .print-root) #root {
+  /* 인쇄할 장(PrintDeck)이 붙어 있을 때는 그것만 인쇄한다. 그 밖의 화면에서 브라우저 인쇄를 쓰면 빈 쪽 대신 화면이 그대로 나온다.
+     화면(#root)만 감추던 때는 body에 바로 붙는 떠 있는 것(마우스를 올린 단추의 말풍선, 알림)이 쪽마다 되풀이되어 찍혔고,
+     그 그림자가 쪽마다 그림으로 구워졌다. 끝에 그것만 든 빈 쪽도 하나 더 생겼다 */
+  body:has(> .print-root) > :not(.print-root) {
     display: none !important;
   }
 
@@ -38,8 +40,9 @@
     position: static;
   }
 
-  .print-page {
-    break-after: page;
+  /* 장 사이에서만 쪽을 나눈다: 마지막 장 뒤에서 나누면 끝에 빈 쪽이 생길 수 있다 */
+  .print-page + .print-page {
+    break-before: page;
   }
 
   * {

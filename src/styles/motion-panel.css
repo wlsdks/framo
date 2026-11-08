@@ -1,11 +1,12 @@
-/* ---------- 오른쪽 칸의 '움직임' (screens/editor/MotionPanel.tsx) ---------- */
+/* ---------- 오른쪽 칸의 '모션' (screens/editor/MotionPanel.tsx) ---------- */
+/* 이 슬라이드가 어떻게 움직이는지 짧게: 작은 그림(올리면 움직인다), 쉬운 말 네 줄, 고치는 곳(모션 편집)으로 가는 단추 */
 
-/* 머리말 줄: 이름은 왼쪽, 미리 보기는 오른쪽 (따로 한 줄을 쓰면 차례 목록이 첫 화면 밖으로 밀린다) */
+/* 머리말 줄: 이름은 왼쪽, 미리 보기는 오른쪽 */
 .mp-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: -6px 0 8px;
+  margin: -6px 0 10px;
 }
 
 .mp-head .ins-h {
@@ -21,61 +22,84 @@
   height: 12px;
 }
 
-/* 고르는 값이 넷을 넘으면 세 칸씩 줄을 맞춘 격자로 (한 줄 고르기가 꺾여 보이지 않게).
-   모양은 다른 고르기(Segmented)와 같은 회색 판 위의 흰 단추: 예전에는 칸마다 테 상자에 고른 것만 두 겹 먹색 테라,
-   바로 위 '모션 세기'와 꼴이 달랐고 고른 것이 굵은 상자로 튀었다 */
-.mp-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2px;
-  padding: 3px;
-  border-radius: var(--r);
-  background: #e8e8e8;
-}
-
-.mp-pick {
-  min-width: 0;
-  height: 30px;
-  padding: 0 4px;
-  overflow: hidden;
+/* 그림을 눌러도 모션 편집으로. 칸 너비를 다 쓴다(그림 너비는 MotionPanel이 잰다) */
+.mp-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
   border: 0;
-  border-radius: var(--r-sm);
+  border-radius: 4px;
   background: none;
-  color: var(--ink-2);
-  font-size: 13px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   cursor: pointer;
-  transition: background var(--t-fast), box-shadow var(--t-fast), color var(--t-fast);
 }
 
-.mp-pick:hover {
-  color: var(--ink);
+.mp-thumb .slide-frame {
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--line);
+  transition: box-shadow var(--t) var(--ease-out);
 }
 
-.mp-pick.is-on {
-  background: var(--panel);
-  box-shadow: 0 1px 2px rgb(20 20 20 / 0.12);
-  color: var(--ink);
+.mp-thumb:hover .slide-frame {
+  box-shadow: 0 0 0 1px var(--ink-3);
 }
 
-.mp-pick:focus-visible {
-  outline: 2px solid var(--sel);
-  outline-offset: -2px;
+.mp-thumb:focus-visible {
+  outline: none;
 }
 
-.mp-empty p {
-  margin: 0 0 12px;
-  color: var(--ink-2);
+.mp-thumb:focus-visible .slide-frame {
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--sel);
+}
+
+/* 이름은 왼쪽, 지금 값은 오른쪽에 한 줄씩. 표가 아니라 여백으로 나눈다 */
+.mp-facts {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 16px;
   font-size: 13px;
-  line-height: 1.5;
 }
 
-.mp-seq-h {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+.mp-facts > div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.mp-facts dt {
+  color: var(--ink-3);
+}
+
+.mp-facts dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.mp-note {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+/* 고치는 곳으로 가는 단추: 칸 너비를 다 쓰고, 오른쪽 꺾쇠가 가는 곳임을 알린다. 채운 검은 단추는 위 막대의 '발표하기' 하나라 테 단추로 */
+.mp-open {
+  width: 100%;
+  min-height: 42px;
+}
+
+.mp-open .icon-chevron {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+}
+
+.mp-open-d {
+  margin: 8px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  text-align: center;
 }
 
 .mp-reset {
@@ -86,166 +110,6 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-}
-
-/* 묶음 머리: 장이 나올 때, n번 누르면. 뒤로 가는 선이 다음 묶음까지의 경계가 된다 */
-.mp-step {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 6px;
-  color: var(--ink-3);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.mp-step::after {
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-  content: '';
-}
-
-.mp-row .mp-step {
-  margin-top: 14px;
-}
-
-.mp-list {
-  display: grid;
-  /* 끄는 동안 붙든 높이(min-height)는 아래에 비워 둔다. 줄마다 나눠 늘이면 접은 줄이 손 아래에서 밀려났다 */
-  align-content: start;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mp-row {
-  position: relative;
-}
-
-.mp-row.is-dragging {
-  z-index: 1;
-}
-
-.mp-card {
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  background: var(--panel);
-  transition: border-color 0.14s, box-shadow 0.14s;
-}
-
-.mp-row.is-open .mp-card {
-  border-color: var(--line-2);
-  box-shadow: 0 1px 2px rgb(20 20 20 / 0.06);
-}
-
-.mp-row.is-dragging .mp-card {
-  box-shadow: var(--shadow-pop);
-}
-
-/* 끄는 줄의 묶음 머리(n번 누르면)는 감춘다: 끄는 동안 다른 묶음 머리 위로 지나가며 겹쳤다. 놓으면 새 차례로 다시 단다 */
-.mp-row.is-dragging .mp-step {
-  visibility: hidden;
-}
-
-/* 함께 나오는 컴포넌트는 앞 컴포넌트 밑으로 들여 한 묶음으로 보인다 */
-.mp-row.is-with .mp-card {
-  margin-left: 16px;
-}
-
-.mp-row-h {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  min-height: 46px;
-  padding: 0 6px 0 2px;
-}
-
-.mp-grip {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 22px;
-  height: 32px;
-  color: var(--ink-3);
-  cursor: grab;
-  touch-action: none;
-}
-
-.mp-grip .icon {
-  width: 14px;
-  height: 14px;
-}
-
-.mp-row.is-dragging .mp-grip {
-  cursor: grabbing;
-}
-
-.mp-row-btn {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  min-width: 0;
-  padding: 6px 4px;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: none;
-  text-align: left;
-  cursor: pointer;
-}
-
-.mp-row-btn:focus-visible {
-  outline: 2px solid var(--sel);
-  outline-offset: 0;
-}
-
-.mp-name,
-.mp-sum {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mp-name {
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.mp-sum {
-  color: var(--ink-3);
-  font-size: 12px;
-}
-
-/* 둥근 테를 둘러 '이것만 보기'로 읽히게 (테 없는 ▸는 줄을 펼치는 단추로 보였다) */
-.mp-play {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--line-2);
-  border-radius: 50%;
-}
-
-.mp-play .icon {
-  width: 11px;
-  height: 11px;
-  margin-left: 1px;
-}
-
-.mp-edit {
-  padding: 14px 12px 16px;
-  border-top: 1px solid var(--line);
-}
-
-/* '전체대로'가 지금 무엇인지: 고르는 값 위에 작게 */
-.mp-inherit {
-  margin: -2px 0 12px;
-  color: var(--ink-3);
-  font-size: 12px;
 }
 
 /* ---------- 장면 고르기 (screens/editor/ScenePicker.tsx) ---------- */
@@ -406,11 +270,6 @@
 
 .sp-over .mp-reset {
   flex: none;
-}
-
-.mp-pick:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 
 /* 움직임 편집의 고른 컴포넌트: 언제 고르기 아래에 알림 한 줄 */

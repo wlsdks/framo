@@ -17,6 +17,11 @@ describe('내보낸 파일에 넣는 글꼴', () => {
     }
     // 쓰지 않는 글꼴은 넣지 않는다
     expect(fontFamiliesOf({ id: 'white' }).test('Hahmlet Variable')).toBe(false)
+    // 내 PC 글꼴은 이름만 적고 파일은 넣지 않는다(나눠 주기를 막는 라이선스가 있다). 그 글꼴이 없는 PC는 고른 짝으로 그리니 그 짝은 넣는다
+    const local = { id: 'white' as const, font: 'serif' as const, localFont: '회사 고딕' }
+    expect(fontFamiliesOf(local).test('회사 고딕')).toBe(false)
+    expect(fontFamiliesOf(local).test('Hahmlet Variable')).toBe(true)
+    expect(first((themeStyle(local) as Record<string, unknown>)['--font-head'])).toBe('회사 고딕')
     expect(fontFamiliesOf({ id: 'white', font: 'suit' }).test('Noto Serif KR Variable')).toBe(false)
   })
 

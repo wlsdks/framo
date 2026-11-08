@@ -27,12 +27,15 @@ PPT로 하던 발표를 HTML로 만드는 도구입니다. 회사 발표에만 �
    - 서버(`server/serve.ts`)는 `127.0.0.1`에만 묶고 Host 검사를 유지합니다.
 2. **AI(MCP)에게는 모양만 보인다.**
    - `src/ai/share.ts`의 `toShape`는 빼는 방식이 아니라 **고르는 방식**입니다. 새 값을 넣을 때는 enum, 숫자, 불리언, 해시 id, 카탈로그에 있는 말만 넣습니다. 사람이 적은 글, 제목, 이름, 이미지, 노트, 원래 id는 절대 넣지 않습니다.
+   - 글의 길이는 글자 수가 아니라 구간으로만 넣습니다(`TEXT_LENGTHS`: 1-10 … 281+, 여러 줄로 쓰는 칸은 줄 수 구간 `TEXT_LINES`, 이미지 칸은 있는지만). 같은 구간의 다른 글은 모양이 한 글자도 같아야 합니다(`share.test.ts`). 구간을 잘게 나누거나 정확한 수를 넣지 않습니다. 화면에서 잰 것(글이 넘쳤는지)도 참거짓으로만 넣습니다(`toShape`의 `over`).
+   - 사람이 AI에게 숨긴 슬라이드와 컴포넌트(`src/deck/aiHidden.ts`, 장의 옵션 `aiHidden`, `aiHiddenBlocks`)는 자리만 넣습니다: 숨긴 장은 해시 id와 `hidden`, 숨긴 컴포넌트는 판의 자리(`x, y, w, h`)뿐이고 종류, 칸, 길이, 바탕, 넘침, id, 나오는 차례, 그 종류 때문에만 맞는 장면은 넣지 않습니다(`private: true`).
    - 모양을 바꾸면 `checkShape`(꼴 확인)와 MCP 서버의 `PROTOCOL_WORDS`도 같이 고칩니다.
    - `src/ai/share.test.ts`의 비밀 심기 테스트와 `mcp/server.test.ts`가 통과해야 합니다.
 3. **AI의 제안은 사람이 적은 글을 쓰거나 지우지 못한다.**
    - `src/ai/ops.ts`에 칸의 글(fields, items)을 쓰는 op를 만들지 않습니다. 부품 장의 부품도 같습니다: AI는 빈 부품을 넣고, 부품을 옮기고, 너비, 모양, 바탕, 움직임, 항목 수, 안내 문구를 바꿀 수 있지만 부품 안의 글은 쓰지 못합니다. 부품은 해시 id(`b`로 시작)로만 가리킵니다.
    - 장을 부품 장으로 바꾸는 것은 글을 하나도 잃지 않는 `composeFrom`으로만, 부품 장을 되돌리는 것은 그 레이아웃의 부품 하나뿐이고 장에 가려 둔 글이 없을 때(`unwrapCompose`)만 합니다. 부품이 있으면 빈 장이 아닙니다.
    - 지우는 op는 빈 장, 빈 항목, 빈 부품만 지웁니다. `applyOps`는 op마다 사람이 적은 글이 줄지 않았는지 보고, 줄면 그 op를 되돌립니다. 제안은 사람이 미리 보고 적용하며, 적용 전 상태는 버전으로 남깁니다.
+   - AI에게 숨긴 장과 컴포넌트는 어느 op도 바꾸거나 옮기지 못합니다. 그것을 가리키는 op(옆에 두기, 맞바꾸기, 나오는 차례 포함)는 `private`으로 건너뛰고, `applyOps`는 op마다 숨긴 것(숨긴 장 통째로, 숨긴 컴포넌트의 자리와 크기, 나오는 차례)이 그대로인지 보고 바뀌면 그 op를 되돌립니다. 숨기기와 보이기를 바꾸는 op는 만들지 않습니다.
 4. **MCP 서버는 'AI 공유' 폴더만 다룬다.**
    - `mcp/server.ts`의 Node 권한 모델 실행(`--permission`, `--allow-fs-*`)을 빼지 않습니다.
    - 권한 모델은 심볼릭 링크를 따라가므로, 링크와 하드 링크를 거르는 `readJson`(`server/shareFiles.ts`)을 유지합니다. 로컬 서버도 같은 것으로 읽고, 하위 폴더가 링크면 따라가 읽거나 지우지 않습니다(꼴이 맞지 않는 제안과 지난 결과를 지우므로).
@@ -56,7 +59,7 @@ npm run build        # dist/(화면) + dist-node/(로컬 서버, MCP 서버)
 npm start            # http://127.0.0.1:41580
 npm run mcp          # MCP 서버를 직접 띄우기 (보통은 Claude Code, Codex가 띄움)
 npm run licenses     # 라이선스 확인
-npm run look -- shot|check|frame|film …  # 창 없는 크롬으로 화면 찍기, 조합·틀 검사, 모션 필름 띠(개발 서버가 떠 있을 때, scripts/look.mjs)
+npm run look -- shot|check|frame|film|pdf …  # 창 없는 크롬으로 화면 찍기, 조합·틀 검사, 모션 필름 띠, 내보내기 → PDF 검사(개발 서버가 떠 있을 때, scripts/look.mjs)
 npm run pack         # 나눠 줄 폴더와 zip (release/)
 # 릴리스: package.json의 version을 올려 커밋한 뒤 git tag vX.Y.Z && git push origin vX.Y.Z
 #   → .github/workflows/release.yml이 검수 후 zip 둘과 SHA256SUMS.txt를 GitHub 릴리스에 올린다
@@ -81,7 +84,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 | `server/` | 로컬 서버, AI 공유 창구, ‘AI에게 부탁’으로 Claude Code 띄우기(`agent.ts`), 새 버전 확인과 받기(`update.ts`가 바깥 연결, `updateRoutes.ts`가 창구), CSP |
 | `mcp/` | MCP 서버 |
 | `scripts/`, `launch/` | 묶기, `Framo.exe` 만들기(`exe.mjs`, 아이콘은 `icon.mjs`로 `launch/framo.ico`), 라이선스 확인, 바깥 주소 검사(`offline.mjs`), 쓰지 않는 것 찾기(`unused.mjs`, 소스 읽기는 `readSource.mjs`), 더블클릭 실행 파일 |
-| `.claude/` | Claude Code 하네스. 자주 하는 일의 스킬(`skills/`: 검수 `framo-review`·`framo-verify`, 커밋, 새 컴포넌트, 릴리스, 서브 에이전트, 부탁받은 발표), 감성 검수 리뷰어(`agents/framo-reviewer.md`), 발표 자료가 커밋되지 않게 막는 훅(`hooks/guard-commit.mjs`), 설정(`settings.json`). 개인 설정은 `settings.local.json`(git에서 빠짐). 일하는 방식이 바뀌면 스킬도 같이 고칩니다 |
+| `.claude/` | Claude Code 하네스. 자주 하는 일의 스킬(`skills/`: 검수 `framo-review`·`framo-verify`, 모션 `framo-motion`, 커밋, 새 컴포넌트, 릴리스, 서브 에이전트, 부탁받은 발표), 감성 검수 리뷰어(`agents/framo-reviewer.md`), 발표 자료가 커밋되지 않게 막는 훅(`hooks/guard-commit.mjs`), 설정(`settings.json`). 개인 설정은 `settings.local.json`(git에서 빠짐). 일하는 방식이 바뀌면 스킬도 같이 고칩니다 |
 | `site/` | 홍보 페이지(GitHub Pages, https://wlsdks.github.io/framo/). 바깥 주소에서 아무것도 불러오지 않는 정적 파일(글꼴도 안에 둠, CSP). 새 버전을 올리면 다운로드 구역의 버전, 날짜, 파일 크기도 고칩니다(`scripts/site.test.ts`가 버전을 확인). 고친 뒤 올리기: `git subtree push --prefix site origin gh-pages` |
 
 ## 디자인
@@ -98,7 +101,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 - 슬라이드를 고쳤으면 갤러리에서 세 테마를 직접 보고 확인합니다(`&variants=1`로 모든 모양, `&tone=invert|accent`로 바탕, `&hl=2`로 강조 항목, `&only=bridge,table`로 몇 장만). 화면을 고쳤으면 편집기를 직접 띄워 봅니다.
 - 색을 섞을 때는 `color-mix(in srgb, …)`를 씁니다. oklch로 섞으면 회녹색이 분홍빛으로, 색상이 먼 두 색 사이가 주황으로 틀어집니다.
 - **지향은 큰 무대의 발표입니다.** 회사 규모와 상관없이, 큰 회사가 공들여 하는 발표만큼 멋지게 보여야 합니다. 한 장에 한 메시지, 글보다 숫자와 그림이 말하고, 모션이 그 내용을 말합니다(데이터가 건너가고, 갈라지고, 모이고, 맞춰진다). 제목 아래 점 목록, 글로 채운 두 단 비교, 상자와 화살표 도형, 칸마다 선을 그은 표 같은 예전 보고서 모양은 기본으로 삼지 않습니다(필요하면 고를 수는 있게). 새 컴포넌트와 프레임 잡기의 구성도 이 기준으로 봅니다. 보고 자리라 결론부터(표지의 결정 요청, 한 장 요약), 숫자는 크게, 장식은 적게는 그대로입니다.
-- 발표할 때의 움직임은 `src/motion/engine.ts` 하나로 앱과 내보낸 HTML이 같이 씁니다. 새 레이아웃은 연출표에 넣습니다. 다른 사이트나 라이브러리의 모션 코드를 옮기지 않습니다([docs/MOTION.md](docs/MOTION.md)).
+- 발표할 때의 움직임은 `src/motion/engine.ts` 하나로 앱과 내보낸 HTML이 같이 씁니다. 새 레이아웃은 연출표에 넣습니다. 다른 사이트나 라이브러리의 모션 코드를 옮기지 않습니다([docs/MOTION.md](docs/MOTION.md)). 움직임을 짜거나 고치거나 검토할 때는 MOTION.md 맨 앞의 ‘기준’(움직임마다 뜻, 한 박자에 초점 하나, 장의 말에 맞는 움직임)을 따르고, 순서와 점검표는 `/framo-motion`입니다.
 - 발표자 화면은 창 두 개(발표 화면, 발표자 화면)를 BroadcastChannel로 잇습니다(`src/present/link.ts`). 어느 창에서 넘겨도 같이 움직여야 합니다.
 
 ## 윈도우

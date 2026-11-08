@@ -935,8 +935,8 @@ export function ItemTools({ i, sort = true, keepBlank = false }: { i: number; so
           ref={removeRef}
           type="button"
           className="it-remove"
-          aria-label="이 항목 빼기"
-          title="이 항목 빼기"
+          aria-label="이 항목 지우기"
+          title="이 항목 지우기"
           onClick={(e) => {
             // 두 번 누르기의 둘째 누름은 받지 않는다: 고르지 않은 컴포넌트를 누르면 골라지면서 손 아래에 ✕가 뜨는데, 그 자리를
             // 두 번 누르면 둘째 누름이 ✕를 눌러 항목이 빠졌다. ✕를 두 번 눌러도 한 항목만 빠진다(빠진 자리로 올라온 다음 항목의 ✕가 눌리지 않게)

@@ -816,6 +816,35 @@ body.is-block-dragging .slide.m-edit .bk-area.is-live .ed > .ed-halo {
   right: 0;
 }
 
+/* AI에게 숨긴 컴포넌트: 테두리 오른쪽 위 모서리에 걸친 작은 흰 원과 자물쇠 (항목 빼기 단추와 같은 크기와 면).
+   늘 보이되 누름은 받지 않는다. 숨기기와 보이기는 고른 컴포넌트의 이름 메뉴에서. 편집 화면에서만 그린다(blocks.tsx) */
+.bk-ai-hidden {
+  --d: calc(22px / var(--vs, 0.5));
+  position: absolute;
+  z-index: 5;
+  top: calc(var(--fr-t, -14px) - var(--d) / 2);
+  right: calc(var(--fr-r, -14px) - var(--d) / 2);
+  display: grid;
+  place-items: center;
+  width: var(--d);
+  height: var(--d);
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 0 0 calc(1px / var(--vs, 0.5)) rgb(16 20 31 / 0.14), 0 calc(2px / var(--vs, 0.5)) calc(6px / var(--vs, 0.5)) rgb(16 20 31 / 0.16);
+  color: #5b6170;
+  pointer-events: none;
+}
+
+.bk-ai-hidden svg {
+  width: 60%;
+  height: 60%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 /* 어디에 두어도 글을 가리면 띄우지 않는다: 그때는 컴포넌트를 눌러 고르고 장 아래 도구 줄의 앞뒤로 단추로 옮긴다 */
 .bk-handle[data-at='none'] {
   display: none;

@@ -1,14 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BLOCK_EFFECTS, BLOCK_LOOKS, BLOCKS, blockItems, effectOf, isAlone, shownLook, variantOfBlock, type NoRoom, type SavedKind } from '../../deck/blocks'
+import { BLOCK_EFFECTS, BLOCK_LOOKS, BLOCKS, blockItems, effectChoices, effectOf, isAlone, shownLook, variantOfBlock, type NoRoom, type SavedKind } from '../../deck/blocks'
 import { sceneOf } from '../../deck/scenes'
 import type { Block, BlockEffect, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { onMenuKeys } from '../../lib/menuKeys'
-import { Icon, MotionIcon, PlusIcon, ShapesIcon, TrashIcon } from '../ui'
+import { Icon, LockIcon, MotionIcon, PlusIcon, ShapesIcon, TrashIcon } from '../ui'
 import { noRoomText } from './noRoom'
 import { SceneOverride } from './ScenePicker'
 
-// 고른 컴포넌트의 도구 (바탕, 움직임, 모양, 항목 더하기, 빼기, 그리고 이름을 누르면 복제, 앞뒤로, 칸 더하기, 저장). 레이아웃 슬라이드의 항목 도구처럼 슬라이드 아래 도구 줄에
+// 고른 컴포넌트의 도구 (바탕, 움직임, 모양, 항목 더하기, 지우기, 그리고 이름을 누르면 복제, 앞뒤로, 칸 더하기, 저장, AI에게 숨기기). 레이아웃 슬라이드의 항목 도구처럼 슬라이드 아래 도구 줄에
 // 그린다(SlideStage가 .stage-sel에 넣는다). 슬라이드 위에는 고른 테와 끌어 옮기는 이름표(.bk-handle)만 남는다
 
 /** 내 컴포넌트로 저장하는 것의 이름 */
@@ -41,6 +41,8 @@ export function BlockTools({
   onRemove,
   saves,
   onSave,
+  aiHidden,
+  onAiHidden,
 }: {
   /** 이 부품이 있는 장. 장면을 골랐으면 움직임 메뉴가 장면 알림이 된다 */
   slide: Slide
@@ -67,9 +69,15 @@ export function BlockTools({
   /** 내 컴포넌트로 저장할 수 있는 것과 든 컴포넌트 수 */
   saves: { kind: SavedKind; count: number }[]
   onSave(kind: SavedKind): void
+  /** AI에게 숨긴 컴포넌트인지(deck/aiHidden.ts). 숨기면 AI는 자리만 알고 바꾸거나 옮기지 못한다 */
+  aiHidden: boolean
+  onAiHidden(hidden: boolean): void
 }) {
   const spec = BLOCKS[block.type]
   const [menu, setMenu] = useState<'look' | 'motion' | 'variant' | 'more' | null>(null)
+  // 모션 메뉴의 '더 보기'를 펼쳤는지 (어울리는 넷 말고 나머지)
+  const [moreFx, setMoreFx] = useState(false)
+  const fx = effectChoices(block.type)
   const menuRef = useRef<HTMLUListElement>(null)
   // 메뉴는 도구 아래로 연다. 고른 부품이 장 아래쪽이라 아래에 자리가 모자라면 위로 (위 끝은 머리 띠 아래).
   // 남은 높이만큼만 쓰고 나머지는 메뉴 안에서 스크롤 (노트북의 낮은 창에서 잘리지 않게)
@@ -123,10 +131,16 @@ export function BlockTools({
           className={cx('sel-name sel-name-btn', menu === 'more' && 'is-on')}
           aria-expanded={menu === 'more'}
           aria-haspopup="menu"
-          title={`${spec.name}: 복제, 앞뒤로 옮기기, 칸 더하기, 내 컴포넌트로 저장`}
+          title={`${spec.name}: 복제, 앞뒤로 옮기기, 칸 더하기, 내 컴포넌트로 저장, AI에게 숨기기${aiHidden ? ' (AI에게 숨긴 컴포넌트예요)' : ''}`}
           onClick={() => setMenu(menu === 'more' ? null : 'more')}
         >
           {spec.name}
+          {/* 숨긴 것은 이름 옆의 자물쇠로: 장 위의 표시(.bk-ai-hidden)와 같은 그림 */}
+          {aiHidden && (
+            <span className="sel-name-lock" aria-label="AI에게 숨김">
+              <LockIcon />
+            </span>
+          )}
           <Icon d="M6 9l6 6 6-6" />
         </button>
         {menu === 'more' && (
@@ -209,6 +223,21 @@ export function BlockTools({
                 </button>
               </li>
             ))}
+            {/* 글은 원래 AI에게 가지 않는다. 숨기면 몇 자인지, 무슨 컴포넌트인지도 가지 않고 AI가 옮기거나 바꾸지도 못한다 */}
+            <li>
+              <button
+                type="button"
+                role="menuitem"
+                className="bk-menu-item"
+                onClick={() => {
+                  onAiHidden(!aiHidden)
+                  setMenu(null)
+                }}
+              >
+                <b>{aiHidden ? 'AI에게 보이기' : 'AI에게 숨기기'}</b>
+                <span className="bk-menu-d">{aiHidden ? 'AI가 다시 이 컴포넌트의 모양을 보고 다듬을 수 있어요' : 'AI가 이 컴포넌트를 보지도 바꾸지도 못해요'}</span>
+              </button>
+            </li>
           </ul>
         )}
       </div>
@@ -270,7 +299,8 @@ export function BlockTools({
         )}
         {menu === 'motion' && !scened && (
           <ul ref={menuRef} className="bk-menu" role="menu" onKeyDown={onMenuKeys}>
-            {BLOCK_EFFECTS.map((x) => (
+            {/* 어울리는 넷 먼저, 나머지('튀어나오기', '한 글자씩' 같은)는 '더 보기'. 고른 것이 '더 보기'에 있으면 펼쳐 둔다 */}
+            {BLOCK_EFFECTS.filter((x) => moreFx || fx.more.includes(effect) || fx.first.includes(x.id)).map((x) => (
               <li key={x.id}>
                 <button
                   type="button"
@@ -295,6 +325,14 @@ export function BlockTools({
                 </button>
               </li>
             ))}
+            {!moreFx && !fx.more.includes(effect) && (
+              <li>
+                <button type="button" role="menuitem" className="bk-menu-item bk-menu-more" onClick={() => setMoreFx(true)}>
+                  <b>더 보기</b>
+                  <span className="bk-menu-d">모션 {fx.more.length}가지 더</span>
+                </button>
+              </li>
+            )}
           </ul>
         )}
       </div>
@@ -352,9 +390,9 @@ export function BlockTools({
           <span className="btn-t">{spec.items.label}</span>
         </button>
       )}
-      <button type="button" className={B} title="빼기 (Delete)" onClick={onRemove}>
+      <button type="button" className={B} title="지우기 (Delete)" onClick={onRemove}>
         <TrashIcon />
-        <span className="btn-t">빼기</span>
+        <span className="btn-t">지우기</span>
       </button>
     </div>
   )

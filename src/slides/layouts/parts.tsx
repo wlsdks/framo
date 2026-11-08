@@ -64,7 +64,7 @@ export function SharedScaleNote() {
   const who = scale.with === 'next' ? '다음' : scale.with === 'prev' ? '앞' : '앞뒤'
   return (
     <div className="ed-scale" aria-hidden="true">
-      <span title="모핑으로 이어지는 슬라이드끼리 같은 잣대로 그려서, 넘길 때 바뀐 값만큼만 움직여요.">
+      <span title="화면 전환 '이어지게'로 이어지는 슬라이드끼리 같은 잣대로 그려서, 넘길 때 바뀐 값만큼만 움직여요.">
         <svg viewBox="0 0 16 16">
           <circle cx="8" cy="8" r="7" />
           <path d="M8 7v4.5M8 4.6v.1" />

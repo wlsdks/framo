@@ -186,7 +186,7 @@ ${VIEWER_CSS}
 <header class="v-bar">
   <span class="v-title">${escapeHtml(deck.title)}</span>
   <span class="v-actions">
-    <button type="button" class="v-btn" id="v-print">PDF로 저장</button>
+    <button type="button" class="v-btn" id="v-print" title="인쇄 창의 대상에서 ‘PDF로 저장’을 고르고 ‘저장’을 눌러요">PDF로 저장</button>
     <button type="button" class="v-btn v-btn-primary" id="v-present">발표 시작</button>
   </span>
 </header>

@@ -3,13 +3,16 @@ import { flushSync } from 'react-dom'
 import { pageInfo } from '../deck/fields'
 import type { Deck } from '../deck/types'
 import { cx } from '../lib/cx'
+import { particle } from '../lib/josa'
 import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
 import { motionOf, transitionOf } from '../deck/themes'
 import { motionEngine, type MotionPlay } from '../motion/engine'
 import { presentChannel, type Blank, type PresentMessage } from '../present/link'
-import { canRecord, motionSettled, saveBlob, startRecording, type Recording } from '../present/record'
+import { recordSeconds, recordTime, slideHoldMs, START_MS, STEP_HOLD_MS, TURN_MS } from '../present/pace'
+import { canRecord, motionSettled, saveBlob, sizeSettled, startRecording, type RecordMode, type Recording } from '../present/record'
 import { safeFileName } from '../store/deckFile'
 import { FitSlide, pageProps, SlideCanvas } from '../slides/SlideCanvas'
+import { Modal } from './ui'
 
 /** 발표를 시작할 장. 발표에서 뺀 장을 골랐으면 그 뒤의 첫 장부터 (뒤에 없으면 바로 앞 장) */
 export function startIndex(deck: Deck, shown: Deck['slides'], startId?: string): number {
@@ -44,12 +47,39 @@ export function barRoom(w: number, h: number): BarRoom {
   return side >= SIDE_ROOM ? 'side' : top >= TOP_ROOM ? 'top' : 'over'
 }
 
+/** 녹화가 어떻게 끝났는지: 파일로 저장함, 담긴 장면이 없음, 시작하지 못함(화면 고르기를 거절했거나 막혔다) */
+export type RecordResult = 'saved' | 'empty' | 'failed'
+
+/**
+ * 녹화를 묻는 창의 안심 한 줄. 브라우저 창과 녹화 중 띠에 '공유'라는 말이 나와도 놀라지 않게.
+ * '이 PC'는 줄에서 가르지 않는다(\u00a0): '녹화는 이 / PC 안에서만'으로 갈라지면 안심시키는 말이 읽히지 않았다
+ */
+const RECORD_SAFE = '브라우저 창에 ‘공유’라고 나와도 아무 데도 보내지 않아요. 녹화는 이\u00a0PC 안에서만 하고 다운로드 폴더에 저장돼요.'
+
+/** 녹화하는 동안 장 위에 비워 두는 띠의 높이(화면 px). '녹화 중' 표시가 여기 있어 잘라 녹화하는 자리 밖이다 */
+const REC_BAND = 36
+
+/**
+ * 녹화하는 동안 슬라이드 상자의 자리(화면 px): 위 띠 아래에 16:9로, 크기는 기기 픽셀로 짝수, 자리는 기기 픽셀에 딱 맞게.
+ * 녹화는 이 상자의 자리만 잘라 낸다(record.ts). 그 자리에 겹친 것은 다 담기므로 '녹화 중' 표시는 위 띠에 두려고 장을 조금 줄인다
+ * (16:9 전체 화면은 장 밖에 여백이 없어 표시가 장 위에 겹쳤다). 자리가 기기 픽셀 사이에 걸치면 영상 가장자리에 1~2px 검은 줄이
+ * 들었고(1280×600 창의 장은 1066.67×600), 홀수 크기는 영상으로 만들 때 한 줄을 잘라 낸다.
+ * 그래서 크기를 기기 픽셀로 고른다: 너비가 32의 배수면 16:9의 높이도 짝수다. 화면 px로 16의 배수인 너비를 찾던 때는 브라우저 배율이
+ * 딱 떨어지지 않는 수(110% 확대는 1.100000023841858)면 맞는 너비가 없어 장이 320×180으로 작아져 화면 한가운데 작게 녹화됐다
+ */
+export function recordBox(w: number, h: number, dpr: number, band = REC_BAND): { left: number; top: number; width: number; height: number } {
+  // 배율의 아주 작은 어긋남(float32)으로 한 칸 덜 잡지 않게 조금 넉넉히 내림
+  const dev = Math.floor((Math.min(w, ((h - band) * 16) / 9) * dpr) / 32 + 1e-6) * 32
+  const width = dev / dpr
+  const height = (dev * 9) / 16 / dpr
+  const snap = (x: number) => Math.round(x * dpr) / dpr
+  return { left: snap((w - width) / 2), top: snap(band + (h - band - height) / 2), width, height }
+}
+
 /**
  * 전체 화면 발표. 클리커가 보내는 PageUp/PageDown도 받는다.
  * 발표자 화면(Presenter)이 열려 있으면 같이 움직인다. 어느 창에서 넘겨도 된다.
  */
-/** 녹화가 어떻게 끝났는지: 파일로 저장함, 담긴 장면이 없음, 시작하지 못함(화면 고르기를 거절했거나 막혔다) */
-export type RecordResult = 'saved' | 'empty' | 'failed'
 
 export function Present({
   deck,
@@ -63,9 +93,10 @@ export function Present({
   startId?: string
   entering?: Promise<unknown>
   onExit: (lastId?: string) => void
-  /** 열자마자 첫 장부터 영상으로 저장하고, 끝나면 발표를 닫는다 (편집기 내보내기의 '영상') */
+  /** 열자마자 영상으로 저장할지 묻는다 (편집기 내보내기의 '영상'). 묻는 창에서 취소하면 발표를 닫는다 */
   record?: boolean
-  onRecorded?: (result: RecordResult) => void
+  /** 녹화가 끝나 발표를 닫을 때 (편집기가 결과를 알린다). file: 저장한 파일 이름 */
+  onRecorded?: (result: Exclude<RecordResult, 'failed'>, file: string) => void
 }) {
   const slides = useMemo(() => deck.slides.filter((s) => !s.hidden), [deck.slides])
   // 장마다 넘기는 쪽 번호와 단락. 그릴 때마다 새로 만들면 단락 목록이 새 배열이라, 마우스를 움직이거나 멈출 때마다(아래 표시를
@@ -109,12 +140,26 @@ export function Present({
     }
   }, [entering])
   /**
-   * 영상으로 저장하는 중인지. 녹화는 첫 장부터 실제 발표처럼 움직임이 끝나기를 기다렸다 넘기며 화면을 그대로 담는다(present/record.ts).
+   * 영상으로 저장하는 중인지. 녹화는 첫 장부터 실제 발표처럼 움직임이 끝나기를 기다렸다가, 장의 글을 읽을 만큼 머문 뒤 넘기며 화면을 그대로 담는다(present/record.ts, present/pace.ts).
    * 녹화하는 동안은 아래 막대와 커서를 감추고, Esc나 브라우저의 '공유 중지'로 멈추면 거기까지를 파일로 저장한다
    */
   const [recording, setRecording] = useState(false)
-  const [notice, setNotice] = useState('')
+  // 녹화가 실제로 시작됐는지 (화면 고르기를 마친 뒤)와 어떻게 잘라 녹화하는지. 이때부터 위 띠에 '녹화 중' 표시를 띄운다.
+  // 탭 전체를 녹화하면(잘라 내지 못하면) 띠의 표시도 담기므로 띄우지 않고, 브라우저의 '공유 중' 막대에 맡긴다
+  const [recLive, setRecLive] = useState<RecordMode | null>(null)
+  const recFile = useRef('')
   const recStop = useRef<(() => void) | null>(null)
+  // 화면 고르기 창이 떠 있는 동안, 녹화가 시작된 때. 그 창이나 공유 시작이 전체 화면을 풀어도 발표를 끝내지 않는다
+  const recStarting = useRef(false)
+  const recSince = useRef(0)
+  /**
+   * 녹화하기 전에 묻는 창. 브라우저의 공유 창이 아무 말 없이 먼저 뜨면 처음 쓰는 분은 무엇을 골라야 하는지, 영상이 어디로
+   * 가는지 몰랐다. 이 창의 '녹화 시작'을 누르는 그 순간에 브라우저가 공유할 화면을 묻는다(누름 안에서 불러야 묻는다).
+   * failed: 공유가 시작되지 않아 다시 묻는 중
+   */
+  const [recIntro, setRecIntro] = useState<{ failed?: boolean } | null>(null)
+  const introOpen = useRef(false)
+  introOpen.current = !!recIntro
   const startedAt = useRef(Date.now())
   const now = useRef({ index: view.index, blank })
   now.current = { index: view.index, blank }
@@ -203,7 +248,9 @@ export function Present({
         return
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return
-      // 녹화하는 동안 Esc는 녹화를 멈춘다(발표는 그대로). 다른 키는 듣지 않는다: 녹화가 장을 넘긴다
+      // 녹화할지 묻는 창이 떠 있으면 키는 그 창의 것 (Esc는 창이 닫는다)
+      if (introOpen.current) return
+      // 녹화하는 동안 Esc는 녹화를 멈춘다. 다른 키는 듣지 않는다: 녹화가 장을 넘긴다
       if (recStop.current) {
         e.preventDefault()
         if (e.key === 'Escape') recStop.current()
@@ -230,8 +277,16 @@ export function Present({
   // 전체 화면을 Esc로 빠져나오면 발표도 끝낸다
   useEffect(() => {
     const onChange = () => {
-      // 녹화를 고르는 창이 뜨며 전체 화면이 풀려도 녹화는 이어 간다
-      if (!document.fullscreenElement && !recStop.current) exit()
+      if (document.fullscreenElement) return
+      // 화면 고르기 창이 뜨며, 또는 공유가 막 시작되며 전체 화면이 풀려도 녹화는 이어 간다
+      if (recStarting.current) return
+      if (recStop.current) {
+        // 녹화하는 중에 전체 화면을 나왔으면 멈추고 거기까지 저장한다. 전체 화면에서 누른 Esc는 브라우저가 전체 화면을 푸는 데
+        // 쓰고 화면에 보내지 않아서, 키로는 녹화를 멈출 수 없었다(녹화가 끝까지 이어지고 발표만 작은 창이 됐다)
+        if (Date.now() - recSince.current > 1500) recStop.current()
+        return
+      }
+      exit()
     }
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
@@ -293,72 +348,105 @@ export function Present({
   const record = async (): Promise<RecordResult | null> => {
     const frame = stageRef.current?.closest<HTMLElement>('.slide-frame')
     if (!frame || recStop.current) return null
-    setNotice('')
     flushSync(() => setRecording(true))
+    // 여기까지 기다림 없이 와야 브라우저가 누름 안에서 공유할 화면을 묻는다 (startRecording이 바로 getDisplayMedia를 부른다)
+    recStarting.current = true
     let rec: Recording
     try {
       rec = await startRecording(frame)
     } catch {
+      recStarting.current = false
       setRecording(false)
-      setNotice('녹화를 시작하지 못했어요. 공유할 화면으로 ‘이 탭’을 고르면 돼요.')
       return 'failed'
     }
+    // 고르는 창이 전체 화면을 풀었으면 다시 들어가 본다(누른 지 얼마 안 됐으면 된다). 안 되면 이 창 크기로 녹화한다.
+    // 창 크기가 다 바뀐 뒤에 담기 시작한다: 담는 도중에 장면 크기가 바뀌면 MP4가 깨졌다 (record.ts의 begin)
+    if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.().catch(() => {})
+    await sizeSettled()
+    rec.begin()
+    recStarting.current = false
+    recSince.current = Date.now()
+    setRecLive(rec.mode)
+    // 멈추면(Esc, 브라우저의 '공유 중지') 기다리던 것을 바로 끝낸다: 장마다 글을 읽을 만큼(15초까지) 머무는데, 머무는 동안 누른
+    // Esc가 그 시간이 다 지나서야 먹어 영상에 원치 않는 장면이 남았다
     let stopped = false
-    recStop.current = () => {
+    let wake = () => {}
+    const halted = new Promise<void>((r) => (wake = r))
+    const halt = () => {
       stopped = true
+      wake()
     }
-    void rec.ended.then(() => {
-      stopped = true
-    })
-    const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms))
+    recStop.current = halt
+    void rec.ended.then(halt)
+    const wait = (ms: number) => Promise.race([new Promise((r) => window.setTimeout(r, ms)), halted])
     // 첫 장부터 움직이며 시작한다
     flushSync(() => {
       setAhead(null)
       setView({ index: 0, play: true })
     })
-    await wait(400)
+    await wait(START_MS)
     while (!stopped) {
-      await motionSettled(() => stageRef.current)
+      await Promise.race([motionSettled(() => stageRef.current), halted])
       if (stopped) break
       const left = playing.current?.left() ?? 0
-      // 다 보인 모습을 잠깐 보여 준다: 단계 사이는 짧게, 장 끝은 읽을 만큼
-      await wait(left > 0 ? 900 : 1800)
-      if (stopped) break
-      if (left <= 0 && now.current.index >= slides.length - 1) break
+      const last = left <= 0 && now.current.index >= slides.length - 1
+      // 다 보인 모습을 보여 준다: 단계 사이는 짧게, 장 끝은 그 장의 글을 읽을 만큼 (마지막 장은 더 길게, present/pace.ts)
+      await wait(left > 0 ? STEP_HOLD_MS : slideHoldMs(deck, slides[now.current.index], last))
+      if (stopped || last) break
       forward()
-      await wait(left > 0 ? 120 : 500)
+      await wait(left > 0 ? 120 : TURN_MS)
     }
     recStop.current = null
+    setRecLive(null)
     const blob = await rec.stop()
     setRecording(false)
-    if (blob) saveBlob(blob, `${safeFileName(deck.title, '발표')}.${rec.ext}`)
-    else setNotice('녹화된 장면이 없어요. 다시 ‘영상으로 저장’을 눌러 주세요.')
+    recFile.current = `${safeFileName(deck.title, '발표')}.${rec.ext}`
+    if (blob) saveBlob(blob, recFile.current)
     return blob ? 'saved' : 'empty'
   }
 
-  // 내보내기에서 '영상'을 골랐으면 창이 다 커지고 첫 장이 그려진 뒤 바로 녹화한다(누른 지 1초 안이라 브라우저가 화면 고르기를 묻는다).
-  // 다 되면(Esc로 멈춰도) 발표를 닫고 편집기로 돌아가 결과를 알린다: 영상만 만들려던 분이 발표 화면에 남아 무엇을 할지 몰랐다
-  const autoRecord = useRef(false)
+  /**
+   * 묻는 창의 '녹화 시작'. 공유가 시작되지 않았으면(거절했거나 다른 것을 골라 막혔으면) 같은 창으로 다시 묻는다.
+   * 다 되면(Esc로 멈춰도) 발표를 닫고 편집기로 돌아가 결과를 알린다: 영상만 만들려던 분이 발표 화면에 남아 무엇을 할지 몰랐다
+   */
+  const startRecord = async () => {
+    setRecIntro(null)
+    const result = await record()
+    if (!result) return
+    if (result === 'failed') {
+      setRecIntro({ failed: true })
+      return
+    }
+    onRecorded?.(result, recFile.current)
+    exit()
+  }
+  /** 묻는 창을 닫으면: 내보내기에서 왔으면 편집기로, 발표하다 눌렀으면 발표를 이어 간다 */
+  const cancelRecord = () => {
+    setRecIntro(null)
+    if (recordOnStart) exit()
+  }
+
+  // 내보내기에서 '영상'을 골랐으면 창이 다 커지고 첫 장이 그려진 뒤 녹화할지 묻는다
+  const asked = useRef(false)
   useEffect(() => {
-    if (!recordOnStart || !ready || !settled || autoRecord.current) return
-    autoRecord.current = true
-    void record().then((result) => {
-      if (!result) return
-      onRecorded?.(result)
-      exit()
-    })
-  })
+    if (!recordOnStart || !ready || !settled || asked.current) return
+    asked.current = true
+    setRecIntro({})
+  }, [recordOnStart, ready, settled])
 
   const slide = slides[view.index]
   if (!slide) return null
   const after = slides[view.index + 1]
   const early = after && after.id === ahead ? after : null
+  // 녹화하는 동안 슬라이드 상자의 자리 (창 크기가 바뀌면 room과 함께 다시 그려진다)
+  const box = recording ? recordBox(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1) : null
 
   return (
     <div
-      className={cx('present', idle && 'is-idle', !settled && 'is-entering', recording && 'is-recording')}
+      className={cx('present', idle && !recIntro && 'is-idle', !settled && 'is-entering', recording && 'is-recording')}
+      style={box ? { '--rec-left': `${box.left}px`, '--rec-top': `${box.top}px`, '--rec-width': `${box.width}px`, '--rec-height': `${box.height}px` } : undefined}
       onMouseMove={wake}
-      onClick={(e) => (blank ? setBlank(null) : e.clientX < window.innerWidth * 0.3 ? goTo(view.index - 1) : forward())}
+      onClick={(e) => (recIntro || recording ? undefined : blank ? setBlank(null) : e.clientX < window.innerWidth * 0.3 ? goTo(view.index - 1) : forward())}
     >
       <FitSlide className="present-stage">
         <div key={slide.id} ref={attachStage} className="present-slide">
@@ -378,9 +466,8 @@ export function Present({
         <span className="present-count">
           {view.index + 1} / {slides.length}
         </span>
-        {notice && <span className="present-note" role="status">{notice}</span>}
         {canRecord() && (
-          <button type="button" className="present-exit" onClick={() => void record()}>
+          <button type="button" className="present-exit" onClick={() => setRecIntro({})}>
             영상으로 저장
           </button>
         )}
@@ -388,6 +475,63 @@ export function Present({
           발표 끝내기
         </button>
       </div>
+      {/* 녹화 중 표시는 장 위의 띠에 둔다: 녹화는 슬라이드 상자의 자리만 잘라 내서 띠는 영상에 담기지 않는다 (recordBox) */}
+      {recLive && recLive !== 'tab' && (
+        <div className="present-rec" role="status">
+          <span className="present-rec-dot" aria-hidden="true" />
+          <span>녹화 중</span>
+          <span className="present-rec-sep" aria-hidden="true">
+            ·
+          </span>
+          <span className="present-rec-n">
+            {view.index + 1} / {slides.length}
+          </span>
+          <span className="present-rec-sep" aria-hidden="true">
+            ·
+          </span>
+          <span>Esc로 멈추고 저장</span>
+        </div>
+      )}
+      {recIntro && (
+        <Modal
+          title={recIntro.failed ? '녹화하지 못했어요' : '영상으로 저장할게요'}
+          onClose={cancelRecord}
+          className="rec-intro"
+          actions={
+            <>
+              <button type="button" className="btn btn-ghost" onClick={cancelRecord}>
+                취소
+              </button>
+              <button type="button" className="btn btn-primary" data-autofocus onClick={() => void startRecord()}>
+                {recIntro.failed ? '다시 녹화하기' : '녹화 시작'}
+              </button>
+            </>
+          }
+        >
+          {/*
+            브라우저가 띄우는 창에 맞춘 말: 크롬은 이 탭만 녹화할 때 탭 목록 없이 '…에서 이 탭을 보도록 허용하시겠습니까?'와
+            '허용'을 띄운다(엣지도 같은 크로미움). 예전 '이 탭을 고르고 공유를 눌러 주세요'는 그 창에 없는 말이었다.
+            '공유'라는 말에 놀라지 않게 아무 데도 보내지 않는다는 것을 본문 크기로 둔다(녹화 중 브라우저 띠에도 '공유'가 나온다)
+          */}
+          {recIntro.failed ? (
+            <>
+              <p>{RECORD_SAFE}</p>
+              <p>‘다시 녹화하기’를 누르고, 브라우저가 이 탭을 보여 줘도 되는지 물으면 ‘허용’을 눌러 주세요.</p>
+            </>
+          ) : (
+            <>
+              <p>
+                ‘녹화 시작’을 누르면 브라우저가 이 탭을 보여 줘도 되는지 물어요. ‘허용’을 눌러 주세요. 창에 나오는 {location.hostname}
+                {particle(location.hostname, '은', '는')} 이{'\u00a0'}PC에서 켜진{'\u00a0'}Framo예요.
+              </p>
+              <p>{RECORD_SAFE}</p>
+              <p>
+                영상을 보는 분이 읽을 수 있게 슬라이드마다 글의 양만큼 머물렀다가 넘겨요. {slides.length}장이라 {recordTime(recordSeconds(deck, slides))}쯤 걸리고, Esc를 누르면 거기까지 저장해요.
+              </p>
+            </>
+          )}
+        </Modal>
+      )}
     </div>
   )
 }

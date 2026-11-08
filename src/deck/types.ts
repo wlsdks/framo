@@ -86,6 +86,11 @@ export interface DeckTheme {
   id: ThemeId
   accent?: string
   font?: FontId
+  /**
+   * 이 PC에 깔린 글꼴의 이름(테마 메뉴의 '내 PC 글꼴'). 있으면 제목과 본문을 이 글꼴로 그리고, 없는 PC에서는 font의 글꼴로 그린다.
+   * 글꼴 파일은 발표에 넣지 않는다(글꼴마다 나눠 주기를 막는 라이선스가 있다). AI에게 보이는 모양에도 넣지 않는다(사람이 고른 이름)
+   */
+  localFont?: string
   size?: TextSize
   footer?: FooterMode
   transition?: Transition
@@ -133,6 +138,14 @@ export interface SlideOptions {
   order?: string[]
   /** 이 장의 장면. 고른 동안 컴포넌트마다의 움직임, 빠르기, 들어오는 쪽 대신 장면이 움직인다(값은 그대로 남는다) */
   scene?: SceneId
+  /**
+   * 이 장을 AI에게 숨긴다(사람이 슬라이드 메뉴에서 고른다). AI의 모양에는 자리만 보이고, 이 장을 바꾸거나 옮기는 제안은 건너뛴다(deck/aiHidden.ts).
+   * 숨긴 컴포넌트(aiHiddenBlocks)와 함께 장의 옵션에 둔다: 컴포넌트에 새 값을 두면 예전 버전이 모르는 값으로 세어 발표를 열지 않는데(compat.ts),
+   * 장의 옵션은 예전 버전도 그대로 두고 저장한다(모르면 쉬고 지우지 않게). 예전 버전의 AI 공유에는 숨긴 것의 모양도 보인다(글은 그때도 나가지 않는다)
+   */
+  aiHidden?: boolean
+  /** 컴포넌트 장: AI에게 숨긴 컴포넌트의 id. AI의 모양에는 판의 자리만 보이고, 그 컴포넌트를 바꾸거나 옮기는 제안은 건너뛴다 */
+  aiHiddenBlocks?: string[]
 }
 
 /** 부품 장만의 부품. 목록과 모양은 src/deck/blocks.ts */

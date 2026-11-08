@@ -37,7 +37,7 @@ interface LinkDrag {
   blocked: string | null
 }
 
-const NO_HEIGHT = '컴포넌트 사이를 넓힐 높이가 모자라요. 컴포넌트를 빼거나 항목을 줄여 주세요.'
+const NO_HEIGHT = '컴포넌트 사이를 넓힐 높이가 모자라요. 컴포넌트를 지우거나 항목을 줄여 주세요.'
 const NO_PAIR = '컴포넌트가 둘 이상 있어야 그 사이에 연결 기호를 끼울 수 있어요.'
 
 /** 지금 그려진 부품들로 놓을 자리를 잰다. 양쪽 부품이 똑같이 비켜 나서, 미리 보기로 부품이 움직여도 가운데는 그대로다 */
@@ -367,9 +367,9 @@ export function useLinkEditing({
             </button>
           ))}
         </div>
-        <button type="button" className="btn btn-ghost btn-sm" title="빼기 (Delete)" aria-label="연결 기호 빼기" onClick={() => change(null)}>
+        <button type="button" className="btn btn-ghost btn-sm" title="지우기 (Delete)" aria-label="연결 기호 지우기" onClick={() => change(null)}>
           <TrashIcon />
-          <span className="btn-t">빼기</span>
+          <span className="btn-t">지우기</span>
         </button>
       </div>
     ) : null
