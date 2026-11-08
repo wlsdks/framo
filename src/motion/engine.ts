@@ -1508,10 +1508,16 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-rt-of'), 120, 500)
           rise(one('.bk-rt-big'), 160, L.y * 0.4)
           count(one('.bk-rt-v'), 180)
-          // 점이 많아도 1초 안에 다 맺히게
+          // 세기 막대가 많아도 1초 안에 다 그어지게. 해당하는 막대는 손으로 세며 긋듯 아래에서 위로 그어지고, 나머지는 옅게 놓인다
           const dots = $('.bk-rt-d')
           const step = Math.min(L.step, 900 / Math.max(1, dots.length))
-          dots.forEach((el, i) => (el.classList.contains('is-on') ? pop(el, 240 + i * step) : fade(el, 240 + i * step, 300)))
+          dots.forEach((el, i) =>
+            el.classList.contains('is-on') && !el.querySelector('svg')
+              ? run(anims, el, [{ scale: '1 0', transformOrigin: '50% 100%' }], s(240 + i * step), { easing: OUT, duration: d(360) })
+              : el.classList.contains('is-on')
+                ? pop(el, 240 + i * step)
+                : fade(el, 240 + i * step, 300),
+          )
           fade(one('.bk-rt-n'), 360 + dots.length * step, 500)
           break
         }
