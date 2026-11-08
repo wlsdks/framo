@@ -791,6 +791,93 @@ export function motionEngine(): MotionEngine {
       count(el, at)
     }
     /**
+     * 값 이어 움직이기: 이어 움직이기로 짝이 된 것(el) 안의 값을 앞 장의 값(was)에서 지금 값으로 옮긴다. 숫자가 든 글은 앞 값에서 새 값까지
+     * 세고(숫자 밖의 글이 같은 것만: '42%'에서 '58%'로. 단위나 꼴이 바뀌면 그대로 둔다), 값 변수와 그림의 좌표는 사이 값으로 옮긴다.
+     * 모두 한 시계(아무것도 바꾸지 않는 움직임 하나의 진행)를 읽어서 같이 움직이고 같이 닿으며, 발표 화면이 끝 모습으로 보내면 같이 끝난다.
+     * 짝을 바꿔 끼우는 동안(View Transitions의 old와 new가 겹치는 처음 0.26초)은 앞 값 그대로라 두 모습이 겹쳐도 같은 그림이다.
+     * 끝나면 글과 값을 원래 문자열 그대로 돌려 둔다(끝 모습이 편집 화면과 같다)
+     */
+    const carry = (el: HTMLElement, was: Values) => {
+      if (still) return
+      const sets: ((p: number) => void)[] = []
+      const undo: (() => void)[] = []
+      const NUM = /^(\D*)(\d[\d,]*)(\.\d+)?(\D*)$/
+      const plain = /^\s*-?(?:\d+\.?\d*|\.\d+)\s*$/
+      const NUMS = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi
+      walkPaths(el, (n, path) => {
+        const w = was.get(path)
+        if (!w) return
+        let k = 0
+        for (const c of Array.prototype.slice.call(n.childNodes) as Node[]) {
+          if (c.nodeType !== 3) continue
+          const old = w.texts[k++]
+          const node = c as Text
+          const now = node.nodeValue || ''
+          const a = old ? NUM.exec(old) : null
+          const b = NUM.exec(now)
+          if (!old || !a || !b || old === now || a[1] !== b[1] || a[4] !== b[4] || (a[2] + b[2]).length > 30) continue
+          const from = parseFloat((a[2] + (a[3] || '')).replace(/,/g, ''))
+          const to = parseFloat((b[2] + (b[3] || '')).replace(/,/g, ''))
+          if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) continue
+          // 새 값의 꼴로 센다(소수 자리, 세 자리 쉼표). 앞 값이나 새 값에 쉼표가 있으면 세는 동안에도 쉼표를 둔다
+          const decimals = b[3] ? b[3].length - 1 : 0
+          const grouped = (a[2] + b[2]).indexOf(',') >= 0
+          const format = (v: number) => {
+            const [whole, frac] = v.toFixed(decimals).split('.')
+            return b[1] + (grouped ? whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : whole) + (frac ? '.' + frac : '') + b[4]
+          }
+          sets.push((p) => (node.nodeValue = p <= 0 ? old : p >= 1 ? now : format(from + (to - from) * p)))
+          undo.push(() => (node.nodeValue = now))
+        }
+        const st = (n as HTMLElement).style
+        for (const name in w.vars) {
+          const before = w.vars[name]
+          const now = st ? st.getPropertyValue(name) : ''
+          if (!now || now.trim() === before.trim() || !plain.test(now) || !plain.test(before)) continue
+          if (SOFT_VARS.indexOf(name) >= 0 && now.indexOf('.') < 0) continue
+          const a = parseFloat(before)
+          const b = parseFloat(now)
+          const prio = st.getPropertyPriority(name)
+          sets.push((p) => st.setProperty(name, p >= 1 ? now : String(Math.round((a + (b - a) * p) * 1000) / 1000), prio))
+          undo.push(() => st.setProperty(name, now, prio))
+        }
+        for (const name in w.attrs) {
+          const before = w.attrs[name]
+          const now = n.getAttribute(name)
+          if (!now || now === before || before.replace(NUMS, '#') !== now.replace(NUMS, '#')) continue
+          const a = (before.match(NUMS) || []).map(Number)
+          const b = (now.match(NUMS) || []).map(Number)
+          const parts = now.split(NUMS)
+          if (a.length !== b.length || parts.length !== b.length + 1) continue
+          const at = (p: number) => parts.map((part, i) => part + (i < b.length ? String(Math.round((a[i] + (b[i] - a[i]) * p) * 100) / 100) : '')).join('')
+          sets.push((p) => n.setAttribute(name, p >= 1 ? now : at(p)))
+          undo.push(() => n.setAttribute(name, now))
+        }
+      })
+      if (!sets.length) return
+      // 앞 장이 다 옅어지고(SWAP_LEAD) 짝을 바꿔 끼운 뒤에 옮기기 시작한다. 곡선은 자리에서 자리로 옮기기(carry): 앞 값도 새 값도 머문 값이다
+      const clock = el.animate([], { duration: d(1000), delay: s(60), easing: EASE.carry })
+      anims.push(clock)
+      const apply = (p: number) => sets.forEach((f) => f(p))
+      apply(0)
+      let frame = 0
+      let done = () => {}
+      waits.push(new Promise<void>((r) => (done = r)))
+      const end = () => {
+        cancelAnimationFrame(frame)
+        undo.forEach((f) => f())
+        done()
+      }
+      const tick = () => {
+        if (clock.playState === 'finished' || clock.playState === 'idle') return end()
+        const p = clock.effect ? clock.effect.getComputedTiming().progress : null
+        apply(typeof p === 'number' ? p : 0)
+        frame = requestAnimationFrame(tick)
+      }
+      frame = requestAnimationFrame(tick)
+      stops.push(end)
+    }
+    /**
      * 차례로 나오는 n개의 사이(Motion Canvas의 sequence, anime.js의 stagger와 같은 생각을 우리 말로).
      * 기본 사이로 늘어놓되, 첫 것부터 마지막 것이 나오기 시작할 때까지가 span을 넘지 않게 좁힌다: 항목이 열둘인 목록도
      * 넷인 목록과 거의 같은 때에 다 나와서, 듣는 사람이 마지막 줄을 기다리지 않는다
@@ -1422,7 +1509,8 @@ export function motionEngine(): MotionEngine {
      */
     /** easing: 조각이 길을 타는 빠르기. 선이 곡선 없이(linear) 그어지는 길에서는 조각도 linear여야 선 끝과 함께 간다 */
     const packet = (host: Element | null, path: [number, number][], at: number, duration: number, easing: string = CARRY) => {
-      if (!host || path.length < 2) return
+      // 한 번 건너가는 조각은 나오는 연출이라, 이어 움직이기로 이미 제자리에 와 있는 컴포넌트에서는 띄우지 않는다
+      if (!host || path.length < 2 || host.closest('[data-mo-keep]')) return
       const p = document.createElement('span')
       p.className = 'mo-pk'
       p.setAttribute('aria-hidden', 'true')
@@ -1529,7 +1617,8 @@ export function motionEngine(): MotionEngine {
      * 움직이지 않는 때(still)에는 올리지 않는다: 제 시계로 도는 것이라 움직임 없음에서도 합계가 0부터 올라갔다
      */
     const tally = (el: Element | null, marks: { at: number; upto: number }[]) => {
-      if (!el || still || el.closest('.m-edit') || !marks.length || digitTexts(el) > 1) return
+      // 옮겨 온 숫자(이어 움직이기)는 0으로 되돌리지 않는다: 값이 바뀌었으면 carry가 앞 값에서 옮긴다
+      if (!el || still || el.closest('.m-edit, [data-mo-keep]') || !marks.length || digitTexts(el) > 1) return
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
       let node = walker.nextNode() as Text | null
       while (node && !/\d/.test(node.nodeValue || '')) node = walker.nextNode() as Text | null
@@ -3744,6 +3833,11 @@ export function motionEngine(): MotionEngine {
       // 장면은 모아 둔 쓰기를 한 뒤에 다시 짠다: 나눈 낱말이 장 안에 있어야 어느 묶음의 움직임인지 안다
       flushJobs()
       if (after) after()
+      // 이어 움직이기로 옮겨 온 짝: 값이 바뀌었으면 앞 장의 값에서 새 값으로
+      carried.forEach((was, el) => {
+        if (slide.contains(el)) carry(el, was)
+      })
+      carried.clear()
     })
 
     /** 누르면: 다음 묶음을 보이고 그 자리에서 움직인다. 장 바꾸기의 기다림 없이 바로 */
@@ -3790,8 +3884,9 @@ export function motionEngine(): MotionEngine {
 
   // ---------- 이어 움직이기 ----------
   // 앞 장과 다음 장에 같은 것이 있으면 사라졌다 나타나지 않고 새 자리와 크기로 옮겨 간다(View Transitions의 이름 붙인 요소).
-  // 같은 것: 글이 같은 제목(표지 제목이 다음 장의 제목이 되는 것도), 글이 같은 컴포넌트, 두 장에 하나씩뿐인 같은 종류의 컴포넌트
-  // (숫자만 바뀐 차트가 제자리에서 바뀌게). 복제한 장은 id가 새로 나와서 id가 아니라 내용으로 짝을 맞춘다
+  // 같은 것: 글이 같은 제목(표지 제목이 다음 장의 제목이 되는 것도), 글이 같은 컴포넌트, 숫자만 다른 컴포넌트, 두 장에 하나씩뿐인 같은
+  // 종류의 컴포넌트(숫자만 바뀐 차트가 제자리에서 바뀌게). 복제한 장은 id가 새로 나와서 id가 아니라 내용으로 짝을 맞춘다.
+  // 짝의 값이 바뀌었으면 앞 장의 값에서 새 값으로 바뀌어 간다(아래 '값 이어 움직이기', play의 carry)
 
   /** 발표 화면과 내보낸 HTML에서 지금 보이는 장 */
   const CURRENT = ':is(.present-slide, .v-slide.is-current)'
@@ -3803,6 +3898,85 @@ export function motionEngine(): MotionEngine {
   let turn = 0
   /** 장을 바꾸는 중에 움직이지 않고(움직임 없음) 그린 다음 장. swap이 그 장의 글을 늦게 들인다 */
   let stillSwap: Element | null = null
+  /** 앞 장에서 이름을 붙인 것의 값: 이름 → 값. 다음 장의 짝을 맞출 때 짝에게 넘긴다 */
+  let morphValues: Map<string, Values> | null = null
+  /** 다음 장에서 짝이 된 것 → 앞 장의 값. 다음 장의 play가 값을 옮기고 비운다(움직이지 않는 장은 swap이 비운다) */
+  const carried = new Map<HTMLElement, Values>()
+
+  // ---------- 값 이어 움직이기 ----------
+  // 짝이 된 숫자나 차트의 값이 두 장에서 다르면, 다음 장의 것이 앞 장의 값에서 새 값으로 바뀌어 간다(Keynote의 Magic Move를 데이터에:
+  // 같은 대상이 바뀌는 것으로 보이게, Heer & Robertson 2007). 차트는 값을 CSS 변수(--p, --x, --y 같은)와 그림(svg)의 좌표로 그리므로,
+  // 그 값을 한 시계로 앞 값에서 새 값까지 옮기면 차트가 그 사이의 모든 값으로 다시 그려진다: 막대는 앞 길이에서 새 길이로, 고리는 앞 몫에서
+  // 새 몫으로, 선은 앞 모양에서 새 모양으로, 막대 끝의 숫자와 선 위의 점이 같이 따라간다. 숫자는 앞 값에서 새 값까지 센다.
+  // 짝의 새 모습(View Transitions의 new)은 살아 있는 그림이라 바뀌어 가는 값이 그대로 보인다.
+
+  /** 값을 옮길 CSS 변수. 차례나 개수(--n, --i, --k, --cols)는 사이 값이 없어 판이 깨지므로 넣지 않는다 */
+  const VALUE_VARS = ['--p', '--t', '--g', '--m', '--a', '--b', '--w', '--pw', '--x', '--y', '--ty', '--lo', '--hi', '--link', '--l', '--s', '--o', 'flex-grow']
+  /** 같은 이름이 칸 번호(정수)로도 쓰이는 변수: 소수로 적힌 값만 옮긴다(설문 결과의 --s는 몫, 일정표의 --s는 칸 번호) */
+  const SOFT_VARS = ['--s', '--o']
+  /** 옮길 그림의 좌표. 숫자를 뺀 꼴이 같을 때만(점과 마디의 수가 같을 때만) 옮긴다 */
+  const SVG_VALUES = ['d', 'points', 'cx', 'cy', 'r', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height']
+  /** 날짜는 세는 수가 아니라서 옮기지 않는다(11월 28일에서 12월 3일로 가며 날을 거꾸로 센다) */
+  const NOT_VALUES = '[data-type="date"]'
+  type Values = Map<string, { texts: (string | null)[]; vars: Record<string, string>; attrs: Record<string, string> }>
+
+  /** 숫자를 지운 글: 숫자만 바뀐 것끼리 짝을 맞추는 열쇠 */
+  const numless = (t: string) => t.replace(/\d[\d,]*(\.\d+)?/g, '#')
+
+  /**
+   * 요소 안의 요소마다 자리 이름(꼴과, 같은 꼴 형제 사이의 차례)을 붙여 돈다. 두 장의 같은 컴포넌트는 같은 코드가 그려서 자리 이름이
+   * 같다. 상태 class(is-, has-: 강조, 넘음 같은)와 엔진이 붙인 것(mo-)은 꼴에서 뺀다: 값이 바뀌면 상태도 바뀔 수 있다
+   */
+  function walkPaths(root: Element, visit: (el: Element, path: string) => void) {
+    const step = (el: Element, path: string) => {
+      visit(el, path)
+      const seen: Record<string, number> = {}
+      for (const c of Array.prototype.slice.call(el.children) as Element[]) {
+        const sig = c.tagName + '.' + Array.prototype.filter.call(c.classList, (k: string) => !/^(is|has|mo)-/.test(k)).join('.')
+        seen[sig] = (seen[sig] ?? -1) + 1
+        step(c, path + '/' + sig + '#' + seen[sig])
+      }
+    }
+    step(root, '')
+  }
+
+  /** 앞 장의 것에서 옮길 수 있는 값을 읽어 둔다: 숫자가 든 글, 값 변수, 그림의 좌표 */
+  function readValues(root: Element): Values {
+    const out: Values = new Map()
+    if (root.matches(NOT_VALUES)) return out
+    walkPaths(root, (el, path) => {
+      const texts: (string | null)[] = []
+      let any = false
+      for (const c of Array.prototype.slice.call(el.childNodes) as Node[]) {
+        if (c.nodeType !== 3) continue
+        const v = /\d/.test(c.nodeValue || '') ? c.nodeValue : null
+        texts.push(v)
+        if (v) any = true
+      }
+      const vars: Record<string, string> = {}
+      const st = (el as HTMLElement).style
+      // 부품 칸(.bk)의 --x, --y, --w, --h는 판의 자리다. 칸째 옮기는 것은 View Transitions가 한다
+      if (st && !el.classList.contains('bk'))
+        for (const k of VALUE_VARS) {
+          const v = st.getPropertyValue(k)
+          if (v) {
+            vars[k] = v
+            any = true
+          }
+        }
+      const attrs: Record<string, string> = {}
+      if (el instanceof SVGElement)
+        for (const k of SVG_VALUES) {
+          const v = el.getAttribute(k)
+          if (v) {
+            attrs[k] = v
+            any = true
+          }
+        }
+      if (any) out.set(path, { texts, vars, attrs })
+    })
+    return out
+  }
 
   /** 요소마다 짝을 찾을 열쇠들 (앞의 것일수록 먼저 맞춘다) */
   function morphKeys(slide: Element): { el: HTMLElement; keys: string[] }[] {
@@ -3813,9 +3987,16 @@ export function motionEngine(): MotionEngine {
     const cells = Array.prototype.slice.call(slide.querySelectorAll('.bk-area > .bk')) as HTMLElement[]
     const count: Record<string, number> = {}
     for (const el of cells) count[el.dataset.type || ''] = (count[el.dataset.type || ''] || 0) + 1
+    // 글이 같은 것 → 숫자만 다른 것(그 종류 안에서 그 글이 하나뿐일 때) → 그 종류가 하나뿐인 것 차례로 맞춘다
+    const nums: Record<string, number> = {}
+    for (const el of cells) {
+      const k = (el.dataset.type || '') + ':' + numless(text(el))
+      nums[k] = (nums[k] || 0) + 1
+    }
     for (const el of cells) {
       const type = el.dataset.type || ''
-      const keys = ['bk:' + type + ':' + text(el)]
+      const loose = type + ':' + numless(text(el))
+      const keys = ['bk:' + type + ':' + text(el), nums[loose] === 1 ? 'bkn:' + loose : '']
       if (count[type] === 1) keys.push('bk1:' + type)
       out.push({ el, keys })
     }
@@ -3823,14 +4004,34 @@ export function motionEngine(): MotionEngine {
     // 크게 다시 쓰는 장에서 항목이 사라졌다 나타나지 않고 새 자리로 옮겨 간다. 부품 장은 부품째로 맞추므로 넣지 않는다.
     // 한 장에 같은 글이 둘 이상이면 어느 것이 짝인지 알 수 없어 넣지 않는다
     if (!cells.length) {
+      // 같은 레이아웃, 같은 모양에 숫자만 다른 본문(같은 차트의 값만 바꾼 장)은 본문째 짝이 된다: 추이의 선과 점처럼 항목 밖에 그린 것까지
+      // 앞 값에서 새 값으로 바뀌어 간다. 그 안의 항목도 항목끼리 짝을 짓고, 값은 본문이 함께 옮긴다(pairUp). 항목이 늘거나 준 장은
+      // 본문의 글이 달라 예전처럼 항목마다 맞춘다
+      const body = slide.querySelector(':scope > .s-body') as HTMLElement | null
+      const layout = (/\bl-([a-zA-Z]+)/.exec(slide.className) || [])[1] || ''
+      const variant = (/\bva-([a-zA-Z]+)/.exec(slide.className) || [])[1] || 'base'
+      if (body && text(body)) out.push({ el: body, keys: ['body:' + layout + ':' + variant + ':' + numless(text(body))] })
       const seen: Record<string, HTMLElement | null> = {}
       const add = (key: string, el: HTMLElement) => (seen[key] = key in seen ? null : el)
       const its = Array.prototype.slice.call(slide.querySelectorAll(':scope > .s-body .it')) as HTMLElement[]
-      for (const el of its) if (text(el) && !el.parentElement?.closest('.it')) add('it:' + text(el), el)
+      for (const el of its)
+        if (text(el) && !el.parentElement?.closest('.it')) {
+          add('it:' + text(el), el)
+          add('itn:' + numless(text(el)), el)
+        }
       const imgs = Array.prototype.slice.call(slide.querySelectorAll(':scope > .s-body img, :scope > .ix img')) as HTMLImageElement[]
       // 그림은 data: 주소라 길다: 길이와 앞뒤 조각으로 가린다(같은 그림이면 같고, 다른 그림이 우연히 같을 일은 없다)
       for (const el of imgs) if (el.src) add('img:' + el.src.length + el.src.slice(0, 48) + el.src.slice(-48), el)
-      for (const key in seen) if (seen[key]) out.push({ el: seen[key]!, keys: [key] })
+      // 항목은 열쇠 둘(글이 같은 것, 숫자만 다른 것)을 차례로. 그 장에 하나뿐인 열쇠만
+      const byEl = new Map<HTMLElement, string[]>()
+      for (const key in seen) {
+        const el = seen[key]
+        if (!el) continue
+        const keys = byEl.get(el) || ['', '']
+        keys[key.indexOf('itn:') === 0 ? 1 : 0] = key
+        byEl.set(el, keys)
+      }
+      byEl.forEach((keys, el) => out.push({ el, keys }))
     }
     return out
   }
@@ -3838,25 +4039,31 @@ export function motionEngine(): MotionEngine {
   /** 앞 장의 것에 이름을 붙인다 (전환이 앞 장을 찍기 전에) */
   function nameFrom(slide: Element) {
     morphFrom = new Map()
+    morphValues = new Map()
     morphKeys(slide).forEach(({ el, keys }, i) => {
       const name = 'mo-k' + i
       el.style.setProperty('view-transition-name', name)
       named.push(el)
-      for (const k of keys) if (!morphFrom!.has(k)) morphFrom!.set(k, name)
+      for (const k of keys) if (k && !morphFrom!.has(k)) morphFrom!.set(k, name)
+      // 값은 앞 장이 사라지기 전에 읽어 둔다(제목은 글이 같아야 짝이라 옮길 값이 없다)
+      if (!keys.some((k) => k.indexOf('title:') === 0)) morphValues!.set(name, readValues(el))
     })
   }
 
   /** 다음 장에서 짝이 있는 것에 같은 이름을 붙이고, 다시 들이지 않게 표시한다. 글이 같은 짝을 먼저, 종류만 같은 짝은 그다음 */
   function pairUp(slide: Element) {
     const from = morphFrom
+    const values = morphValues
     morphFrom = null
+    morphValues = null
+    carried.clear()
     if (!from) return
     // 앞 장은 이미 찍혔다. 앞 장이 그대로 남는 곳(내보낸 HTML은 모든 장이 문서에 있다)에서 이름이 겹치지 않게 앞 장의 이름을 뗀다
     for (const el of named.splice(0)) el.style.removeProperty('view-transition-name')
     const used = new Set<string>()
     const fresh = morphKeys(slide)
     const taken = new Set<HTMLElement>()
-    for (const pass of [0, 1]) {
+    for (const pass of [0, 1, 2]) {
       for (const { el, keys } of fresh) {
         const name = keys[pass] && from.get(keys[pass])
         if (!name || used.has(name) || taken.has(el)) continue
@@ -3865,6 +4072,11 @@ export function motionEngine(): MotionEngine {
         el.style.setProperty('view-transition-name', name)
         el.setAttribute('data-mo-keep', '')
         named.push(el)
+        // 본문째 짝이 되어도 그 안의 항목은 항목끼리 짝을 짓는다(앞 장이 항목마다 따로 찍혀서, 짝이 없으면 항목이 본문보다 먼저 옅어져
+        // 막대가 0.1초 남짓 흐려 보였다). 값은 바깥 짝 하나가 옮긴다: 본문의 carry가 그 안의 항목까지 함께 옮긴다
+        const was = values && values.get(name)
+        const inside = Array.from(carried.keys()).some((c) => c.contains(el) || el.contains(c))
+        if (was && was.size && !inside && !el.matches(NOT_VALUES)) carried.set(el, was)
       }
     }
   }
@@ -3907,6 +4119,8 @@ export function motionEngine(): MotionEngine {
         const fresh = morphFrom && document.querySelector(CURRENT + ' .slide')
         if (fresh) pairUp(fresh)
         morphFrom = null
+        // 움직이지 않는 장(뒤로 갈 때)은 값을 옮기지 않는다: 다 보인 채로 온다
+        carried.clear()
         // 두 장이 함께 옅어지는 동안 뒤로 비치는 바탕을 다음 장의 바탕색으로 (motion.css의 ::view-transition-group(root)).
         // 비워 두면 장 뒤의 바탕이 비쳐서, 장끼리 넘길 때 화면이 잠깐 회색으로 번쩍였다
         const next = document.querySelector(':is(.present-slide, .v-slide.is-current) .slide')
@@ -3950,6 +4164,8 @@ export function motionEngine(): MotionEngine {
 
   function unname() {
     morphFrom = null
+    morphValues = null
+    carried.clear()
     for (const el of named.splice(0)) {
       el.style.removeProperty('view-transition-name')
       el.removeAttribute('data-mo-keep')
