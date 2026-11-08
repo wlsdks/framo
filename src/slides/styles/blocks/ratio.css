@@ -252,3 +252,8 @@
     background-size: 56% 100%;
   }
 }
+
+/* 검은 바탕에서는 빈 막대(글자색 16%)가 바탕에 묻혀서 한 단계 짙게 */
+.is-dark .bk-rt-d:not(.is-on) {
+  --rt-c: color-mix(in srgb, var(--ink) 30%, transparent);
+}

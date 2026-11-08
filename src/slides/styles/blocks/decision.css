@@ -232,3 +232,8 @@
     font-size: min(calc(44px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
   }
 }
+
+/* 검은 바탕에서는 갈래 곡선(--line-strong)이 바탕에 묻혀서 한 단계 짙게 */
+.is-dark .bk-dc-fork {
+  stroke: color-mix(in srgb, var(--ink-3) 80%, var(--bg));
+}

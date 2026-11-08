@@ -241,3 +241,8 @@
 .bk.is-shared > .bk-in > .bk-gw {
   padding-right: var(--bk-col-gap);
 }
+
+/* 검은 바탕에서는 통로가 바탕에 묻혀서 한 단계 짙게 */
+.is-dark .bk-gw::before {
+  background: color-mix(in srgb, var(--ink-3) 80%, var(--bg));
+}
