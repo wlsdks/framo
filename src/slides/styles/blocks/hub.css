@@ -44,18 +44,19 @@
   translate: -50% -50%;
 }
 
-/* 끝점: 먹색 점 하나. 데이터가 떠나거나 닿을 때만 강조색으로 밝아진다(engine.ts) */
+/* 끝점: 가는 세로 눈금 하나(가운데 계기판의 눈금과 같은 말투). 동그란 점은 흔한 연결도처럼 보였다(사용자).
+   데이터가 떠나거나 닿을 때만 강조색으로 밝아지며 길어진다(engine.ts) */
 .bk-hb-spot {
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
+  width: 4px;
+  height: 28px;
 }
 
 .bk-hb-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+  width: 4px;
+  height: 28px;
+  border-radius: 1px;
   background: var(--ink-2);
 }
 
