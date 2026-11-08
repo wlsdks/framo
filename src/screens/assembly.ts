@@ -136,6 +136,8 @@ function rivals(slide: HTMLElement, area: HTMLElement): string[] {
       const cs = getComputedStyle(el)
       // 제목과 다른 색(강조색의 답, 버금 글자색의 딸린 글)은 제목과 다투지 않는다
       if (cs.color !== ts.color) continue
+      // 판에 혼자인 핵심 한 줄은 굵기를 낮춰(600 밑) 제목보다 커져도 된다(message.css, docs/VISUAL-RULES.md 4)
+      if (cell.dataset.type === 'message' && Number(cs.fontWeight) < 600 && !area.querySelector(':scope > .bk ~ .bk')) continue
       const fs = parseFloat(cs.fontSize)
       const same = Number(cs.fontWeight) >= 600
       if (fs >= tfs - 0.5) out.add(`${cell.dataset.type}: 글이 장 제목만큼 커요(${Math.round(fs)} ≥ ${Math.round(tfs)}) 「${text.slice(0, 12)}」`)
