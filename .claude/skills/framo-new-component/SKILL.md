@@ -28,7 +28,7 @@ description: Framo에 새 컴포넌트(부품 장의 부품, BlockType)를 더�
 | `src/slides/styles/blocks/foo.css` + `src/slides/blocks.css` | CSS 파일과 `@import`(차례가 곧 덮어쓰는 차례). 클래스 머리말은 다른 부품과 겹치지 않게(예: spark가 `bk-sp-`라 spread는 `bk-spr-`) |
 | `src/slides/styles/base.css` | 새 글자 칸 클래스를 글자 칸 목록(`--fs` 규칙)에 (`css.test.ts`가 확인) |
 | `src/screens/assembly.ts`, `src/slides/fitBlocks.ts` | 글이 아닌 그림이 주인 부품이면 그림 부품 목록에 |
-| `src/motion/engine.ts` | `nativeAuto`에 `case 'foo'`. 이징은 `EASE` 표에서, 차례는 `stagger`로. 글은 제자리에서 나타나게 |
+| `src/motion/engine.ts` | `nativeAuto`에 `case 'foo'`. 이 부품의 말에 맞는 움직임 하나를 큐 시트로 먼저 적고(`/framo-motion`), 이징은 `EASE` 표에서, 차례는 `stagger`로. 글은 제자리에서 나타나게 |
 | `src/deck/showcase.ts`(장 모음 예시) | 예시가 필요하면(테스트가 알려 준다) |
 
 글자 크기는 `base.css` 맨 위의 단계(22, 26, 30, 36, 44, 52, 62 …)에서만 고른다. 색은 테마 변수만 쓰고, 섞을 때는 `color-mix(in srgb, …)`를 쓴다. 좁은 칸에서는 글자를 줄이지 말고 짜임을 바꾼다(여러 단, 눕히기, 쌓기). 글자 단계는 `--bk-w`, `--bk-h` 가운데 작은 쪽 하나만 쓴다.
