@@ -3145,6 +3145,8 @@ export function motionEngine(): MotionEngine {
           for (const c of cums) rise(c.el, x(c.x) - 60, L.y * 0.3)
           its.forEach((it, k) => rise(it, x(starts[k]) + 80, L.y * 0.4))
           fade(one('.bk-ad-sl'), t0 + T - 200, 400)
+          // 종 모양의 이름은 훑는 선이 꼭대기(가운데)를 지날 때
+          fade(one('.bk-ad-bl'), x(W / 2), 400)
           const now = one('.bk-ad-band.is-now')
           if (now && !still) {
             const base = getComputedStyle(now).fill

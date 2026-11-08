@@ -94,6 +94,18 @@
   transform: translateY(-120%);
 }
 
+/* 종 모양 곡선의 이름: 곡선 꼭대기(가운데, 높이의 위 10%) 바로 위. 누적 곡선의 이름(오른쪽 위 끝)과 짝을 이뤄 곡선 둘이 무엇인지 읽힌다 */
+.bk-ad-bl {
+  --fs: var(--t-small);
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  color: var(--ink-3);
+  line-height: 1;
+  white-space: nowrap;
+  transform: translate(-50%, -150%);
+}
+
 /* 훑는 세로선: 발표할 때만 움직이며 보이고 다 보인 모습에서는 없다 */
 .bk-ad-sweep {
   position: absolute;

@@ -80,6 +80,7 @@ export function Adoption() {
           <line className="bk-ad-base" x1="0" x2={ADOPT_W} y1={ADOPT_H} y2={ADOPT_H} />
         </svg>
         <T k="total" className="bk-ad-sl" oneLine />
+        <T k="curve" className="bk-ad-bl" oneLine />
         <span className="bk-ad-sweep" aria-hidden="true" />
       </div>
       {/* 경계마다 누적 몫: 이 선을 넘으면 몇 %가 쓰는지. 바닥선 아래의 눈금 글이라 곡선과 겹치지 않는다 */}

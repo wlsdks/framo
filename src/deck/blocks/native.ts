@@ -1111,6 +1111,8 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       { key: 'label', label: '이름표', hint: '예: 확산 단계' },
       { key: 'note', label: '설명', hint: '예: 지금은 첫 무리, 3개월 차에 다음 무리로', optional: true, multiline: true },
       { key: 'total', label: '누적 곡선 이름', hint: '예: 누적', optional: true },
+      // 종 모양(단계마다 새로 쓰기 시작하는 사람)에도 이름을 단다: 누적 곡선에만 이름이 있어 곡선 둘 가운데 하나가 무엇인지 몰랐다
+      { key: 'curve', label: '새로 쓰는 사람 곡선 이름', hint: '예: 새로 쓰는 사람', optional: true },
     ],
     items: {
       label: '무리',
@@ -1127,7 +1129,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
     minSpan: 6,
     prefSpan: 12,
     sample: {
-      fields: { label: '새 결재 시스템', note: '지금은 앞서 쓰는 사람까지', total: '누적' },
+      fields: { label: '새 결재 시스템', note: '지금은 앞서 쓰는 사람까지', total: '누적', curve: '새로 쓰는 사람' },
       items: [
         { title: '시범 부서', meta: '2.5%' },
         { title: '먼저 쓰는 팀', meta: '13.5%' },
