@@ -97,7 +97,7 @@
     display: grid;
     grid-template-columns: max-content minmax(0, max-content);
     grid-template-rows: auto auto;
-    column-gap: max(160px, 16cqw);
+    column-gap: max(160px, 20cqw);
     align-content: start;
   }
 
@@ -125,7 +125,12 @@
     border-top: 0;
   }
 
+  /* 답은 지운 줄보다 한 단계 크게(52까지), 굵기는 중간(500)이라 장 제목과 다투지 않는다: 지운 줄과 같은 크기라 답이 앞서지
+     않았다(검수). 그림 이름표의 상한(44, blocks/base.css)보다 앞선다 */
   .bk-area:not(:has(> .bk ~ .bk)) .bk-dp-r {
+    --fs: var(--t-h);
     margin-top: 14px;
+    font-size: min(calc(52px * var(--scale, 1)), max(var(--fs-min, 0px), calc(44px * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1))));
+    font-weight: 500;
   }
 }
