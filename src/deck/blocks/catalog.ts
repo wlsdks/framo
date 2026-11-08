@@ -127,6 +127,18 @@ export const BLOCK_EFFECTS: { id: BlockEffect; name: string; description: string
   { id: 'none', name: '없음', description: '처음부터 보여요' },
 ]
 
+/**
+ * 컴포넌트의 모션 고르기에서 먼저 보이는 것: 기본(컴포넌트에 맞게), 그 종류에 어울리는 둘, 없음. 나머지는 '더 보기'에.
+ * 열한 가지를 한꺼번에 늘어놓으면 처음 쓰는 분은 무엇이 다른지 몰랐고, '튀어나오기', '한 글자씩'처럼 눈에 띄는 것을 쉽게 골라
+ * 템플릿 같은 움직임이 됐다. 그 둘은 늘 '더 보기'에 둔다. AI 카탈로그는 그대로 모두(BLOCK_EFFECTS)
+ */
+export function effectChoices(type: BlockType): { first: BlockEffect[]; more: BlockEffect[] } {
+  const group = BLOCK_GROUPS.find((g) => g.types.includes(type))?.short
+  const fits: BlockEffect[] = group === '글' ? ['fade', 'rise'] : group === '차트' ? ['wipe', 'fade'] : ['rise', 'fade']
+  const first: BlockEffect[] = ['auto', ...fits, 'none']
+  return { first, more: BLOCK_EFFECTS.map((e) => e.id).filter((id) => !first.includes(id)) }
+}
+
 /** 언제 나오는지. 이름과 설명은 움직임 탭과 AI 카탈로그에 함께 쓴다 */
 export const BLOCK_WHENS: { id: BlockWhen; name: string; description: string }[] = [
   { id: 'after', name: '이어서', description: '앞 컴포넌트가 나온 뒤에 이어서 나와요' },

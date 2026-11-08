@@ -880,6 +880,12 @@ html.ms-vt[data-mo-swap]::view-transition {
   color: var(--ink);
 }
 
+/* 어울리는 넷 아래의 '모션 더 보기' */
+.ms-fx-more {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
 .ms-fx-n {
   min-width: 0;
   overflow: hidden;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeSlide } from '../generate'
-import { BLOCKS } from './catalog'
+import { BLOCK_EFFECT_IDS, BLOCKS, effectChoices } from './catalog'
 import { findBlocks, suggestBlocks } from './suggest'
 import type { Block, Slide } from '../types'
 
@@ -60,5 +60,18 @@ describe('이 슬라이드에 어울리는 것', () => {
 
   it('차트만 든 장에는 결론 한 줄을 먼저 권한다', () => {
     expect(suggestBlocks(slideWith('', '', [block('bars')]))[0]).toBe('message')
+  })
+})
+
+describe('컴포넌트 모션 고르기의 처음 목록', () => {
+  it('기본과 없음, 종류에 어울리는 둘만 먼저. 튀어나오기와 한 글자씩은 늘 더 보기에', () => {
+    for (const type of ['message', 'bars', 'number', 'hub'] as const) {
+      const { first, more } = effectChoices(type)
+      expect(first.length, type).toBeLessThanOrEqual(4)
+      expect(first[0]).toBe('auto')
+      expect(first).toContain('none')
+      expect(more).toEqual(expect.arrayContaining(['pop', 'letters']))
+      expect([...first, ...more].sort()).toEqual(BLOCK_EFFECT_IDS.slice().sort())
+    }
   })
 })

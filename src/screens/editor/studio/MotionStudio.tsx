@@ -8,6 +8,7 @@ import {
   BLOCK_WHENS,
   blockNames,
   currentPreset,
+  effectChoices,
   effectOf,
   fromOf,
   MOTION_PRESETS,
@@ -269,7 +270,7 @@ export function MotionStudio({
         </div>
         <div className="ms-side-body">
           {block ? (
-            <BlockMotion slide={slide} block={block} n={ids.indexOf(block.id) + 1} name={name} disabled={level === 'none'} onSet={setBlock} onPlay={() => player.playOne(block.id)} />
+            <BlockMotion key={block.id} slide={slide} block={block} n={ids.indexOf(block.id) + 1} name={name} disabled={level === 'none'} onSet={setBlock} onPlay={() => player.playOne(block.id)} />
           ) : (
             <>
               {/* 움직이는 방식: 자동(컴포넌트마다 내용에 맞게) 아니면 장 전체를 한 컷으로 짠 장면. 고르면 무대가 그 모습으로 처음부터 움직인다 */}
@@ -459,6 +460,9 @@ function BlockMotion({
   const speed = speedOf(block)
   // 장면을 고른 동안은 장면이 움직임, 쪽, 빠르기를 정한다. 언제는 그대로 고른다
   const scened = !!sceneOf(slide)
+  const choices = effectChoices(block.type)
+  const [more, setMore] = useState(false)
+  const showMore = more || choices.more.includes(effect)
   return (
     <section className="ms-sec ms-block">
       <div className="ms-block-h">
@@ -483,7 +487,8 @@ function BlockMotion({
       ) : (
         <Opt label="모션" wide>
           <div className="ms-fxs" role="group" aria-label="모션">
-            {BLOCK_EFFECTS.map((x) => (
+            {/* 어울리는 넷 먼저(기본, 종류에 맞는 둘, 없음), 나머지는 '더 보기'. 고른 것이 '더 보기'에 있으면 펼쳐 둔다 */}
+            {BLOCK_EFFECTS.filter((x) => showMore || choices.first.includes(x.id)).map((x) => (
               <button
                 key={x.id}
                 type="button"
@@ -501,6 +506,11 @@ function BlockMotion({
               </button>
             ))}
           </div>
+          {!showMore && (
+            <button type="button" className="link-btn ms-fx-more" onClick={() => setMore(true)}>
+              모션 더 보기 ({choices.more.length})
+            </button>
+          )}
         </Opt>
       )}
       {from && !scened && (

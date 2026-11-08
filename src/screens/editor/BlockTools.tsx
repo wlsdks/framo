@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BLOCK_EFFECTS, BLOCK_LOOKS, BLOCKS, blockItems, effectOf, isAlone, shownLook, variantOfBlock, type NoRoom, type SavedKind } from '../../deck/blocks'
+import { BLOCK_EFFECTS, BLOCK_LOOKS, BLOCKS, blockItems, effectChoices, effectOf, isAlone, shownLook, variantOfBlock, type NoRoom, type SavedKind } from '../../deck/blocks'
 import { sceneOf } from '../../deck/scenes'
 import type { Block, BlockEffect, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
@@ -75,6 +75,9 @@ export function BlockTools({
 }) {
   const spec = BLOCKS[block.type]
   const [menu, setMenu] = useState<'look' | 'motion' | 'variant' | 'more' | null>(null)
+  // 모션 메뉴의 '더 보기'를 펼쳤는지 (어울리는 넷 말고 나머지)
+  const [moreFx, setMoreFx] = useState(false)
+  const fx = effectChoices(block.type)
   const menuRef = useRef<HTMLUListElement>(null)
   // 메뉴는 도구 아래로 연다. 고른 부품이 장 아래쪽이라 아래에 자리가 모자라면 위로 (위 끝은 머리 띠 아래).
   // 남은 높이만큼만 쓰고 나머지는 메뉴 안에서 스크롤 (노트북의 낮은 창에서 잘리지 않게)
@@ -296,7 +299,8 @@ export function BlockTools({
         )}
         {menu === 'motion' && !scened && (
           <ul ref={menuRef} className="bk-menu" role="menu" onKeyDown={onMenuKeys}>
-            {BLOCK_EFFECTS.map((x) => (
+            {/* 어울리는 넷 먼저, 나머지('튀어나오기', '한 글자씩' 같은)는 '더 보기'. 고른 것이 '더 보기'에 있으면 펼쳐 둔다 */}
+            {BLOCK_EFFECTS.filter((x) => moreFx || fx.more.includes(effect) || fx.first.includes(x.id)).map((x) => (
               <li key={x.id}>
                 <button
                   type="button"
@@ -321,6 +325,14 @@ export function BlockTools({
                 </button>
               </li>
             ))}
+            {!moreFx && !fx.more.includes(effect) && (
+              <li>
+                <button type="button" role="menuitem" className="bk-menu-item bk-menu-more" onClick={() => setMoreFx(true)}>
+                  <b>더 보기</b>
+                  <span className="bk-menu-d">모션 {fx.more.length}가지 더</span>
+                </button>
+              </li>
+            )}
           </ul>
         )}
       </div>
