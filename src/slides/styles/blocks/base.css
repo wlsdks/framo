@@ -85,7 +85,7 @@
 /* 그림의 이름표(흐름, 연결도 같은)는 좁은 단에서 두세 줄로 꺾이는 짧은 글이라 줄 길이를 고르게: pretty는 끝 줄이 아주 짧을 때만
    고쳐서 '결과를 시스템에 / 기록'은 그대로 두었다. 줄 수는 그대로라 잰 높이(blockHeights.ts)도 그대로다.
    목록은 screens/assembly.ts의 FIGURE_TYPES와 같다 */
-.bk:is([data-type='flow'], [data-type='network'], [data-type='merge'], [data-type='split'], [data-type='tiles'], [data-type='hub'], [data-type='gather'], [data-type='search'], [data-type='layers'], [data-type='gate'], [data-type='dupes'], [data-type='aliases'], [data-type='adoption'], [data-type='spread']) > .bk-in {
+.bk:is([data-type='flow'], [data-type='network'], [data-type='merge'], [data-type='split'], [data-type='tiles'], [data-type='hub'], [data-type='gather'], [data-type='search'], [data-type='layers'], [data-type='gate'], [data-type='dupes'], [data-type='aliases'], [data-type='adoption'], [data-type='spread'], [data-type='rank']) > .bk-in {
   text-wrap-style: balance;
 }
 

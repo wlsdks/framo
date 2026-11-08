@@ -2492,6 +2492,66 @@ export function motionEngine(): MotionEngine {
           }
           break
         }
+        case 'rank': {
+          // 순위 바뀌기: 순위가 바뀌는 움직임이 곧 할 말이다. 지난 순위가 위에서부터 서고, 지금 칸의 항목들이 지난 순서 그대로
+          // (자기의 지난 줄에) 나타난다. 잠깐 머문 뒤 모두 함께 지금 자리로 옮겨 가고, 옮기는 동안 잇는 선이 왼쪽에서부터 같은
+          // 빠르기로 그어져 항목이 지나간 길이 선으로 남는다. 처음 든 항목은 아래에서 올라와 빈 줄을 채운다. 다 서면 바뀐 만큼(▲3)이 나온다.
+          // 좁은 칸(지난 목록과 선이 없다)에서는 지금 목록이 아래에서부터 차례로 선다. 자리는 움직임을 걸기 전에 잰다
+          const board = one('.bk-ra-board')
+          const now = $('.bk-ra-it')
+          if (!board || !now.length) break
+          fade(one('.bk-ra-l'), 0, 500)
+          const links = one('.bk-ra-links')
+          const wide = !!links && getComputedStyle(links).display !== 'none'
+          if (!wide) {
+            fade(one('.bk-ra-when.is-to'), 60, 500)
+            items('.bk-ra-it', 120, (el, at) => rise(el, at, L.y * 0.5))
+            break
+          }
+          fade(one('.bk-ra-when.is-from'), 40, 500)
+          const was = $('.bk-ra-wi')
+          was.forEach((el, i) => rise(el, 80 + i * 70, L.y * 0.4))
+          const tops = now.map((el) => spot(el, board).t)
+          // 줄의 높이는 모두 같다(rank.css의 1fr 줄): 지난 줄 a의 자리는 첫 줄에서 a줄 아래
+          const pitch = now.length > 1 ? (tops[now.length - 1] - tops[0]) / (now.length - 1) : 0
+          const shown = 80 + was.length * 70 + 260
+          const hold = 520
+          const go = shown + hold
+          const travel = levelName === 'lively' ? 1250 : 1000
+          fade(one('.bk-ra-when.is-to'), shown - 120, 500)
+          now.forEach((el, k) => {
+            const a = el.dataset.from === '' || el.dataset.from === undefined ? null : Number(el.dataset.from)
+            if (a === null) {
+              // 처음 든 항목: 옮기기가 끝날 무렵 아래에서 올라온다
+              rise(el, go + travel * 0.7, L.y * 0.8)
+              return
+            }
+            const dy = tops[0] + a * pitch - tops[k]
+            const total = go + travel - shown
+            const leave = (go - shown) / total
+            // 옮기는 동안 강조할 항목 밖의 것은 옅어진다: 자리를 바꾸며 서로 지나칠 때 글이 겹쳐도 오르는 하나가 또렷하게 읽힌다
+            const pass = el.classList.contains('is-hl') ? 1 : 0.35
+            run(
+              anims,
+              el,
+              [
+                { opacity: 0, translate: `0 ${dy}px`, offset: 0, easing: OUT },
+                { opacity: 1, translate: `0 ${dy}px`, offset: 360 / total },
+                { opacity: 1, translate: `0 ${dy}px`, offset: leave, easing: CARRY },
+                { opacity: pass, offset: leave + (1 - leave) * 0.5 },
+                { opacity: 1, translate: '0px 0px', offset: 1 },
+              ],
+              s(shown),
+              { easing: 'linear', duration: d(total) },
+            )
+          })
+          // 선은 항목이 옮겨 가는 동안 왼쪽에서부터 그어진다(같은 때, 같은 이징): 선 끝이 항목을 따라간다. 선마다 점선 길이(dasharray)로
+          // 긋지 않고 선의 띠 전체를 왼쪽부터 걷는다: 띠는 늘여 그린 그림(preserveAspectRatio none)이라 굵기를 지키는 선(non-scaling-stroke)의
+          // 점선 길이가 화면 px로 읽혀, 긋는 동안 선이 여러 토막의 점선으로 보였다
+          run(anims, links!, [{ clipPath: 'inset(-8px 100% -8px 0)' }, { clipPath: 'inset(-8px 0 -8px 0)' }], s(go), { easing: CARRY, duration: d(travel) })
+          for (const mv of $('.bk-ra-mv')) fade(mv, go + travel + 80, 500)
+          break
+        }
         case 'spread': {
           // 퍼짐: 옅은 눈금 판이 먼저 깔리고, 단계마다 그 단계에 드는 눈금이 왼쪽 가운데의 씨앗에서 가까운 차례로 번진다(물결).
           // 기울어 있던 눈금이 똑바로 서며 물든다(사람들이 같은 쪽을 보기 시작한다). 단계의 몫과 이름은 그 단계가 번지기
