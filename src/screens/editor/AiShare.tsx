@@ -5,6 +5,7 @@ import { shapeBlockId, shapeDeckId, shapeSlideId, toShape } from '../../ai/share
 import { mcpCommand } from '../../ai/client'
 import type { AiAsk, AskJob } from '../../ai/useAiAsk'
 import type { AiShare } from '../../ai/useAiShare'
+import { slideAiHidden } from '../../deck/aiHidden'
 import { BLOCK_EFFECTS, BLOCK_FROMS, BLOCK_LINKS, BLOCK_LOOKS, BLOCK_SPEEDS, BLOCK_WHENS, BLOCKS, slideName } from '../../deck/blocks'
 import { pageInfo } from '../../deck/fields'
 import { LAYOUTS } from '../../deck/layouts'
@@ -19,6 +20,7 @@ import { pageProps, ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
 import { sideName } from '../../slides/panes'
 import { useDeck } from '../../store/deckStore'
 import { AskIcon, BackIcon, CheckIcon, ChevronIcon, CopyIcon, Info, Popover, Toggle, useDialog } from '../ui'
+import { measureOver } from './aiOver'
 
 const SKIP_REASON: Record<Exclude<OpCode, 'applied'>, string> = {
   no_slide: '그 슬라이드가 지금은 없어요',
@@ -34,6 +36,7 @@ const SKIP_REASON: Record<Exclude<OpCode, 'applied'>, string> = {
   look_clash: '이 슬라이드의 다른 컴포넌트와 바탕이 어울리지 않아요',
   link_clash: '이으면 뜻이 서지 않는 두 컴포넌트예요',
   scene_unfit: '이 슬라이드에 맞지 않는 장면이에요',
+  private: 'AI에게 숨긴 슬라이드나 컴포넌트가 바뀌어요',
 }
 
 /** 장면 줄이 같이 고른 다른 설정 때문에 빠졌으면, 장면이 아니라 그 설정이 이유라고 말한다 */
@@ -98,7 +101,7 @@ function Consent({ direct, onMore, onCancel, onOk }: { direct: boolean; onMore?:
     <div className="ask-consent" role="group" aria-label="AI에게 모양 보여 주기">
       <p className="ask-consent-p">
         이 발표의 모양만 AI에게 보여 줘요. 적은 글은 보내지 않아요.
-        {!onMore && <Info label="AI에게 보이는 것">슬라이드 순서, 레이아웃, 칸이 비었는지, 테마가 보여요. 제목과 작성한 글, 숫자, 이미지, 노트는 보이지 않아요.</Info>}
+        {!onMore && <Info label="AI에게 보이는 것">슬라이드 순서, 레이아웃, 칸마다 글이 대략 몇 자인지, 테마가 보여요. 제목과 작성한 글, 숫자, 이미지, 노트는 보이지 않아요.</Info>}
       </p>
       <div className="ask-consent-actions">
         {onMore && (
@@ -192,9 +195,15 @@ function AskList({
           <AskSteps job={job} />
         </div>
       )}
+      {/* AI에게 숨긴 슬라이드는 AI가 보지도 바꾸지도 못하니 이 슬라이드의 부탁을 늘어놓지 않는다 (로컬 서버도 받지 않는다) */}
+      {scope === 'slide' && slide && slideAiHidden(slide) && (
+        <p className="ask-done" role="status">
+          AI에게 숨긴 슬라이드예요. 슬라이드 메뉴의 ‘AI에게 보이기’를 누르면 부탁할 수 있어요.
+        </p>
+      )}
       <ul className="ask-list">
         {/* 묻는 동안은 고른 부탁 하나만 남긴다: 무엇을 맡기려는지 그 자리에서 보이고, 슬라이드 아래 창이 1280×600에서도 넘치지 않게 */}
-        {ASKS.filter((a) => a.scope === scope && askFits(a, slide?.layout ?? null) && (!asking || a.id === asking)).map((a) => (
+        {ASKS.filter((a) => a.scope === scope && askFits(a, slide?.layout ?? null) && !(scope === 'slide' && slide && slideAiHidden(slide)) && (!asking || a.id === asking)).map((a) => (
           <li key={a.id}>
             <button
               type="button"
@@ -474,7 +483,8 @@ function AiDetails({ deck, ai, ask, onPicked }: { deck: Deck; ai: AiShare; ask: 
 /** 한 장 뒤: AI에게 보이는 것과 보이지 않는 것, 보이는 그대로, 터미널에서 직접 연결하기 */
 function AiMore({ deck, ai, onBack }: { deck: Deck; ai: AiShare; onBack: () => void }) {
   const setAiShare = useDeck((s) => s.setAiShare)
-  const shape = useMemo(() => JSON.stringify(toShape(deck), null, 2), [deck])
+  // 올리는 것과 같게 넘침까지 (왼쪽 목록의 그림에서 잰다)
+  const shape = useMemo(() => JSON.stringify(toShape(deck, measureOver(deck)), null, 2), [deck])
   const back = useRef<HTMLButtonElement>(null)
   // 넘어오면 초점을 '뒤로'에: 누른 링크가 사라져 초점이 문서 맨 앞으로 가지 않게
   useEffect(() => back.current?.focus(), [])
@@ -492,7 +502,7 @@ function AiMore({ deck, ai, onBack }: { deck: Deck; ai: AiShare; onBack: () => v
           <ul>
             <li>보고 종류와 시간</li>
             <li>슬라이드 순서와 레이아웃</li>
-            <li>칸이 비었는지, 긴지</li>
+            <li>칸마다 글이 대략 몇 자인지, 넘쳤는지</li>
             <li>테마와 강조색</li>
           </ul>
         </div>
@@ -503,6 +513,7 @@ function AiMore({ deck, ai, onBack }: { deck: Deck; ai: AiShare; onBack: () => v
             <li>숫자와 이미지</li>
             <li>발표자 노트</li>
             <li>소속, 이름, 연락처</li>
+            <li>AI에게 숨긴 슬라이드와 컴포넌트</li>
           </ul>
         </div>
       </div>

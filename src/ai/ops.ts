@@ -4,6 +4,7 @@
 // - 지우는 동작은 빈 장, 빈 항목, 빈 부품만. 내용이 있는 장은 '발표에서 빼기'(숨기기)만 된다.
 // - 부품 장도 모양은 바꿀 수 있다: 빈 부품 넣기, 부품 옮기기와 맞바꾸기, 크기, 모양, 바탕, 움직임(나오는 차례와 때 포함), 항목 수, 이음표. 부품 안의 글은 그대로 따라간다.
 // - AI가 적을 수 있는 글은 세 가지뿐이고 모두 사람에게 보이는 안내다: 제안 설명, 장 안내, 칸 안내 문구.
+// - 사람이 AI에게 숨긴 장과 부품(deck/aiHidden.ts)은 바꾸지도 옮기지도 못한다. 다른 op가 그것을 바꾸게 되면 그 op를 되돌린다.
 
 import {
   asCompose,
@@ -54,6 +55,7 @@ import {
   type LinkTarget,
   type Spot, revealOf, BLOCK_REVEAL_IDS
 } from '../deck/blocks'
+import { aiHiddenIds, slideAiHidden } from '../deck/aiHidden'
 import { BLUEPRINTS } from '../deck/blueprints'
 import { relayout, withVisibleCount } from '../deck/edits'
 import { makeSlide } from '../deck/generate'
@@ -207,6 +209,8 @@ export type OpCode =
   | 'link_clash'
   /** 그 장에 맞지 않는 장면 (카탈로그 scenes[].layouts, blocks). not_for_layout과 나눠야 AI가 장면만 다시 고른다 */
   | 'scene_unfit'
+  /** 사람이 AI에게 숨긴 장이나 부품을 바꾸거나 옮기게 된다 (그것을 가리켰거나, 다른 것을 바꾸다 그 자리, 크기, 나오는 차례가 바뀐다) */
+  | 'private'
 
 /**
  * 결과 파일에 쓸 수 있는 코드. 로컬 서버가 앱이 보낸 결과를 받을 때 이것으로 확인한다.
@@ -228,6 +232,7 @@ const OP_CODE_SET = {
   look_clash: true,
   link_clash: true,
   scene_unfit: true,
+  private: true,
 } as const satisfies Record<OpCode, true>
 export const OP_CODES = Object.keys(OP_CODE_SET) as OpCode[]
 export const isOpCode = (v: unknown): v is OpCode => typeof v === 'string' && Object.hasOwn(OP_CODE_SET, v)
@@ -578,6 +583,37 @@ function writtenText(slides: Slide[]): Map<string, number> {
   return out
 }
 
+/** op가 가리키는 부품들 (그 부품, 옆에 둘 부품, 맞바꿀 부품, 나오는 차례) */
+function blockRefs(op: Op): BlockRef[] {
+  const o = op as Partial<Record<'block' | 'beside' | 'swap', BlockRef>> & { order?: BlockRef[] }
+  return [o.block, o.beside, o.swap, ...(o.order ?? [])].filter((r): r is BlockRef => r !== undefined)
+}
+
+/** 키 차례와 없는 값(undefined)에 매이지 않는 JSON: 같은 부품을 다시 만들어도(판을 다시 맞추며) 바뀌지 않았으면 같은 글이 된다 */
+const stableJson = (v: unknown): string =>
+  JSON.stringify(v, (_, x: unknown) =>
+    isObj(x) ? Object.fromEntries(Object.entries(x).filter(([, y]) => y !== undefined).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : x,
+  )
+
+/**
+ * 사람이 AI에게 숨긴 것의 지금 모습: 숨긴 장은 통째로, 숨긴 부품은 그 부품(자리, 크기, 바탕, 움직임, 글)과 나오는 차례.
+ * 제안의 op 하나가 이것을 바꾸면 그 op를 되돌린다
+ */
+function privateMark(slides: Slide[]): string {
+  const marks: unknown[] = []
+  for (const s of slides) {
+    if (slideAiHidden(s)) {
+      marks.push(['slide', s])
+      continue
+    }
+    const shut = aiHiddenIds(s)
+    if (!shut.size) continue
+    const order = playOrder(s).map((b) => b.id)
+    for (const b of s.blocks ?? []) if (shut.has(b.id)) marks.push(['block', s.id, b, order.indexOf(b.id)])
+  }
+  return marks.length ? stableJson(marks) : ''
+}
+
 /** 앞의 글이 뒤에 하나도 빠짐없이 남았는지 (같은 글이 둘이면 둘 다) */
 const keepsText = (before: Map<string, number>, after: Map<string, number>) => [...before].every(([v, n]) => (after.get(v) ?? 0) >= n)
 
@@ -690,6 +726,11 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
     if (i < 0) return fail('no_slide')
     const s = slides[i]
     const spec = LAYOUTS[s.layout]
+    // 사람이 AI에게 숨긴 장, 숨긴 부품을 가리키는 op (옆에 두기, 맞바꾸기, 나오는 차례도). 모양에는 숨긴 부품의 id가 없지만,
+    // 숨기기 전에 받은 모양의 id로 올 수 있다. 다른 것을 바꾸다 숨긴 것이 바뀌는 op는 아래 마지막 그물이 되돌린다
+    if (slideAiHidden(s)) return fail('private')
+    const shut = aiHiddenIds(s)
+    if (shut.size && blockRefs(op).some((ref) => shut.has(findBlock(s, ref)?.id ?? ''))) return fail('private')
 
     switch (op.op) {
       case 'remove_slide':
@@ -974,18 +1015,22 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
   }
 
   // 마지막 그물: 어느 제안도 사람이 적은 글을 지우지 못한다. 모양만 바꾸는 동작이 글을 잃으면(레이아웃을 바꾸며 가려 둔 칸을
-  // 부품 장으로 옮기지 않고 버리던 것처럼) 그 동작만 되돌리고 적용하지 않는다
+  // 부품 장으로 옮기지 않고 버리던 것처럼) 그 동작만 되돌리고 적용하지 않는다.
+  // 사람이 AI에게 숨긴 것도 같다: 다른 부품을 넣거나 옮기거나 키우다 숨긴 부품의 자리, 크기, 나오는 차례가 바뀌면 되돌린다
   const results = ops.map((op): OpResult => {
     const before = { slides, theme, motion, touched: new Set(touched) }
     const text = writtenText(slides)
+    const shut = privateMark(slides)
     const result = step(op)
-    if (!result.ok || keepsText(text, writtenText(slides))) return result
+    if (!result.ok) return result
+    const code = privateMark(slides) !== shut ? 'private' : keepsText(text, writtenText(slides)) ? null : 'has_content'
+    if (!code) return result
     slides = before.slides
     theme = before.theme
     motion = before.motion
     touched.clear()
     before.touched.forEach((id) => touched.add(id))
-    return { ok: false, code: 'has_content' }
+    return { ok: false, code }
   })
 
   // 글자 크기나 보내는 자료를 바꾸면 본문 높이가 달라져서 모든 부품 장을 다시 맞춘다 (편집기와 같은 규칙)
