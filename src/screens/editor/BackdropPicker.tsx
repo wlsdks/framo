@@ -1,10 +1,10 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { BACKDROP_PLACES, BACKDROP_STRENGTHS, BACKDROPS, backdropOf, backdropSpec, placeOfArea, withBackdropKind } from '../../deck/backdrops'
 import { motionOf } from '../../deck/themes'
 import type { BackdropId, Deck, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { backdrops } from '../../slides/Backdrop'
-import { ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
+import { ScaledSlide, SLIDE_W, SlideCanvas } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
 import { ChevronIcon, Info, Segmented } from '../ui'
 import { setBackdropEditing, useBackdropEditing } from './backdropEdit'
@@ -57,7 +57,7 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
       {open && (
         <>
           {level === 'none' && <p className="sp-quiet">모션이 ‘없음’이라 발표할 때 배경이 멈춘 그림으로 보여요.</p>}
-          <div className="sp-grid bdp-grid" role="group" aria-label="배경 고르기">
+          <div className="sp-grid bdp-grid" role="group" aria-label="배경 고르기" style={{ '--mo-line': `${SLIDE_W / THUMB_W}px` } as CSSProperties}>
             <BackdropCard look={look} slide={slide} kind={null} on={!slide.backdrop} onPick={() => pick(null)} />
             {BACKDROPS.map((b) => (
               <BackdropCard key={b.id} look={look} slide={slide} kind={b.id} on={now?.kind === b.id} onPick={() => pick(b.id)} />
@@ -72,7 +72,7 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
             <span className="ins-opt-l">
               자리
               <Info label="자리 도움말" align="start">
-                배경이 깔리는 곳이에요. 글이 적은 쪽에 두면 좋아요. 글 바로 뒤에서는 배경이 알아서 옅어져요.
+                배경이 깔리는 곳이에요. 글이 적은 쪽에 두면 좋아요. 글 바로 뒤에서는 배경이 알아서 옅어져요. 슬라이드에서 옮길 때는 방향키로 한 칸씩 옮기고, Shift와 함께 누르면 크기를 바꿔요.
               </Info>
               {!placeOfArea(now.at) && <span className="bdp-own">직접 옮긴 자리</span>}
             </span>
@@ -90,7 +90,7 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
           <button type="button" className={cx('btn btn-ghost btn-sm bdp-move', editing && 'is-on')} aria-pressed={editing} onClick={() => setBackdropEditing(editing ? null : slide.id)}>
             {editing ? '옮기기 끝내기' : '슬라이드에서 끌어 옮기기'}
           </button>
-          {editing && <p className="bdp-help">슬라이드 위의 틀 안을 끌어 옮기고, 모서리를 끌어 크기를 바꿔요. 방향키로도 한 칸씩 옮겨요(Shift와 함께면 크기). Esc로 끝내요.</p>}
+          {editing && <p className="bdp-help">슬라이드 위의 틀을 끌어 옮기고, 모서리로 크기를 바꿔요.</p>}
           <div className="ins-opt">
             <span className="ins-opt-l">진하기</span>
             <Segmented

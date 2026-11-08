@@ -50,6 +50,8 @@ describe('모션 그래픽을 그리는 도구', () => {
     P.stroke(1, 0, 0.1)
     const svg = P.markup()
     expect(svg.match(/<path/g)).toHaveLength(3)
+    // 선만 이음(stroke-linejoin)을 갖는다: 작은 그림이 선만 골라 화면 1px로 그릴 수 있게
+    expect(svg.match(/stroke-linejoin/g)).toHaveLength(1)
     expect(svg).toContain('M10 10h0M20 10h0')
     expect(svg.match(/class="mo-a"/g)).toHaveLength(1)
     // 짙기 배율을 곱하되 0.95를 넘지 않는다. 강조색의 class는 쓰는 쪽이 정할 수 있다

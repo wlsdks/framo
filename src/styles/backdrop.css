@@ -58,6 +58,14 @@
   margin-top: 12px;
 }
 
+/* 카드의 작은 그림: 장을 15분의 1로 줄여 1px 선이 0.07px이 되어 사라졌다(검수: '없음'과 구분되지 않는다). 선만 화면 1px로
+   그린다(--mo-line: 화면 1px이 장의 몇 px인지, BackdropPicker. 움직이는 캔버스도 같은 값을 읽는다, motion/draw.ts). 발표 화면에서도
+   선은 화면의 1px 남짓이라 이쪽이 실제로 보이는 모습에 가깝다. 점은 그대로 줄인다(망점이 뭉치지 않게). 줄인 배율이 CSS transform이라
+   vector-effect로는 되지 않는다 */
+.bdp-grid .s-bd path[stroke-linejoin] {
+  stroke-width: var(--mo-line);
+}
+
 /* 카드 아래의 어울리는 슬라이드: 이름보다 한 단계 옅고 작게, 두 줄까지 */
 .bdp-fits {
   display: -webkit-box;

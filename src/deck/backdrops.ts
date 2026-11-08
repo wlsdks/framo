@@ -43,12 +43,13 @@ export const BACKDROP_STRENGTHS: { id: BackdropStrength; name: string; descripti
 
 /** 자주 쓰는 자리. 장 전체를 12×12칸으로 나눈 칸 수다(세로 한 칸은 90px, 가로 한 칸은 160px) */
 export const BACKDROP_PLACES: { id: string; name: string; at: BlockAt }[] = [
+  // 고르는 단추의 차례: 짝(왼쪽과 오른쪽, 위와 아래)을 붙여 둔다. 뒤섞어 두던 때는 찾게 됐다(검수)
   { id: 'full', name: '전체', at: { x: 0, y: 0, w: BOARD_COLS, h: BOARD_ROWS } },
-  { id: 'right', name: '오른쪽', at: { x: 5, y: 0, w: 7, h: 12 } },
+  { id: 'center', name: '가운데', at: { x: 2, y: 2, w: 8, h: 8 } },
   { id: 'left', name: '왼쪽', at: { x: 0, y: 0, w: 7, h: 12 } },
+  { id: 'right', name: '오른쪽', at: { x: 5, y: 0, w: 7, h: 12 } },
   { id: 'top', name: '위', at: { x: 0, y: 0, w: 12, h: 7 } },
   { id: 'bottom', name: '아래', at: { x: 0, y: 5, w: 12, h: 7 } },
-  { id: 'center', name: '가운데', at: { x: 2, y: 2, w: 8, h: 8 } },
   { id: 'corner', name: '오른쪽 아래', at: { x: 6, y: 5, w: 6, h: 7 } },
 ]
 
