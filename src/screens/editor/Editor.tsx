@@ -36,11 +36,10 @@ import { SlideStage } from './SlideStage'
 import { useImageInput } from './useImageInput'
 import { VersionPanel } from './Versions'
 
-/** 내보내기의 '영상'이 끝난 뒤 편집기에 띄우는 말 */
-const RECORDED: Record<RecordResult, string> = {
+/** 영상 녹화가 끝나 발표를 닫은 뒤 편집기에 띄우는 말 (시작하지 못한 것은 발표 화면의 묻는 창이 다시 묻는다) */
+const RECORDED: Record<Exclude<RecordResult, 'failed'>, string> = {
   saved: '영상을 저장했어요. 다운로드 폴더를 확인해 주세요.',
-  empty: '녹화된 장면이 없어요. 내보내기에서 ‘영상’을 다시 눌러 주세요.',
-  failed: '녹화를 시작하지 못했어요. 화면 공유를 묻는 창에서 ‘이 탭’을 고르면 돼요.',
+  empty: '녹화된 장면이 없어요. 내보내기에서 ‘영상 (MP4)’을 다시 눌러 주세요.',
 }
 
 export function Editor({ id }: { id: string }) {

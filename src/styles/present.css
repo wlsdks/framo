@@ -137,10 +137,73 @@
   isolation: isolate;
 }
 
-.present-note {
-  max-width: 28em;
-  padding: 0 8px;
-  color: #e7e8ea;
+/*
+ * 녹화하는 동안의 표시: 녹화 중 · 쪽 · 멈추는 법 (Present.tsx). 발표 막대와 같은 자리, 같은 모양으로 늘 보인다.
+ * 슬라이드 상자 밖의 형제라 요소 녹화에는 담기지 않는다(여백이 없어 장 위에 겹쳐도). 누름은 받지 않는다
+ */
+.present-rec {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.5);
+  color: rgb(255 255 255 / 0.82);
   font-size: 13px;
-  line-height: 1.4;
+  font-weight: 600;
+  pointer-events: none;
+  /* 장 넘기기(View Transition) 동안에도 넘어가는 장 아래로 가려지지 않게 따로 떼어 둔다 */
+  view-transition-name: present-rec;
+}
+
+/* 한 줄일 때 사이의 점 (오른쪽 여백에 세 줄로 놓일 때는 감춘다) */
+.present-rec-sep {
+  color: rgb(255 255 255 / 0.5);
+}
+
+.present-rec.is-side .present-rec-sep {
+  display: none;
+}
+
+.present-rec-n {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 오른쪽 여백(1280×600 창처럼 장보다 넓은 창): 여백 한가운데에 세 줄로 */
+.present-rec.is-side {
+  right: 0;
+  width: calc((100vw - 100vh * 16 / 9) / 2);
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 8px;
+  background: none;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.present-rec.is-top {
+  top: calc((100vh - 100vw * 9 / 16) / 4);
+  translate: 0 -50%;
+}
+
+/* 녹화 중을 알리는 빨간 점. 녹화 프로그램마다 같은 뜻이라 말 없이도 읽힌다 */
+.present-rec-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: #e5484d;
+}
+
+/* 녹화할지 묻는 창: 문단 사이를 조금 띄운다 (보통 창은 문단 하나) */
+.rec-intro .modal-body p + p {
+  margin-top: 8px;
+}
+
+.rec-intro-local {
+  color: var(--ink-3);
+  font-size: 13px;
 }
