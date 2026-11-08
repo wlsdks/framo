@@ -38,6 +38,8 @@ import {
 } from '../src/ai/protocol'
 import { catalog, checkShape, onlyKnownStrings, SHAPE_FORMAT, type ShapeDeck } from '../src/ai/share'
 import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LINK_IDS, BLOCK_LOOK_IDS, BLOCK_REVEAL_IDS, BLOCK_SPEED_IDS, BLOCK_TYPES, BLOCK_WHEN_IDS, BOARD_COLS, BOARD_ROWS, MAX_BLOCKS } from '../src/deck/blocks'
+import { DURATIONS } from '../src/deck/blueprints'
+import { targetCount } from '../src/deck/generate'
 import { LAYOUT_ORDER } from '../src/deck/layouts'
 import { SCENE_IDS } from '../src/deck/scenes'
 import { FONTS, FOOTERS, MOTIONS, PLACES, TEXT_SIZES, THEME_ORDER, TONES, TRANSITIONS } from '../src/deck/themes'
@@ -55,14 +57,16 @@ const MESSAGES = {
   badShape: '모양 파일을 읽을 수 없어요. 앱에서 발표를 다시 열면 새로 만들어져요.',
   badRequest: '제안의 꼴이 맞지 않아요. check_changes로 보내면 어느 op의 어느 키가 틀렸는지 알려 줘요.',
   tooMany: '이 발표에 아직 보지 않은 제안이 많아요. 사람이 앱에서 확인한 뒤에 다시 보내세요.',
-  unknownRequest: '모르는 제안 id예요.',
+  unknownRequest: '모르는 제안 id예요. propose_changes가 돌려준 request(r로 시작)를 그대로 쓰세요. 오래된 결과는 지워져요.',
   blocked: '응답에 내보낼 수 없는 값이 있어서 막았어요.',
   unknownTool: '모르는 도구예요.',
-  pending: '앱에서 사람이 확인하면 적용돼요. get_result로 결과를 볼 수 있어요.',
+  pending:
+    '사용자가 Framo 편집 화면에서 이 발표를 열면 제안이 떠요. 사람이 미리 보고 적용하거나 거절한 뒤에 get_result로 결과를 볼 수 있어요. ' +
+    '되풀이해 묻지 말고 사용자에게 그렇게 알리세요.',
   checked:
     '미리 돌려 보기만 했고 아무것도 보내지 않았어요. ok가 false인 op는 help의 그 코드 풀이대로 고치거나 빼고 propose_changes로 보내세요. ' +
     '노트나 제목의 실제 길이처럼 모양에 없는 것 때문에 앱에서 조금 다를 수 있어요.',
-  internal: '처리하지 못했어요.',
+  internal: '처리하지 못했어요. 한 번만 다시 해 보고, 또 안 되면 Framo를 껐다 켜 달라고 사용자에게 알리세요.',
 } as const
 
 /**
@@ -77,7 +81,7 @@ const CODE_HELP: Record<Exclude<OpCode, 'applied'> | 'invalid', string> = {
   last_slide: '남은 장이 하나뿐이라 지울 수 없어요.',
   unknown_role: '카탈로그 deckTypes[].roles[].role에 있는 역할 이름이 아니에요. 그 이름을 그대로 쓰거나 layout을 같이 주세요.',
   no_change: '이미 그 값이라 바뀌는 것이 없어요. 이 op는 빼세요.',
-  not_reviewed: '사람이 이 op를 적용하지 않고 넘겼어요.',
+  not_reviewed: '사람이 제안을 보기 전에 이 발표의 AI 공유를 꺼서 적용되지 않았어요. 사용자가 다시 켜기 전에는 같은 제안을 보내지 마세요.',
   no_block: '그 부품이 이 장에 없어요. get_shape의 blocks[].id나 같은 제안에서 add_block의 as로 붙인 이름을 쓰세요.',
   no_room: '장에 자리가 모자라요. 부품 수를 줄이거나 다른 자리에 넣고, 부품의 가장 좁은 너비(blocks[].minSpan)를 확인하세요.',
   look_clash: '한 장에는 면 한 가지만 써요: 들여 쓰기(card)끼리, 또는 강조(bold) 하나와 바탕 없는(plain) 부품들. 혼자 장 너비를 다 쓰는 부품은 바탕 없이 그려져요.',
@@ -223,7 +227,7 @@ const TOOLS = [
     name: 'list_decks',
     description:
       '사용자가 앱에서 AI 공유를 켠 발표 목록. 제목은 없고 해시 id(d로 시작)로 구분한다. 발표 종류, 장 수, 듣는 사람, 시간이 나온다. ' +
-      '최근에 고친 순서라서, 여러 개면 맨 앞이 지금 고치고 있는 발표일 가능성이 크다. 목록이 비었으면 앱의 편집 화면 위쪽 ‘AI 다듬기’에서 공유를 켜 달라고 안내한다.',
+      '최근에 고친 순서라서, 여러 개면 맨 앞이 지금 고치고 있는 발표일 가능성이 크다. 목록이 비었으면 Framo 편집 화면 위쪽 ‘AI 다듬기’를 열고 아래 ‘보이는 것, 직접 연결’에서 ‘이 발표를 AI에게 보여 주기’를 켜 달라고 안내한다.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
@@ -233,7 +237,9 @@ const TOOLS = [
       '쓸 수 있는 레이아웃(칸과 항목 수 범위 포함), 발표 종류별 장 역할(role)과 순서, 듣는 사람, 시간, 방식, 테마, 부품 장에 쓰이는 부품(blocks). ' +
       '제안을 만들기 전에 한 번 읽는다. add_slide의 role에 여기 나온 역할 이름을 쓰면 그 장의 안내와 이름표까지 같이 들어간다. ' +
       '거짓(false)과 없음(null)인 값은 빠진다: 예를 들어 highlight가 없는 레이아웃은 강조할 항목을 고를 수 없다. ' +
-      '크니까 deck을 주어 그 발표 종류의 역할만 받고, 부품 장(layout compose)을 만들거나 고치지 않을 때는 blocks를 false로 해서 부품 목록을 뺀다.',
+      '크니까 deck을 주어 그 발표 종류의 역할만 받고, 부품 장(layout compose)을 만들거나 고치지 않을 때는 blocks를 false로 해서 부품 목록을 뺀다. ' +
+      'roles[].priority는 1이 늘 넣는 장이고, 시간이 짧아 장을 줄일 때는 3, 2 차례로 뒤쪽부터 뺀다(듣는 사람에 따라 2와 3이 한 단계 오르내린다). ' +
+      `시간마다 맞추는 장 수: ${DURATIONS.map((d) => `${d.name} ${targetCount(d.minutes)}장`).join(', ')}.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -286,7 +292,7 @@ const TOOLS = [
       '- set_options {slide, highlight?: 강조할 항목 번호(0부터, -1은 없음; 카탈로그 layouts[].highlight가 있는 레이아웃만), flip?: 옆 판을 반대쪽에, pane?: 옆 판 너비(layouts[].panes.sides 중 하나, null은 기본; 둘 다 panes가 있는 레이아웃의 panes.variants 모양에서만), contain?: 이미지와 설명의 이미지를 자르지 않기, hideHead?: 제목과 부제 숨기기, hideFoot?: 출처와 아래 표시 숨기기(글은 지우지 않음), motion?: 이 장만 다른 움직임(카탈로그 motions, null은 발표 전체 설정대로), tone?: 이 장의 바탕(카탈로그 tones; 표지, 섹션, 결정 요청은 안 됨), place?: 제목 덩어리의 자리(카탈로그 places, null은 기본; layouts[].place가 있는 레이아웃만), transition?: 이 장으로 넘어올 때(카탈로그 transitions, null은 발표 전체 설정대로; morph는 앞 장과 같은 제목이나 부품이 새 자리로 옮겨 간다), scene?: 장면(카탈로그 scenes의 id, null은 장면 끄기; 그 장에 맞는 것만, 아니면 scene_unfit)}',
       '장면(scene)은 장 하나를 영화의 한 컷처럼 처음부터 끝까지 짠 움직임이다. 맞는 장: scenes[].layouts의 레이아웃, 또는 부품 장에 scenes[].blocks의 부품이 하나라도 있을 때(compare는 나란히 선 두 부품뿐인 부품 장에도). ' +
         '장면을 고른 장은 부품마다의 effect, speed, from 대신 장면대로 움직이고, when과 나오는 차례(order)는 그대로다. 움직임 정도(motion)가 none이면 장면도 쉰다.',
-      '- set_theme {theme?: 테마 id, accent?: "#rrggbb"(카탈로그 accents의 강조색에서 고르기) 또는 null(테마 기본색), motion?: 발표할 때 움직임(카탈로그 motions), font?: 제목 글꼴(카탈로그 fonts, null은 테마 글꼴), size?: 글자 크기(textSizes), footer?: 아래 표시(footers), transition?: 장 넘기기(transitions)}',
+      '- set_theme {theme?: 테마 id, accent?: "#rrggbb"(카탈로그 accents의 강조색에서 고르기) 또는 null(테마 기본색), motion?: 발표할 때 움직임(카탈로그 motions), font?: 제목 글꼴(카탈로그 fonts, null은 테마 글꼴), size?: 글자 크기(textSizes), footer?: 아래 표시(footers), transition?: 장 넘기기(transitions)}. null은 accent와 font만 받는다(테마 기본으로). 나머지는 장마다의 set_options와 달리 null을 받지 않는다',
       '바탕(tone)은 흐름을 끊고 눈길을 모을 장 한두 곳에만 쓴다. 모든 장을 바꾸면 오히려 아무것도 눈에 띄지 않는다.',
       '- set_guide {slide, text} 이 장을 어떻게 채우면 좋은지 (200자 이내)',
       '- set_hint {slide, block?, field, item?, text} 칸의 안내 문구 (80자 이내, 한 줄). item을 빼면 장의 칸, 장에 없는 칸이면 모든 항목의 그 칸. block이 있으면 부품 장의 그 부품 칸(카탈로그 blocks[].fields, items.fields).',
@@ -311,7 +317,7 @@ const TOOLS = [
   },
   {
     name: 'get_result',
-    description: '보낸 제안을 사용자가 어떻게 했는지: pending(아직 안 봄), applied(적용), rejected(거절), invalid(꼴이 맞지 않음). 적용했으면 op마다 결과 코드가 나오고, help에 빠진 코드마다 무엇을 고치면 되는지 나온다.',
+    description: '보낸 제안을 사용자가 어떻게 했는지: pending(아직 안 봄), applied(적용), rejected(거절), invalid(꼴이 맞지 않음). 적용했으면 op마다 결과 코드가 보낸 ops와 같은 차례로 나오고, help에 빠진 코드마다 무엇을 고치면 되는지 나온다. pending이면 사람이 아직 보지 않은 것이니 되풀이해 묻지 않는다.',
     inputSchema: {
       type: 'object',
       properties: { request: { type: 'string', description: 'propose_changes가 돌려준 request (r로 시작)' } },
@@ -406,7 +412,7 @@ function callTool(dirs: Dirs, name: string, args: Record<string, unknown>): unkn
         const help = helpFor(results)
         return { request: id, status, results, ...(Object.keys(help).length ? { help } : {}) }
       }
-      if (existsSync(join(dirs.requests, `${id}.json`))) return { request: id, status: 'pending', results: [] }
+      if (existsSync(join(dirs.requests, `${id}.json`))) return { request: id, status: 'pending', results: [], message: MESSAGES.pending }
       throw new ToolError(MESSAGES.unknownRequest)
     }
     default:
@@ -417,7 +423,7 @@ function callTool(dirs: Dirs, name: string, args: Record<string, unknown>): unkn
 // ---------- 프롬프트: 앱의 'AI에게 부탁'과 같은 부탁을 Claude Desktop, Claude Code에서 골라 쓰게 ----------
 
 const deckArg = { name: 'deck', description: '발표 id(d로 시작하는 9글자). 비우면 가장 최근에 고친 공유 발표', required: false }
-const pageArg = { name: 'page', description: '다듬을 장 번호(1부터, 숨긴 장도 센다)', required: true }
+const pageArg = { name: 'page', description: '다듬을 슬라이드 번호(1부터, 발표에서 뺀 슬라이드도 센다)', required: true }
 
 const PROMPTS = ASKS.map((a) => ({
   name: a.id,
@@ -454,7 +460,7 @@ function getPrompt(params: Record<string, unknown>): object | null {
 type Message = { jsonrpc?: unknown; id?: unknown; method?: unknown; params?: unknown }
 
 const INSTRUCTIONS =
-  'Framo(gyeol)는 보고, 제안, 공유 같은 발표를 만드는 앱이다. 이 서버로는 발표의 모양(장 구성, 레이아웃, 테마, 안내 문구)만 보고 바꾸자고 제안할 수 있다. ' +
+  'Framo(gyeol)는 보고, 제안, 지식 공유 같은 발표를 만드는 앱이다. 이 서버로는 발표의 모양(장 구성, 레이아웃, 테마, 안내 문구)만 보고 바꾸자고 제안할 수 있다. ' +
   '사람이 적은 글은 보안 때문에 이 서버에 없고, 사용자에게 붙여 달라고 하지도 않는다. ' +
   '순서: list_decks → get_shape → get_catalog(deck을 주고, 부품 장이 없으면 blocks: false) → check_changes(미리 돌려 보고 고치기) → propose_changes → (사용자가 앱에서 적용) → get_result.'
 
