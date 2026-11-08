@@ -217,3 +217,18 @@
     column-gap: max(140px, 18cqw);
   }
 }
+
+/* 넓고 높은 칸에서는 글도 한 단계 위로: 갈래의 조건을 중간 굵기(500)의 소제목 단계로 키운다(키운 단계에서 52, 굵지 않아 장 제목과
+   다투지 않는다). 질문은 굵은 머리 글꼴이라 44에서 멈춘다. 글이 키운 단계의 끝(굵은 글 44)에 묶여 혼자 써도 본문 높이의 37%만
+   쓰고 오른쪽이 510px 비었다(검수) */
+@container bk (min-width: 760px) and (min-height: 560px) {
+  .bk-dc-condition {
+    --fs: var(--t-h);
+    font-weight: 500;
+  }
+
+  .bk-dc-question {
+    --fs: var(--t-h);
+    font-size: min(calc(44px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+  }
+}
