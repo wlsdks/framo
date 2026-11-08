@@ -422,6 +422,11 @@
   background: var(--accent);
 }
 
+/* 다음 슬라이드의 큰 면은 강조색을 옅게: 여섯 그림이 모두 진한 파란 면이면 메뉴가 시끄러웠다. 진한 강조는 옮겨 가는 작은 상자 하나만 */
+.ds-tr-bar {
+  background: color-mix(in srgb, var(--accent) 28%, var(--bg));
+}
+
 .ds-tr-bar {
   position: absolute;
   top: 38%;
@@ -429,7 +434,6 @@
   width: 76%;
   height: 44%;
   border-radius: 2px;
-  background: var(--accent);
 }
 
 /*
@@ -596,6 +600,7 @@
     left: 12%;
     width: 76%;
     height: 44%;
+    background: color-mix(in srgb, var(--accent) 28%, var(--bg));
   }
 }
 
