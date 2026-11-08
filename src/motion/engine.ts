@@ -1966,7 +1966,7 @@ export function motionEngine(): MotionEngine {
           // 생동감: 질문에서 조각이 괄호 줄기를 타고 갈래마다 번갈아 들어가고, 닿는 갈래의 조건이 잠깐 강조색이 된다.
           // 조각의 길은 움직임을 걸기 전에 잰다: 올라오기(rise)는 걸자마자 시작 자리(아래로 밀린 자리)에 서서, 뒤에 재면 길이 선에서
           // 비켜 났다(발표 화면에서 조각이 선 아래로 지나갔다). 선은 CSS가 그린다(decision.css): 질문에서 오는 가로선은 목록 높이의
-          // 가운데, 줄기는 목록 왼쪽 끝, 갈래는 줄 위에서 0.75em
+          // 가운데, 줄기는 목록 왼쪽 끝, 갈래는 줄 위에서 0.7em
           const root = one('.bk-dc')
           const list = one('.bk-dc-list')
           const rows = $('.bk-dc-row')
@@ -1977,8 +1977,9 @@ export function motionEngine(): MotionEngine {
             const ly = (l.t + l.b) / 2
             rows.forEach((row) => {
               const r = spot(row, root)
-              const y = r.t + 0.75 * (parseFloat(getComputedStyle(row).fontSize) || 30)
-              ways.push({ path: [[l.l - gap, ly], [l.l, ly], [l.l, y], [l.l + 24, y]], cond: row.querySelector('.bk-dc-condition') })
+              // 가지는 줄의 첫 글줄 가운데(0.7em, 줄의 글자 크기는 조건과 같은 단계)에 28px (decision.css)
+              const y = r.t + 0.7 * (parseFloat(getComputedStyle(row).fontSize) || 30)
+              ways.push({ path: [[l.l - gap, ly], [l.l, ly], [l.l, y], [l.l + 28, y]], cond: row.querySelector('.bk-dc-condition') })
             })
           }
           fade(one('.bk-dc-label'), 40, 400)
@@ -2377,19 +2378,14 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'search': {
-          // 하나를 찾으려고 여러 곳을 뒤진다: 기준선과 눈금이 깔리고 곳들이 서면, 강조색 커서가 첫 곳부터 차례로 건너뛴다.
-          // 건너뛸 때마다 그 곳의 이름이 잠깐 강조색이 됐다가 옅어지고(뒤졌지만 없음), 왼쪽 수가 하나씩 오른다(01 → 06).
-          // 다 뒤지면 결과 한 줄이 올라온다. 자리는 움직임을 걸기 전에 잰다
+          // 하나를 찾으려고 여러 곳을 뒤진다: 곳들이 차례로 서고, 첫 곳부터 이름이 차례로 잠깐 강조색이 됐다가 옅어지며(뒤졌지만 없음)
+          // 왼쪽 수가 하나씩 오른다(1 → 6). 다 뒤지면 결과 한 줄이 올라온다
           const list = one('.bk-sr-list')
           const its = $('.bk-sr-it')
-          const cursor = one('.bk-sr-cursor')
           const num = one('.bk-sr-k')
           if (!list || !its.length) break
-          const xs = its.map((it) => spot(it.querySelector('.bk-sr-tick') ?? it, list).l)
           fade(one('.bk-sr-l'), 60, 400)
-          draw(list, 120, 600, 'left center', '::before')
           its.forEach((it, k) => {
-            run(anims, it.querySelector('.bk-sr-tick') as Element, [{ scale: '1 0' }], s(140 + k * 60), { easing: OUT, duration: d(280) })
             rise(it.querySelector('.bk-sr-t'), 160 + k * 60, L.y * 0.4)
             fade(it.querySelector('.bk-sr-m'), 200 + k * 60, 360)
           })
@@ -2397,18 +2393,6 @@ export function motionEngine(): MotionEngine {
           const hop = levelName === 'lively' ? 400 : 340
           const t0 = 160 + its.length * 60 + 80
           rise(one('.bk-sr-num'), t0 - 120, L.y * 0.4)
-          const visible = cursor && getComputedStyle(cursor).display !== 'none' && !still
-          if (visible) {
-            const frames: Keyframe[] = []
-            const total = hop * its.length + 300
-            xs.forEach((x, k) => {
-              const at = (k * hop) / total
-              frames.push({ opacity: 1, translate: `${x}px 0`, offset: Math.min(1, at + (hop * 0.45) / total), easing: CARRY })
-              if (k === 0) frames.unshift({ opacity: 0, translate: `${x}px 0`, offset: 0, easing: 'linear' })
-            })
-            frames.push({ opacity: 0, translate: `${xs[xs.length - 1]}px 0`, offset: 1 })
-            run(anims, cursor!, frames, s(t0), { easing: 'linear', duration: d(total) })
-          }
           const accent = getComputedStyle(list).getPropertyValue('--accent').trim()
           its.forEach((it, k) => {
             const t = it.querySelector<HTMLElement>('.bk-sr-t')
@@ -2478,10 +2462,11 @@ export function motionEngine(): MotionEngine {
           if (!root || !gates.length) break
           const W = root.offsetWidth || 1
           // 통로의 높이: 관문 눈금의 가운데(gate.css의 가운데 줄)
-          const post0 = gates[0].querySelector('.bk-gw-post')
-          const midY = post0 ? (() => { const r = spot(post0, root); return (r.t + r.b) / 2 })() : (root.offsetHeight || 0) / 2
+          // 통로의 높이는 관문 이름의 가운데(이름이 통로 위에 선다, gate.css)
+          const name0 = gates[0].querySelector('.bk-gw-t')
+          const midY = name0 ? (() => { const r = spot(name0, root); return (r.t + r.b) / 2 })() : (root.offsetHeight || 0) / 2
           const dropIdx = gates.findIndex((g) => g.classList.contains('is-drop'))
-          const dropX = dropIdx >= 0 ? (() => { const r = spot(gates[dropIdx].querySelector('.bk-gw-post') ?? gates[dropIdx], root); return (r.l + r.r) / 2 })() : -1
+          const dropX = dropIdx >= 0 ? (() => { const r = spot(gates[dropIdx].querySelector('.bk-gw-t') ?? gates[dropIdx], root); return (r.l + r.r) / 2 })() : -1
           const inEl = one('.bk-gw-in')
           const outEl = one('.bk-gw-out')
           const x0 = inEl ? spot(inEl, root).r : 0
@@ -2490,7 +2475,6 @@ export function motionEngine(): MotionEngine {
           rise(inEl, 100, L.y * 0.4)
           gates.forEach((g, k) => {
             const at = 200 + k * 140
-            run(anims, g.querySelector('.bk-gw-post') as Element, [{ scale: '1 0' }], s(at), { easing: OUT, duration: d(340) })
             rise(g.querySelector('.bk-gw-t'), at + 60, L.y * 0.4)
             fade(g.querySelector('.bk-gw-m'), at + 140, 400)
           })

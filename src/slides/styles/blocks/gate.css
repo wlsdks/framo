@@ -158,3 +158,52 @@
     height: 40px;
   }
 }
+
+/* ---------- 관문을 통로 위의 이름으로 ----------
+   통로를 가로지르는 높은 눈금은 자 모양의 장식처럼 보였다(사용자: 디자인 아쉽다). 눈금을 걷고 관문 이름을 통로 위에 바로 세운다:
+   이름 뒤는 바탕색으로 가려 통로가 이름 앞뒤에서 끊겨 'AI의 요청 ── 회사 계정 ── 권한 ── 기록 ── 답'으로 읽힌다. 하는 일은 이름 아래.
+   거르는 관문은 이름만 강조색, 걸러지는 것은 그 아래 버금 글자색(강조색 글이 아래에 매달려 보였다) */
+@container bk (min-width: 901px) {
+  .bk-gw {
+    grid-template-rows: auto auto;
+    row-gap: 16px;
+  }
+
+  .bk-gw::before {
+    grid-row: 1;
+  }
+
+  .bk-gw-in,
+  .bk-gw-out {
+    grid-row: 1;
+  }
+
+  .bk-gw-t {
+    position: relative;
+    z-index: 3;
+    grid-row: 1;
+    align-self: center;
+    margin: 0;
+    padding: 0 0.6em;
+    background: var(--bg);
+  }
+
+  .bk-gw-below {
+    grid-row: 2;
+    margin-top: 0;
+  }
+}
+
+.bk-gw-post {
+  display: none;
+}
+
+.bk-gw-g.is-drop .bk-gw-t {
+  color: var(--accent);
+}
+
+.bk-gw-x {
+  margin-top: 10px;
+  color: var(--ink-2);
+  font-weight: 400;
+}

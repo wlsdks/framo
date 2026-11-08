@@ -21,7 +21,7 @@ export function Search() {
       <div className="bk-sr-count">
         <T k="heading" className="bk-sr-l" multiline />
         <p className="bk-sr-num">
-          <span className="bk-sr-k">{String(n).padStart(2, '0')}</span>
+          <span className="bk-sr-k">{n}</span>
           <T k="unit" as="span" className="bk-sr-u" oneLine />
         </p>
         <T k="result" className="bk-sr-r" multiline />
@@ -29,13 +29,11 @@ export function Search() {
       <ol className="bk-sr-list">
         {shown.map(({ it, i }, k) => (
           <li key={it.id} className="it bk-sr-it" style={{ '--k': k } as CSSProperties}>
-            <span className="bk-sr-tick" aria-hidden="true" />
             <IT i={i} k="title" className="bk-sr-t" multiline />
             <IT i={i} k="meta" className="bk-sr-m" multiline />
             <ItemTools i={i} />
           </li>
         ))}
-        <span className="bk-sr-cursor" aria-hidden="true" />
       </ol>
     </div>
   )

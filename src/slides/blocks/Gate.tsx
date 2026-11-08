@@ -30,7 +30,6 @@ export function Gate() {
         {shown.map(({ it, i }, k) => (
           <li key={it.id} className={cx('it bk-gw-g', k === drop && 'is-drop')} style={{ '--k': k } as CSSProperties}>
             <IT i={i} k="title" className="bk-gw-t" multiline />
-            <span className="bk-gw-post" aria-hidden="true" />
             <div className="bk-gw-below">
               <IT i={i} k="meta" className="bk-gw-m" multiline />
               {k === drop && <T k="dropped" className="bk-gw-x" multiline />}

@@ -1,6 +1,5 @@
 /* ---------- 여기저기 찾기 ----------
-   왼쪽: 무엇을 찾는지(작게), 뒤진 곳의 수(크게, 숫자 무게 --num-weight), 결과 한 줄. 오른쪽: 곳들이 가는 기준선 위의 눈금으로
-   한 줄에 선다(단계 표시와 같은 자의 말투). 커서(.bk-sr-cursor)는 발표할 때만 보인다(engine.ts) */
+   왼쪽: 무엇을 찾는지(작게), 뒤진 곳의 수(크게, 숫자 무게 --num-weight), 결과 한 줄. 오른쪽: 곳마다 이름과 설명을 세 단에 */
 .bk-sr {
   display: grid;
   grid-template-columns: minmax(0, 0.32fr) minmax(0, 1fr);
@@ -50,37 +49,18 @@
 }
 
 .bk-sr-list {
-  position: relative;
   display: grid;
-  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
-  column-gap: 24px;
+  /* 곳들은 세 단으로 두 줄에: 여섯을 한 줄에 세우면 단이 좁아 설명이 두세 글자마다 꺾였다. 기준선 위의 눈금과 그 위를 건너뛰는
+     커서는 자 모양의 장식 그림처럼 보여(사용자: AI 디자인 같다) 걷었다. 뒤지는 차례는 이름이 차례로 밝아지는 것과 왼쪽의 수가 보인다 */
+  grid-template-columns: repeat(min(var(--n), 3), minmax(0, 1fr));
+  gap: calc(40px * var(--bk-fit, 1)) 56px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* 기준선: 첫 눈금에서 끝 눈금까지 */
-.bk-sr-list::before {
-  position: absolute;
-  top: 14px;
-  right: 0;
-  left: 0;
-  height: var(--rule-hair);
-  background: var(--line-strong);
-  content: '';
-}
-
 .bk-sr-it {
-  position: relative;
   min-width: 0;
-}
-
-.bk-sr-tick {
-  display: block;
-  width: 4px;
-  height: 28px;
-  margin-bottom: 20px;
-  background: var(--ink-3);
 }
 
 .bk-sr-t {
@@ -99,18 +79,6 @@
   line-height: 1.35;
 }
 
-/* 커서: 높은 강조색 눈금. 다 보인 모습에서는 없다 */
-.bk-sr-cursor {
-  position: absolute;
-  top: -8px;
-  left: 0;
-  width: 4px;
-  height: 44px;
-  background: var(--accent);
-  opacity: 0;
-  pointer-events: none;
-}
-
 /* 좁은 칸: 수를 위에, 곳들은 두 단으로 */
 @container bk (max-width: 900px) {
   .bk-sr {
@@ -124,12 +92,7 @@
   }
 
   .bk-sr-list {
-    grid-template-columns: repeat(min(var(--n), 3), minmax(0, 1fr));
+    grid-template-columns: repeat(min(var(--n), 2), minmax(0, 1fr));
     row-gap: 28px;
-  }
-
-  .bk-sr-list::before,
-  .bk-sr-cursor {
-    display: none;
   }
 }

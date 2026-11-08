@@ -436,3 +436,51 @@
   width: 240%;
   height: 4px;
 }
+
+/* ---------- 세로 일정: 축 걷기 ----------
+   세로 선 위의 가로 눈금(-)이 글과 따로 떠서 어색했다(사용자: 디자인 개선). 축 칸을 걷고 시기 | 할 일 | 설명의 세 단으로만 둔다.
+   줄은 온 너비의 가는 줄 선으로 나누고, 지금 단계는 시기와 할 일을 강조색으로. 차례는 위에서 아래로 읽는 순서가 말한다 */
+.va-steps .tl {
+  grid-template-columns: max-content minmax(0, 5fr) minmax(0, 7fr);
+  column-gap: 64px;
+}
+
+.va-steps .tl-item::before {
+  display: none;
+}
+
+/* 눈금은 감추되 줄 안에 크기 없이 남긴다: display: none이면 자리가 화면 왼쪽 위(0, 0)로 잡혀 검수가 본문 밖으로 나갔다고 봤다.
+   모션(engine.ts)도 이 요소를 찾으므로 지우지 않는다 */
+.va-steps .tl-item {
+  position: relative;
+}
+
+.va-steps .tl-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  visibility: hidden;
+}
+
+.va-steps .tl-title {
+  grid-column: 2;
+}
+
+.va-steps .tl-body {
+  grid-column: 3;
+}
+
+.va-steps .tl-item:not(:has(.tl-body)) .tl-title {
+  grid-column: 2 / -1;
+}
+
+.va-steps .tl-item:not(:last-child)::after {
+  grid-column: 1 / -1;
+}
+
+.va-steps .tl-item.is-now :is(.tl-meta, .tl-title) {
+  color: var(--accent);
+}
