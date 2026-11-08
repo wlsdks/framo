@@ -2,6 +2,7 @@
 // 지금 것으로 바꾸는 줄을 더한다. 편집기가 발표를 열 때(deckStore.open) 부른다. 여러 번 불러도 결과가 같다
 
 import { boardAreaH, boardFit, boardFromRows, cleanDeckBlocks } from './blocks'
+import { cleanCines, tidyCines } from './cine'
 import { LAYOUTS } from './layouts'
 import { plainTheme } from './themes'
 import type { Deck } from './types'
@@ -24,6 +25,9 @@ export function migrateDeck(raw: Deck): Deck {
     const { rows, ...rest } = old
     return { ...rest, blocks: rest.blocks ?? boardFromRows(rows, fitOf(rest)) }
   })
-  // 부품 장의 판을 정해진 꼴로 맞추고, 예전 세리프 테마는 화이트에 명조 제목으로
-  return cleanDeckBlocks({ ...raw, version: 2, slides, theme }, fitOf)
+  // 부품 장의 판을 정해진 꼴로 맞추고, 예전 세리프 테마는 화이트에 명조 제목으로.
+  // 모션 그래픽의 레시피는 꼴이 맞는 것만 남기고(사람의 글이 섞여 들지 않게), 쓰지 않는 버전은 뺀다
+  const { cines: rawCines, ...rest } = raw
+  const cines = cleanCines(rawCines)
+  return tidyCines(cleanDeckBlocks({ ...rest, ...(cines ? { cines } : {}), version: 2, slides, theme }, fitOf))
 }

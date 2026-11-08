@@ -184,6 +184,8 @@ const STRETCHY = new Set<BlockType>([
   // 확산 곡선과 퍼짐은 그림(곡선, 눈금 판)이 칸의 남는 높이를 받는다. 받지 않으면 맺음 장처럼 머리가 긴 장에서 눈금이 납작했다
   'adoption',
   'spread',
+  // 모션 그래픽은 장면이라 무대가 클수록 좋다
+  'cine',
 ])
 export const isStretchy = (type: BlockType) => STRETCHY.has(type)
 

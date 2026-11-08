@@ -350,7 +350,7 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
     { id: null, name: '전체' },
     ...BLOCK_GROUPS.map((g) => ({ id: g.name, name: g.short, title: `${g.name}: ${g.description}` })),
     { id: LINK_GROUP.name, name: LINK_GROUP.short, title: `${LINK_GROUP.name}: ${LINK_GROUP.description}` },
-    { id: MINE, name: saved ? `내 컴포넌트 ${saved}` : '내 컴포넌트', title: '저장해 둔 컴포넌트, 줄, 슬라이드를 어느 발표에서든 다시 넣어요' },
+    { id: MINE, name: saved ? `내 컴포넌트 ${saved}` : '내 컴포넌트', title: '내가 만든 모션 그래픽과 저장해 둔 컴포넌트, 줄, 슬라이드를 어느 발표에서든 다시 넣어요' },
   ]
   // 이음표는 컴포넌트 장에서 컴포넌트가 둘 이상일 때만 끼울 수 있다
   const linkable = slide.layout === 'compose' && linkTargets(slide.blocks ?? []).length > 0

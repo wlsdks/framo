@@ -22,6 +22,8 @@ import { scenarioSlides } from './scenarioSlides'
 import { checkStress, stressSlides } from './stress'
 import { dirSlides } from './dirSlides'
 import { BackdropSheet, backdropSlides, withBackdrop } from './backdropSlides'
+import { cineSlides } from './cineSlides'
+import { cines } from '../slides/blocks/Cine'
 
 // 개발용: 모든 레이아웃을 한 화면에 늘어놓고 디자인을 점검한다. #/gallery?theme=navy&mode=preview&set=blank&type=deal
 // &set=blocks 는 부품마다 넓은 칸과 좁은 칸에 넣어 본 부품 장. &types=ring,ratio 처럼 부품을 고르고, &bv=list 처럼 부품의 모양을 고를 수 있다.
@@ -42,6 +44,7 @@ import { BackdropSheet, backdropSlides, withBackdrop } from './backdropSlides'
 // set=dirs 는 컴포넌트의 모양을 고칠 때 전과 후를 견줄 장(dirSlides.ts: 빽빽한 장, 듬성한 장, 지표 줄, 단계, 비교, 인용, 이음표).
 // set=combos&seed=1&n=60 은 규칙이 받아들인 부품 조합을 seed마다 정해진 차례로 만들어 본다 (combos.ts의 checkCombos).
 // &blank=1이면 부품마다 반쯤은 첫 항목만 채운 채로 발표하는 모습(빈 항목이 빠진다).
+// set=cine 는 모션 그래픽의 틀마다 한 장(cineSlides.ts). 콘솔의 cineStats()가 마지막 장면의 성능 기록을 돌려준다.
 // set=backdrops 는 배경마다 어울리는 장 하나(backdropSlides.ts). &bd=diffuse 는 어느 갤러리든 모든 장에 그 배경을, &bdat=right &bds=soft 는 자리와 짙기를.
 
 /** set=edge: 차트 장이 무너지기 쉬운 값들 (음수, 빈 값, 많은 항목, 모두 같은 값, 긴 이름) */
@@ -214,6 +217,7 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
   if (set === 'scenarios') return { ...deck, title: '가상의 발표 예시', theme: { id: theme }, slides: scenarioSlides(look) }
   if (set === 'dirs') return { ...deck, theme: { id: theme }, slides: dirSlides(look) }
   if (set === 'backdrops' || set === 'bdsheet') return { ...deck, theme: { id: theme }, slides: backdropSlides(params) }
+  if (set === 'cine') return { ...deck, theme: { id: theme }, ...cineSlides(params) }
   if (set === 'combos') return { ...deck, theme: { id: theme }, slides: comboSlides(Number(params.get('seed')) || 1, Number(params.get('n')) || 40, look, params.get('mode') === 'edit', params.get('blank') === '1').map((c) => c.slide) }
   return { ...deck, theme: { id: theme }, slides: [...deck.slides, ...extraSlides()] }
 }
@@ -260,6 +264,8 @@ export function Gallery() {
   if (params.get('mode') === 'edit') Object.assign(window, { checkEdit })
   // 장의 틀 점검 (checkFrame.ts). 콘솔에서 await checkFrame()
   Object.assign(window, { checkFrame, inkOf })
+  // 모션 그래픽의 성능 기록(scripts/look.mjs perf)
+  if (params.get('set') === 'cine') Object.assign(window, { cineStats: () => cines.stats() })
   // 움직임 보기: 콘솔에서 playSlide(0, 'lively')로 그 장을 발표할 때처럼 움직인다
   Object.assign(window, { playSlide: (i: number, level: 'calm' | 'lively' = 'calm') => motionEngine().play(document.querySelectorAll('.slide')[i], level) })
   const theme = (params.get('theme') ?? 'white') as ThemeId

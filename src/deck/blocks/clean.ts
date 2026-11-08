@@ -1,5 +1,6 @@
 // 파일에서 읽은 부품 장 바로잡기: 정해진 꼴로 맞추고, 모르는 부품은 빼되 글은 지우지 않는다
 
+import { isCineId } from '../cine'
 import { uid } from '../generate'
 import type { Block, BlockEffect, BlockFrom, BlockLook, BlockSpeed, BlockType, BlockWhen, Item, Slide, BlockReveal } from '../types'
 import { type Fit, isArea, LOOSE, normalize, removeFromBoard } from './board'
@@ -13,7 +14,7 @@ const strings = (v: unknown): Record<string, string> =>
   isRecord(v) ? Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === 'string')) : {}
 
 /** 이 버전이 아는 부품의 값. 이 밖의 값은 새 버전에서 더한 것이라, 예전 버전이 고치면 빠진다 */
-const BLOCK_KEYS = ['id', 'type', 'fields', 'items', 'hints', 'look', 'effect', 'when', 'speed', 'reveal', 'from', 'variant', 'highlight', 'link', 'linkBelow', 'at']
+const BLOCK_KEYS = ['id', 'type', 'fields', 'items', 'hints', 'look', 'effect', 'when', 'speed', 'reveal', 'from', 'variant', 'highlight', 'link', 'linkBelow', 'at', 'cine']
 
 /**
  * 부품 하나를 정해진 꼴로. 모르는 부품이거나 개수(count: 남은 수와 남은 큰 부품 수)가 넘치면 null.
@@ -55,6 +56,9 @@ export function cleanBlock(b: Record<string, unknown>, count: { left: number; la
   else if (b.link !== undefined) drop()
   if (isLink(b.linkBelow)) block.linkBelow = b.linkBelow
   else if (b.linkBelow !== undefined) drop()
+  // 모션 그래픽이 쓰는 레시피의 버전 id (해시 꼴만)
+  if (type === 'cine' && isCineId(b.cine)) block.cine = b.cine
+  else if (b.cine !== undefined) drop()
   // 자리는 바로잡을 수 있는 값이라 버려도 세지 않는다 (판을 다시 나눈다)
   if (isArea(b.at)) block.at = { x: b.at.x, y: b.at.y, w: b.at.w, h: b.at.h }
   drop(Object.keys(b).filter((k) => !BLOCK_KEYS.includes(k)).length)

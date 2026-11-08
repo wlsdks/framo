@@ -6,7 +6,8 @@
 //   npm run look -- shot  <주소> [--size 1280x600] [--wait 2000] [--scrollbars] [--run a.js[,b.js]] [--out a.png]
 //   npm run look -- check [--base http://localhost:5199] [--seeds 1-4] [--themes white,navy,serif] [--large]
 //   npm run look -- frame --only cover,kpi [--base …]
-//   npm run look -- film  <갤러리 주소> --slide 0 [--level lively] [--every 300] [--count 12] [--out film.png]
+//   npm run look -- film  <갤러리 주소> --slide 0 [--level lively] [--every 300] [--count 12] [--exact] [--gpu off] [--cols 4] [--tile 480] [--out film.png]
+//   npm run look -- perf  <갤러리 주소> --slide 0 [--level lively] [--cpu 4] [--gpu off] [--ms 7000]
 //   npm run look -- pdf   [--base …] [--deck 작업파일.deck] [--out deck.pdf] [--pages 폴더]
 //
 // shot   한 화면을 찍는다. --scrollbars는 윈도우처럼 늘 보이는 스크롤바를 흉내 낸다. --run은 찍기 전에 페이지에서 돌릴 스크립트 파일
@@ -14,7 +15,11 @@
 //        열어 둔 화면을 찍는다). 몸통에서 wait(ms)를 쓸 수 있고, 돌려준 값은 출력한다. --do는 --run과 같다(예전 이름).
 // check  부품 조합(set=combos)을 조건마다 열어 checkCombos()와 checkAssembly()를 돌린다. 문제가 있으면 1로 끝난다.
 // frame  레이아웃의 모든 모양(variants=1)을 두 테마, 명조, 큰 글자, 편집 화면에서 열어 checkFrame()을 돌린다.
-// film   갤러리의 장 하나를 playSlide로 움직이며 every ms마다 찍어 한 장의 필름 띠로 묶는다(모션 검토).
+// film   갤러리의 장 하나를 playSlide로 움직이며 every ms마다 찍어 한 장의 필름 띠로 묶는다(모션 검토). --exact면 움직임을 모두 멈추고
+//        시계를 정확히 every ms씩 옮겨 찍는다(찍는 데 걸리는 시간만큼 늦지 않는다. 모션 그래픽처럼 시간의 순수 함수인 것을 볼 때).
+//        --gpu off면 GPU 없이(소프트웨어 GL을 거절하는 모션 그래픽은 캔버스로 그린다)
+// perf   갤러리의 장 하나를 움직이며 프레임 사이 시간을 잰다(모션 그래픽의 성능 합격선: docs/MOTION.md '모션 그래픽'). --cpu 4면 CPU를
+//        4배 느리게(윈도우 보통 노트북 흉내). 장을 넘기는 첫 프레임(움직임을 거는 일), 그다음 프레임의 준비, p90, p99를 알린다
 // pdf    편집기의 내보내기 → PDF를 그대로 밟아(예시 발표, --deck이면 그 작업 파일) 크롬이 인쇄할 장들을 그리게 하고 printToPDF로 담는다.
 //        인쇄 창을 처음 연 사람처럼 '배경 그래픽'은 끈 채로, 쪽 크기는 CSS의 @page대로. 쪽 수와 장 수, 쪽 크기, 글꼴을 넣었는지,
 //        그림으로 구운 것의 수를 알리고 어긋나면 1로 끝난다. --pages면 인쇄 화면으로 그린 장마다의 그림도 남긴다(외부 도구 없이 보기).
@@ -47,11 +52,11 @@ function findBrowser() {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /** 창 없는 브라우저 하나와 탭 하나. 끝나면 close()로 브라우저와 임시 프로필을 지운다 */
-async function openBrowser({ width = 1920, height = 1080 } = {}) {
+async function openBrowser({ width = 1920, height = 1080, gpu = true } = {}) {
   const profile = mkdtempSync(join(tmpdir(), 'framo-look-'))
   const proc = spawn(
     findBrowser(),
-    ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-extensions', 'about:blank'],
+    ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-extensions', ...(gpu ? [] : ['--disable-gpu']), 'about:blank'],
     { stdio: 'ignore' },
   )
   const portFile = join(profile, 'DevToolsActivePort')
@@ -240,7 +245,7 @@ async function film(o) {
   const i = Number(o.slide ?? 0)
   const every = Number(o.every ?? 300)
   const count = Number(o.count ?? 12)
-  const page = await openBrowser()
+  const page = await openBrowser({ gpu: o.gpu !== 'off' })
   try {
     await page.go(url, 2500)
     const rect = await page.eval(`(() => { const s = document.querySelectorAll('.slide')[${i}]; if (!s) return null; s.scrollIntoView({ block: 'start' }); const r = s.getBoundingClientRect(); return { x: r.left, y: r.top, width: r.width, height: r.height } })()`)
@@ -248,13 +253,19 @@ async function film(o) {
     await page.eval(`(void window.playSlide(${i}, ${JSON.stringify(o.level || 'lively')}), true)`)
     /** @type {string[]} */
     const frames = []
+    // 엔진이 한 묶음의 움직임을 같은 때에 걸어서(지연으로 차례를 둔다) 모두 같은 때로 옮기면 그 순간이다(모션 편집의 끌어 보기와 같다)
+    const seek = (t) => `(() => { const all = document.getAnimations().filter((a) => !(a instanceof CSSAnimation) && !(a instanceof CSSTransition)); for (const a of all) { a.pause(); a.currentTime = ${t} } return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(all.length)))) })()`
+    if (o.exact) await page.eval(seek(0))
     for (let k = 0; k < count; k++) {
-      await sleep(every)
+      if (o.exact) {
+        await page.eval(seek((k + 1) * every))
+        await sleep(60)
+      } else await sleep(every)
       frames.push((await page.shot(rect)).toString('base64'))
     }
     // 같은 브라우저에서 그림들을 격자로 늘어놓고 한 번 더 찍어 한 장으로 묶는다(이미지 패키지 없이)
-    const cols = 4
-    const w = 480
+    const cols = Number(o.cols ?? 4)
+    const w = Number(o.tile ?? 480)
     const h = Math.round((w * rect.height) / rect.width)
     const rows = Math.ceil(frames.length / cols)
     await page.size(cols * (w + 8) + 8, rows * (h + 28) + 8)
@@ -264,6 +275,34 @@ async function film(o) {
     const out = o.out || 'film.png'
     writeFileSync(out, await page.shot())
     console.log(out)
+  } finally {
+    await page.close()
+  }
+}
+
+async function perf(o) {
+  const url = o._[1]
+  if (!url) throw new Error('갤러리 주소를 적어 주세요(예: http://localhost:5199/#/gallery?set=cine&presets=light).')
+  const i = Number(o.slide ?? 0)
+  const page = await openBrowser({ gpu: o.gpu !== 'off' })
+  try {
+    await page.go(url, 2500)
+    await page.eval(`(() => { const s = document.querySelectorAll('.slide')[${i}]; s.scrollIntoView({ block: 'start' }); return true })()`)
+    if (o.cpu) await page.cdp('Emulation.setCPUThrottlingRate', { rate: Number(o.cpu) })
+    await sleep(300)
+    // 움직임을 거는 일(장을 넘기는 첫 프레임에 하는 일)과 그다음 프레임까지
+    const first = await page.eval(`new Promise((r) => { const t0 = performance.now(); void window.playSlide(${i}, ${JSON.stringify(o.level || 'lively')}); const t1 = performance.now(); requestAnimationFrame(() => r({ play: t1 - t0, frame: performance.now() - t0 })) })`)
+    await sleep(Number(o.ms ?? 7000))
+    const st = await page.eval(`window.cineStats ? window.cineStats() : null`)
+    if (o.cpu) await page.cdp('Emulation.setCPUThrottlingRate', { rate: 1 })
+    if (!st) throw new Error('cineStats가 없어요(set=cine 갤러리를 열어 주세요).')
+    const dts = st.frames.slice(1)
+    const sorted = [...dts].sort((a, b) => a - b)
+    const pct = (p) => (sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] : NaN)
+    const f = (v) => (Number.isFinite(v) ? v.toFixed(1) : '-')
+    console.log(`그리기 ${st.mode} · 입자 ${st.count}${st.tier ? ' (느려서 절반으로)' : ''} · 프레임 ${dts.length}개`)
+    console.log(`  거는 일 ${f(first.play)}ms, 첫 프레임까지 ${f(first.frame)}ms, 준비 ${f(st.setup)}ms (프레임마다 ${(st.steps || []).map(f).join(' + ')}ms)`)
+    console.log(`  프레임 사이 p50 ${f(pct(0.5))} · p90 ${f(pct(0.9))} · p99 ${f(pct(0.99))} · 가장 김 ${f(sorted[sorted.length - 1])}ms`)
   } finally {
     await page.close()
   }
@@ -355,11 +394,11 @@ async function pdf(o) {
 }
 
 /** @type {Record<string, (o: Record<string, any>) => Promise<void>>} */
-const COMMANDS = { shot, check, frame, film, pdf }
+const COMMANDS = { shot, check, frame, film, perf, pdf }
 const o = args(process.argv.slice(2))
 const cmd = COMMANDS[o._[0]]
 if (!cmd) {
-  console.error('쓰는 법: npm run look -- shot|check|frame|film|pdf … (scripts/look.mjs 맨 위 참고)')
+  console.error('쓰는 법: npm run look -- shot|check|frame|film|perf|pdf … (scripts/look.mjs 맨 위 참고)')
   process.exit(2)
 }
 cmd(o).catch((e) => {

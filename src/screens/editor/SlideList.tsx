@@ -136,6 +136,7 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
                 meta={deck.meta}
                 theme={deck.theme}
                 title={deck.title}
+                cines={deck.cines}
                 slide={slide}
                 page={info.page.get(slide.id) ?? 0}
                 total={info.total}
@@ -180,6 +181,8 @@ interface ThumbProps {
   meta: Deck['meta']
   theme: Deck['theme']
   title: string
+  /** 모션 그래픽의 레시피(장 그림에 끝 모습을 그린다) */
+  cines: Deck['cines']
   slide: Slide
   page: number
   total: number
@@ -195,8 +198,8 @@ interface ThumbProps {
 }
 
 const Thumb = memo(function Thumb(props: ThumbProps) {
-  const { meta, theme, title, slide, page, total, sections, sectionIndex, selected, missing, onSelect, onMenu, later } = props
-  const look = useMemo(() => ({ meta, theme, title }), [meta, theme, title])
+  const { meta, theme, title, cines, slide, page, total, sections, sectionIndex, selected, missing, onSelect, onMenu, later } = props
+  const look = useMemo(() => ({ meta, theme, title, cines }), [meta, theme, title, cines])
   // 장 그림은 고친 것이 화면에 그려진 다음에 고친다 (look.ts의 useAfterPaint)
   const shown = useAfterPaint(slide)
   const btnRef = useRef<HTMLButtonElement>(null)

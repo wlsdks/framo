@@ -707,3 +707,23 @@ describe('AI에게 숨긴 것', () => {
     expect(codes).toEqual(['applied', 'applied', 'applied'])
   })
 })
+
+describe('모션 그래픽 (사람이 내 라이브러리에서 넣는 장면)', () => {
+  const cineSlide: Slide = { ...makeSlide('compose'), id: 'cine-s', blocks: [{ ...makeBlock('cine'), id: 'cine-b', fields: { glyph: 'Q' }, at: { x: 0, y: 0, w: 12, h: 12 } }] }
+  const withCine: Deck = { ...deck, slides: [cineSlide, ...deck.slides] }
+  const S = shapeSlideId(cineSlide)
+  const B = shapeBlockId(cineSlide.blocks![0])
+
+  it('AI는 모션 그래픽을 넣지 못한다(레시피를 만들 수 없다): 그런 op는 꼴이 맞지 않는 것으로 거른다', () => {
+    expect(parseOp({ op: 'add_block', slide: S, type: 'cine' })).toBeNull()
+    expect(parseOp({ op: 'add_block', slide: S, type: 'text' })).not.toBeNull()
+  })
+
+  it('모양에는 종류와 칸의 상태만 보이고, 나타나는 모습은 장면(기본)이나 없음만 고를 수 있다', () => {
+    const shown = toShape(withCine).slides[0].blocks![0]
+    expect(shown.type).toBe('cine')
+    expect(JSON.stringify(shown)).not.toContain('"Q"')
+    expect(applyOps(withCine, [{ op: 'set_block', slide: S, block: B, effect: 'rise' }]).results[0].code).toBe('not_for_layout')
+    expect(applyOps(withCine, [{ op: 'set_block', slide: S, block: B, effect: 'none' }]).results[0].code).toBe('applied')
+  })
+})

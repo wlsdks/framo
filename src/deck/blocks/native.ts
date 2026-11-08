@@ -1,5 +1,6 @@
 // 부품 장에만 있는 부품의 정의와 예시 내용
 
+import { CINE_FIELD_SPECS, presetSpec } from '../cine'
 import { SAMPLE_IMAGE } from '../sampleImage'
 import type { NativeBlockType } from '../types'
 import type { BlockSpec } from './catalog'
@@ -1507,5 +1508,15 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
     prefSpan: 12,
     small: true,
     sample: { fields: { kind: '기준', text: '9월 말 인사 시스템 집계예요. 파견 인력은 빼고 셌어요.' } },
+  },
+  cine: {
+    name: '모션 그래픽',
+    description: '영화 타이틀처럼 한 장면을 짠 컴포넌트. 내 컴포넌트에서 틀을 골라 만들고, 고쳐 쓰며 버전이 남아요',
+    motion: '빛이나 먹이 번지고 입자가 모여 글자가 되는 장면이 한 번 펼쳐져요',
+    // 레시피가 쓰는 칸만 그린다(Cine.tsx). 비워도 빈칸으로 세지 않고, 편집할 때 접지 않는다
+    fields: CINE_FIELD_SPECS.map((f) => ({ ...f, optional: true, shown: true })),
+    minSpan: 6,
+    prefSpan: 12,
+    sample: { fields: presetSpec('light').sample as Record<string, string> },
   },
 }

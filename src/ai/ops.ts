@@ -16,6 +16,7 @@ import {
   BLOCK_SPEED_IDS,
   BLOCK_WHEN_IDS,
   BLOCK_TYPES,
+  CUSTOM_TYPES,
   BLOCKS,
   BOARD_COLS,
   BOARD_ROWS,
@@ -330,7 +331,8 @@ function parseBlockOp(v: Record<string, unknown>): Op | null {
   switch (v.op) {
     case 'add_block': {
       if (!onlyKeys(v, OP_KEYS.add_block)) return null
-      if (!BLOCK_TYPES.includes(v.type as BlockType) || !parseLooks(v)) return null
+      // 모션 그래픽(CUSTOM_TYPES)은 사람이 내 라이브러리에서 넣는다: AI는 레시피를 만들지 못한다(2단계 전까지)
+      if (!BLOCK_TYPES.includes(v.type as BlockType) || CUSTOM_TYPES.includes(v.type as BlockType) || !parseLooks(v)) return null
       if (v.as !== undefined && !(typeof v.as === 'string' && NEW_BLOCK.test(v.as))) return null
       const place = parsePlace(v)
       if (!place) return null
@@ -950,7 +952,11 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
           if (lookIssue(s.blocks ?? [], b.id, op.look)) return fail('look_clash')
           next.look = op.look
         }
-        if (op.effect) next.effect = op.effect
+        if (op.effect) {
+          // 모션 그래픽은 제 장면(기본)이나 없음만: 다른 나타나기를 고르면 장면 대신 칸이 통째로 나타난다
+          if (b.type === 'cine' && op.effect !== 'auto' && op.effect !== 'none') return fail('not_for_layout')
+          next.effect = op.effect
+        }
         if (op.when) next.when = op.when === 'after' ? undefined : op.when
         if (op.speed) next.speed = op.speed === 'normal' ? undefined : op.speed
         if (op.reveal) {

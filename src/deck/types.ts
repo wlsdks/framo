@@ -99,6 +99,90 @@ export interface Backdrop {
   /** 없으면 base */
   strength?: BackdropStrength
 }
+/**
+ * 모션 그래픽(cine): 영화 타이틀처럼 한 장면을 짠 컴포넌트. 코드가 아니라 '장면 레시피'(데이터)이고, 앱 안의 엔진 하나(motion/cine.ts)가
+ * 해석해 그린다. 레시피에는 글이 없다: 글은 컴포넌트의 칸(fields)에 있고 엔진은 그리는 순간에만 읽는다. 문자열은 정해진 낱말, 짧은 id,
+ * 해시 id뿐이다. 뜻과 값의 범위, 기본값, 시간표는 deck/cine.ts 한 곳이 정한다
+ */
+/** 처음 고른 틀 */
+export type CinePresetId = 'light' | 'diffuse' | 'gather' | 'stroke'
+/** 글의 짜임: 큰 글자와 옆의 제목(mark), 가운데 하나(center), 가로로 그어지는 선과 두 끝(line) */
+export type CineFrame = 'mark' | 'center' | 'line'
+/** 구간: 한 점이 맺힘, 번짐, 모임, 또렷해짐, 글이 써짐, 카메라가 물러남, 머묾 */
+export type CinePhaseKind = 'seed' | 'spread' | 'gather' | 'resolve' | 'write' | 'pull' | 'hold'
+/** 입자가 모이는 모양: 칸의 글자, 고리, 선, 물결, 한 점 */
+export type CineShape = 'glyph' | 'ring' | 'line' | 'wave' | 'point'
+/** 모션 그래픽의 글 칸. 정해진 낱말뿐이다(사람이 쓴 글은 컴포넌트의 fields에) */
+export type CineFieldKey = 'glyph' | 'title' | 'lead' | 'label' | 'text' | 'sub' | 'value' | 'note'
+/** 글이 들어오는 모습: 맺힘, 써짐(왼쪽부터 펜 끝을 따라), 한 글자씩, 숫자 굴리기 */
+export type CineEnter = 'settle' | 'write' | 'letters' | 'count'
+export type CineAmount = 'few' | 'normal' | 'many'
+/** 번지는 모양: 둥글게, 옆으로 길게, 위로 */
+export type CineSpread = 'round' | 'side' | 'rise'
+/** 카메라: 가까이에서 물러나기, 멀리서 다가가기, 그대로. 끝은 늘 제자리(배율 1)라 끝 모습이 편집 화면과 같다 */
+export type CineCamera = 'pull' | 'push' | 'none'
+/** 입자의 색: 글자색, 강조색, 글자색에 강조색을 조금 */
+export type CineTone = 'ink' | 'accent' | 'mix'
+export type CinePace = 'slow' | 'normal' | 'fast'
+
+export interface CinePhase {
+  kind: CinePhaseKind
+  /** 걸리는 때(ms). 보통 빠르기와 생동감 기준(차분하게는 엔진이 줄인다) */
+  ms: number
+  /** 앞 구간이 끝나기 이만큼(ms) 전에 시작한다(겹침) */
+  overlap?: number
+}
+
+/** 글 칸 하나가 언제 어떻게 들어오는지 */
+export interface CineText {
+  key: CineFieldKey
+  enter: CineEnter
+  /** 이 구간이 시작할 때 들어온다. 없으면 write */
+  on?: CinePhaseKind
+  /** 그 구간 안에서 늦추는 몫(0~1) */
+  lag?: number
+}
+
+interface CineParticles {
+  amount: CineAmount
+  /** 크기 배율(0.6~1.6) */
+  size: number
+  tone: CineTone
+  /** 깊이(0~1): 가까운 입자는 크고 옅게, 먼 입자는 작고 또렷하게 */
+  depth: number
+  /** 잔상: 빠르게 움직이는 동안 지나온 자리를 옅게 남긴다 */
+  trail: boolean
+  spread: CineSpread
+}
+
+export interface CineRecipe {
+  /** 이 레시피를 쓴 엔진 번호(deck/cine.ts의 CINE_ENGINE). 더 새 번호면 이 버전은 아는 층만 그리고 레시피는 그대로 둔다 */
+  engine: number
+  /** 내 라이브러리에서 같은 갈래(처음 만든 것과 고친 버전들)를 묶는 id */
+  lineage: string
+  preset: CinePresetId
+  frame: CineFrame
+  /** 정해진 씨앗: 같은 레시피는 늘 같은 그림 */
+  seed: number
+  phases: CinePhase[]
+  particles: CineParticles
+  /** 모일 모양. glyph면 그 칸(field)의 글자를 그 칸의 글꼴로 그려 모양을 딴다 */
+  shape: { kind: CineShape; field?: CineFieldKey }
+  /** 한 점의 빛(어두운 바탕에서만. 밝은 바탕은 번지는 먹) */
+  light: boolean
+  /** 모인 자리에 남는 가는 선(선, 물결 모양에서) */
+  line: boolean
+  camera: CineCamera
+  pace: CinePace
+  texts: CineText[]
+  /** 넘겨주기: 모임이 끝난 자리의 빛(먹)이 펜 끝이 되어 제목을 쓴다 */
+  handoff: boolean
+  /** 되풀이: 생동감에서만, 다 맺힌 뒤 12초 넘는 주기로 옅게 한 번씩 */
+  loop: boolean
+  /** 입자가 칸 밖, 장 전체로 번진다(글 칸은 늘 제 칸 안) */
+  bleed: boolean
+}
+
 /** 제목 덩어리의 자리 (표지, 섹션). 값 목록은 themes.ts의 PLACES */
 export type Place = 'top' | 'middle' | 'bottom'
 
@@ -227,6 +311,8 @@ export type NativeBlockType =
   | 'steps'
   | 'date'
   | 'note'
+  /** 모션 그래픽: 레시피(deck.cines)를 엔진이 그린다. 내 라이브러리에서 넣는다 */
+  | 'cine'
 
 /** 장 레이아웃을 그대로 부품으로 쓰는 것. 칸과 그리는 법이 그 레이아웃과 같아서, 장을 부품 장으로 바꿔도 내용과 모습이 그대로다 */
 export type LayoutBlockType = Extract<
@@ -307,6 +393,8 @@ export interface Block {
   link?: BlockLink
   /** 이 부품과 아래 부품 사이의 이음표 (판을 위아래로 나누는 선 위). 맨 아래 부품에는 없다 */
   linkBelow?: BlockLink
+  /** 모션 그래픽(cine)만: 쓰는 레시피의 버전 id(내용 해시, deck.cines의 열쇠). 발표마다 쓰던 버전에 고정된다 */
+  cine?: string
 }
 
 export interface Slide {
@@ -370,4 +458,9 @@ export interface Deck {
   slides: Slide[]
   /** AI(MCP)에게 이 발표의 모양을 보여 줄지. 사용자가 발표마다 직접 켠다. */
   aiShare?: boolean
+  /**
+   * 모션 그래픽의 레시피: 버전 id → 레시피. 발표가 레시피를 품어서 .deck이나 HTML을 보내도 그대로 그린다.
+   * 쓰지 않는 버전은 저장할 때 뺀다(deck/cine.ts의 tidyCines)
+   */
+  cines?: Record<string, CineRecipe>
 }

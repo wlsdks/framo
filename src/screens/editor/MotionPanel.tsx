@@ -1,6 +1,8 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { blockNames, playOrder, whenOf } from '../../deck/blocks'
+import { presetSpec } from '../../deck/cine'
 import { sceneOf, sceneSpec } from '../../deck/scenes'
+import { loadCines, newerFor, useCines, versionNumber } from '../../store/cines'
 import { MOTIONS, motionOf, transitionOf, TRANSITIONS } from '../../deck/themes'
 import type { BlockFrom, Deck, Slide, Transition } from '../../deck/types'
 import { motionEngine } from '../../motion/engine'
@@ -46,6 +48,16 @@ export function MotionPanel({ deck, slide, onOpenStudio }: { deck: Deck; slide: 
   const order = useMemo(() => playOrder(slide), [slide])
   const names = useMemo(() => blockNames(slide.blocks ?? []), [slide.blocks])
   const clicks = order.filter((b) => whenOf(b) === 'click').length
+  // 이 장의 모션 그래픽(첫째): 이름(내 라이브러리의 이름, 없으면 틀 이름), 쓰는 버전, 더 새 버전
+  const entries = useCines((s) => s.entries)
+  useEffect(() => void loadCines(), [])
+  const cine = useMemo(() => {
+    const b = order.find((x) => x.type === 'cine')
+    const r = b?.cine ? deck.cines?.[b.cine] : undefined
+    if (!b || !r) return null
+    const entry = entries.find((e) => e.lineage === r.lineage)
+    return { name: entry?.name ?? presetSpec(r.preset).name, number: entry && b.cine ? versionNumber(entry, b.cine) : 0, newer: newerFor(entries, r, b.cine)?.number ?? 0 }
+  }, [order, deck.cines, entries])
   const listed = order.slice(0, NAMES).map((b) => names.get(b.id) ?? '컴포넌트')
   const sequence =
     slide.layout !== 'compose'
@@ -98,6 +110,21 @@ export function MotionPanel({ deck, slide, onOpenStudio }: { deck: Deck; slide: 
           )}
         </button>
         <dl className="mp-facts">
+          {cine && (
+            // 모션 그래픽: 이 발표가 쓰는 버전. 내 라이브러리에 더 새 버전이 있으면 알리고 모션 편집에서 바꾸게 한다(고정된 버전을 몰래 바꾸지 않는다)
+            <div>
+              <dt>모션 그래픽</dt>
+              <dd>
+                {cine.name}
+                {cine.number > 0 && <span className="mp-note"> · 버전 {cine.number}</span>}
+                {cine.newer > 0 && (
+                  <button type="button" className="link-btn mp-newer" onClick={onOpenStudio}>
+                    새 버전 {cine.newer}이 있어요
+                  </button>
+                )}
+              </dd>
+            </div>
+          )}
           <div>
             <dt>움직이는 방식</dt>
             <dd>{scene ? `‘${sceneSpec(scene).name}’ 장면` : '자동 (내용에 맞게)'}</dd>
