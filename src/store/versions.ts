@@ -7,7 +7,8 @@ import { writeVersionToFolder } from './folder'
 /*
  * 버전 기록. 목록(가벼운 정보)과 내용(덱 전체)을 따로 저장해서 목록은 빨리 뜨게 한다.
  * - 이름 붙인 버전: 지우기 전까지 남는다.
- * - 자동 버전: 열 때, 고치는 중 10분마다, 발표·내보내기 전, 되돌리기 전에 남긴다. 발표마다 최근 30개.
+ * - 자동 버전: 열 때, 고치는 중 5분마다, 발표·내보내기 전, 되돌리기 전에 남긴다. 오래된 것일수록 듬성듬성 남긴다(autoToDrop):
+ *   최근 10개는 모두, 하루 안은 한 시간에 하나, 2주 안은 하루에 하나, 8주 안은 한 주에 하나.
  */
 
 const listeners = new Set<() => void>()
@@ -20,8 +21,41 @@ const changed = () => listeners.forEach((fn) => fn())
 
 const metaStore = createStore('html-maker-version-list', 'versions')
 const dataStore = createStore('html-maker-version-data', 'versions')
-const AUTO_KEEP = 30
-export const AUTO_INTERVAL = 10 * 60 * 1000
+export const AUTO_INTERVAL = 5 * 60 * 1000
+
+const HOUR = 60 * 60 * 1000
+const DAY = 24 * HOUR
+/**
+ * 자동 버전을 얼마나 남기는지. 예전에는 최근 30개만 두어서, 하루 몇 시간씩 고치면(10분마다 하나) 사흘 전 모습이 이미 밀려
+ * 사라졌다. 만들다 그냥 창을 닫는 일도 많아서, 오래 전 모습일수록 듬성듬성하게 남기되 두 달 가까이는 거슬러 갈 수 있게 한다.
+ * 한 발표에 많아야 10 + 24 + 14 + 8개 남짓이고, 보통은 고친 때만 남아 그보다 훨씬 적다
+ */
+const RECENT_KEEP = 10
+const TIERS: { within: number; bucket: number }[] = [
+  { within: DAY, bucket: HOUR },
+  { within: 14 * DAY, bucket: DAY },
+  { within: 56 * DAY, bucket: 7 * DAY },
+]
+
+/**
+ * 지울 자동 버전의 id. versions는 이 발표의 자동 버전들(어느 차례든). 최근 RECENT_KEEP개는 모두 두고, 그 밖은 나이에 맞는
+ * 칸(한 시간, 하루, 한 주)마다 가장 새것 하나만 둔다. 8주보다 오래된 것은 지운다. 칸은 now에서 거꾸로 잰다(같은 칸이면 같은 시기)
+ */
+export function autoToDrop(versions: Pick<DeckVersion, 'id' | 'createdAt'>[], now: number): string[] {
+  const sorted = [...versions].sort((a, b) => b.createdAt - a.createdAt)
+  const kept = new Set<string>()
+  const drop: string[] = []
+  sorted.forEach((v, i) => {
+    if (i < RECENT_KEEP) return
+    const age = Math.max(0, now - v.createdAt)
+    const tier = TIERS.findIndex((t) => age < t.within)
+    if (tier < 0) return drop.push(v.id)
+    const key = `${tier}:${Math.floor(age / TIERS[tier].bucket)}`
+    if (kept.has(key)) drop.push(v.id)
+    else kept.add(key)
+  })
+  return drop
+}
 
 export type VersionReason = 'open' | 'interval' | 'present' | 'export' | 'restore' | 'file' | 'ai'
 
@@ -187,8 +221,7 @@ export async function keepVersion(deck: Deck, options: SaveOptions = {}): Promis
 }
 
 async function pruneAuto(versions: DeckVersion[]) {
-  const autos = versions.filter((v) => !v.named)
-  for (const v of autos.slice(AUTO_KEEP)) await deleteVersion(v.id)
+  for (const id of autoToDrop(versions.filter((v) => !v.named), Date.now())) await deleteVersion(id)
 }
 
 /** 이름을 붙이면 자동 정리 대상에서 빠진다. 보관 폴더에도 그 이름으로 한 벌 남긴다. */

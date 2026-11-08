@@ -6,7 +6,7 @@ import { AUTO_INTERVAL, saveVersion, type VersionReason } from './versions'
 
 /**
  * 고칠 때마다 저장한다. 브라우저에는 바로, 보관 폴더에는 조금 모아서.
- * 고치는 중에는 10분마다 자동 버전을 남긴다. 화면을 떠나거나 창을 닫을 때는 남은 저장을 바로 끝낸다.
+ * 고치는 중에는 5분마다 자동 버전을 남긴다. 화면을 떠나거나 창을 닫을 때는 남은 저장을 바로 끝낸다.
  */
 export function useAutosave(deck: Deck) {
   const latest = useRef(deck)

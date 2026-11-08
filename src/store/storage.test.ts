@@ -3,7 +3,7 @@ import { createDeck } from '../deck/generate'
 import type { Deck } from '../deck/types'
 import { decodeDeckFile, encodeDeckFile, fileStamp, safeFileName } from './deckFile'
 import { reconcile } from './reconcile'
-import { deckSignature, slideAfterRestore, slideSignatures, versionChanges, type DeckVersion } from './versions'
+import { autoToDrop, deckSignature, slideAfterRestore, slideSignatures, versionChanges, type DeckVersion } from './versions'
 
 const deck = () =>
   createDeck({ type: 'deal', audience: 'mixed', minutes: 20, method: 'live', title: '품질 관리 제안 계획', org: '영업 2팀', presenter: '김민준', theme: 'white' })
@@ -151,5 +151,40 @@ describe('두 벌 맞추기 (브라우저와 보관 폴더)', () => {
     expect(reconcile(undefined, d)).toEqual({ action: 'take', backup: false })
     expect(reconcile(d, undefined)).toEqual({ action: 'write' })
     expect(reconcile(undefined, undefined)).toEqual({ action: 'none' })
+  })
+})
+
+describe('자동 버전 솎기 (autoToDrop)', () => {
+  const MIN = 60 * 1000
+  const HOUR = 60 * MIN
+  const DAY = 24 * HOUR
+  const now = Date.UTC(2026, 10, 8, 12)
+  /** now에서 ago만큼 전에 남긴 자동 버전들 */
+  const at = (...agos: number[]) => agos.map((ago, i) => ({ id: `v${i}`, createdAt: now - ago }))
+
+  it('최근 10개는 오래돼도 모두 둔다', () => {
+    expect(autoToDrop(at(...Array.from({ length: 10 }, (_, i) => (i + 1) * 70 * DAY)), now)).toEqual([])
+  })
+
+  it('하루 안은 한 시간에 하나, 그 칸의 가장 새것을 둔다', () => {
+    // 최근 10개(1~10분 전) 뒤에, 3시간 전 칸에 셋
+    const list = at(...Array.from({ length: 10 }, (_, i) => (i + 1) * MIN), 3 * HOUR + 5 * MIN, 3 * HOUR + 20 * MIN, 3 * HOUR + 40 * MIN)
+    expect(autoToDrop(list, now)).toEqual(['v11', 'v12'])
+  })
+
+  it('8주보다 오래된 것은 최근 10개 밖이면 지운다', () => {
+    const list = at(...Array.from({ length: 10 }, (_, i) => (i + 1) * MIN), 57 * DAY)
+    expect(autoToDrop(list, now)).toEqual(['v10'])
+  })
+
+  it('사흘 동안 5분마다 남겨도 수십 개 안에서 사흘 전 모습까지 거슬러 간다', () => {
+    // 날마다 아홉 시간씩 고친 사흘(5분마다 하나)
+    const agos: number[] = []
+    for (let d = 0; d < 3; d++) for (let m = 0; m < 9 * 60; m += 5) agos.push(d * DAY + m * MIN)
+    const list = at(...agos)
+    const drop = new Set(autoToDrop(list, now))
+    const kept = list.filter((v) => !drop.has(v.id))
+    expect(kept.length).toBeLessThan(40)
+    expect(Math.max(...kept.map((v) => now - v.createdAt))).toBeGreaterThanOrEqual(2 * DAY)
   })
 })
