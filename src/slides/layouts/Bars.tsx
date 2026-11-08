@@ -37,7 +37,7 @@ export function Bars() {
   // 견줄 수 없는 값이 어느 칸인지 (편집할 때만 밑줄로 보인다)
   const unfit = mode === 'edit' && !comparable ? unfitValues(items.map((it) => it.value), unit) : []
   // 이어 움직이기로 이어지는 이웃 장과는 한 잣대로(sharedScale.ts): 넘길 때 막대가 바뀐 만큼만 자라고 그대로인 값은 가만히 있게
-  const max = Math.max(0, ...values.map((v) => v ?? 0), comparable && scale ? scale : 0)
+  const max = Math.max(0, ...values.map((v) => v ?? 0), comparable && scale ? scale.hi : 0)
   const demo = demoOf(mode, items)
   const demoP = demo ? demoBars(slide, items.length) : []
   const highlight = highlightOf(slide)

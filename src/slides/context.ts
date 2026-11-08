@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { Block, DeckMeta, ItemKey, Slide, SlideOptions } from '../deck/types'
 import type { LayoutSpec } from '../deck/layouts'
+import type { Scale } from './sharedScale'
 
 /**
  * edit: 슬라이드 위에서 바로 입력
@@ -55,12 +56,12 @@ export interface SlideCtx {
   /** 부품 장의 부품 안: 칸 너비 (12 기준). 자리를 어림해야 하는 그림(위치 비교의 이름표)이 쓴다 */
   span?: number
   /**
-   * 이 차트가 이어 움직이는 이웃 장과 같이 쓰는 막대의 잣대(끝 값, 차트의 값과 같은 단위). 없으면 제 가장 큰 값으로 그린다(sharedScale.ts).
+   * 이 차트가 이어 움직이는 이웃 장과 같이 쓰는 잣대(담는 값의 범위, 차트의 값과 같은 단위). 없으면 제 값으로 그린다(sharedScale.ts).
    * 부품 장에서는 장의 scales에서 부품마다 꺼낸다(blocks.tsx)
    */
-  scale?: number
-  /** 장 하나의 잣대들(차트 자리 → 끝 값). 레이아웃 장은 '', 부품 장은 부품 id */
-  scales?: ReadonlyMap<string, number>
+  scale?: Scale
+  /** 장 하나의 잣대들(차트 자리 → 잣대). 레이아웃 장은 '', 부품 장은 부품 id */
+  scales?: ReadonlyMap<string, Scale>
 }
 
 export const SlideContext = createContext<SlideCtx | null>(null)

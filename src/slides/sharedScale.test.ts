@@ -23,8 +23,8 @@ describe('이어 움직이는 이웃 장의 막대 잣대', () => {
     const a = bars('a', ['3.5', '2.5', '2', '1'])
     const b = bars('b', ['5.0', '3.0', '2', '1'], true)
     const info = pageInfo([a, b], deck)
-    expect(sharedScales(info).get('a')?.get('')).toBe(5)
-    expect(sharedScales(info).get('b')?.get('')).toBe(5)
+    expect(sharedScales(info).get('a')?.get('')?.hi).toBe(5)
+    expect(sharedScales(info).get('b')?.get('')?.hi).toBe(5)
     // 앞 장의 가장 큰 막대는 70%, 그대로인 값(2)은 두 장에서 같은 길이
     const html = (s: Slide) => renderToStaticMarkup(createElement(SlideCanvas, { deck, slide: s, mode: 'final', ...pageProps(info, s.id) }))
     expect(html(a)).toContain('--p:70.00')
@@ -43,12 +43,12 @@ describe('이어 움직이는 이웃 장의 막대 잣대', () => {
   })
 
   it('셋 넘게 이어지면 모두 한 잣대, 숨긴 장은 건너뛴다', () => {
-    const a = bars('a', ['2', '1', '1', '1'])
+    const a = bars('a', ['2.5', '1', '1', '1'])
     const hidden = { ...bars('h', ['9', '9', '9', '9']), hidden: true }
     const b = bars('b', ['4', '1', '1', '1'], true)
     const c = bars('c', ['3', '1', '1', '1'], true)
     const s = sharedScales(pageInfo([a, hidden, b, c], deck))
-    expect([s.get('a')?.get(''), s.get('b')?.get(''), s.get('c')?.get('')]).toEqual([4, 4, 4])
+    expect([s.get('a')?.get('')?.hi, s.get('b')?.get('')?.hi, s.get('c')?.get('')?.hi]).toEqual([4, 4, 4])
     expect(s.get('h')).toBeUndefined()
   })
 
@@ -61,14 +61,53 @@ describe('이어 움직이는 이웃 장의 막대 잣대', () => {
     const a: Slide = { ...makeSlide('compose'), id: 'a', blocks: [block('x', ['3.5', '2.5', '2', '1'])] }
     const b: Slide = { ...makeSlide('compose'), id: 'b', blocks: [block('y', ['5.0', '3.0', '2', '1'])], options: { transition: 'morph' } }
     const s = sharedScales(pageInfo([a, b], deck))
-    expect(s.get('a')?.get('x')).toBe(5)
-    expect(s.get('b')?.get('y')).toBe(5)
+    expect(s.get('a')?.get('x')?.hi).toBe(5)
+    expect(s.get('b')?.get('y')?.hi).toBe(5)
   })
 
   it('발표 전체의 장 넘기기가 이어 움직이기면 장마다 고르지 않아도 짝이 된다', () => {
     const a = bars('a', ['3.5', '2.5', '2', '1'])
     const b = bars('b', ['5.0', '3.0', '2', '1'])
     const look = { ...deck, theme: { ...deck.theme, transition: 'morph' as const } }
-    expect(sharedScales(pageInfo([a, b], look)).get('a')?.get('')).toBe(5)
+    expect(sharedScales(pageInfo([a, b], look)).get('a')?.get('')?.hi).toBe(5)
+  })
+
+  it('값이 크게 뛰어 한 잣대로는 어느 장이 잣대의 40%도 채우지 못하면 묶지 않는다(장마다 제 잣대)', () => {
+    const a = bars('a', ['1', '0.8', '0.5', '0.2'])
+    const b = bars('b', ['10', '8', '5', '2'], true)
+    expect(sharedScales(pageInfo([a, b], deck)).size).toBe(0)
+    // 문턱 바로 위(40%)는 묶는다
+    const c = bars('c', ['4', '0.8', '0.5', '0.2'])
+    expect(sharedScales(pageInfo([c, b], deck)).get('c')?.get('')?.hi).toBe(10)
+  })
+
+  it('셋 넘게 이어질 때 가운데 장은 앞 장과 먼저 묶이고, 다음 장을 더해 문턱 밑이 되는 장부터 새 묶음이다', () => {
+    const a = bars('a', ['3', '1', '1', '1'])
+    const b = bars('b', ['6', '1', '1', '1'], true)
+    const c = bars('c', ['12', '1', '1', '1'], true)
+    const d = bars('d', ['10', '1', '1', '1'], true)
+    const s = sharedScales(pageInfo([a, b, c, d], deck))
+    // a(3)와 b(6)는 6의 잣대에서 50%라 묶이고, c(12)를 더하면 a가 25%라 c부터 새 묶음(c와 d는 12의 잣대)
+    expect([s.get('a')?.get('')?.hi, s.get('b')?.get('')?.hi, s.get('c')?.get('')?.hi, s.get('d')?.get('')?.hi]).toEqual([6, 6, 12, 12])
+  })
+
+  it('추이도 이어 움직이는 장끼리 두 장의 값(목표까지)을 다 담는 한 잣대로 그린다', () => {
+    const trend = (id: string, values: string[], target: string, morph = false): Slide => ({
+      ...makeSlide('trend'),
+      id,
+      fields: { target },
+      items: values.map((value, i) => ({ ...emptyItem(), id: `${id}-${i}`, title: `${i + 1}월`, value })),
+      options: morph ? { transition: 'morph' } : {},
+    })
+    const a = trend('a', ['96', '101', '99', '131'], '115')
+    const b = trend('b', ['134', '111', '139', '144'], '115', true)
+    const info = pageInfo([a, b], deck)
+    expect(sharedScales(info).get('a')?.get('')).toEqual({ lo: 96, hi: 144 })
+    expect(sharedScales(info).get('b')?.get('')).toEqual({ lo: 96, hi: 144 })
+    // 두 장의 목표선(115)이 같은 높이에 그려진다
+    const html = (s: Slide) => renderToStaticMarkup(createElement(SlideCanvas, { deck, slide: s, mode: 'final', ...pageProps(info, s.id) }))
+    const ty = (s: Slide) => /--ty:([\d.]+)/.exec(html(s))?.[1]
+    expect(ty(a)).toBeDefined()
+    expect(ty(a)).toBe(ty(b))
   })
 })

@@ -12,7 +12,7 @@ import { SlideContext, type SlideActions, type SlideMode } from './context'
 import { useHalos } from './halos'
 import { BOLD_LAYOUTS, LAYOUT_VIEWS } from './layouts'
 import { PaneTools } from './panes'
-import { sharedScales } from './sharedScale'
+import { sharedScales, type Scale } from './sharedScale'
 
 export const SLIDE_W = 1920
 export const SLIDE_H = 1080
@@ -30,8 +30,8 @@ export interface SlideCanvasProps {
   sectionIndex?: number
   /** 부품 하나만 이 크기(캔버스 px)로: 부품 고르기 카드, 끌고 있는 부품 */
   solo?: { w: number; h: number }
-  /** 이어 움직이는 이웃 장과 같이 쓰는 막대의 잣대(차트 자리 → 끝 값, sharedScale.ts). pageProps가 넘긴다 */
-  scales?: ReadonlyMap<string, number>
+  /** 이어 움직이는 이웃 장과 같이 쓰는 차트의 잣대(차트 자리 → 잣대, sharedScale.ts). pageProps가 넘긴다 */
+  scales?: ReadonlyMap<string, Scale>
 }
 
 const NO_SECTIONS: readonly string[] = []
