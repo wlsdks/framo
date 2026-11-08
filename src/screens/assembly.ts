@@ -20,6 +20,7 @@ import { blockDrawn, blockEdgeSeen, blockFigures, blockTextLines } from '../slid
  * - 이음표: 앞 부품과 선 건너편 부품이 뜻이 서는 짝인지 (links.ts의 linkFits)
  * - 짜임: 높이가 넉넉한데 단을 나눈 목록, 내용이 적은데 본문의 왼쪽 위에 몰린 장(너비의 절반도 안 쓰고 아래 3분의 1 넘게 빈)
  * - 글 폭: 글 부품(TEXT_TYPES)의 한 줄이 MEASURE_EM(그 글자 크기의 배수)보다 긴 것, 여러 줄 글의 끝 줄에 낱말 하나만 남은 것(그림의 이름표도)
+ * - 짧은 이름표: 흐름의 단계 이름이 꺾였는데 흐름의 이름을 모두 한 단계 작게 하면 모두 한 줄에 드는 것
  * #/gallery?set=combos&seed=1&n=60 (또는 set=review) → 콘솔에서 await checkAssembly()
  */
 
@@ -265,6 +266,72 @@ function measure(area: HTMLElement, k: number): string[] {
     })
   }
   return [...out]
+}
+
+/**
+ * 짧은 이름표가 반으로 꺾인 것 (docs/DESIGN.md '흐름'): 흐름의 단계 이름은 한 줄에 드는 가장 큰 단계로 그린다(fitBlocks.ts의 flowNames).
+ * 이름이 꺾였는데 흐름의 이름, 번호, 설명을 모두 한 단계(1.2) 작게 하면 모든 이름이 한 줄에 드는 흐름을 잡는다. 판을 혼자 쓰는 다섯 단계
+ * 흐름에서 이름을 52로 키워 '각자 / 만들기', '본부에 / 배포'로 꺾이고 '합의'만 한 줄이던 것.
+ * 맞추기처럼 줄여 보지 않고 그려진 것으로 어림한다: 글 칸마다 한 줄 너비는 꺾인 줄의 글 너비에 줄 사이의 띄어쓰기 몫을 더한 것이다.
+ * 단계 칸(격자의 열)은 글 너비만큼이고 모자라면 남는 너비를 고르게 나눠 받으므로(flow.css), 한 단계 작게 한 단계마다의 너비로
+ * 지금 단계 칸들의 너비 합을 다시 나눠 본다. 세로로 쌓은 흐름은 지금 글 칸 너비와 견준다.
+ * 번호(이름 한 단계 아래)가 바닥(--fs-min) 밑으로 가는 단계와, 판을 혼자 쓰는 흐름에서 이름이 --fw-least(flow.css) 밑으로 가는 단계는
+ * 보지 않는다: 그보다 작게는 내리지 않고 꺾인다
+ */
+function labelWraps(area: HTMLElement, k: number): string[] {
+  const out: string[] = []
+  const range = document.createRange()
+  // 글 칸을 한 줄로 늘어놓았을 때의 너비(캔버스 px)와 지금 그려진 줄 수
+  const oneLine = (el: Element | null) => {
+    if (!el) return { w: 0, rows: 0 }
+    const rows: { t: number; w: number }[] = []
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    while (walk.nextNode()) {
+      range.selectNodeContents(walk.currentNode)
+      for (const q of range.getClientRects()) {
+        if (q.width <= 1) continue
+        const row = rows.find((x) => Math.abs(x.t - q.top) < q.height / 2)
+        if (row) row.w += q.width
+        else rows.push({ t: q.top, w: q.width })
+      }
+    }
+    const fs = parseFloat(getComputedStyle(el).fontSize)
+    return { w: rows.reduce((n, x) => n + x.w, 0) / k + Math.max(0, rows.length - 1) * fs * 0.3, rows: rows.length }
+  }
+  for (const fw of area.querySelectorAll<HTMLElement>('.bk-fw')) {
+    const nodes = [...fw.querySelectorAll<HTMLElement>('.bk-fw-node')].filter((el) => el.getClientRects().length)
+    const steps = nodes.map((node) => {
+      const t = node.querySelector<HTMLElement>('.bk-fw-t')
+      const name = oneLine(t)
+      // 한 단계 작게 했을 때 이 단계 칸이 바라는 너비: 오가는 양은 그대로, 나머지는 1.2로 나눈다
+      const need = Math.max(Math.max(name.w, oneLine(node.querySelector('.bk-fw-m')).w, oneLine(node.querySelector('.bk-fw-i')).w) / 1.2, oneLine(node.querySelector('.bk-fw-v')).w)
+      return { t, name, need, width: node.getBoundingClientRect().width / k }
+    })
+    const wrapped = steps.filter((x) => x.name.rows > 1)
+    if (!wrapped.length || !wrapped[0].t) continue
+    const fs = parseFloat(getComputedStyle(wrapped[0].t).fontSize)
+    const fcs = getComputedStyle(fw)
+    if (fs / 1.44 < (parseFloat(fcs.getPropertyValue('--fs-min')) || 0) - 0.5 || fs / 1.2 < (parseFloat(fcs.getPropertyValue('--fw-least')) || 0) - 0.5) continue
+    let room: (x: (typeof steps)[number]) => number
+    if (getComputedStyle(fw.querySelector('.bk-fw-list') ?? fw).display === 'grid') {
+      // 단계 칸들의 너비 합을 바라는 너비가 작은 칸부터 채우고 남는 것을 고르게 나눈다
+      let left = steps.reduce((n, x) => n + x.width, 0)
+      let share = Infinity
+      const needs = steps.map((x) => x.need).sort((p, q) => p - q)
+      for (let i = 0; i < needs.length; i++) {
+        const even = left / (needs.length - i)
+        if (needs[i] > even) {
+          share = even
+          break
+        }
+        left -= needs[i]
+      }
+      // 바라는 너비를 다 받는 칸은 꺾이지 않는다
+      room = (x) => (x.need <= share ? Infinity : share)
+    } else room = (x) => x.t?.clientWidth ?? 0
+    if (wrapped.every((x) => x.name.w / 1.2 <= room(x) - 2)) out.push(`흐름: 단계 이름이 꺾였어요(한 단계 작게 하면 모두 한 줄에 들어요) 「${(wrapped[0].t?.textContent ?? '').trim().slice(0, 12)}」`)
+  }
+  return out
 }
 
 /** 면 안의 빈 띠가 이보다 넓게 아래에 몰리면 (캔버스 px). 면 안의 위아래 여백은 같아 보여야 한다 */
@@ -1063,7 +1130,7 @@ export async function checkAssembly(): Promise<{ slides: number; problems: strin
     const slide = area.closest<HTMLElement>('.slide')
     if (!slide) return
     const k = slide.getBoundingClientRect().width / 1920
-    for (const p of [...rivals(slide, area), ...bands(slide, area, k), ...measure(area, k), ...inside(area, k), ...corner(area, k), ...linkMeaning(area), ...floating(area, k), ...lineEconomy(area, k), ...paintedBoxes(area, k), ...textOverlap(area, k), ...rowRhythm(area, k), ...sides(area, k), ...rowTops(area, k), ...fill(slide, area), ...clipped(slide)]) problems.push(`${i + 1}번 장: ${p}`)
+    for (const p of [...rivals(slide, area), ...bands(slide, area, k), ...measure(area, k), ...labelWraps(area, k), ...inside(area, k), ...corner(area, k), ...linkMeaning(area), ...floating(area, k), ...lineEconomy(area, k), ...paintedBoxes(area, k), ...textOverlap(area, k), ...rowRhythm(area, k), ...sides(area, k), ...rowTops(area, k), ...fill(slide, area), ...clipped(slide)]) problems.push(`${i + 1}번 장: ${p}`)
   })
   return { slides: areas.length, problems }
 }

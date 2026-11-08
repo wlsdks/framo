@@ -402,19 +402,31 @@
 }
 
 /* ---------- 단계가 적고 칸이 넓으면 ----------
-   단계 셋이 장 하나를 다 쓰면 작은 번호와 짧은 글만 가는 선 위에 떠 장이 비어 보였다(사용자: 아쉽다, 빈 곳이 많다). 글을 키우면
-   무거워지므로 짜임을 키운다: 번호를 소제목 단계의 가는 숫자(--num-weight)로, 설명을 본문 단계로. 번호 줄과 선은 그대로 이어진다 */
+   단계 셋이 장 하나를 다 쓰면 작은 번호와 짧은 글만 가는 선 위에 떠 장이 비어 보였다(사용자: 아쉽다, 빈 곳이 많다). 짜임을 키운다:
+   판을 혼자 쓸 때(아래)와 같은 위계로 단계 이름을 소제목 단계(보통 굵기 500)로, 차례 번호(가는 숫자)는 이름 한 단계 아래, 설명은
+   번호보다 한 단계 아래. 번호를 소제목 단계로 키우고 이름은 본문 단계에 두던 때는 낮은 줄에서 번호(36)가 이름(30)보다 커 차례 표시가
+   단계 이름보다 먼저 읽혔고 설명이 이름과 같은 크기였다(검수: 뜻이 먼저). 이름의 한도는 그림 이름표의 한도(44, blocks/base.css)이고
+   장 제목이 길면 제목을 따라 내려간다(--fw-name-cap). 번호와 설명의 한도도 그에 맞춰 한 단계, 두 단계 아래다. 굵기를 낮춰 커진 이름이
+   제목과 다투지 않는다(판을 혼자 쓸 때와 같은 까닭). 번호 줄과 선은 그대로 이어진다 */
 @container bk (min-width: 1300px) {
-  .bk-fw:is([data-n='2'], [data-n='3'], [data-n='4']) .bk-fw-i {
+  .bk-fw:is([data-n='2'], [data-n='3'], [data-n='4']) .bk-fw-t {
     --fs: var(--t-h);
+    font-size: min(calc(var(--fw-name-cap, 44px) * var(--fit, 1) * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+    font-weight: 500;
+  }
+
+  .bk-fw:is([data-n='2'], [data-n='3'], [data-n='4']) .bk-fw-i {
+    --fs: var(--t-body);
     font-family: var(--font-head);
+    font-size: max(var(--fs-min, 0px), min(calc(var(--fw-name-cap, 44px) / 1.2 * var(--fit, 1) * var(--scale, 1)), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
     font-weight: var(--num-weight);
     letter-spacing: -0.01em;
   }
 
   .bk-fw:is([data-n='2'], [data-n='3'], [data-n='4']) .bk-fw-m {
-    --fs: var(--t-body);
+    --fs: var(--t-small);
     margin-top: 10px;
+    font-size: max(var(--fs-min, 0px), min(calc(var(--fw-name-cap, 44px) / 1.44 * var(--fit, 1) * var(--scale, 1)), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
   }
 
   .bk-fw:is([data-n='2'], [data-n='3'], [data-n='4']) .bk-fw-list {
@@ -457,6 +469,13 @@
   translate: none;
 }
 
+/* 이름을 내릴 바닥(아래 판을 혼자 쓸 때). 길이로 등록해 두어야 맞추기(fitBlocks.ts의 flowNames)가 계산을 마친 px로 읽는다 */
+@property --fw-least {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
 /* ---------- 판을 혼자 쓸 때(넓고 높은 칸) ----------
    흐름 하나가 장을 혼자 쓰면 작은 번호와 이름이 본문 위쪽 띠에만 서고 아래 절반이 비었다(사용자, 세·네·다섯 단계 모두). 사이를 벌리지
    않고 그림과 글의 단계를 올린다(VISUAL-RULES 6): 단계 이름이 가장 크고(오가는 양이 있으면 양이 가장 크다), 차례 번호와 설명은 이름
@@ -466,21 +485,25 @@
   .bk-fw[data-n] {
     --fw-lw: calc(96px * var(--bk-fit, 1));
     --fw-i-gap: calc(24px * var(--bk-fit, 1));
+    /* 이름이 꺾여 한 단계씩 내릴 때(맨 아래 --fw-fit)의 바닥: 판을 혼자 쓸 때의 이름(52)에서 두 단계 아래(36). 이름 하나가 길다고
+       흐름 전체가 30으로 작아지면 판이 휑해서, 그보다 긴 이름은 그 이름만 낱말 사이에서 꺾인다. 제목이 길어 한도가 44면 한 단계,
+       36이면 내리지 않는다 */
+    --fw-least: calc(52px / 1.44 * var(--scale, 1));
   }
 
-  /* 단계 이름이 가장 크다(52까지, 보통 굵기는 아래), 차례 번호는 이름 한 단계 아래(가는 숫자), 설명은 그 아래. 번호를 이름보다 크게
+  /* 단계 이름이 가장 크다(52까지, 보통 굵기는 아래), 차례 번호는 이름 한 단계 아래(가는 숫자), 설명은 그보다 한 단계 아래. 번호를 이름보다 크게
      키우던 때는 차례 표시가 단계 이름보다 먼저 읽혔다(검수: 뜻이 먼저). 오가는 양이 있으면 양이 답이라 가장 크다(75).
      이름의 한도는 장 제목을 따른다(아래 .l-compose 규칙의 --fw-name-cap): 제목이 길어 작아지면 이름이 제목보다 크지 않게 */
   .bk-fw[data-n] .bk-fw-t {
     --fs: var(--t-h);
-    font-size: min(calc(var(--fw-name-cap, 52px) * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+    font-size: min(calc(var(--fw-name-cap, 52px) * var(--fit, 1) * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
   }
 
   .bk-fw[data-n] .bk-fw-i {
     --fs: var(--t-body);
     gap: var(--fw-i-gap);
     font-family: var(--font-head);
-    font-size: min(calc(var(--fw-name-cap, 52px) / 1.2 * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+    font-size: min(calc(var(--fw-name-cap, 52px) / 1.2 * var(--fit, 1) * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
     font-weight: var(--num-weight);
     letter-spacing: -0.01em;
   }
@@ -510,9 +533,10 @@
     font-weight: 500;
   }
 
-  /* 설명은 번호와 같은 한도(이름 한 단계 아래)에서 멈춘다: 이름이 제목을 따라 작아질 때 설명이 이름만 해지지 않게 */
+  /* 설명은 번호보다 한 단계 아래(이름 두 단계 아래)에서 멈춘다: 이름 36 > 번호 30 > 설명 26처럼 셋이 갈린다. 번호와 같은 한도(이름 한
+     단계 아래)였을 때는 제목이 길어 이름이 36이면 번호와 설명이 30으로 같아 위계가 둘뿐이었다(검토). 바닥(--fs-min) 밑으로는 가지 않는다 */
   .bk-fw[data-n] .bk-fw-m {
-    font-size: min(calc(var(--fw-name-cap, 52px) / 1.2 * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+    font-size: max(var(--fs-min, 0px), min(calc(var(--fw-name-cap, 52px) / 1.44 * var(--fit, 1) * var(--scale, 1)), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
   }
 }
 
@@ -522,4 +546,11 @@
 
 .l-compose:has(.s-title.fit-2:not(.is-hint, .is-empty)) .bk-fw {
   --fw-name-cap: 36px;
+}
+
+/* 단계 이름은 짧은 이름표라 한 줄에 둔다: 이름이 꺾이면 맞추기(fitBlocks.ts의 flowNames)가 이름, 번호, 설명을 같이 한 단계씩(1.2)
+   내린 배율을 흐름에 적는다(--fw-fit). 길이에 따라 줄이는 배율(--fit, base.css)과 같은 자리라 칸 크기의 단계와 곱해지고, 판을 혼자 쓸
+   때의 한도(위 --fw-name-cap)도 같이 내려간다. 오가는 양과 오가는 것은 그대로 */
+.bk-fw :is(.bk-fw-t, .bk-fw-i, .bk-fw-m) {
+  --fit: var(--fw-fit, 1);
 }

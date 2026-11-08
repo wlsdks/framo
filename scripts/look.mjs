@@ -9,6 +9,7 @@
 //   npm run look -- film  <갤러리 주소> --slide 0 [--level lively] [--every 300] [--count 12] [--exact] [--gpu off] [--cols 4] [--tile 480] [--out film.png]
 //   npm run look -- perf  <갤러리 주소> --slide 0 [--level lively] [--cpu 4] [--gpu off] [--ms 7000]
 //   npm run look -- pdf   [--base …] [--deck 작업파일.deck] [--out deck.pdf] [--pages 폴더]
+//   경로(--deck, --out, --pages, --run)는 명령을 실행한 폴더 기준이다(상대 경로도 된다)
 //
 // shot   한 화면을 찍는다. --scrollbars는 윈도우처럼 늘 보이는 스크롤바를 흉내 낸다. --run은 찍기 전에 페이지에서 돌릴 스크립트 파일
 //        (async 함수의 몸통. 쉼표로 여럿을 이어 붙인다. 개발 서버의 모듈을 import('/src/…')로 불러 발표를 만들거나, 단추를 눌러 메뉴를
@@ -28,7 +29,7 @@
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 const DEFAULT_BASE = 'http://localhost:5199'
 
@@ -50,6 +51,20 @@ function findBrowser() {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * 명령에 적은 경로(--deck, --out, --pages, --run)를 실행한 폴더 기준의 절대 경로로. npm run은 package.json이 있는 폴더에서 돌리므로
+ * 실행한 폴더는 INIT_CWD에 있다. 상대 경로를 그대로 넘기면 크롬은 파일 고르기 창에 넣은 상대 경로를 읽지 못해서, 작업 파일이 열리지
+ * 않은 채 다음 단계에서 '‘내보내기’ 단추를 찾지 못했어요'로 끝났다
+ */
+const here = (p) => resolve(process.env.INIT_CWD || process.cwd(), String(p))
+
+/** 있어야 하는 파일. 없으면 무엇을 찾지 못했는지 말한다 */
+function mustExist(p, what) {
+  const full = here(p)
+  if (!existsSync(full)) throw new Error(`${what}을 찾지 못했어요: ${full}\n경로를 확인해 주세요(상대 경로는 명령을 실행한 폴더 기준이에요).`)
+  return full
+}
 
 /** 창 없는 브라우저 하나와 탭 하나. 끝나면 close()로 브라우저와 임시 프로필을 지운다 */
 async function openBrowser({ width = 1920, height = 1080, gpu = true } = {}) {
@@ -168,12 +183,12 @@ async function shot(o) {
     if (o.scrollbars) await page.eval(SCROLLBARS)
     const script = o.run ?? o.do
     if (typeof script === 'string') {
-      const body = script.split(',').map((f) => readFileSync(f, 'utf8')).join('\n')
+      const body = script.split(',').map((f) => readFileSync(mustExist(f, '스크립트 파일'), 'utf8')).join('\n')
       const said = await page.eval(`(async () => {\nconst wait = (ms) => new Promise((r) => setTimeout(r, ms))\n${body}\n})()`)
       if (said !== undefined) console.log(typeof said === 'string' ? said : JSON.stringify(said, null, 2))
       await sleep(Number(o.after ?? 600))
     }
-    const out = o.out || 'shot.png'
+    const out = here(o.out || 'shot.png')
     writeFileSync(out, await page.shot())
     console.log(out)
   } finally {
@@ -272,7 +287,7 @@ async function film(o) {
     await page.go('about:blank', 0)
     const cells = frames.map((f, k) => `<figure><img src="data:image/png;base64,${f}"><figcaption>${((k + 1) * every) / 1000}s</figcaption></figure>`).join('')
     await page.eval(`(() => { document.body.innerHTML = ${JSON.stringify(`<style>body{margin:0;padding:8px;background:#777;display:grid;grid-template-columns:repeat(${cols},${w}px);gap:8px;font:12px sans-serif;color:#fff}figure{margin:0}img{width:${w}px;height:${h}px;display:block}figcaption{height:20px;line-height:20px}</style>${cells}`)}; return Promise.all([...document.images].map((im) => im.decode())).then(() => true) })()`)
-    const out = o.out || 'film.png'
+    const out = here(o.out || 'film.png')
     writeFileSync(out, await page.shot())
     console.log(out)
   } finally {
@@ -330,6 +345,8 @@ function pdfFacts(buf) {
 
 async function pdf(o) {
   const base = o.base || DEFAULT_BASE
+  const deck = o.deck ? mustExist(o.deck, '작업 파일') : null
+  const pages = o.pages ? here(o.pages) : null
   const page = await openBrowser({ width: 1600, height: 900 })
   try {
     // 인쇄 창 대신: 부른 것만 적어 두고, 인쇄가 끝났다고 보고 장들을 거두는 1초 뒤의 정리(exports.tsx)는 PDF를 다 만든 뒤로 미룬다
@@ -337,15 +354,16 @@ async function pdf(o) {
       source: `window.print = () => { window.__printed = true }; { const st = window.setTimeout; window.setTimeout = function (fn, ms, ...a) { if (ms === 1000 && window.__printed) { window.__done = fn; return 0 } return st.call(window, fn, ms, ...a) } }`,
     })
     await page.go(base, 1200)
-    if (o.deck) {
+    if (deck) {
       await page.cdp('Page.setInterceptFileChooserDialog', { enabled: true })
       const chosen = new Promise((resolve) => page.on((m) => m.method === 'Page.fileChooserOpened' && resolve(m.params)))
       await press(page, '파일 열기')
       const fc = await Promise.race([chosen, sleep(5000).then(() => null)])
       if (!fc) throw new Error('파일 고르기 창이 열리지 않았어요.')
-      await page.cdp('DOM.setFileInputFiles', { files: [o.deck], backendNodeId: fc.backendNodeId })
+      await page.cdp('DOM.setFileInputFiles', { files: [deck], backendNodeId: fc.backendNodeId })
     } else await press(page, '완성된 예시 보기')
     await sleep(3500)
+    if (!(await page.eval(`location.hash.startsWith('#/edit/')`))) throw new Error(deck ? `작업 파일을 열지 못했어요: ${deck}\nFramo에서 저장한 .deck 파일인지 확인해 주세요.` : '예시 발표를 열지 못했어요.')
     await press(page, '내보내기')
     await sleep(400)
     await press(page, 'PDF', '.menu button')
@@ -355,16 +373,16 @@ async function pdf(o) {
     for (let i = 0; i < 1200 && !(await page.eval('!!window.__printed')); i++) await sleep(100)
     const shown = await page.eval(`document.querySelectorAll('.print-page').length`)
     if (!shown) throw new Error('인쇄할 장이 그려지지 않았어요.')
-    if (o.pages) {
+    if (pages) {
       // 인쇄 화면으로 그린 장마다의 그림: PDF에 담긴 모습과 같은 짜임이다(PDF를 그림으로 바꾸는 도구 없이 보기).
       // PDF보다 먼저 찍는다: PDF를 만들면 인쇄가 끝났다는 알림(afterprint)에 인쇄할 장들을 거둔다
-      mkdirSync(o.pages, { recursive: true })
+      mkdirSync(pages, { recursive: true })
       await page.cdp('Emulation.setEmulatedMedia', { media: 'print' })
       await page.size(1920, 1080)
       for (let i = 0; i < shown; i++) {
         const clip = await page.eval(`(() => { const r = document.querySelectorAll('.print-page')[${i}].getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height, scale: 1 } })()`)
         const shot = await page.cdp('Page.captureScreenshot', { format: 'png', clip, captureBeyondViewport: true })
-        writeFileSync(join(o.pages, `${String(i + 1).padStart(3, '0')}.png`), Buffer.from(shot.data, 'base64'))
+        writeFileSync(join(pages, `${String(i + 1).padStart(3, '0')}.png`), Buffer.from(shot.data, 'base64'))
       }
       await page.cdp('Emulation.setEmulatedMedia', { media: '' })
     }
@@ -377,7 +395,7 @@ async function pdf(o) {
       if (c.eof) break
     }
     await page.cdp('IO.close', { handle: stream })
-    const out = o.out || 'deck.pdf'
+    const out = here(o.out || 'deck.pdf')
     const buf = Buffer.concat(parts)
     writeFileSync(out, buf)
     await page.eval('window.__done && window.__done(), true')
