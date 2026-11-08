@@ -1,36 +1,59 @@
 /* ---------- 층 ----------
-   층마다 한 줄: 이름(크게, 굵게)과 무엇이 있는지(--ink-2). 층 사이는 가는 줄 선(--line) 하나뿐. 왼쪽에 세로 축과 층마다 눈금을
-   두던 때는 꾸밈 표시가 AI가 만든 서식처럼 보였다(사용자). 위아래 차례는 줄의 차례가 말한다 */
+   위에서 비스듬히 본 얇은 판(평행사변형의 옅은 1px 테두리)이 넉넉한 사이를 두고 위에서 아래로 포개진다. 맨 아래가 받치는 바탕이다.
+   층 이름(굵게)과 무엇이 있는지(--ink-2)는 판 옆에 글자 위계로 둔다: 판 안에 글을 넣으면 글이 든 상자가 된다.
+   강조할 층 하나만 판의 선과 이름이 강조색(답). 예전에는 이름 | 설명 두 단의 줄 선 표라 판을 혼자 쓰면 빽빽한 세 줄 표로만
+   보였다(사용자: 너무 붙어 있고 예전 PPT 규격 같다).
+   판의 크기는 칸을 따른다: 너비는 칸 너비의 몫(cqw), 두께는 너비의 5분의 1이되 소제목과 안쪽 여백을 뺀 칸 높이(cqh)를 층 수로 나눈 몫을 넘지 않는다.
+   그래서 판을 혼자 쓰면 그림이 커지고, 낮은 칸에서는 판이 얇아져 줄 높이는 글이 정한다(잰 높이, blockHeights.ts) */
 .bk-ly {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  height: 100%;
+}
+
+.bk-ly > .bk-h {
+  margin-bottom: var(--bk-h-gap);
 }
 
 .bk-ly-list {
-  position: relative;
+  /* 판 사이: 판 두께보다 좁게 두어야 따로 떨어진 목록이 아니라 한 더미로 읽힌다 */
+  --ly-gap: calc(36px * var(--bk-fit, 1));
+  --ly-pw: clamp(200px, 40cqw, calc(640px * var(--bk-fit, 1)));
+  --ly-ph: max(48px, min(calc(var(--ly-pw) * 0.2), calc((100cqh - 200px) / var(--n, 3) - var(--ly-gap))));
+  display: grid;
+  row-gap: var(--ly-gap);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .bk-ly-row {
-  --ly-pad: calc(18px * var(--bk-fit, 1));
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
-  align-items: baseline;
-  column-gap: 48px;
-  padding: var(--ly-pad) 0;
+  grid-template-columns: var(--ly-pw) minmax(0, 1fr);
+  align-items: center;
+  column-gap: calc(56px * var(--bk-fit, 1));
 }
 
-.bk-ly-list {
-  --ly-pad: calc(18px * var(--bk-fit, 1));
+.bk-ly-plate {
+  display: block;
+  width: 100%;
+  height: var(--ly-ph);
+  overflow: visible;
+  fill: none;
+  /* 판은 그림 자체라 보여야 한다(docs/VISUAL-RULES.md 2-1): 줄 선(--line-strong)은 검은 바탕에서 묻혀 판이 사라졌다. 한 단계 짙게 */
+  stroke: color-mix(in srgb, var(--ink-3) 64%, var(--bg));
+  stroke-width: var(--rule-hair);
 }
 
-.bk-ly-row + .bk-ly-row {
-  border-top: var(--rule-hair) solid var(--line);
+.bk-ly-row.is-hl .bk-ly-plate {
+  stroke: var(--accent);
+}
+
+.bk-ly-txt {
+  display: grid;
+  row-gap: 4px;
+  min-width: 0;
 }
 
 .bk-ly-t {
@@ -41,6 +64,10 @@
   line-height: 1.3;
 }
 
+.bk-ly-row.is-hl .bk-ly-t {
+  color: var(--accent);
+}
+
 .bk-ly-m {
   --fs: var(--t-body);
   color: var(--ink-2);
@@ -48,9 +75,96 @@
   text-wrap: pretty;
 }
 
-@container bk (max-width: 760px) {
+/* 판을 혼자 쓰면 판 더미와 이름표를 한 묶음으로 본문 가운데에: 이름표 뒤가 칸 끝까지 비면 오른쪽 3분의 1이 통째로 빈다.
+   소제목도 묶음의 왼쪽 끝에 같이 선다. 다른 컴포넌트와 같이 있으면 왼쪽 끝을 맞춘다(한 단의 글은 왼쪽 끝 하나에) */
+@container bk (min-width: 1200px) {
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-ly {
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-ly-row {
+    grid-template-columns: var(--ly-pw) minmax(0, max-content);
+  }
+
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-ly-txt {
+    max-width: 14em;
+  }
+}
+
+/* 낮은 칸: 판 사이를 좁히고 층 이름과 무엇이 있는지를 한 줄에 둔다(--ly-tight). 넉넉한 짜임(이름 아래 설명, 넓은 판 사이)이
+   글자를 줄이지 않고 들어가는 높이는 층 수마다 달라서(소제목 75 + 층마다 92 + 판 사이 36) 층 수마다 문턱을 둔다. 들여 쓰기와 강조는
+   안쪽 위아래 여백(88)만큼 더 높다. 문턱 없이 넉넉한 짜임 그대로면 잘리지 않는 높이(blockHeights.ts)가 예전 표 꼴보다 200px 넘게 높아졌다 */
+@container bk (max-height: 309px) {
+  .bk-ly {
+    --ly-tight: 1;
+  }
+}
+
+@container bk (max-height: 439px) {
+  .bk-ly:not([data-n='2']) {
+    --ly-tight: 1;
+  }
+}
+
+@container bk (max-height: 569px) {
+  .bk-ly:is([data-n='4'], [data-n='5']) {
+    --ly-tight: 1;
+  }
+}
+
+@container bk (max-height: 699px) {
+  .bk-ly[data-n='5'] {
+    --ly-tight: 1;
+  }
+}
+
+@container bk (max-height: 399px) {
+  :is(.bk-look-card, .bk-look-bold) .bk-ly {
+    --ly-tight: 1;
+  }
+}
+
+@container bk (max-height: 529px) {
+  :is(.bk-look-card, .bk-look-bold) .bk-ly:not([data-n='2']) {
+    --ly-tight: 1;
+  }
+}
+
+@container bk (max-height: 659px) {
+  :is(.bk-look-card, .bk-look-bold) .bk-ly:is([data-n='4'], [data-n='5']) {
+    --ly-tight: 1;
+  }
+}
+
+@container bk (max-height: 789px) {
+  :is(.bk-look-card, .bk-look-bold) .bk-ly[data-n='5'] {
+    --ly-tight: 1;
+  }
+}
+
+@container style(--ly-tight: 1) {
+  .bk-ly-list {
+    --ly-gap: calc(14px * var(--bk-fit, 1));
+  }
+
+  .bk-ly-txt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.8em;
+  }
+}
+
+/* 좁은 칸: 판을 그리면 이름표가 두세 글자마다 꺾인다. 판 없이 위층일수록 들여 쓴 계단으로(아래가 넓게 받친다) */
+@container bk (max-width: 640px) {
   .bk-ly-row {
     grid-template-columns: minmax(0, 1fr);
-    row-gap: 6px;
+    padding-left: calc((var(--n, 3) - 1 - var(--k, 0)) * 28px);
+  }
+
+  .bk-ly-plate {
+    display: none;
   }
 }

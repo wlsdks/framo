@@ -3,26 +3,41 @@
 import type { CSSProperties } from 'react'
 import { BLOCKS } from '../../deck/blocks'
 import { isBlankItem } from '../../deck/fields'
+import { cx } from '../../lib/cx'
 import { useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
 
+/** 강조할 층: 고른 것이 있으면 그것(-1은 강조 없음), 없으면 둘째 층(쓰는 화면과 바탕 사이, 대개 새로 놓는 층). 층이 하나면 그것 */
+function layersHighlight(chosen: number | undefined, n: number): number {
+  if (Number.isInteger(chosen) && chosen! >= -1 && chosen! < n) return chosen!
+  return Math.min(1, n - 1)
+}
+
 /**
- * 층: 위에서 아래로 쌓인 층(쓰는 것 → 잇는 것 → 바탕). 층마다 이름(크게)과 무엇이 있는지(옆에), 층 사이는 가는 선, 왼쪽에 층을 꿰는
- * 세로 축과 층마다 눈금. 흐름(가로 상자)과 달리 '위가 아래에 기대어 선다'가 주인공이라, 발표할 때 층이 위에서부터 쌓이고 요청 조각이
- * 축을 타고 맨 아래까지 내려갔다가 답으로 올라온다(engine.ts)
+ * 층: 위에서 비스듬히 본 얇은 판이 넉넉한 사이를 두고 포개진 그림. 맨 위가 쓰는 쪽, 맨 아래가 받치는 바탕이다. 판은 옅은 1px 선만
+ * 긋고(글은 판 안이 아니라 옆에) 층 이름과 무엇이 있는지는 판 옆에 글자 위계로 둔다. 강조할 층 하나만 판의 선과 이름이 강조색이다.
+ * 예전에는 이름 | 설명 두 단의 줄 선 표라서, 판을 혼자 쓰면 빽빽한 세 줄 표로만 보이고 '층'이 읽히지 않았다(사용자: 예전 PPT 규격 같다).
+ * 발표할 때는 맨 아래 판부터 차례로 내려앉아 쌓이고 글은 제자리에서 나타난다(engine.ts)
  */
 export function Layers() {
   const { slide, mode } = useSlide()
   const all = slide.items.slice(0, BLOCKS.layers.items!.max).map((it, i) => ({ it, i }))
   const shown = mode === 'final' ? all.filter(({ it }) => !isBlankItem(it)) : all
+  const hl = layersHighlight(slide.options.highlight, shown.length)
   return (
-    <div className="bk-ly" data-n={shown.length}>
+    <div className="bk-ly" data-n={shown.length} style={{ '--n': shown.length } as CSSProperties}>
       <T k="heading" as="h3" className="bk-h" fit={[18, 32]} multiline />
       <ol className="bk-ly-list">
         {shown.map(({ it, i }, k) => (
-          <li key={it.id} className="it bk-ly-row" style={{ '--k': k } as CSSProperties}>
-            <IT i={i} k="title" className="bk-ly-t" multiline />
-            <IT i={i} k="meta" className="bk-ly-m" multiline />
+          <li key={it.id} className={cx('it bk-ly-row', k === hl && 'is-hl')} style={{ '--k': k } as CSSProperties}>
+            {/* 판: 비스듬히 본 얇은 판의 테두리. 늘이는 그림이라 선 굵기는 그대로(non-scaling-stroke) */}
+            <svg className="bk-ly-plate" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <polygon points="24,0.5 99.5,0.5 76,99.5 0.5,99.5" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div className="bk-ly-txt">
+              <IT i={i} k="title" className="bk-ly-t" multiline />
+              <IT i={i} k="meta" className="bk-ly-m" multiline />
+            </div>
             <ItemTools i={i} />
           </li>
         ))}
