@@ -215,3 +215,24 @@
 .l-closing .cl-step + .cl-step {
   border-top: 0;
 }
+
+/* 요청이 있고 발표자·연락처가 없으면 제목(감사합니다)을 요청 위에 한 단으로 쌓는다: 왼쪽 단에 제목만 남으면 제목과 요청 사이가 700px
+   비었다(검수). 제목은 마무리 문장이라 요청 제목과 같은 단계(52) */
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1.2fr);
+  row-gap: 56px;
+}
+
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) > .cl-main {
+  grid-row: 2;
+}
+
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) > .cl-steps {
+  grid-row: 3;
+  order: 0;
+}
+
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) .cl-main > .cl-title {
+  --fs: 52px;
+}
