@@ -21,6 +21,21 @@ export function recordType(): { mime: string; ext: string } | null {
   return TYPES.find((t) => MediaRecorder.isTypeSupported(t.mime)) ?? null
 }
 
+/** 영상 크기의 위 한계(1080p). 더 촘촘하게 그려 받은 장면은 이 크기로 줄여 담는다 */
+const VIDEO_W = 1920
+const VIDEO_H = 1080
+
+/**
+ * 탭을 몇 배 촘촘하게 그려 녹화할지. crop은 잘라 낼 자리(슬라이드 상자)의 기기 픽셀 너비.
+ * 탭 녹화는 창에 그린 크기 그대로라 1280×600 창(100%)의 영상은 992×558이었고 작은 글자가 뭉개졌다. 크롬과 엣지는 탭보다 큰 크기를
+ * 달라고 하면 탭을 그만큼(2배까지) 촘촘하게 다시 그려 보낸다. 장이 기기 픽셀로 1280 이하로 작게 그려지면 2배로 그려 받아 1920×1080 안으로 줄인다.
+ * 그보다 큰 장(1920 전체 화면의 1856×1044, 150% 배율 노트북의 1824×1026)은 그대로: 2배로 그리면 느린 PC에서 모션이 끊길 수 있는데 얻는 것이 적다.
+ * 배수는 정수만 쓴다: 장의 자리를 기기 픽셀에 맞춰 둔 것(recordBox)이 어긋나면 영상 가장자리에 검은 줄이 든다
+ */
+export function captureScale(crop: number): 1 | 2 {
+  return crop > 0 && crop <= 1280 ? 2 : 1
+}
+
 /** 이 브라우저에서 녹화할 수 있는지(크롬, 엣지) */
 export function canRecord(): boolean {
   return !!navigator.mediaDevices?.getDisplayMedia && recordType() !== null
@@ -59,9 +74,14 @@ export type Recording = {
 export async function startRecording(el: HTMLElement): Promise<Recording> {
   const type = recordType()
   if (!type) throw new Error('unsupported')
+  const dpr = window.devicePixelRatio || 1
+  const scale = captureScale(el.getBoundingClientRect().width * dpr)
+  // 마우스 화살표는 담지 않는다 (발표 화면도 녹화하는 동안 감춘다)
+  const video: MediaTrackConstraints & { cursor?: string } = { frameRate: { ideal: 60 }, displaySurface: 'browser', cursor: 'never' }
+  // 탭을 scale배로 그려 달라고 한다. 이 기능이 없는 브라우저는 탭 크기 그대로 보낸다(ideal이라 거절하지 않는다)
+  if (scale > 1) Object.assign(video, { width: { ideal: Math.round(window.innerWidth * dpr * scale) }, height: { ideal: Math.round(window.innerHeight * dpr * scale) } })
   const options = {
-    // 마우스 화살표는 담지 않는다 (발표 화면도 녹화하는 동안 감춘다)
-    video: { frameRate: { ideal: 60 }, displaySurface: 'browser', cursor: 'never' },
+    video,
     audio: false,
     // 크롬: 고르기 창에 이 탭을 먼저 보인다
     preferCurrentTab: true,
@@ -86,6 +106,8 @@ export async function startRecording(el: HTMLElement): Promise<Recording> {
   } catch {
     // 잘라 내지 못하면(다른 탭이나 창을 골랐을 때) 고른 화면 그대로 녹화한다
   }
+  // 촘촘하게 그려 받은 장면은 1080p로 줄여 담는다 (비율은 그대로). 안 되면 받은 크기 그대로
+  if (scale > 1) await track.applyConstraints({ width: { max: VIDEO_W }, height: { max: VIDEO_H } }).catch(() => {})
   const recorder = new MediaRecorder(stream, { mimeType: type.mime, videoBitsPerSecond: 16_000_000 })
   const chunks: Blob[] = []
   recorder.ondataavailable = (e) => {
