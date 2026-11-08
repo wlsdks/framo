@@ -3547,9 +3547,17 @@ export function motionEngine(): MotionEngine {
     }
     const finish = () => {
       shown = true
+      // 멈춰 둔 컴포넌트의 움직임은 끝 모습으로 보낸다: 다시 재생만 하면 아직 차례가 오지 않은 항목이 멈춘 자리(안 보임)에 남아
+      // 뒤로 돌아온 장에서 대화가 두 마디만 보였다(발표 녹화). 끝없는 움직임(계속 흐르는 조각)은 끝이 없어 거둔다
       for (const st of steppers.splice(0)) {
         cancelAnimationFrame(st.raf)
-        for (const a of cellAnims(st)) a.play()
+        for (const a of cellAnims(st)) {
+          try {
+            a.finish()
+          } catch {
+            a.cancel()
+          }
+        }
       }
       waiting.splice(0).forEach((g) => hold(g, false))
       for (const b of batches) {
