@@ -179,3 +179,13 @@
     padding-top: 0;
   }
 }
+
+/* 넓은 칸에 한 줄로 늘어선 점: 점은 32px 그대로 두고 사이만 벌려 점 칸 너비를 쓴다(사이는 점 지름의 2.6배까지). 사이를 그대로 두면
+   한 줄을 다 쓰는 칸에서 숫자와 점이 왼쪽 45% 안에 몰리고 오른쪽이 30% 넘게 비었다(checkAssembly). 점을 키우지 않는 까닭은
+   위(32px까지)와 같다 */
+@container bk (min-aspect-ratio: 16 / 9) and (min-width: 900px) {
+  .bk-rt-dots[data-flat]:not(.is-pct) {
+    justify-content: space-between;
+    width: min(100%, calc(var(--c) * var(--d) * 3.4));
+  }
+}
