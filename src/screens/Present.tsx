@@ -48,7 +48,25 @@ export function barRoom(w: number, h: number): BarRoom {
  * 전체 화면 발표. 클리커가 보내는 PageUp/PageDown도 받는다.
  * 발표자 화면(Presenter)이 열려 있으면 같이 움직인다. 어느 창에서 넘겨도 된다.
  */
-export function Present({ deck, startId, entering, onExit }: { deck: Deck; startId?: string; entering?: Promise<unknown>; onExit: (lastId?: string) => void }) {
+/** 녹화가 어떻게 끝났는지: 파일로 저장함, 담긴 장면이 없음, 시작하지 못함(화면 고르기를 거절했거나 막혔다) */
+export type RecordResult = 'saved' | 'empty' | 'failed'
+
+export function Present({
+  deck,
+  startId,
+  entering,
+  onExit,
+  record: recordOnStart,
+  onRecorded,
+}: {
+  deck: Deck
+  startId?: string
+  entering?: Promise<unknown>
+  onExit: (lastId?: string) => void
+  /** 열자마자 첫 장부터 영상으로 저장하고, 끝나면 발표를 닫는다 (편집기 내보내기의 '영상') */
+  record?: boolean
+  onRecorded?: (result: RecordResult) => void
+}) {
   const slides = useMemo(() => deck.slides.filter((s) => !s.hidden), [deck.slides])
   // 장마다 넘기는 쪽 번호와 단락. 그릴 때마다 새로 만들면 단락 목록이 새 배열이라, 마우스를 움직이거나 멈출 때마다(아래 표시를
   // 보이고 숨긴다) 지금 장을 통째로 다시 그렸다
@@ -272,9 +290,9 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
     }
   }, [view, slides, ahead, ready])
 
-  const record = async () => {
+  const record = async (): Promise<RecordResult | null> => {
     const frame = stageRef.current?.closest<HTMLElement>('.slide-frame')
-    if (!frame || recStop.current) return
+    if (!frame || recStop.current) return null
     setNotice('')
     flushSync(() => setRecording(true))
     let rec: Recording
@@ -283,7 +301,7 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
     } catch {
       setRecording(false)
       setNotice('녹화를 시작하지 못했어요. 공유할 화면으로 ‘이 탭’을 고르면 돼요.')
-      return
+      return 'failed'
     }
     let stopped = false
     recStop.current = () => {
@@ -315,7 +333,21 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
     setRecording(false)
     if (blob) saveBlob(blob, `${safeFileName(deck.title, '발표')}.${rec.ext}`)
     else setNotice('녹화된 장면이 없어요. 다시 ‘영상으로 저장’을 눌러 주세요.')
+    return blob ? 'saved' : 'empty'
   }
+
+  // 내보내기에서 '영상'을 골랐으면 창이 다 커지고 첫 장이 그려진 뒤 바로 녹화한다(누른 지 1초 안이라 브라우저가 화면 고르기를 묻는다).
+  // 다 되면(Esc로 멈춰도) 발표를 닫고 편집기로 돌아가 결과를 알린다: 영상만 만들려던 분이 발표 화면에 남아 무엇을 할지 몰랐다
+  const autoRecord = useRef(false)
+  useEffect(() => {
+    if (!recordOnStart || !ready || !settled || autoRecord.current) return
+    autoRecord.current = true
+    void record().then((result) => {
+      if (!result) return
+      onRecorded?.(result)
+      exit()
+    })
+  })
 
   const slide = slides[view.index]
   if (!slide) return null

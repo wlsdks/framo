@@ -180,11 +180,14 @@ export function ExportMenu({
   onHtml,
   onPdf,
   onPpt,
+  onVideo,
   onDeckFile,
 }: {
   onHtml: () => void
   onPdf: () => void
   onPpt: () => void
+  /** 영상으로 녹화하기. 이 브라우저가 녹화하지 못하면 없다 */
+  onVideo?: () => void
   onDeckFile: () => void
 }) {
   return (
@@ -229,6 +232,16 @@ export function ExportMenu({
               info="PowerPoint에서 넘기며 발표할 수 있지만, 슬라이드마다 그림 한 장이라 글과 표는 고칠 수 없어요. 고칠 것은 Framo에서 고쳐 다시 내보내세요. 발표자 노트는 PPT의 노트 칸에 들어가니 다른 분께 보내기 전에 확인하세요."
               onPick={pick(onPpt)}
             />
+            {/* 영상은 발표 화면의 막대에만 있어서, 내보내기에서 찾던 분은 영상으로 저장할 수 있다는 것을 몰랐다 */}
+            {onVideo && (
+              <ExportItem
+                name="영상 (MP4)"
+                label="영상"
+                desc="모션까지 발표하는 모습 그대로 녹화해요"
+                info="첫 슬라이드부터 모션이 끝나면 다음으로 넘기며 녹화하고, 마지막 슬라이드가 끝나면 파일로 저장해요. 화면 공유를 묻는 창이 뜨면 ‘이 탭’을 골라요. Esc를 누르면 거기까지 저장해요. 녹화는 이 PC 안에서만 해요."
+                onPick={pick(onVideo)}
+              />
+            )}
             <div className="menu-sep" role="separator" />
             <ExportItem
               name="작업 파일"
