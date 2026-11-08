@@ -37,7 +37,7 @@ import {
   SHARE_SUBDIRS,
   type ShareSubdir,
 } from '../src/ai/protocol'
-import { catalog, checkShape, onlyKnownStrings, type ShapeDeck } from '../src/ai/share'
+import { catalog, checkShape, onlyKnownStrings, TEXT_STATES, type ShapeDeck } from '../src/ai/share'
 import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LINK_IDS, BLOCK_LOOK_IDS, BLOCK_REVEAL_IDS, BLOCK_SPEED_IDS, BLOCK_TYPES, BLOCK_WHEN_IDS, BOARD_COLS, BOARD_ROWS, MAX_BLOCKS } from '../src/deck/blocks'
 import { DURATIONS } from '../src/deck/blueprints'
 import { targetCount } from '../src/deck/generate'
@@ -66,7 +66,7 @@ const MESSAGES = {
     '되풀이해 묻지 말고 사용자에게 그렇게 알리세요.',
   checked:
     '미리 돌려 보기만 했고 아무것도 보내지 않았어요. ok가 false인 op는 help의 그 코드 풀이대로 고치거나 빼고 propose_changes로 보내세요. ' +
-    '노트나 제목의 실제 길이처럼 모양에 없는 것 때문에 앱에서 조금 다를 수 있어요.',
+    '노트나 글의 정확한 길이처럼 모양에 없는 것 때문에 앱에서 조금 다를 수 있어요.',
   internal: '처리하지 못했어요. 한 번만 다시 해 보고, 또 안 되면 Framo를 껐다 켜 달라고 사용자에게 알리세요.',
 } as const
 
@@ -100,7 +100,8 @@ const PROTOCOL_WORDS = [
   // 모양 파일
   SHAPE_FORMAT, 'format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides',
   'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'pane', 'contain', 'place', 'variant', 'variants', 'base',
-  'empty', 'filled', 'long',
+  // 칸의 상태: 비었는지, 글자 수 구간(여러 줄로 쓰는 칸은 줄 수 구간까지), 이미지 칸은 있는지
+  ...TEXT_STATES, 'filled',
   // 장면 (장의 options.scene). id는 카탈로그에도 있지만 모양의 값이라 여기에도 적어 둔다
   'scene', ...SCENE_IDS,
   // 부품 장
@@ -254,7 +255,9 @@ const TOOLS = [
   {
     name: 'get_shape',
     description:
-      '발표 하나의 모양: 장 순서, 장마다 레이아웃과 역할, 숨김 여부, 칸마다 비었는지(empty)/채웠는지(filled)/길어서 넘칠 수 있는지(long), 항목 수, 옵션, 테마. ' +
+      '발표 하나의 모양: 장 순서, 장마다 레이아웃과 역할, 숨김 여부, 칸마다 글의 길이, 항목 수, 옵션, 테마. ' +
+        '칸의 길이는 글자 수가 아니라 구간이다: empty(빈칸), 1-10, 11-20, 21-40, 41-80, 81-140, 141-280, 281+(글자). 여러 줄로 쓰는 칸에 두 줄 넘게 썼으면 줄 수 구간이 붙는다(예: "81-140, 3-4 lines"는 81~140자를 3~4줄로). 이미지 칸은 있으면 filled. ' +
+        '긴 글이 든 칸은 넓은 자리, 글을 더 담는 레이아웃이나 부품, 장 나누기를 생각하고, 짧은 글만 있는 칸은 크게 보이는 레이아웃이 어울린다. ' +
       '부품 장(layout compose)은 가로 12칸, 세로 12칸의 판을 부품들이 빈틈없이 나눠 덮은 장으로, blocks에 부품마다 id(b로 시작), 종류, 자리(x, y는 왼쪽 위 칸, w, h는 너비와 높이의 칸 수), 모양, 바탕, 움직임, 이음표(link는 오른쪽 선, linkBelow는 아래 선), 칸 상태가 읽는 차례로 나온다. ' +
         '부품의 when/speed/reveal/from은 기본값이 아닐 때만 나오고, 장의 options.order는 부품이 나오는 차례를 정했을 때만 나온다. ' +
         '장의 options.scene은 골라 둔 장면(카탈로그 scenes)이고, 그 장에 맞을 때만 나온다. ' +
@@ -273,7 +276,7 @@ const TOOLS = [
       'propose_changes와 같은 인자를 받아 미리 돌려 보기만 한다. 아무것도 보내지 않고 사용자에게도 보이지 않는다. ' +
       'op마다 앱에서 적용하면 어떻게 될지(ok, code)가 나오고, 안 되는 op에는 까닭이 된 키(key)가 붙는다. help에는 나온 코드마다 무엇을 고치면 되는지 나온다. ' +
       'ops는 차례로, 앞의 op가 적용된 위에서 본다(add_slide, add_block의 as 이름도 쓸 수 있다). code가 invalid인 op가 있으면 propose_changes가 제안을 통째로 받지 않으니(accepted가 false) 고치거나 뺀다. ' +
-      'propose_changes를 부르기 전에 한 번 부르고, ok가 false인 op를 고치거나 빼서 보낸다. 모양에 없는 것(노트, 제목의 실제 길이) 때문에 앱의 결과와 조금 다를 수 있다.',
+      'propose_changes를 부르기 전에 한 번 부르고, ok가 false인 op를 고치거나 빼서 보낸다. 모양에 없는 것(노트, 글의 정확한 길이) 때문에 앱의 결과와 조금 다를 수 있다.',
     inputSchema: CHANGES_SCHEMA,
     annotations: { readOnlyHint: true, openWorldHint: false },
   },

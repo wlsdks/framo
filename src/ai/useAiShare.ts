@@ -20,7 +20,7 @@ export interface AiShare {
 
 /**
  * 공유를 켠 발표의 모양을 'AI 공유' 폴더에 올리고, AI가 보낸 제안을 가져온다.
- * 글은 모양에 들어가지 않으므로, 글만 고칠 때는 다시 올리지 않는다.
+ * 글은 모양에 들어가지 않으므로, 글을 고쳐도 글자 수 구간이 그대로면 다시 올리지 않는다.
  */
 export function useAiShare(deck: Deck): AiShare {
   const [status, setStatus] = useState<AiStatus | null | undefined>(undefined)
@@ -37,7 +37,7 @@ export function useAiShare(deck: Deck): AiShare {
     }
   }, [])
 
-  // 수정 시각은 빼고 비교한다. 칸이 비었는지, 장 순서 같은 모양이 바뀔 때만 올린다.
+  // 수정 시각은 빼고 비교한다. 칸의 글자 수 구간, 장 순서 같은 모양이 바뀔 때만 올린다.
   const key = useMemo(() => (shared ? JSON.stringify({ ...toShape(deck), updatedAt: 0 }) : null), [deck, shared])
   const published = useRef<string | null>(null)
   const latest = useRef(deck)

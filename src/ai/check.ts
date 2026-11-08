@@ -1,20 +1,37 @@
 // 제안을 보내기 전에 미리 돌려 보기. MCP 서버의 check_changes가 쓴다.
 //
-// MCP 서버에는 모양 파일뿐이라 진짜 발표가 없다. 그래서 모양으로 '대역 발표'를 세운다: 칸이 찼으면 지어낸 글자로,
+// MCP 서버에는 모양 파일뿐이라 진짜 발표가 없다. 그래서 모양으로 '대역 발표'를 세운다: 칸이 찼으면 그 글자 수 구간만큼 지어낸 글자로,
 // 비었으면 비운 채로, 판의 자리와 고른 값은 모양 그대로. 그 위에 앱과 같은 applyOps를 돌려 op마다 결과 코드를 얻는다.
 // 대역의 글자는 이 파일이 만든 같은 글자의 되풀이라 사람이 적은 글이 들어올 길이 없고, 밖으로 나가는 것도 코드뿐이다.
 //
-// 앱에서 적용할 때와 다를 수 있는 것: 모양에 없는 것(노트, 제목의 실제 길이, 보고 구성이 미리 넣은 이름표)에 기대는 판단.
+// 앱에서 적용할 때와 다를 수 있는 것: 모양에 없는 것(노트, 글의 정확한 길이, 보고 구성이 미리 넣은 이름표)에 기대는 판단.
 // 노트만 있는 장은 대역에서 빈 장이고, 미리 넣은 이름표만 있는 칸은 대역에서 찬 칸이다.
 
 import { LAYOUTS } from '../deck/layouts'
 import type { Block, Deck, Item, ItemKey, Slide } from '../deck/types'
 import { isObj } from './guards'
 import { applyOps, OP_KEYS, parseOp, type Op, type OpCode } from './ops'
-import { shapeBlockId, shapeSlideId, type FieldState, type ShapeBlock, type ShapeDeck, type ShapeSlide } from './share'
+import { shapeBlockId, shapeSlideId, TEXT_LENGTHS, TEXT_LINES, type FieldState, type ShapeBlock, type ShapeDeck, type ShapeSlide } from './share'
 
-/** 대역의 글자. 찬 칸은 짧은 제목쯤, 긴 칸은 모양이 'long'으로 치는 길이(140자)를 넘게 */
-const fill = (state: FieldState | undefined) => (state === 'long' ? '가'.repeat(160) : state === 'filled' ? '가'.repeat(16) : '')
+/** 글자 수 구간마다 대역에 적는 글자 수: 구간 안의 흔한 길이 (281자 넘으면 320자) */
+const LENGTH_FILL = [8, 16, 32, 64, 120, 220, 320]
+/** 줄 수 구간마다 대역의 줄 수 */
+const LINE_FILL = [2, 4, 6, 10]
+
+/**
+ * 대역의 글자. 모양이 말하는 구간의 길이와 줄 수로 같은 글자를 되풀이한다(그 칸이 차지할 높이를 앱과 비슷하게 어림하려고).
+ * 이미지 칸은 있는지만 알아서 짧은 글자로
+ */
+function fill(state: FieldState | undefined): string {
+  if (!state || state === 'empty') return ''
+  if (state === 'filled') return '가'.repeat(16)
+  const [len, lines] = state.split(', ')
+  const top = TEXT_LENGTHS.indexOf(len as (typeof TEXT_LENGTHS)[number])
+  const n = lines ? LINE_FILL[TEXT_LINES.indexOf(lines.replace(' lines', '') as (typeof TEXT_LINES)[number])] : 1
+  // 줄마다 한 글자는 있어야 줄로 센다 ('1-10, 9+ lines'는 열 줄에 한 글자씩)
+  const total = Math.max(LENGTH_FILL[top], n)
+  return Array.from({ length: n }, (_, i) => '가'.repeat(Math.floor((total * (i + 1)) / n) - Math.floor((total * i) / n))).join('\n')
+}
 
 function fillFields(states: Record<string, FieldState>): Record<string, string> {
   return Object.fromEntries(Object.entries(states).flatMap(([k, v]) => (v === 'empty' ? [] : [[k, fill(v)]])))
@@ -50,7 +67,7 @@ function standInSlide(s: ShapeSlide): Slide {
   // 레이아웃이 숨긴 항목(최대 수 너머)은 모양에 수만 있다. 지우지 않고 남겨 둔 것이라 찬 항목으로 둔다
   const spec = LAYOUTS[s.layout]
   const hidden = Array.from({ length: s.hiddenItems }, (_, j) =>
-    fillItem(Object.fromEntries((spec.items?.fields ?? []).map((f) => [f.key, 'filled' as const])), s.items.length + j),
+    fillItem(Object.fromEntries((spec.items?.fields ?? []).map((f) => [f.key, f.image ? ('filled' as const) : ('11-20' as const)])), s.items.length + j),
   )
   return {
     // 대역의 원래 id는 모양의 해시 id 그대로. 그래서 op가 가리키는 해시 id를 대역의 해시로 옮겨 적는다 (refsFor)

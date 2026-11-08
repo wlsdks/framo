@@ -9,7 +9,7 @@ import type { Block, LayoutId } from '../deck/types'
 import { parseOp } from './ops'
 import { HIGHLIGHT_MAX, HIGHLIGHT_MIN } from './protocol'
 import { SECRET, secretDeck } from './secretDeck'
-import { checkShape, onlyKnownStrings, toShape } from './share'
+import { checkShape, onlyKnownStrings, TEXT_STATES, toShape } from './share'
 
 describe('모양만 고르기', () => {
   it('적은 글, 제목, 이름, 노트, 이미지, 원래 id가 하나도 들어가지 않는다', () => {
@@ -37,7 +37,8 @@ describe('모양만 고르기', () => {
     expect(tiles(blocks.map((b, i) => ({ ...makeBlock(b.type), id: String(i), at: { x: b.x, y: b.y, w: b.w, h: b.h } })))).toBe(true)
     expect(blocks.every((b) => [b.x, b.y, b.w, b.h].every(Number.isInteger))).toBe(true)
     const message = blocks.find((b) => b.type === 'message')!
-    expect(message).toMatchObject({ look: 'plain', effect: 'auto', variant: 'base', fields: { text: 'filled' } })
+    // 칸에 심은 비밀(기밀7731-bf, 10자)은 글자 수 구간으로만 보인다
+    expect(message).toMatchObject({ look: 'plain', effect: 'auto', variant: 'base', fields: { text: '1-10' } })
     // 이음표는 카탈로그의 말만: 맞지 않는 값과 설 데가 없는 것(판의 끝)은 빠진다
     expect(blocks.map((b) => b.link ?? null).filter(Boolean)).toEqual(['arrow'])
     expect(blocks.every((b) => b.linkBelow === undefined)).toBe(true)
@@ -58,9 +59,11 @@ describe('모양만 고르기', () => {
 
   it('원래 덱에서는 장 역할과 칸 상태가 보인다', () => {
     const shape = toShape(createSampleDeck())
-    expect(shape.slides[1]).toMatchObject({ layout: 'summary', role: '한 장 요약', fields: { title: 'filled' } })
+    expect(shape.slides[1]).toMatchObject({ layout: 'summary', role: '한 장 요약', fields: { title: '21-40' } })
     expect(shape.slides[1].items).toHaveLength(4)
-    expect(shape.slides.find((s) => s.layout === 'kpi')?.items[0]).toEqual({ value: 'filled', title: 'filled', body: 'filled' })
+    expect(shape.slides.find((s) => s.layout === 'kpi')?.items[0]).toEqual({ value: '1-10', title: '11-20', body: '11-20' })
+    // 비운 이미지 칸은 empty (이미지 칸은 있는지만 보인다)
+    expect(shape.slides[0].fields.$logo).toBe('empty')
     expect(checkShape(shape)).toBe(true)
   })
 
@@ -86,13 +89,13 @@ describe('모양만 고르기', () => {
     expect(JSON.stringify(shape)).not.toContain(SECRET)
     expect(shape.slides[0].blocks![0]).toMatchObject({
       type: 'decision',
-      fields: { label: 'filled', question: 'filled' },
-      items: [{ title: 'filled', body: 'filled' }, { title: 'filled', body: 'filled' }],
+      fields: { label: '1-10', question: '1-10' },
+      items: [{ title: '1-10', body: '1-10' }, { title: '1-10', body: '1-10' }],
     })
   })
 
   it('모든 발표 종류와 듣는 사람의 구성이 꼴 확인과 마지막 그물을 지난다', () => {
-    const words = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'pane', 'contain', 'place', 'variant', 'base', 'empty', 'filled', 'long', 'html-maker/shape']
+    const words = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'pane', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape']
     for (const type of [...DECK_TYPES, 'blank' as const]) {
       for (const { id: audience } of AUDIENCES) {
         const shape = toShape(createDeck({ type, audience, minutes: 30, method: 'send', title: SECRET, org: SECRET, presenter: SECRET, ask: SECRET, theme: 'white' }))
@@ -242,12 +245,93 @@ describe('모양만 고르기', () => {
 
   it('마지막 그물은 모르는 글자를 잡는다', () => {
     const shape = toShape(createSampleDeck())
-    const words = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'empty', 'filled', 'long', 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene']
+    const words = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene']
     expect(onlyKnownStrings(shape, words)).toBe(true)
     expect(onlyKnownStrings(toShape(withScenes(createSampleDeck(), true)), words)).toBe(true)
     expect(onlyKnownStrings(toShape(secretDeck()), words)).toBe(true)
     expect(onlyKnownStrings({ ...shape, extra: SECRET }, [...words, 'extra'])).toBe(false)
     expect(onlyKnownStrings({ [SECRET]: 1 }, words)).toBe(false)
+  })
+})
+
+describe('칸의 글 길이 (글자 수 구간)', () => {
+  // 한 장 요약: 장의 결론(title)과 항목의 내용(body)은 여러 줄로 쓰는 칸, 항목의 이름(title)은 한 줄 칸
+  const summaryWith = (title: string, name: string, body: string) => {
+    const deck = createSampleDeck()
+    const at = deck.slides.findIndex((s) => s.layout === 'summary')
+    const s = deck.slides[at]
+    deck.slides[at] = { ...s, fields: { ...s.fields, title }, items: s.items.map((it, i) => (i ? it : { ...it, title: name, body })) }
+    return { deck, at }
+  }
+  const shown = (title: string, name = '', body = '') => {
+    const { deck, at } = summaryWith(title, name, body)
+    const s = toShape(deck).slides[at]
+    return { title: s.fields.title, name: s.items[0].title, body: s.items[0].body }
+  }
+
+  it('글자 수는 구간으로만, 경계는 구간의 끝까지 그 구간이다', () => {
+    const at = (n: number) => shown('가'.repeat(n)).title
+    expect([0, 1, 10, 11, 20, 21, 40, 41, 80, 81, 140, 141, 280, 281, 5000].map(at)).toEqual([
+      'empty', '1-10', '1-10', '11-20', '11-20', '21-40', '21-40', '41-80', '41-80', '81-140', '81-140', '141-280', '141-280', '281+', '281+',
+    ])
+    // 앞뒤 빈칸, 줄바꿈만 있는 칸은 빈칸. 이모지는 한 글자로 센다
+    expect(shown('  \n \n ').title).toBe('empty')
+    expect(shown('👍'.repeat(10)).title).toBe('1-10')
+  })
+
+  it('여러 줄로 쓰는 칸만 줄 수 구간이 붙고, 빈 줄은 세지 않는다', () => {
+    const lines = (n: number) => Array.from({ length: n }, () => '가나다').join('\n')
+    expect([1, 2, 3, 4, 5, 8, 9, 30].map((n) => shown(lines(n)).title)).toEqual([
+      '1-10', '1-10, 2 lines', '1-10, 3-4 lines', '11-20, 3-4 lines', '11-20, 5-8 lines', '21-40, 5-8 lines', '21-40, 9+ lines', '81-140, 9+ lines',
+    ])
+    expect(shown('가나다\n\n\r\n   \n가나다').title).toBe('1-10, 2 lines')
+    // 항목의 내용(여러 줄 칸)과 이름(한 줄 칸): 가져온 파일의 한 줄 칸에 줄바꿈이 있어도 줄 수는 붙지 않는다
+    expect(shown('', lines(3), lines(3))).toMatchObject({ name: '1-10', body: '1-10, 3-4 lines' })
+  })
+
+  it('같은 구간의 다른 글은 모양이 같다: 정확한 글자 수와 글이 새지 않는다', () => {
+    // 길이도 줄 수도 비밀과 함께 심는다. 구간 안에서 글과 길이가 달라도 모양은 한 글자도 다르지 않아야 한다
+    // 결론 1233자, 이름 13자, 내용 3줄 24자 ↔ 결론 400자, 이름 20자, 내용 4줄 28자
+    const a = summaryWith(`${SECRET}${'가'.repeat(1227)}`, `${SECRET}${'가'.repeat(7)}`, `${SECRET}-1\n${SECRET}-2\n${SECRET}-3`)
+    const b = summaryWith('나'.repeat(400), '다'.repeat(20), Array.from({ length: 4 }, () => '라'.repeat(7)).join('\n'))
+    // 발표마다 다른 해시 id와 고친 시각만 지우고 견준다
+    const plain = (d: typeof a.deck) => JSON.stringify(toShape(d)).replace(/"[sdb][0-9a-f]{8}"/g, '"#"').replace(/"updatedAt":\d+/, '')
+    expect(plain(a.deck)).toBe(plain(b.deck))
+    expect(plain(a.deck)).not.toContain(SECRET)
+    expect(plain(a.deck)).not.toContain('1233')
+    const at = toShape(a.deck).slides[a.at]
+    expect([at.fields.title, at.items[0]]).toEqual(['281+', { title: '11-20', body: '21-40, 3-4 lines' }])
+  })
+
+  it('칸의 꼴에 맞지 않는 상태는 받지 않는다', () => {
+    const shape = toShape(createSampleDeck())
+    const at = shape.slides.findIndex((s) => s.layout === 'summary')
+    const cover = shape.slides.findIndex((s) => s.layout === 'cover')
+    const bad = (fn: (s: { fields: Record<string, string>; items: Record<string, string>[] }[]) => void) => {
+      const copy = structuredClone(shape) as unknown as { slides: { fields: Record<string, string>; items: Record<string, string>[] }[] }
+      fn(copy.slides)
+      return checkShape(copy)
+    }
+    expect(bad(() => {})).toBe(true)
+    // 여러 줄 칸의 줄 수는 받는다
+    expect(bad((s) => (s[at].fields.title = '81-140, 3-4 lines'))).toBe(true)
+    expect(bad((s) => (s[at].items[0].body = '281+, 9+ lines'))).toBe(true)
+    // 한 줄 칸의 줄 수, 글 칸의 filled, 이미지 칸의 글자 수, 예전 판의 long, 정확한 수, 모르는 구간
+    expect(bad((s) => (s[at].items[0].title = '1-10, 2 lines'))).toBe(false)
+    expect(bad((s) => (s[at].fields.title = 'filled'))).toBe(false)
+    expect(bad((s) => (s[cover].fields.$logo = '281+'))).toBe(false)
+    expect(bad((s) => (s[at].fields.title = 'long'))).toBe(false)
+    expect(bad((s) => (s[at].fields.title = '37'))).toBe(false)
+    expect(bad((s) => (s[at].fields.title = '1-5'))).toBe(false)
+    expect(bad((s) => (s[at].fields.title = '81-140, 1 lines'))).toBe(false)
+    expect(bad((s) => (s[at].fields.title = 37 as unknown as string))).toBe(false)
+    expect(bad((s) => (s[cover].fields.$logo = 'filled'))).toBe(true)
+  })
+
+  it('예전 판(2판)의 모양 파일은 받지 않는다', () => {
+    // 2판은 칸이 empty, filled, long 셋이었다. 앱이 발표를 열면 3판으로 다시 쓴다
+    const old = { ...toShape(createSampleDeck()), version: 2 }
+    expect(checkShape(old)).toBe(false)
   })
 })
 

@@ -9,7 +9,7 @@ import { ASKS, mcpPrompt } from '../src/ai/asks'
 import { OP_CODES, OP_KEYS } from '../src/ai/ops'
 import { MCP_TOOLS, RESULT_FORMAT } from '../src/ai/protocol'
 import { SECRET, secretDeck } from '../src/ai/secretDeck'
-import { toShape } from '../src/ai/share'
+import { TEXT_STATES, toShape } from '../src/ai/share'
 import { autoPlace, makeBlock } from '../src/deck/blocks'
 import { makeSlide } from '../src/deck/generate'
 import { createSampleDeck } from '../src/deck/sample'
@@ -138,6 +138,21 @@ describe('MCP 서버', () => {
     await tool('propose_changes', { deck: list.decks[0].deck, note: 'x', ops: [{ op: 'set_field', text: SECRET }] })
     expect(raw.join('\n')).not.toContain(SECRET)
     expect(raw.join('\n')).not.toContain('7731')
+  })
+
+  it('칸의 글은 글자 수 구간으로만 보이고, 도구 설명이 구간을 알려 준다', async () => {
+    const { value: list } = await tool('list_decks')
+    const { value: shape } = await tool('get_shape', { deck: list.decks[0].deck })
+    type Cells = { fields: Record<string, string>; items: Record<string, string>[] }
+    const cells = (x: Cells) => [...Object.values(x.fields), ...x.items.flatMap((it) => Object.values(it))]
+    const states = shape.slides.flatMap((s: Cells & { blocks?: Cells[] }) => [...cells(s), ...(s.blocks ?? []).flatMap(cells)])
+    expect(states.length).toBeGreaterThan(50)
+    expect(states.every((v: string) => v === 'filled' || (TEXT_STATES as readonly string[]).includes(v))).toBe(true)
+    // 비밀을 심은 칸은 찬 칸으로 보인다 (글자 수 구간)
+    expect(states.filter((v: string) => /^\d/.test(v)).length).toBeGreaterThan(30)
+    const res = await rpc('tools/list')
+    const get = (res.result!.tools as { name: string; description: string }[]).find((t) => t.name === 'get_shape')!
+    for (const word of ['1-10', '281+', 'lines']) expect(get.description).toContain(word)
   })
 
   it('조건별 흐름도 실제 MCP 창구에서 모양만 보이고 질문과 경로의 글은 나가지 않는다', async () => {

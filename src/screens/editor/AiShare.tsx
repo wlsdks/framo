@@ -98,7 +98,7 @@ function Consent({ direct, onMore, onCancel, onOk }: { direct: boolean; onMore?:
     <div className="ask-consent" role="group" aria-label="AI에게 모양 보여 주기">
       <p className="ask-consent-p">
         이 발표의 모양만 AI에게 보여 줘요. 적은 글은 보내지 않아요.
-        {!onMore && <Info label="AI에게 보이는 것">슬라이드 순서, 레이아웃, 칸이 비었는지, 테마가 보여요. 제목과 작성한 글, 숫자, 이미지, 노트는 보이지 않아요.</Info>}
+        {!onMore && <Info label="AI에게 보이는 것">슬라이드 순서, 레이아웃, 칸마다 글이 대략 몇 자인지, 테마가 보여요. 제목과 작성한 글, 숫자, 이미지, 노트는 보이지 않아요.</Info>}
       </p>
       <div className="ask-consent-actions">
         {onMore && (
@@ -492,7 +492,7 @@ function AiMore({ deck, ai, onBack }: { deck: Deck; ai: AiShare; onBack: () => v
           <ul>
             <li>보고 종류와 시간</li>
             <li>슬라이드 순서와 레이아웃</li>
-            <li>칸이 비었는지, 긴지</li>
+            <li>칸마다 글이 대략 몇 자인지</li>
             <li>테마와 강조색</li>
           </ul>
         </div>

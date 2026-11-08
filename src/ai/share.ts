@@ -47,8 +47,25 @@ import type { Audience, Block, BlockEffect, BlockFrom, BlockLink, BlockLook, Blo
 import { hasKey, HEX, isInt, isObj, isOneOf, onlyKeys } from './guards'
 import { HIGHLIGHT_MAX, HIGHLIGHT_MIN, OPAQUE_ID, REQUEST_ID, SHAPE_FORMAT, SHAPE_VERSION } from './protocol'
 
-/** 칸의 상태. 글자 수 대신 세 단계만 알려 준다. */
-export type FieldState = 'empty' | 'filled' | 'long'
+/**
+ * 칸의 글이 얼마나 긴지. 글자 수를 그대로 알려 주지 않고 구간만 알려 준다: 구간이 같으면 모양도 같아서, 모양으로 글을 맞혀 볼 수 없다.
+ * 예전에는 비었다, 찼다, 길다(40자, 여러 줄 칸은 140자 넘게) 셋뿐이라 AI가 '이 칸은 길어서 넓은 자리로'를 가늠할 수 없었다
+ */
+export const TEXT_LENGTHS = ['1-10', '11-20', '21-40', '41-80', '81-140', '141-280', '281+'] as const
+const LENGTH_TOPS = [10, 20, 40, 80, 140, 280, Infinity]
+/** 여러 줄로 쓰는 칸(multiline)에 두 줄 넘게 쓴 줄 수의 구간 */
+export const TEXT_LINES = ['2', '3-4', '5-8', '9+'] as const
+const LINE_TOPS = [2, 4, 8, Infinity]
+type TextLength = (typeof TEXT_LENGTHS)[number]
+type TextLines = (typeof TEXT_LINES)[number]
+
+/**
+ * 칸의 상태. 글 칸은 비었으면 'empty', 아니면 글자 수 구간('21-40')이고, 여러 줄로 쓰는 칸에 두 줄 넘게 썼으면 줄 수 구간이 붙는다('81-140, 3-4 lines').
+ * 이미지 칸은 있는지('filled')만: 이미지의 길이(데이터 크기)는 뜻이 없다
+ */
+export type FieldState = 'empty' | 'filled' | TextLength | `${TextLength}, ${TextLines} lines`
+/** 글 칸의 상태로 나올 수 있는 모든 말. MCP 서버의 마지막 그물(정해진 말)에도 넣는다 */
+export const TEXT_STATES: readonly FieldState[] = ['empty', ...TEXT_LENGTHS, ...TEXT_LENGTHS.flatMap((n) => TEXT_LINES.map((l) => `${n}, ${l} lines` as const))]
 
 export interface ShapeSlide {
   /** 장의 원래 id가 아니라 그 해시. 원래 id는 가져온 파일에서 아무 글자나 될 수 있어서다. */
@@ -286,11 +303,21 @@ const fromCatalog = (text: string): string | null => (roleStrings().has(text) ? 
 
 // ---------- 덱에서 모양만 골라 만들기 ----------
 
-/** 이 글자 수를 넘으면 'long'. 칸이 넘칠 수 있다는 정도만 알려 준다. */
-function stateOf(text: string, multiline: boolean): FieldState {
-  const n = text.trim().length
-  if (!n) return 'empty'
-  return n > (multiline ? 140 : 40) ? 'long' : 'filled'
+/** 칸 하나의 꼴: 글자 수의 구간을 셀 칸인지(여러 줄로 쓰는 칸이면 줄 수도), 있는지만 볼 이미지 칸인지 */
+type FieldKind = { key: string; multiline?: boolean; image?: boolean }
+
+/**
+ * 칸의 상태. 글자 수는 줄바꿈과 줄 앞뒤의 빈칸을 빼고 센다(이모지 같은 글자도 하나로).
+ * 줄 수는 여러 줄로 쓰는 칸에서만, 빈 줄은 빼고 센다. 둘 다 구간만 내보낸다
+ */
+function stateOf(text: string, field: FieldKind): FieldState {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n').map((l) => l.trim()).filter(Boolean)
+  if (!lines.length) return 'empty'
+  if (field.image) return 'filled'
+  const n = [...lines.join('')].length
+  const len = TEXT_LENGTHS[LENGTH_TOPS.findIndex((top) => n <= top)]
+  if (!field.multiline || lines.length < 2) return len
+  return `${len}, ${TEXT_LINES[LINE_TOPS.findIndex((top) => lines.length <= top)]} lines`
 }
 
 export function toShape(deck: Deck): ShapeDeck {
@@ -317,12 +344,12 @@ export function toShape(deck: Deck): ShapeDeck {
 function shapeSlide(deck: Deck, slide: Slide): ShapeSlide {
   const spec = LAYOUTS[slide.layout]
   const fields: Record<string, FieldState> = {}
-  for (const f of spec.fields) fields[f.key] = stateOf(readField(slide, deck.meta, f.key), !!f.multiline)
+  for (const f of spec.fields) fields[f.key] = stateOf(readField(slide, deck.meta, f.key), f)
   const visible = visibleItems(slide)
   const items = spec.items
     ? visible.map((item) => {
         const out: Record<string, FieldState> = {}
-        for (const f of spec.items!.fields) out[f.key] = stateOf(item[f.key] ?? '', !!f.multiline)
+        for (const f of spec.items!.fields) out[f.key] = stateOf(item[f.key] ?? '', f)
         return out
       })
     : []
@@ -374,11 +401,11 @@ function shapeSlide(deck: Deck, slide: Slide): ShapeSlide {
 function shapeBlock(block: Block): ShapeBlock {
   const spec = BLOCKS[block.type]
   const fields: Record<string, FieldState> = {}
-  for (const f of blockFieldSpecs(block.type)) fields[f.key] = stateOf(block.fields[f.key] ?? '', !!f.multiline)
+  for (const f of blockFieldSpecs(block.type)) fields[f.key] = stateOf(block.fields[f.key] ?? '', f)
   const items = spec.items
     ? blockItems(block).map((item) => {
         const o: Record<string, FieldState> = {}
-        for (const f of spec.items!.fields) o[f.key] = stateOf(item[f.key] ?? '', !!f.multiline)
+        for (const f of spec.items!.fields) o[f.key] = stateOf(item[f.key] ?? '', f)
         return o
       })
     : []
@@ -396,10 +423,14 @@ function shapeBlock(block: Block): ShapeBlock {
 
 // ---------- 확인: 모양 파일이 정해진 꼴 그대로인지. 하나라도 어긋나면 통째로 버린다. ----------
 
-const STATES: FieldState[] = ['empty', 'filled', 'long']
+const IMAGE_STATES: readonly FieldState[] = ['empty', 'filled']
+/** 한 줄로 쓰는 칸의 상태: 줄 수가 붙지 않는다 */
+const LINE_STATES: readonly FieldState[] = ['empty', ...TEXT_LENGTHS]
 
-function checkStates(v: unknown, keys: string[]): boolean {
-  return isObj(v) && Object.keys(v).length === keys.length && keys.every((k) => STATES.includes(v[k] as FieldState))
+/** 칸마다 그 칸의 꼴에 맞는 상태인지: 이미지 칸은 있는지만, 한 줄 칸은 줄 수 없이. 칸은 정해진 것이 빠짐없이, 그것만 */
+function checkStates(v: unknown, fields: readonly FieldKind[]): boolean {
+  if (!isObj(v) || Object.keys(v).length !== fields.length) return false
+  return fields.every((f) => (f.image ? IMAGE_STATES : f.multiline ? TEXT_STATES : LINE_STATES).includes(v[f.key] as FieldState))
 }
 
 function checkBlock(v: unknown): boolean {
@@ -418,10 +449,9 @@ function checkBlock(v: unknown): boolean {
   const spec = BLOCKS[v.type as BlockType]
   if (!BLOCK_LOOK_IDS.includes(v.look as BlockLook) || !BLOCK_EFFECT_IDS.includes(v.effect as BlockEffect)) return false
   if (!(spec.variants ?? [{ id: 'base' }]).some((x) => x.id === v.variant)) return false
-  if (!checkStates(v.fields, blockFieldSpecs(v.type as BlockType).map((f) => f.key))) return false
+  if (!checkStates(v.fields, blockFieldSpecs(v.type as BlockType))) return false
   if (!Array.isArray(v.items) || v.items.length > (spec.items?.max ?? 0)) return false
-  const itemKeys = spec.items?.fields.map((f) => f.key) ?? []
-  return v.items.every((it) => checkStates(it, itemKeys))
+  return v.items.every((it) => checkStates(it, spec.items?.fields ?? []))
 }
 
 function checkSlide(v: unknown): boolean {
@@ -441,10 +471,9 @@ function checkSlide(v: unknown): boolean {
   if (v.role !== null && !(typeof v.role === 'string' && roleStrings().has(v.role))) return false
   if (v.section !== null && !(typeof v.section === 'string' && roleStrings().has(v.section))) return false
   if (typeof v.hidden !== 'boolean' || !isInt(v.hiddenItems, 0, 1000)) return false
-  if (!checkStates(v.fields, spec.fields.map((f) => f.key))) return false
+  if (!checkStates(v.fields, spec.fields)) return false
   if (!Array.isArray(v.items) || v.items.length > (spec.items?.max ?? 0)) return false
-  const itemKeys = spec.items?.fields.map((f) => f.key) ?? []
-  if (!v.items.every((it) => checkStates(it, itemKeys))) return false
+  if (!v.items.every((it) => checkStates(it, spec.items?.fields ?? []))) return false
   const o = v.options
   if (!isObj(o) || !onlyKeys(o, ['highlight', 'flip', 'pane', 'contain', 'motion', 'tone', 'place', 'transition', 'order', 'scene', 'hideHead', 'hideFoot'])) return false
   if (o.hideHead !== undefined && typeof o.hideHead !== 'boolean') return false

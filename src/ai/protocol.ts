@@ -15,9 +15,10 @@ export const REQUEST_FORMAT = 'html-maker/request'
 export const RESULT_FORMAT = 'html-maker/result'
 /**
  * 모양과 제안의 판 번호. 2판부터 부품 장이 줄과 칸이 아니라 12×12 판의 자리(x, y, w, h)다.
- * 모양 파일은 앱이 발표를 고칠 때마다 다시 쓰고, 제안은 그 모양을 보고 바로 만드는 것이라 예전 판은 읽지 않는다
+ * 모양 3판부터 칸의 상태가 세 단계(empty, filled, long)가 아니라 글자 수의 구간이다(제안의 꼴은 그대로라 제안은 2판).
+ * 모양 파일은 앱이 발표를 열 때와 고칠 때마다 다시 쓰고, 제안은 그 모양을 보고 바로 만드는 것이라 예전 판은 읽지 않는다
  */
-export const SHAPE_VERSION = 2
+export const SHAPE_VERSION = 3
 export const REQUEST_VERSION = 2
 
 /** 앱이 로컬 서버의 AI 창구로 가는 주소와, 다른 웹사이트가 붙일 수 없는 머리글 */
