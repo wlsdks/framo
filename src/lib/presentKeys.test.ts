@@ -53,8 +53,10 @@ describe('발표 중의 키', () => {
 
 describe('번호를 치고 Enter (PowerPoint처럼 그 장으로)', () => {
   it('친 번호의 장으로 가고, 마지막보다 크면 마지막 장', () => {
-    expect(presentAction('Enter', null, 0, 9, '5')).toEqual({ kind: 'go', index: 4 })
-    expect(presentAction('Enter', null, 0, 9, '42')).toEqual({ kind: 'go', index: 9 })
+    expect(presentAction('Enter', null, 0, 9, '5')).toEqual({ kind: 'go', index: 4, jump: true })
+    expect(presentAction('Enter', null, 0, 9, '42')).toEqual({ kind: 'go', index: 9, jump: true })
+    // 다음 장 번호를 쳐도 바로 그 장으로(누르면 나올 것을 먼저 보이지 않게): jump
+    expect(presentAction('Enter', null, 3, 9, '5')).toEqual({ kind: 'go', index: 4, jump: true })
     expect(presentAction('Enter', null, 3, 9, '')).toEqual({ kind: 'go', index: 4 })
     expect(presentAction('Enter', null, 3, 9, '0')).toEqual({ kind: 'go', index: 4 })
   })

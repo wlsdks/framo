@@ -123,7 +123,7 @@ document.addEventListener('keydown',function(e){
   var a=presentAction(k,blank.hidden?null:blank.className.indexOf('is-white')>=0?'white':'black',i,slides.length-1,num.take(e.timeStamp));
   if(!a)return;
   e.preventDefault();
-  if(a.kind==='blank')setBlank(a.blank);else if(a.kind==='go'&&a.index===i+1)forwardOne();else if(a.kind==='go')show(a.index);else stop();
+  if(a.kind==='blank')setBlank(a.blank);else if(a.kind==='go'&&a.index===i+1&&!a.jump)forwardOne();else if(a.kind==='go')show(a.index);else stop();
 });
 addEventListener('resize',function(){fit();if(presenting()&&!roomy()){clearTimeout(timer);body.classList.remove('is-awake')}});
 fit();fitBlocks(document);

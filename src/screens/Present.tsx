@@ -186,7 +186,7 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
       if (!act) return
       e.preventDefault()
       if (act.kind === 'blank') setBlank(act.blank)
-      else if (act.kind === 'go' && act.index === index + 1) forward()
+      else if (act.kind === 'go' && act.index === index + 1 && !act.jump) forward()
       else if (act.kind === 'go') goTo(act.index)
       else exit()
     }

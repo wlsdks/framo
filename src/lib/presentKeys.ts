@@ -15,7 +15,8 @@ export function presentKey(e: Pick<KeyboardEvent, 'key' | 'code'>): string {
 }
 
 /** 키 하나로 할 일: 화면 가리기(blank가 null이면 걷기), 그 차례의 장으로 넘기기(넘기는 쪽이 처음과 끝에서 멈춘다), 발표 끝내기 */
-export type PresentAction = { kind: 'blank'; blank: Blank } | { kind: 'go'; index: number } | { kind: 'exit' }
+/** go의 jump: 번호를 쳐서 간다. 다음 장 번호여도 '다음'(누르면 나올 것을 먼저 보이기)이 아니라 그 장으로 바로 간다 */
+export type PresentAction = { kind: 'blank'; blank: Blank } | { kind: 'go'; index: number; jump?: boolean } | { kind: 'exit' }
 
 /**
  * presentKey로 읽은 키를 할 일로. PowerPoint와 같게: → ↓ PageDown Space Enter N은 다음 장, ← ↑ PageUp Backspace P는 앞 장,
@@ -30,7 +31,7 @@ export function presentAction(key: string, blank: Blank, index: number, last: nu
   if (cover) return { kind: 'blank', blank: blank === cover ? null : cover }
   if (blank && key !== 'Escape') return { kind: 'blank', blank: null }
   // 번호를 치고 Enter면 그 차례의 장으로 (PowerPoint와 같게. 숫자는 slideNumber가 모은다). 마지막 장보다 크면 마지막 장
-  if (key === 'Enter' && /^[0-9]+$/.test(typed) && Number(typed) >= 1) return { kind: 'go', index: Math.min(Number(typed), last + 1) - 1 }
+  if (key === 'Enter' && /^[0-9]+$/.test(typed) && Number(typed) >= 1) return { kind: 'go', index: Math.min(Number(typed), last + 1) - 1, jump: true }
   if (next.includes(key)) return { kind: 'go', index: index + 1 }
   if (prev.includes(key)) return { kind: 'go', index: index - 1 }
   if (key === 'Home') return { kind: 'go', index: 0 }
