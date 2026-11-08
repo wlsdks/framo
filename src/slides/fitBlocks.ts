@@ -1536,8 +1536,15 @@ export function blockFitter() {
         const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
         const contentPx = contentHold?.get(c.dataset.block ?? '')
         if (inner && contentPx) {
+          const was = over(inner)
           inner.style.setProperty('--bk-content-shift', contentPx + 'px')
           if (contentPx > 0) inner.style.setProperty('--bk-content-limit', contentPx + 'px')
+          // 붙잡아 둔 자리에서 넘치게 되면 놓는다(아래에서 새로 옮길 때와 같은 잣대): 짧은 글을 가운데로 옮겨 둔 자리를 쓰는 내내 붙잡으면
+          // 안쪽 상자가 옮긴 만큼 좁아진 채라, 결정 요청을 길게 쓰자 글이 그 좁은 폭에서 열세 줄로 꺾여 강조 상자 밖, 장 아래까지 흘러내렸다
+          if (!was && over(inner)) {
+            inner.style.removeProperty('--bk-content-shift')
+            inner.style.removeProperty('--bk-content-limit')
+          }
         }
       }
       return
