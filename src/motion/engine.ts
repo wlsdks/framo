@@ -838,9 +838,10 @@ export function motionEngine(): MotionEngine {
       }
       if (still) return keep()
       /**
-       * v: 값의 진행(곡선을 입힌), at: 눈금 위의 값 → 길이. side: 점 숫자가 새 쪽으로 옮겨 가는 진행(처음 0.1초 남짓에 다 간다)
+       * v: 값의 진행(곡선을 입힌), at: 눈금 위의 값 → 길이. side: 점 숫자가 새 쪽으로 옮겨 가는 진행(처음 0.1초 남짓에 다 간다).
+       * fall, rise: 다시 자라는 차트(regrow)가 바닥으로 내려가는 진행과 새 값으로 자라는 진행
        */
-      type Tick = { v: number; raw: number; side: number; at: (group: string, u: number) => number | null }
+      type Tick = { v: number; raw: number; side: number; fall: number; rise: number; at: (group: string, u: number) => number | null }
       const sets: ((t: Tick) => void)[] = []
       const undo: (() => void)[] = []
       const NUM = /^(\D*)(\d[\d,]*)(\.\d+)?(\D*)$/
@@ -888,21 +889,26 @@ export function motionEngine(): MotionEngine {
         for (const name in w.attrs) {
           const before = w.attrs[name]
           const now = n.getAttribute(name)
-          if (!now || now === before || before.replace(NUMS, '#') !== now.replace(NUMS, '#')) continue
+          // 추이의 선과 면(0~100 그림, 위가 0)은 점과 같은 눈금으로: 짝수 자리는 가로, 홀수 자리는 세로(100 - 높이).
+          // 모양이 같아도 둔다: 잣대가 크게 달라 다시 자라는 추이(아래 regrow)는 같은 모양도 바닥에서 다시 선다
+          const line = name === 'points' && !!n.closest('.tn-svg')
+          if (!now || (now === before && !line) || before.replace(NUMS, '#') !== now.replace(NUMS, '#')) continue
           const a = (before.match(NUMS) || []).map(Number)
           const b = (now.match(NUMS) || []).map(Number)
           const parts = now.split(NUMS)
           if (a.length !== b.length || parts.length !== b.length + 1) continue
-          // 추이의 선과 면(0~100 그림, 위가 0)은 점과 같은 눈금으로: 짝수 자리는 가로, 홀수 자리는 세로(100 - 높이)
-          const line = name === 'points' && !!n.closest('.tn-svg')
           const text = (vals: number[]) => parts.map((part, i) => part + (i < vals.length ? String(Math.round(vals[i] * 100) / 100) : '')).join('')
           sets.push((t) => {
             if (t.v >= 1 && !line) return n.setAttribute(name, now)
+            // 모양이 같은 선은 다시 자랄 때만 움직인다(점의 높이도 같으면 가만히 있으니, 선만 눈금을 따라 흔들리지 않게)
+            if (now === before && !(axes['--y'] && axes['--y'].regrow)) return
             const vals = b.map((y, i) => {
               const x = a[i] + (y - a[i]) * t.v
               if (!line || i % 2 === 0) return x
               // 바닥(면의 아래 끝)은 늘 바닥이다. 값이 아니라 그림의 가장자리라서 눈금을 따라 뜨지 않게
               if (a[i] === 100 && y === 100) return 100
+              // 다시 자라는 추이: 앞 모양이 바닥으로 내려갔다가 새 모양으로 선다
+              if (axes['--y'] && axes['--y'].regrow) return t.fall < 1 ? 100 - (100 - a[i]) * (1 - t.fall) : 100 - (100 - y) * t.rise
               const u0 = axes['--y'] ? (100 - a[i] - axes['--y'].a0.al) / axes['--y'].a0.be : NaN
               const u1 = axes['--y'] ? (100 - y - axes['--y'].a1.al) / axes['--y'].a1.be : NaN
               const q = t.at('--y', u0 + (u1 - u0) * t.v)
@@ -929,7 +935,7 @@ export function motionEngine(): MotionEngine {
         if (!(be > 0) || !Number.isFinite(al)) return null
         return use.every((p) => Math.abs(al + be * p.u - p.q) <= 1) ? { al, be } : null
       }
-      const axes: Record<string, { a0: Fit; a1: Fit; d0: [number, number]; d1: [number, number] }> = {}
+      const axes: Record<string, { a0: Fit; a1: Fit; d0: [number, number]; d1: [number, number]; regrow: boolean }> = {}
       const groups = Array.from(new Set(vars.map((x) => x.group)))
       for (const g of groups) {
         const own = vars.filter((x) => x.group === g)
@@ -947,7 +953,12 @@ export function motionEngine(): MotionEngine {
         // 눈금이 담는 값의 범위(길이 0과 100에 놓이는 값)
         const d0: [number, number] = [-a0.al / a0.be, (100 - a0.al) / a0.be]
         const d1: [number, number] = [-a1.al / a1.be, (100 - a1.al) / a1.be]
-        axes[g] = { a0, a1, d0, d1 }
+        // 크게 뛰어 이웃 장과 잣대를 같이 쓰지 않는 짝(slides/sharedScale.ts의 문턱, 같은 40%): 두 잣대가 담는 폭이 2.5배 넘게 다르다.
+        // 두 잣대 사이를 옮기면 장마다 제 잣대를 채워 그려서 1에서 10으로 뛴 막대가 거의 움직이지 않았다(가장 큰 변화가 가장 작은
+        // 움직임, 4차 감성 검수). 그런 짝은 처음 나올 때처럼 바닥에서 새 값으로 다시 자란다(앞 모습은 짧게 바닥으로 내려간다)
+        const s0 = d0[1] - d0[0]
+        const s1 = d1[1] - d1[0]
+        axes[g] = { a0, a1, d0, d1, regrow: Math.min(s0, s1) < 0.4 * Math.max(s0, s1) }
       }
 
       // ---- 바뀌는 값 ----
@@ -961,17 +972,22 @@ export function motionEngine(): MotionEngine {
           const [whole, frac] = v.toFixed(decimals).split('.')
           return b[1] + (grouped ? whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : whole) + (frac ? '.' + frac : '') + b[4]
         }
-        sets.push((k) => (node.nodeValue = k.v <= 0 ? old : k.v >= 1 ? now : format(from + (to - from) * k.v)))
+        // 다시 자라는 막대와 점의 숫자는 자라는 대로 센다(내려가는 동안은 앞 값): 시계대로 세면 막대가 바닥에 있을 때 숫자는 벌써 새 값 가까이였다
+        const grow = vars.some((x) => !!axes[x.group] && axes[x.group].regrow && x.n.contains(node))
+        sets.push((k) => {
+          const v = grow && k.raw < 1 ? k.rise : k.v
+          node.nodeValue = v <= 0 ? old : v >= 1 ? now : format(from + (to - from) * v)
+        })
         undo.push(() => (node.nodeValue = now))
       }
       for (const x of vars) {
         const ax = axes[x.group]
-        // 길이가 같으면 옮길 것이 없다(한 잣대에서 값이 같은 막대)
-        if (x.before.trim() === x.now.trim()) continue
+        // 길이가 같으면 옮길 것이 없다(한 잣대에서 값이 같은 막대). 다시 자라는 짝은 길이가 같아도(장마다 제 잣대를 채운 막대) 바닥에서 다시 선다
+        if (x.before.trim() === x.now.trim() && !(ax && ax.regrow)) continue
         const u0 = ax ? (x.q0 - ax.a0.al) / ax.a0.be : 0
         const u1 = ax ? (x.q1 - ax.a1.al) / ax.a1.be : 0
         sets.push((t) => {
-          const q = ax ? t.at(x.group, u0 + (u1 - u0) * t.v) : null
+          const q = ax && ax.regrow ? (t.fall < 1 ? x.q0 * (1 - t.fall) : x.q1 * t.rise) : ax ? t.at(x.group, u0 + (u1 - u0) * t.v) : null
           x.n.style.setProperty(x.name, String(Math.round((q === null ? x.q0 + (x.q1 - x.q0) * t.v : q) * 1000) / 1000), x.prio)
         })
         undo.push(() => x.n.style.setProperty(x.name, x.now, x.prio))
@@ -1127,6 +1143,9 @@ export function motionEngine(): MotionEngine {
           raw,
           // 추이가 아닌 점 숫자(겹침을 볼 선이 없다)는 선이 가장 빨리 움직이는 처음(시계의 12%)에 새 쪽으로 옮겨 간다
           side: raw >= 1 ? 1 : ease(clamp(raw / 0.12)),
+          // 다시 자라기: 처음 15%에 앞 모습이 바닥으로 내려가고, 나머지에 새 값으로 자란다
+          fall: raw >= 1 ? 1 : ease(clamp(raw / 0.15)),
+          rise: raw >= 1 ? 1 : ease(clamp((raw - 0.15) / 0.85)),
           at: (g, u) => {
             const ax = axes[g]
             if (!ax) return null
