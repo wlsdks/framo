@@ -52,25 +52,3 @@ export function useUnitOpen(unit: string): boolean {
  * 칸 여럿을 견주거나 더하는 곳은 단위까지 읽는 seriesIn, amountPair를 쓴다
  */
 export const numberOrNull = readNumber
-
-/**
- * 이어 움직이는 이웃 슬라이드와 같은 잣대로 그리는 차트의 안내(편집할 때만, sharedScale.ts). 숫자가 낮은 쪽 슬라이드는 이웃의 잣대 때문에
- * 차트가 끝까지 차지 않는데, 처음 쓰는 사람이 까닭을 알 수 있게 차트 위에 한 줄과 (i)를 둔다. 발표와 내보낸 화면에는 없다.
- * 높이 0의 줄 위에 띄워 차트의 자리를 바꾸지 않는다(편집할 때와 발표할 때 그림이 같게)
- */
-export function SharedScaleNote() {
-  const { mode, scale } = useSlide()
-  if (mode !== 'edit' || !scale) return null
-  const who = scale.with === 'next' ? '다음' : scale.with === 'prev' ? '앞' : '앞뒤'
-  return (
-    <div className="ed-scale" aria-hidden="true">
-      <span title="화면 전환 '이어지게'로 이어지는 슬라이드끼리 같은 잣대로 그려서, 넘길 때 바뀐 값만큼만 움직여요.">
-        <svg viewBox="0 0 16 16">
-          <circle cx="8" cy="8" r="7" />
-          <path d="M8 7v4.5M8 4.6v.1" />
-        </svg>
-        {who} 슬라이드와 같은 잣대로 그려요
-      </span>
-    </div>
-  )
-}

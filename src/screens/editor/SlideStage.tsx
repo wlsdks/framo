@@ -13,6 +13,7 @@ import { selectWord } from '../../slides/fields'
 import { liveMoving } from '../../slides/liveMotion'
 import { overflowAt, type OverField } from '../../slides/overflow'
 import { FitSlide, pageProps, SlideCanvas } from '../../slides/SlideCanvas'
+import { sharedScales } from '../../slides/sharedScale'
 import { useDeck } from '../../store/deckStore'
 import { useEscape } from '../ui'
 import type { BlockEditing } from './BlockEditor'
@@ -21,7 +22,7 @@ import { layoutPreview } from './Inspector'
 import { useLook } from './look'
 import { SelectionBar, StageSlot } from './SelectionBar'
 import type { SidePanel } from './sidePanel'
-import { StageTools } from './StageTools'
+import { sharedWith, StageTools } from './StageTools'
 import { useTypingStill } from './typingStill'
 
 // 편집기 가운데: 고치는 장(무대), 그 위에 뜨는 도구, 아래 단추줄과 발표자 노트
@@ -165,6 +166,7 @@ export function SlideStage({
                 peekSlide={peekSlide}
                 peek={peek}
                 overflow={overflow}
+                shareWith={sharedWith(sharedScales(info).get(slide.id))}
                 onTogglePeek={() => (peek ? setPeek(false) : startPeek())}
                 onReplay={() => setPreview((n) => n + 1)}
                 onRemove={onRemove}

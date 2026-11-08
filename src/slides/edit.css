@@ -1285,36 +1285,3 @@ body.is-block-dragging .bk-area.is-live > .bk-link:not(.is-preview) {
   color: #d97706;
   font-weight: 600;
 }
-
-/* 이어 움직이는 이웃 슬라이드와 같은 잣대로 그리는 차트의 안내(layouts/parts.tsx의 SharedScaleNote, 편집할 때만). 높이 0의 줄 위에 띄워
-   차트의 자리를 바꾸지 않는다. 글자는 화면 크기대로(장의 배율 --vs로 되돌린다): 장의 글이 아니라 편집 도구의 안내라서 */
-.ed-scale {
-  position: relative;
-  flex: none;
-  height: 0;
-}
-
-.ed-scale > span {
-  position: absolute;
-  right: 0;
-  bottom: calc(6px / var(--vs, 0.5));
-  display: flex;
-  gap: calc(4px / var(--vs, 0.5));
-  align-items: center;
-  color: var(--ink-3);
-  font-size: calc(12px / var(--vs, 0.5));
-  font-weight: 500;
-  line-height: 1.2;
-  white-space: nowrap;
-  pointer-events: auto;
-  cursor: help;
-}
-
-.ed-scale svg {
-  width: calc(13px / var(--vs, 0.5));
-  height: calc(13px / var(--vs, 0.5));
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
