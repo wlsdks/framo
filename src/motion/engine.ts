@@ -2466,7 +2466,7 @@ export function motionEngine(): MotionEngine {
         }
         case 'spread': {
           // 퍼짐: 옅은 눈금 판이 먼저 깔리고, 단계마다 그 단계에 드는 눈금이 왼쪽 가운데의 씨앗에서 가까운 차례로 번진다(물결).
-          // 눈금은 칠해지며 위로 한 번 늘었다 제 길이로 돌아온다(사람이 하나씩 '켜지는' 느낌). 단계의 몫과 이름은 그 단계가 번지기
+          // 기울어 있던 눈금이 똑바로 서며 물든다(사람들이 같은 쪽을 보기 시작한다). 단계의 몫과 이름은 그 단계가 번지기
           // 바로 전에 올라온다. '하나씩'이면 단계마다 멈춘다(단계 이름이 오르는 때가 항목의 시작)
           const ms = $('.bk-spr-m')
           const its = $('.bk-spr-it')
@@ -2491,13 +2491,14 @@ export function motionEngine(): MotionEngine {
                 run(
                   anims,
                   m.el,
+                  // 기울어 있던 눈금이 똑바로 서며 물든다(결이 맞춰진다). 살짝 지나쳤다 돌아오는 곡선이라 하나하나가 '선다'
                   [
-                    { backgroundColor: base, scale: '1 1', transformOrigin: '50% 100%', offset: 0 },
-                    { backgroundColor: m.to, scale: '1 1.3', transformOrigin: '50% 100%', offset: 0.35 },
-                    { backgroundColor: m.to, scale: '1 1', transformOrigin: '50% 100%', offset: 1 },
+                    { backgroundColor: base, rotate: m.el.style.getPropertyValue('--r') || '0deg', offset: 0 },
+                    { backgroundColor: m.to, offset: 0.45 },
+                    { backgroundColor: m.to, rotate: '0deg', offset: 1 },
                   ],
                   s(at + j * per),
-                  { easing: OUT, duration: d(620) },
+                  { easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', duration: d(760) },
                 ),
               )
             at += 120 + Math.max(320, per * g.length) + 380

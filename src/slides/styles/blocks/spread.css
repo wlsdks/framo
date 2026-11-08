@@ -37,12 +37,20 @@
 
 .bk-spr-m {
   /* 남은 눈금의 색. 모션이 칠해지기 전 색으로도 쓴다(engine.ts) */
-  --sp-off: color-mix(in srgb, var(--ink) 14%, transparent);
+  --sp-off: color-mix(in srgb, var(--ink) 18%, transparent);
+  align-self: center;
   justify-self: center;
-  /* 3px이면 눈금이 머리카락처럼 얇아 칠한 것과 안 칠한 것의 차이가 약했다(사용자: 너무 얇다) */
-  width: 7px;
-  height: 100%;
+  /* 3px이면 머리카락처럼 얇았다(사용자: 너무 얇다). 기울어도 옆 눈금과 닿지 않게 칸 높이의 62% */
+  width: 6px;
+  height: 62%;
+  border-radius: 3px;
   background: var(--sp-off);
+  /* 아직 퍼지지 않은 사람은 저마다 다른 쪽을 본다(Spread.tsx의 SPREAD_TILT). 퍼진 사람은 똑바로 선다(아래) */
+  rotate: var(--r, 0deg);
+}
+
+.bk-spr-m:is(.is-past, .is-now) {
+  rotate: 0deg;
 }
 
 .bk-spr-m.is-past {
