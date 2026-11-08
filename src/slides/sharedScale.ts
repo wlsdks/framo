@@ -7,8 +7,10 @@
 // 넘길 때 막대와 점은 바뀐 만큼, 바뀐 쪽으로만 움직이고 그대로인 값은 가만히 있다. 앞 장만 따로 보면 차트가 잣대를 다 채우지 않지만,
 // 견주는 그림은 같은 잣대가 맞다.
 //
-// 문턱: 값이 크게 뛰어(1에서 10) 한 잣대로 그리면 어느 장의 차트가 잣대의 40%도 채우지 못하는 짝은 묶지 않는다(그 장이 너무 휑해진다).
-// 그런 짝은 장마다 제 잣대로 그리고, 넘길 때는 엔진이 두 잣대 사이를 한 번의 모양 바뀜으로 옮긴다(motion/engine.ts의 carry).
+// 문턱: 값이 크게 뛰어(1에서 10) 한 잣대로 그리면 어느 장의 가장 높은 값이 잣대의 40%에도 닿지 못하는 짝은 묶지 않는다(그 장이 너무
+// 휑해진다). 재는 법은 막대와 추이가 같다: 그려지는 잣대의 바닥에서 가장 높은 값까지(막대는 0부터, 추이는 Trend.tsx와 같은 축의 바닥부터).
+// 오르내림 폭으로 재던 때는 131에서 183으로 오르는 추이가 묶이지 않아, 같은 발표의 막대와 말투가 달랐다(4차 감성 검수).
+// 묶지 않은 짝은 장마다 제 잣대로 그리고, 넘길 때 엔진이 새 값으로 처음 나올 때처럼 다시 자라게 한다(motion/engine.ts의 carry).
 // 셋 넘게 이어지면 읽는 차례로 묶어 가다가, 다음 장을 더하면 묶음의 어느 장이 문턱 밑이 될 때 그 장부터 새 묶음을 시작한다
 // (가운데 장은 앞 장과 먼저 묶인다).
 //
@@ -20,19 +22,20 @@ import type { PageInfo } from '../deck/fields'
 import { variantOf } from '../deck/layouts'
 import { transitionOf } from '../deck/themes'
 import type { Item, Slide } from '../deck/types'
-import { seriesIn } from './numbers'
+import { lineAxis, seriesIn } from './numbers'
 
-/** 같이 쓰는 잣대가 담는 값의 범위. 막대는 lo가 0이다 */
+/** 같이 쓰는 잣대가 담는 값의 범위(막대는 lo가 0이다)와, 어느 이웃과 같이 쓰는지(편집 화면의 안내) */
 export interface Scale {
   lo: number
   hi: number
+  with: 'prev' | 'next' | 'both'
 }
 
 /** 장 id → (차트 자리 → 잣대). 차트 자리는 레이아웃 장이면 '', 부품 장이면 부품 id */
-export type SharedScales = Map<string, Map<string, Scale>>
+type SharedScales = Map<string, Map<string, Scale>>
 
-/** 한 잣대로 그렸을 때 차트가 잣대의 이만큼은 채워야 묶는다 */
-export const SHARE_MIN = 0.4
+/** 한 잣대로 그렸을 때 차트의 가장 높은 값이 잣대의 이만큼에는 닿아야 묶는다. 엔진(carry)도 같은 값으로 다시 자랄지 고른다 */
+const SHARE_MIN = 0.4
 
 type Kind = 'bars' | 'trend'
 
@@ -44,6 +47,8 @@ interface Chart {
   match: string
   lo: number
   hi: number
+  /** 추이의 시기 수(축은 시기 수와 상관없지만 lineAxis가 받는다) */
+  n: number
 }
 
 /** 차트의 값 범위. 견줄 수 없는 값(단위가 섞임, 막대의 음수)이 있으면 잣대를 같이 쓰지 않는다 */
@@ -62,7 +67,7 @@ function chartOf(slide: string, key: string, kind: Kind, variant: string, items:
   const hi = Math.max(...all)
   if (kind === 'bars' && !(hi > 0)) return null
   const names = items.map((it) => it.title.trim()).join('\n')
-  return { slide, key, kind, match: [kind, variant, unit.trim(), series.suffix, names].join('\u0000'), lo, hi }
+  return { slide, key, kind, match: [kind, variant, unit.trim(), series.suffix, names].join('\u0000'), lo, hi, n: items.length }
 }
 
 /** 장 하나의 차트들 (레이아웃 장의 막대 비교와 추이, 부품 장의 그 부품) */
@@ -78,14 +83,13 @@ function chartsOf(s: Slide): Chart[] {
     .filter((c): c is Chart => !!c)
 }
 
-/** 묶음의 잣대로 그렸을 때 차트가 잣대를 채우는 몫(막대는 가장 큰 값, 추이는 값의 폭) */
-function fills(c: Chart, s: Scale): number {
-  const span = s.hi - s.lo
-  if (!(span > 0)) return 1
-  return (c.hi - c.lo) / span
+/** 묶음의 잣대로 그렸을 때 차트의 가장 높은 값이 닿는 높이(잣대의 바닥부터, 0~1). 막대는 0부터, 추이는 그려질 축(lineAxis)의 바닥부터 */
+function reach(c: Chart, lo: number, hi: number): number {
+  const { floor, ceil } = c.kind === 'trend' ? lineAxis([lo, hi], c.n) : { floor: 0, ceil: hi }
+  return ceil > floor ? (c.hi - floor) / (ceil - floor) : 1
 }
 
-const join = (list: Chart[]): Scale => ({ lo: Math.min(...list.map((c) => c.lo)), hi: Math.max(...list.map((c) => c.hi)) })
+const join = (list: Chart[]) => ({ lo: Math.min(...list.map((c) => c.lo)), hi: Math.max(...list.map((c) => c.hi)) })
 
 const memo = new WeakMap<PageInfo, SharedScales>()
 
@@ -116,17 +120,17 @@ export function sharedScales(info: PageInfo): SharedScales {
     const groups: Chart[][] = [group]
     for (let c = next.get(head); c; c = next.get(c)) {
       const wider = join([...group, c])
-      if ([...group, c].every((x) => fills(x, wider) >= SHARE_MIN)) group.push(c)
+      if ([...group, c].every((x) => reach(x, wider.lo, wider.hi) >= SHARE_MIN)) group.push(c)
       else groups.push((group = [c]))
     }
     for (const g of groups) {
       if (g.length < 2) continue
-      const scale = join(g)
-      for (const c of g) {
+      const { lo, hi } = join(g)
+      g.forEach((c, i) => {
         const m = out.get(c.slide) ?? new Map<string, Scale>()
-        m.set(c.key, scale)
+        m.set(c.key, { lo, hi, with: i === 0 ? 'next' : i === g.length - 1 ? 'prev' : 'both' })
         out.set(c.slide, m)
-      }
+      })
     }
   }
   memo.set(info, out)

@@ -102,12 +102,38 @@ describe('이어 움직이는 이웃 장의 막대 잣대', () => {
     const a = trend('a', ['96', '101', '99', '131'], '115')
     const b = trend('b', ['134', '111', '139', '144'], '115', true)
     const info = pageInfo([a, b], deck)
-    expect(sharedScales(info).get('a')?.get('')).toEqual({ lo: 96, hi: 144 })
-    expect(sharedScales(info).get('b')?.get('')).toEqual({ lo: 96, hi: 144 })
+    expect(sharedScales(info).get('a')?.get('')).toEqual({ lo: 96, hi: 144, with: 'next' })
+    expect(sharedScales(info).get('b')?.get('')).toEqual({ lo: 96, hi: 144, with: 'prev' })
     // 두 장의 목표선(115)이 같은 높이에 그려진다
     const html = (s: Slide) => renderToStaticMarkup(createElement(SlideCanvas, { deck, slide: s, mode: 'final', ...pageProps(info, s.id) }))
     const ty = (s: Slide) => /--ty:([\d.]+)/.exec(html(s))?.[1]
     expect(ty(a)).toBeDefined()
     expect(ty(a)).toBe(ty(b))
+  })
+
+  it('추이의 문턱도 막대처럼 잣대의 바닥부터 가장 높은 값까지로 잰다(오르내림 폭이 아니라)', () => {
+    const trend = (id: string, values: string[], morph = false, target = '115'): Slide => ({
+      ...makeSlide('trend'),
+      id,
+      fields: { target },
+      items: values.map((value, i) => ({ ...emptyItem(), id: `${id}-${i}`, title: `${i + 1}월`, value })),
+      options: morph ? { transition: 'morph' } : {},
+    })
+    // 96~131에서 86~183으로: 폭으로 재면 36%라 묶이지 않았지만, 두 장을 담는 축(0부터)에서 131은 70% 높이라 묶는다
+    const a = trend('a', ['96', '101', '99', '108', '117', '131'])
+    const b = trend('b', ['125', '86', '119', '119', '88', '183'], true)
+    expect(sharedScales(pageInfo([a, b], deck)).get('a')?.get('')?.hi).toBe(183)
+    // 1에서 10처럼 크게 뛰면 묶지 않는다(목표 없이)
+    const c = trend('c', ['1', '1.2', '1.1', '1.3', '1', '1.2'], false, '')
+    const d = trend('d', ['10', '12', '11', '13', '10', '12'], true, '')
+    expect(sharedScales(pageInfo([c, d], { ...deck })).size).toBe(0)
+  })
+
+  it('편집 화면의 안내를 위해 어느 이웃과 같은 잣대인지 적는다(앞, 뒤, 앞뒤)', () => {
+    const a = bars('a', ['3', '1', '1', '1'])
+    const b = bars('b', ['4', '1', '1', '1'], true)
+    const c = bars('c', ['5', '1', '1', '1'], true)
+    const s = sharedScales(pageInfo([a, b, c], deck))
+    expect([s.get('a')?.get('')?.with, s.get('b')?.get('')?.with, s.get('c')?.get('')?.with]).toEqual(['next', 'both', 'prev'])
   })
 })
