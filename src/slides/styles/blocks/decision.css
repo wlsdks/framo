@@ -207,7 +207,7 @@
    오갔다(검수: 머리말이 있는 그림은 제목 축에서 시작) */
 @container bk (min-width: 1200px) and (min-height: 560px) {
   .bk-dc {
-    column-gap: max(180px, 26cqw);
+    column-gap: max(180px, 34cqw);
   }
 }
 
@@ -236,4 +236,21 @@
 /* 검은 바탕에서는 갈래 곡선(--line-strong)이 바탕에 묻혀서 한 단계 짙게 */
 .is-dark .bk-dc-fork {
   stroke: color-mix(in srgb, var(--ink-3) 80%, var(--bg));
+}
+
+/* 이름표(확인할 조건)는 질문 위에 떠 있게: 이름표와 질문을 한 묶음으로 갈래의 가운데에 맞추면 곡선이 나오는 질문은 그보다 아래라
+   갈래가 위로 휜 나무처럼 보였다(검수). 질문의 가운데가 두 결과의 가운데 높이에 온다. 갈래를 두 줄로 세운 높은 칸만: 낮은 칸에서는
+   질문이 칸 위에 붙어 이름표가 칸 밖으로 나갔다. 좁은 칸(질문이 위에 서는 짜임)은 그대로 */
+@container bk (min-width: 901px) and (min-height: 560px) {
+  .bk-dc-start {
+    position: relative;
+  }
+
+  .bk-dc-label {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: max-content;
+    max-width: 100%;
+  }
 }
