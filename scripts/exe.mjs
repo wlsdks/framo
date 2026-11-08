@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 /** Node.js가 SEA 덩어리가 들었는지 보는 표시. 넣으면 끝의 0이 1로 바뀐다 */
-export const SEA_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2'
+const SEA_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2'
 
 /**
  * PE(윈도우 실행 파일)에서 Authenticode 서명을 걷어 낸 새 Buffer. 서명이 없으면 그대로.
@@ -70,7 +70,7 @@ export function exeInfo(version) {
  * @param {Buffer} ico
  * @param {string} version
  */
-export async function setIconAndInfo(buf, ico, version) {
+async function setIconAndInfo(buf, ico, version) {
   const { NtExecutable, NtExecutableResource, Data, Resource } = await import('resedit')
   const exe = NtExecutable.from(buf, { ignoreCert: true })
   const res = NtExecutableResource.from(exe)
