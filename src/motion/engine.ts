@@ -981,24 +981,44 @@ export function motionEngine(): MotionEngine {
           sets.push((t) => f.el.classList.toggle('is-on', t.v >= at ? f.to : !f.to))
           undo.push(() => f.el.classList.toggle('is-on', f.to))
         })
-      // 점 숫자가 서는 쪽이 바뀌었으면(점이 오르내려 선과 부딪히는 쪽이 달라졌다) 그때까지는 앞 장의 쪽에 두고, 숫자만 아주 잠깐 옅어졌다가
-      // 새 쪽에서 다시 선다. 숫자마다 읽는 차례(왼쪽부터)로 엇갈려서 여럿이 한꺼번에 깜빡이지 않게. 그대로 두면 짝을 바꿔 끼우는 처음에
-      // 숫자가 점의 반대쪽으로 건너뛰었다(필름)
-      sides.forEach((sd, k) => {
-        const mid = sides.length > 1 ? 0.3 + (0.4 * k) / (sides.length - 1) : 0.5
-        const labels = (Array.prototype.slice.call(sd.el.children) as HTMLElement[]).filter((c) => (c.textContent || '').trim())
-        const styles = labels.map((c) => c.getAttribute('style'))
-        sets.push((t) => {
-          const list = t.v < mid ? sd.before : sd.after
+      // 점 숫자가 서는 쪽이 바뀌었으면(점이 오르내려 선과 부딪히는 쪽이 달라졌다) 새 쪽에 두되, 앞 장의 쪽에서 새 쪽으로 점을 따라
+      // 미끄러져 간다. 숫자는 내내 진하다: 가운데에서 잠깐 옅어졌다가 새 쪽에 서던 때는 셈하는 도중 답 숫자가 한 프레임 거의 투명해져
+      // 깜빡임으로 보였고, 다른 점 숫자도 잠깐 옅어졌다(3차 감성 검수). 그대로 두면 짝을 바꿔 끼우는 처음에 숫자가 반대쪽으로 건너뛰었다.
+      // 두 쪽의 자리는 점에서 숫자까지로 잰다(장을 줄여 그려도 장의 px로). 모두 앞 쪽으로 바꿔 한 번, 새 쪽으로 돌려 한 번만 잰다
+      if (sides.length) {
+        const box = el.getBoundingClientRect()
+        const zoom = el.offsetWidth ? box.width / el.offsetWidth : 1
+        const labelsOf = (n: Element) => (Array.prototype.slice.call(n.children) as HTMLElement[]).filter((c) => (c.textContent || '').trim())
+        const offsets = () =>
+          sides.map((sd) => {
+            const p = sd.el.getBoundingClientRect()
+            return labelsOf(sd.el).map((c) => {
+              const r = c.getBoundingClientRect()
+              return [(r.left - p.left) / zoom, (r.top - p.top) / zoom]
+            })
+          })
+        const toSide = (sd: (typeof sides)[number], list: string[]) => {
           for (const c of SIDES) sd.el.classList.toggle(c, list.indexOf(c) >= 0)
-          const o = Math.min(1, Math.abs(t.v - mid) / 0.09)
-          for (const c of labels) c.style.opacity = o >= 1 ? '' : String(o)
+        }
+        const now = offsets()
+        sides.forEach((sd) => toSide(sd, sd.before))
+        const then = offsets()
+        sides.forEach((sd) => toSide(sd, sd.after))
+        sides.forEach((sd, k) => {
+          const labels = labelsOf(sd.el)
+          const styles = labels.map((c) => c.getAttribute('style'))
+          sets.push((t) => {
+            labels.forEach((c, i) => {
+              const a = then[k][i]
+              const b = now[k][i]
+              if (!a || !b) return
+              const r = 1 - t.v
+              c.style.transform = r <= 0 ? '' : `translate(${(a[0] - b[0]) * r}px, ${(a[1] - b[1]) * r}px)`
+            })
+          })
+          undo.push(() => labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!))))
         })
-        undo.push(() => {
-          for (const c of SIDES) sd.el.classList.toggle(c, sd.after.indexOf(c) >= 0)
-          labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
-        })
-      })
+      }
       if (!sets.length) return keep()
 
       // ---- 시계: 눈금과 값이 같은 진행으로 함께 간다(한 번의 모양 바뀜) ----
