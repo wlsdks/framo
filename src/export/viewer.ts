@@ -144,5 +144,7 @@ document.addEventListener('keydown',function(e){
 });
 addEventListener('resize',function(){fit();if(presenting()&&!roomy()){clearTimeout(timer);body.classList.remove('is-awake')}});
 fit();fitBlocks(document);clearBackdrops();
-if(document.fonts)document.fonts.ready.then(function(){fit();fitBlocks(document);clearBackdrops()});
+// 모션 그래픽의 글자 모양은 목록으로 보는 동안(모든 장이 보인다) 한가할 때 미리 딴다: 발표 중에는 다음 장이 숨어 있어 잴 수 없고, 장을 넘기는 프레임에 따면 첫 프레임이 늦다
+function prewarm(){if(window.requestIdleCallback)requestIdleCallback(function(){if(!presenting())cines.prewarm(document)},{timeout:4000})}
+if(document.fonts)document.fonts.ready.then(function(){fit();fitBlocks(document);clearBackdrops();prewarm()});else prewarm();
 })();`
