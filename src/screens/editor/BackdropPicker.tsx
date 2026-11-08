@@ -57,7 +57,7 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
       {open && (
         <>
           {level === 'none' && <p className="sp-quiet">모션이 ‘없음’이라 발표할 때 배경이 멈춘 그림으로 보여요.</p>}
-          <div className="sp-grid bdp-grid" role="group" aria-label="배경 고르기" style={{ '--mo-line': `${SLIDE_W / THUMB_W}px` } as CSSProperties}>
+          <div className="sp-grid bdp-grid" role="group" aria-label="배경 고르기" style={{ '--mo-line': `${(SLIDE_W / THUMB_W) * 0.6}px` } as CSSProperties}>
             <BackdropCard look={look} slide={slide} kind={null} on={!slide.backdrop} onPick={() => pick(null)} />
             {BACKDROPS.map((b) => (
               <BackdropCard key={b.id} look={look} slide={slide} kind={b.id} on={now?.kind === b.id} onPick={() => pick(b.id)} />
@@ -72,7 +72,7 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
             <span className="ins-opt-l">
               자리
               <Info label="자리 도움말" align="start">
-                배경이 깔리는 곳이에요. 글이 적은 쪽에 두면 좋아요. 글 바로 뒤에서는 배경이 알아서 옅어져요. 슬라이드에서 옮길 때는 방향키로 한 칸씩 옮기고, Shift와 함께 누르면 크기를 바꿔요.
+                배경이 깔리는 곳이에요. 글이 적은 쪽에 두면 좋아요.
               </Info>
               {!placeOfArea(now.at) && <span className="bdp-own">직접 옮긴 자리</span>}
             </span>
@@ -87,12 +87,22 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
               }}
             />
           </div>
-          <button type="button" className={cx('btn btn-ghost btn-sm bdp-move', editing && 'is-on')} aria-pressed={editing} onClick={() => setBackdropEditing(editing ? null : slide.id)}>
-            {editing ? '옮기기 끝내기' : '슬라이드에서 끌어 옮기기'}
-          </button>
+          <div className="bdp-move-row">
+            <button type="button" className={cx('btn btn-ghost btn-sm bdp-move', editing && 'is-on')} aria-pressed={editing} onClick={() => setBackdropEditing(editing ? null : slide.id)}>
+              {editing ? '옮기기 끝내기' : '슬라이드에서 끌어 옮기기'}
+            </button>
+            <Info label="옮기기 도움말" align="start">
+              글 둘레는 배경이 알아서 비켜요. 슬라이드에서 옮길 때는 방향키로 한 칸씩 옮기고, Shift와 함께 누르면 크기를 바꿔요.
+            </Info>
+          </div>
           {editing && <p className="bdp-help">슬라이드 위의 틀을 끌어 옮기고, 모서리로 크기를 바꿔요.</p>}
           <div className="ins-opt">
-            <span className="ins-opt-l">진하기</span>
+            <span className="ins-opt-l">
+              진하기
+              <Info label="진하기 도움말" align="start">
+                프로젝터나 큰 회의실에서는 ‘또렷하게’를 골라요. 검은 바탕은 한 단계 짙게 그려지고, PDF와 PPT에는 한 단계 옅게 들어가요.
+              </Info>
+            </span>
             <Segmented
               label="배경 진하기"
               options={BACKDROP_STRENGTHS.map((s) => ({ id: s.id, name: s.name, description: s.description }))}
@@ -112,8 +122,9 @@ const BackdropCard = memo(function BackdropCard({ look, slide, kind, on, onPick 
   const last = useRef(-1e9)
   const shown = useMemo(() => {
     const { backdrop: _, ...rest } = slide
-    // 작은 그림이라 또렷하게로 그린다: 보통 진하기로는 '없음'과 구분되지 않았다(검수). 고르면 원래 진하기로 들어간다
-    return kind ? { ...rest, backdrop: { ...withBackdropKind(slide, kind), strength: 'strong' as const } } : rest
+    // 고르면 실제로 깔릴 진하기 그대로 그린다. 또렷하게로 키워 그리던 때는 카드가 실제보다 촘촘하고 진해 보였다(검수).
+    // 작은 그림에서 선이 사라지지 않게 하는 것은 선 굵기의 바닥(--mo-line)이 맡는다
+    return kind ? { ...rest, backdrop: withBackdropKind(slide, kind) } : rest
   }, [slide, kind])
   const spec = kind ? backdropSpec(kind) : null
   const play = () => {

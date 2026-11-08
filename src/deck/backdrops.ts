@@ -25,10 +25,10 @@ interface BackdropSpec {
  */
 export const BACKDROPS: readonly BackdropSpec[] = [
   // 깊이, 구조, 여운은 지형도, 모눈 템플릿, 장식 괘선 두 줄로 읽혀 뺐다(감성 검수). 그 값이 남은 발표는 그리지 않고 값은 둔다
-  { id: 'diffuse', name: '확산', description: '한 점에 모인 짙음이 바깥으로 번져 나가요.', fits: '표지, 출시와 도입, 커지는 숫자, 퍼지는 이야기', focal: true, showOn: 'cover' },
-  { id: 'gather', name: '모여 시작', description: '여러 곳에서 온 가는 선이 한 줄기로 모여 뻗어 나가요.', fits: '표지, 창단과 착수, 결론 한 줄, 통합과 합계', focal: true, showOn: 'statement' },
-  { id: 'flow', name: '흐름', description: '가는 선들이 한쪽으로 흐르며 한 곳을 지나가요.', fits: '과정, 일정, 추이, 변화', focal: false, showOn: 'process' },
-  { id: 'link', name: '연결', description: '양쪽의 점들이 낮은 활 모양 선으로 하나씩 이어져요.', fits: '연결도, 관계, 사람과 팀, 협업', focal: false, showOn: 'compare' },
+  { id: 'diffuse', name: '확산', description: '한 점에 모인 짙음이 장 너머까지 번져 나가요.', fits: '표지, 출시와 도입, 커지는 숫자, 넓혀 가는 계획', focal: true, showOn: 'cover' },
+  { id: 'gather', name: '모여 시작', description: '여러 곳에서 온 가는 선이 한 줄기로 모여 장의 답으로 건너가요.', fits: '표지, 착수와 출범, 결론 한 줄, 통합과 합계', focal: true, showOn: 'statement' },
+  { id: 'flow', name: '흐름', description: '가는 결이 왼쪽에서 오른쪽으로 깔리며 본문 위아래로 나란히 흘러요.', fits: '과정, 일정, 추이, 변화', focal: false, showOn: 'process' },
+  { id: 'link', name: '연결', description: '양쪽 점이 먼저 맺히고, 낮고 넓은 선이 건너가 하나씩 이어요.', fits: '연결도, 관계, 사람과 팀, 협업', focal: false, showOn: 'compare' },
 ]
 
 export const BACKDROP_IDS: readonly BackdropId[] = BACKDROPS.map((b) => b.id)
@@ -36,7 +36,7 @@ export const BACKDROP_IDS: readonly BackdropId[] = BACKDROPS.map((b) => b.id)
 export const BACKDROP_STRENGTHS: { id: BackdropStrength; name: string; description: string }[] = [
   { id: 'soft', name: '옅게', description: '글이 많은 슬라이드에 써요. 배경이 더 뒤로 물러나요.' },
   { id: 'base', name: '보통', description: '글이 그 위에서 편하게 읽히는 진하기예요.' },
-  { id: 'strong', name: '또렷하게', description: '글이 적은 표지나 단락 슬라이드에 써요.' },
+  { id: 'strong', name: '또렷하게', description: '글이 적은 표지나 단락 슬라이드, 프로젝터와 큰 회의실에 써요.' },
 ]
 
 /** 자주 쓰는 자리. 장 전체를 12×12칸으로 나눈 칸 수다(세로 한 칸은 90px, 가로 한 칸은 160px) */
@@ -48,7 +48,11 @@ export const BACKDROP_PLACES: { id: string; name: string; at: BlockAt }[] = [
   { id: 'right', name: '오른쪽', at: { x: 5, y: 0, w: 7, h: 12 } },
   { id: 'top', name: '위', at: { x: 0, y: 0, w: 12, h: 7 } },
   { id: 'bottom', name: '아래', at: { x: 0, y: 5, w: 12, h: 7 } },
-  { id: 'corner', name: '오른쪽 아래', at: { x: 6, y: 5, w: 6, h: 7 } },
+  // 모서리 넷
+  { id: 'top-left', name: '왼쪽 위', at: { x: 0, y: 0, w: 6, h: 7 } },
+  { id: 'top-right', name: '오른쪽 위', at: { x: 6, y: 0, w: 6, h: 7 } },
+  { id: 'bottom-left', name: '왼쪽 아래', at: { x: 0, y: 5, w: 6, h: 7 } },
+  { id: 'bottom-right', name: '오른쪽 아래', at: { x: 6, y: 5, w: 6, h: 7 } },
 ]
 
 export const WHOLE_SLIDE: BlockAt = BACKDROP_PLACES[0].at
@@ -82,7 +86,7 @@ export const placeOfArea = (at: BlockAt) => BACKDROP_PLACES.find((p) => sameArea
  * 다른 장은 글이 왼쪽부터 놓인다.
  * 한곳에 모이는 배경(확산, 모여 시작)은 그 빈 쪽에 놓아 그림의 가운데가 글 뒤에 오지 않게 한다
  */
-const FOCAL_PLACE: Partial<Record<LayoutId, string>> = { cover: 'top', section: 'top', closing: 'top', statement: 'corner' }
+const FOCAL_PLACE: Partial<Record<LayoutId, string>> = { cover: 'top', section: 'top', closing: 'top', statement: 'bottom-right' }
 
 /**
  * 글이 적은 장(표지, 섹션, 맺음, 한 문장): 처음 고를 때 또렷하게. 보통 짙기는 글이 많은 장에 맞춘 것이라 큰 화면에서 표지가 비어

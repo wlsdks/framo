@@ -48,6 +48,21 @@
   grid-area: go;
 }
 
+/* 펼치는 단추: 닫혀 있으면 아래, 펼쳐 있으면(접기) 위를 본다 */
+.bdp-cur .ins-cur-go .icon {
+  transform: rotate(90deg);
+}
+
+.bdp-cur[aria-expanded='true'] .ins-cur-go .icon {
+  transform: rotate(-90deg);
+}
+
+.bdp-move-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .bdp-note {
   margin: 8px 0 0;
   color: var(--ink-3);
@@ -58,8 +73,8 @@
   margin-top: 12px;
 }
 
-/* 카드의 작은 그림: 장을 15분의 1로 줄여 1px 선이 0.07px이 되어 사라졌다(검수: '없음'과 구분되지 않는다). 선만 화면 1px로
-   그린다(--mo-line: 화면 1px이 장의 몇 px인지, BackdropPicker. 움직이는 캔버스도 같은 값을 읽는다, motion/draw.ts). 발표 화면에서도
+/* 카드의 작은 그림: 장을 15분의 1로 줄여 1px 선이 0.07px이 되어 사라졌다(검수: '없음'과 구분되지 않는다). 선만 화면 0.6px로
+   그린다(--mo-line: 화면 0.6px이 장의 몇 px인지, BackdropPicker. 1px로는 실제보다 촘촘하고 진해 보였다. 움직이는 캔버스도 같은 값을 읽는다, motion/draw.ts). 발표 화면에서도
    선은 화면의 1px 남짓이라 이쪽이 실제로 보이는 모습에 가깝다. 점은 그대로 줄인다(망점이 뭉치지 않게). 줄인 배율이 CSS transform이라
    vector-effect로는 되지 않는다 */
 .bdp-grid .s-bd path[stroke-linejoin] {
@@ -81,7 +96,7 @@
   -webkit-line-clamp: 2;
 }
 
-/* 자리 일곱은 한 줄에 넣으면 이름이 잘려서 네 칸씩 두 줄로 */
+/* 자리 열하나는 한 줄에 넣으면 이름이 잘려서 네 칸씩 세 줄로 */
 .seg.bdp-places {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
