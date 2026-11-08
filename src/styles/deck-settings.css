@@ -197,6 +197,10 @@
   font-weight: 400;
 }
 
+.ds-sub::before {
+  content: ' · ';
+}
+
 /* 작은 슬라이드 하나 (16:9) */
 .ds-slide {
   position: relative;
@@ -257,14 +261,14 @@
 
 /*
  * 모션 그림은 2.8초마다 되풀이한다: 나타나기(0~45%), 다 보인 채 머물기, 끝에 잠깐 비우기. --d는 나오는 차례.
- * 고르지 않은 그림은 나타나는 도중(0.4초)에 멈춰 있어서 멈춘 그림만으로도 차례로 나오는 모습이 보이고, 올리거나 고르면(is-play) 움직인다
+ * 고르지 않은 그림은 나타나는 도중(0.6초)에 멈춰 있어서 멈춘 그림만으로도 차례로 나오는 모습이 보이고, 올리거나 고르면(is-play) 움직인다
  */
 .ds-mo:is(.is-calm, .is-lively) :is(.ds-mo-t, .ds-mo-n, .ds-mo-bars i) {
   animation-duration: 2.8s;
   animation-timing-function: var(--ease-out);
   animation-iteration-count: infinite;
   animation-fill-mode: both;
-  animation-delay: calc(var(--d) * 0.14s - 0.4s);
+  animation-delay: calc(var(--d) * 0.14s - 0.6s);
   animation-play-state: paused;
 }
 

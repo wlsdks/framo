@@ -114,10 +114,10 @@ export function DeckSettings({ deck, slide }: { deck: Deck; slide?: Slide }) {
 const nameOfTransition = (id: Exclude<Transition, 'auto'>) => TRANSITIONS.find((t) => t.id === id)?.name ?? ''
 
 /**
- * 고르는 그림 하나. 고른 것의 그림은 늘 움직이고, 나머지는 움직이는 도중의 한 장면에 멈춰 있다가 마우스를 올리거나
+ * 고르는 그림 하나(발표 설정, 모션 편집의 '이 슬라이드만 다르게'). 고른 것의 그림은 늘 움직이고, 나머지는 움직이는 도중의 한 장면에 멈춰 있다가 마우스를 올리거나
  * 키보드로 오면 움직인다(motion.css를 쓰지 않고 deckset.css의 작은 그림 움직임으로)
  */
-function DemoCard({ name, sub, title, on, onPick, children }: { name: string; sub?: string; title: string; on: boolean; onPick(): void; children: ReactNode }) {
+export function DemoCard({ name, sub, title, on, onPick, children }: { name: string; sub?: string; title: string; on: boolean; onPick(): void; children: ReactNode }) {
   const [play, setPlay] = useState(false)
   return (
     <button
@@ -136,7 +136,7 @@ function DemoCard({ name, sub, title, on, onPick, children }: { name: string; su
       </span>
       <span className="ds-name">
         {name}
-        {sub && <span className="ds-sub"> · {sub}</span>}
+        {sub && <span className="ds-sub">{sub}</span>}
       </span>
     </button>
   )
@@ -176,7 +176,7 @@ function FootStrip({ deck, slide, mode, look }: { deck: Deck; slide?: Slide; mod
 }
 
 /** 모션 정도의 작은 그림: 제목, 큰 숫자, 막대 셋이 그 정도로 나타난다 (없음은 처음부터 다 보인다) */
-function MotionDemo({ level, look }: { level: Motion; look: CSSProperties }) {
+export function MotionDemo({ level, look }: { level: Motion; look: CSSProperties }) {
   return (
     <span className={cx('ds-slide ds-mo', `is-${level}`)} style={look}>
       <i className="ds-mo-t" style={{ '--d': 0 } as CSSProperties} />
@@ -193,7 +193,7 @@ function MotionDemo({ level, look }: { level: Motion; look: CSSProperties }) {
 }
 
 /** 화면 전환의 작은 그림: 앞 슬라이드(제목과 줄)에서 다음 슬라이드(큰 숫자)로. 이어지게는 같은 숫자 상자가 새 자리로 옮겨 간다 */
-function TransitionDemo({ id, look }: { id: Exclude<Transition, 'auto'>; look: CSSProperties }) {
+export function TransitionDemo({ id, look }: { id: Exclude<Transition, 'auto'>; look: CSSProperties }) {
   return (
     <span className={cx('ds-slide ds-tr', `is-${id}`)} style={look}>
       <span className="ds-tr-a">

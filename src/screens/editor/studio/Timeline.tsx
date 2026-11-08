@@ -9,7 +9,7 @@ import { GripIcon, Icon, Info, PlayIcon } from '../../ui'
 import type { Lane, Player } from './player'
 
 // 움직임 편집 아래의 시간표. 줄마다 그 컴포넌트가 움직이는 동안을 막대로 보이고, 바늘을 끌어 그때의 모습을 본다.
-// 막대를 끌어 시간을 바꾸지는 않는다(고르는 방식): 줄을 위아래로 끌어 차례를 바꾸고, 때와 움직임은 오른쪽에서 고른다
+// 막대를 끌어 시간을 바꾸지는 않는다(고르는 방식): 줄을 위아래로 끌어 차례를 바꾸고, 줄을 누르면 오른쪽 칸에 그 컴포넌트의 때와 움직임이 보인다
 
 /** 눈금 사이(ms). 시간표가 길면 1초마다 */
 const tickStep = (span: number) => (span > 6000 ? 1000 : 500)
@@ -189,7 +189,7 @@ export function Timeline({
               </Info>
             </p>
           ) : quiet === 'none' ? (
-            <p className="ms-tl-empty">모션 세기가 ‘없음’이라 움직이지 않아요. 오른쪽 ‘이 슬라이드’에서 모션 세기를 골라 보세요.</p>
+            <p className="ms-tl-empty">모션이 ‘없음’이라 움직이지 않아요. 오른쪽 ‘이 슬라이드만 다르게’에서 모션을 골라 보세요.</p>
           ) : (
             none && <p className="ms-tl-empty">이 슬라이드에는 움직이는 것이 없어요.</p>
           )}

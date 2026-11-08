@@ -24,25 +24,27 @@ import {
 } from '../../../deck/blocks'
 import { pageInfo } from '../../../deck/fields'
 import { sceneOf } from '../../../deck/scenes'
-import { MOTIONS, motionOf, transitionOf } from '../../../deck/themes'
-import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockWhen, Deck, Motion, Slide, BlockReveal } from '../../../deck/types'
+import { MOTIONS, motionOf, themeStyle, transitionOf, TRANSITIONS } from '../../../deck/themes'
+import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockWhen, Deck, Motion, Slide, BlockReveal, Transition } from '../../../deck/types'
 import { cx } from '../../../lib/cx'
-import { presentKey } from '../../../lib/presentKeys'
 import { FitSlide, pageProps, SlideCanvas, useStableSections } from '../../../slides/SlideCanvas'
 import { useDeck } from '../../../store/deckStore'
-import { BackIcon, ChevronIcon, PlayIcon, Segmented, useDialog, type Toast } from '../../ui'
+import { BackIcon, ChevronIcon, PlayIcon, Segmented, useEscape, type Toast } from '../../ui'
+import { DemoCard, MotionDemo, TransitionDemo } from '../DeckSettings'
 import { Opt } from '../Inspector'
 import { useLook, type Look } from '../look'
-import { FROM_SHORT, INHERIT, InheritNote, SLIDE_TRANSITIONS } from '../MotionPanel'
-import { SceneOverride, ScenePicker } from '../ScenePicker'
+import { FROM_SHORT, INHERIT, nameOf, SLIDE_TRANSITIONS } from '../MotionPanel'
+import { SceneAll, SceneOverride, ScenePicker } from '../ScenePicker'
 import { usePlayer, useReducedMotion } from './player'
 import { MotionCopy } from './MotionCopy'
 import { Timeline } from './Timeline'
 
-// 움직임 편집: 한 장의 움직임을 크게 보며 고치는 화면. 편집기 위에 덮어 연다.
-// 가운데에 발표 화면과 똑같이 움직이는 장, 아래에 컴포넌트마다 움직이는 동안을 그린 시간표, 오른쪽에 고르는 값.
-// 시간을 손으로 그리지 않는다(고르는 방식): 연출 하나로 장 전체의 차례와 때를 정하고, 컴포넌트마다 움직임, 언제, 쪽, 빠르기를 고른다.
-// 값은 편집기의 움직임 탭과 같은 곳(부품의 effect·when·from·speed, 장의 options.order·motion·transition)에 적는다
+// 움직임 편집: 한 장의 움직임을 크게 보며 고치는 곳. 편집기 안에서 슬라이드 자리(가운데)와 오른쪽 칸을 바꿔 쓴다:
+// 가운데에 발표 화면과 똑같이 움직이는 장과 그 아래 컴포넌트마다 움직이는 동안을 그린 시간표, 오른쪽 칸에는 지금 고른 것의 값만.
+// 아무것도 고르지 않으면 슬라이드 전체(움직이는 방식, 나오는 차례, 이 슬라이드만 다르게), 컴포넌트를 고르면 그 컴포넌트의 값이다.
+// 예전에는 편집기 위에 덮는 화면이라 왼쪽 슬라이드 목록이 가려졌고, 오른쪽 칸에는 장면부터 컴포넌트 값까지 한꺼번에 늘어서 있었다.
+// 시간을 손으로 그리지 않는다(고르는 방식): 나오는 차례 하나로 장 전체의 차례와 때를 정하고, 컴포넌트마다 움직임, 언제, 쪽, 빠르기를 고른다.
+// 값은 부품의 effect·when·from·speed, 장의 options.order·motion·transition·scene에 적는다
 
 export function MotionStudio({
   deck,
@@ -73,15 +75,17 @@ export function MotionStudio({
   const order = useMemo(() => playOrder(slide), [slide])
   const ids = useMemo(() => order.map((b) => b.id), [order])
   const names = useMemo(() => blockNames(slide.blocks ?? []), [slide.blocks])
-  const [selected, setSelected] = useState<string | null>(initial && ids.includes(initial) ? initial : (ids[0] ?? null))
+  // 고른 컴포넌트. 없으면(null) 슬라이드 전체의 값을 보인다: 처음 열면 '자동'인 슬라이드 전체부터
+  const [selected, setSelected] = useState<string | null>(initial && ids.includes(initial) ? initial : null)
   const [hot, setHot] = useState<string | null>(null)
   useEffect(() => {
-    if (!selected || !ids.includes(selected)) setSelected(ids[0] ?? null)
+    if (selected && !ids.includes(selected)) setSelected(null)
   }, [ids, selected])
-  // 덮은 화면이라 대화 창처럼: 초점은 안에서만 돌고 Esc로 닫는다(편집기의 단축키는 그동안 쉰다).
-  // 열 때 초점은 창 자체에(data-autofocus): 첫 단추('편집으로')에 두면 '재생 (Space)'을 보고 누른 Space가 그 단추를 눌러 창이 닫혔다
-  const dialogRef = useRef<HTMLDivElement>(null)
-  useDialog(dialogRef, onClose)
+  // Esc로 편집으로 돌아간다. 열 때 초점은 무대 쪽 자체에: 첫 단추('편집으로')에 두면 '재생 (Space)'을 보고 누른 Space가 그 단추를 눌러 닫혔다.
+  // 되돌리기, 다시 하기, F5는 편집기의 단축키가 그대로 받는다(덮는 창이 아니라 편집기의 한 모습이라)
+  const mainRef = useRef<HTMLElement>(null)
+  useEscape(onClose)
+  useEffect(() => mainRef.current?.focus({ preventScroll: true }), [])
 
   // 장이 바뀔 때마다 무대를 새로 그린다(key). 그려진 무대(root)를 받으면 재생기가 처음부터 움직인다
   const rev = useRef({ slide, n: 0 })
@@ -93,27 +97,20 @@ export function MotionStudio({
   const reduced = useReducedMotion()
 
   // Space: 재생과 멈춤 (단추나 글 칸에 있을 때는 그것의 Space를 둔다. 바늘은 Space로 할 일이 없어 재생한다: 끌어 본 자리에서
-  // 이어 보려고 누른 Space가 아무 일도 하지 않았다). 되돌리기와 다시 하기는 편집기와 같은 키로 (스튜디오가 덮은 동안 편집기의 단축키는 쉰다)
+  // 이어 보려고 누른 Space가 아무 일도 하지 않았다)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // 한글 입력 상태에서는 Ctrl+Z가 'ㅋ'로 와서 글자 키는 자판 자리로 읽는다 (편집기의 단축키와 같게)
-      const k = presentKey(e).toLowerCase()
-      if ((e.metaKey || e.ctrlKey) && !e.altKey && (k === 'z' || k === 'y')) {
-        e.preventDefault()
-        const st = useDeck.getState()
-        if (k === 'y' || e.shiftKey) st.redo()
-        else st.undo()
-        return
-      }
+      if (e.defaultPrevented) return
       // ←, →: 앞 장, 다음 장 (발표 화면과 같은 키). 단추를 누른 뒤에도 되게 단추는 막지 않는다. 바늘(slider)은 제 화살표로 옮긴다
       if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
-        if ((e.target as Element).closest?.('input, textarea, select, [role="slider"], [contenteditable]')) return
+        // 왼쪽 슬라이드 목록은 제 화살표로 옮긴다
+        if ((e.target as Element).closest?.('input, textarea, select, [role="slider"], [contenteditable], .sl')) return
         e.preventDefault()
         goRef.current(e.key === 'ArrowLeft' ? -1 : 1)
         return
       }
       if (e.key !== ' ' || e.repeat) return
-      if ((e.target as Element).closest?.('button, input, textarea, select, [contenteditable]')) return
+      if ((e.target as Element).closest?.('button, input, textarea, select, [contenteditable], .sl, .side')) return
       e.preventDefault()
       player.toggle()
     }
@@ -192,42 +189,42 @@ export function MotionStudio({
     store.replaceSlide(slide.id, withPreset(slide, id))
   }
 
+  const name = block ? (names.get(block.id) ?? '컴포넌트') : ''
   return (
-    <div ref={dialogRef} className="ms" role="dialog" aria-modal="true" aria-label="모션 편집" tabIndex={-1} data-autofocus>
-      <header className="ms-top">
-        <button type="button" className="btn btn-ghost btn-sm ms-back" onClick={onClose} title="편집으로 돌아가기 (Esc)">
-          <BackIcon />
-          편집으로
-        </button>
-        <h1 className="ms-title">모션 편집</h1>
-        <nav className="ms-nav" aria-label="슬라이드 넘기기">
-          <button type="button" className="icon-btn ms-prev" aria-label="앞 슬라이드" title="앞 슬라이드 (←)" disabled={at <= 0} onClick={() => go(-1)}>
-            <ChevronIcon />
+    <>
+      <main ref={mainRef} className="ms" aria-label="모션 편집" tabIndex={-1}>
+        <header className="ms-top">
+          <button type="button" className="btn btn-ghost btn-sm ms-back" onClick={onClose} title="편집으로 돌아가기 (Esc)">
+            <BackIcon />
+            편집으로
           </button>
-          <span className="ms-count">
-            {at + 1} / {visible.length}
-          </span>
-          <button type="button" className="icon-btn" aria-label="다음 슬라이드" title="다음 슬라이드 (→)" disabled={at < 0 || at >= visible.length - 1} onClick={() => go(1)}>
-            <ChevronIcon />
+          <h1 className="ms-title">모션 편집</h1>
+          <nav className="ms-nav" aria-label="슬라이드 넘기기">
+            <button type="button" className="icon-btn ms-prev" aria-label="앞 슬라이드" title="앞 슬라이드 (←)" disabled={at <= 0} onClick={() => go(-1)}>
+              <ChevronIcon />
+            </button>
+            <span className="ms-count">
+              {at + 1} / {visible.length}
+            </span>
+            <button type="button" className="icon-btn" aria-label="다음 슬라이드" title="다음 슬라이드 (→)" disabled={at < 0 || at >= visible.length - 1} onClick={() => go(1)}>
+              <ChevronIcon />
+            </button>
+            <span className="ms-slide-name">{slideHeading(slide)}</span>
+          </nav>
+          <button type="button" className="btn btn-ghost btn-sm ms-present" onClick={() => onPresent(slide.id)}>
+            <PlayIcon />
+            <span className="btn-t">이 슬라이드부터 발표</span>
           </button>
-          <span className="ms-slide-name">{slideHeading(slide)}</span>
-        </nav>
-        <button type="button" className="btn btn-primary btn-sm ms-present" onClick={() => onPresent(slide.id)}>
-          <PlayIcon />이 슬라이드부터 발표
-        </button>
-      </header>
+        </header>
 
-      <div className="ms-body">
         <div
           className={cx('ms-stage', player.playing && 'is-playing')}
-          onPointerDown={(e) => {
-            const cell = (e.target as Element).closest<HTMLElement>('.bk[data-block]')
-            if (cell?.dataset.block) setSelected(cell.dataset.block)
-          }}
+          // 컴포넌트를 누르면 그것을, 빈 곳을 누르면 슬라이드 전체를 고른다 (오른쪽 칸이 그 값으로 바뀐다)
+          onPointerDown={(e) => setSelected((e.target as Element).closest<HTMLElement>('.bk[data-block]')?.dataset.block ?? null)}
           onPointerOver={(e) => setHot((e.target as Element).closest<HTMLElement>('.bk[data-block]')?.dataset.block ?? null)}
           onPointerLeave={() => setHot(null)}
         >
-          <FitSlide padding={small ? 14 : 24}>
+          <FitSlide padding={small ? 12 : 20}>
             {entering && prev ? (
               <Stage key={`prev.${prev.id}`} deck={look} slide={prev} page={pageProps(info, prev.id)} sections={sections} />
             ) : (
@@ -253,40 +250,57 @@ export function MotionStudio({
         </div>
 
         <Timeline player={player} onEnter={prev && !reduced ? enter : null} quiet={reduced ? 'reduced' : level === 'none' ? 'none' : null} order={compose ? ids : []} selected={selected} hot={hot} onSelect={setSelected} onHot={setHot} onMove={move} />
+      </main>
 
-        <aside className="ms-side" aria-label="모션 고르기">
-          {/* 장면: 장 전체를 한 컷으로. 고르면 무대가 새로 그려져 그 장면으로 처음부터 움직인다 */}
-          <section className="ms-sec sp">
-            <h2 className="ms-h">장면</h2>
-            <ScenePicker deck={deck} slide={slide} thumb={120} />
-          </section>
-          {compose ? (
-            <Presets slide={slide} prefer={prefer} onPick={pickPreset} />
+      {/* 오른쪽 칸: 고른 것의 값만. 컴포넌트를 골랐으면 그 컴포넌트, 아니면 슬라이드 전체 */}
+      <aside className="side ms-side" aria-label="모션 고르기">
+        <div className="ms-side-h">
+          {block ? (
+            <button type="button" className="ms-up" onClick={() => setSelected(null)} title="슬라이드 전체의 모션으로">
+              <BackIcon />
+              슬라이드 전체
+            </button>
           ) : (
-            <section className="ms-sec ms-convert">
-              <h2 className="ms-h">컴포넌트마다 고르기</h2>
-              <p>컴포넌트 슬라이드로 바꾸면 컴포넌트마다 나오는 차례와 모션을 고를 수 있어요. 글은 그대로예요.</p>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={onConvert}>
-                컴포넌트 슬라이드로 바꾸기
-              </button>
-            </section>
+            <h2 className="ms-side-t">슬라이드 전체</h2>
           )}
-          {compose && (
-            <BlockMotion
-              slide={slide}
-              block={block}
-              n={block ? ids.indexOf(block.id) + 1 : 0}
-              name={block ? (names.get(block.id) ?? '컴포넌트') : ''}
-              disabled={level === 'none'}
-              onSet={setBlock}
-              onPlay={() => block && player.playOne(block.id)}
-            />
+        </div>
+        <div className="ms-side-body">
+          {block ? (
+            <BlockMotion slide={slide} block={block} n={ids.indexOf(block.id) + 1} name={name} disabled={level === 'none'} onSet={setBlock} onPlay={() => player.playOne(block.id)} />
+          ) : (
+            <>
+              {/* 움직이는 방식: 자동(컴포넌트마다 내용에 맞게) 아니면 장 전체를 한 컷으로 짠 장면. 고르면 무대가 그 모습으로 처음부터 움직인다 */}
+              <section className="ms-sec sp">
+                <h2 className="ms-h">움직이는 방식</h2>
+                <ScenePicker deck={deck} slide={slide} thumb={120} />
+              </section>
+              {compose ? (
+                <Presets slide={slide} prefer={prefer} onPick={pickPreset} />
+              ) : (
+                <section className="ms-sec ms-convert">
+                  <h2 className="ms-h">컴포넌트마다 고르기</h2>
+                  <p>컴포넌트 슬라이드로 바꾸면 컴포넌트마다 나오는 차례와 모션을 고를 수 있어요. 글은 그대로예요.</p>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={onConvert}>
+                    컴포넌트 슬라이드로 바꾸기
+                  </button>
+                </section>
+              )}
+              {compose && ids.length > 0 && (
+                <section className="ms-sec">
+                  <p className="ms-none">슬라이드나 아래 시간표에서 컴포넌트를 누르면 그 컴포넌트의 모션을 고를 수 있어요.</p>
+                </section>
+              )}
+              <SlideMotion deck={deck} slide={slide} onTransition={enter} />
+              <MotionCopy deck={deck} slide={slide} prefer={prefer} toast={toast} />
+              <section className="ms-sec">
+                <h2 className="ms-h">발표 전체</h2>
+                <SceneAll deck={deck} toast={toast} />
+              </section>
+            </>
           )}
-          <SlideMotion deck={deck} slide={slide} onTransition={enter} />
-          <MotionCopy deck={deck} slide={slide} prefer={prefer} toast={toast} />
-        </aside>
-      </div>
-    </div>
+        </div>
+      </aside>
+    </>
   )
 }
 
@@ -372,13 +386,13 @@ function contentRect(cell: HTMLElement): DOMRect {
   return l === Infinity ? cell.getBoundingClientRect() : new DOMRect(l, t, r - l, b - t)
 }
 
-/** 연출: 장 전체의 차례와 때를 한 번에. 그림은 세 컴포넌트가 나오는 때(가로가 시간)를 줄인 모습 */
+/** 나오는 차례(연출): 장 전체의 차례와 때를 한 번에. 그림은 세 컴포넌트가 나오는 때(가로가 시간)를 줄인 모습 */
 function Presets({ slide, prefer, onPick }: { slide: Slide; prefer: MotionPreset | null; onPick(id: MotionPreset): void }) {
   const now = currentPreset(slide, prefer)
   return (
     <section className="ms-sec">
-      <h2 className="ms-h">연출</h2>
-      <div className="ms-presets" role="group" aria-label="연출">
+      <h2 className="ms-h">나오는 차례</h2>
+      <div className="ms-presets" role="group" aria-label="나오는 차례">
         {MOTION_PRESETS.map((p) => {
           const fits = presetFits(slide, p.id)
           return (
@@ -433,20 +447,13 @@ function BlockMotion({
   onPlay,
 }: {
   slide: Slide
-  block: Block | null
+  block: Block
   n: number
   name: string
   disabled: boolean
   onSet(b: Block, patch: Partial<Block>, one: boolean): void
   onPlay(): void
 }) {
-  if (!block) {
-    return (
-      <section className="ms-sec">
-        <p className="ms-none">슬라이드나 시간표에서 컴포넌트를 고르면 모션을 바꿀 수 있어요.</p>
-      </section>
-    )
-  }
   const effect = effectOf(block)
   const when = whenOf(block)
   const from = fromOf(block)
@@ -511,42 +518,69 @@ function BlockMotion({
   )
 }
 
-/** 이 장 전체: 움직임 정도와 장 넘기기 */
+/**
+ * 이 슬라이드만 다르게: 모션과 화면 전환. 처음에는 접어 두고 지금 무엇인지만 한 줄로 보인다(대개는 발표 설정대로 둔다).
+ * 펼치면 발표 설정과 같은 작은 그림으로 고른다: 예전에는 '발표 설정대로'와 값들이 빽빽한 단추 줄이라 무엇이 다른지 알 수 없었다
+ */
 function SlideMotion({ deck, slide, onTransition }: { deck: Deck; slide: Slide; onTransition(): void }) {
   const setOptions = useDeck((s) => s.setOptions)
-  const onPick = useCallback((m: Motion | undefined) => setOptions(slide.id, { motion: m }), [setOptions, slide.id])
-  const own = slide.options.transition ?? undefined
+  const ownMotion = slide.options.motion
+  const ownTr = slide.options.transition && slide.options.transition !== 'auto' ? slide.options.transition : undefined
+  const [open, setOpen] = useState(!!ownMotion || !!ownTr)
+  // 다른 슬라이드로 가면 그 슬라이드에 따로 고른 것이 있을 때만 펼친다
+  const [seen, setSeen] = useState(slide.id)
+  if (seen !== slide.id) {
+    setSeen(slide.id)
+    setOpen(!!ownMotion || !!ownTr)
+  }
+  const look = useMemo(() => themeStyle(deck.theme), [deck.theme])
+  const deckMotion = deck.motion ?? 'calm'
+  const deckTr = transitionOf(deck)
+  const pickMotion = useCallback((m: Motion | undefined) => setOptions(slide.id, { motion: m }), [setOptions, slide.id])
+  const pickTr = (t: Transition | undefined) => {
+    setOptions(slide.id, { transition: t })
+    onTransition()
+  }
+  const now = `모션 ${nameOf(MOTIONS, motionOf(deck, slide))} · 화면 전환 ${nameOf(TRANSITIONS, transitionOf(deck, slide))}`
   return (
-    <section className="ms-sec">
-      <h2 className="ms-h">이 슬라이드</h2>
-      {/* 움직임 탭과 같은 말: 예전에는 여기만 '기본'이라 같은 값이 두 이름으로 보였고, 기본이 무엇인지도 알 수 없었다 */}
-      <p className="mp-inherit">
-        <InheritNote deck={deck} />
-      </p>
-      <Opt label="모션 세기" wide>
-        <Segmented<Motion | undefined>
-          className="seg-fill seg-fit"
-          label="이 슬라이드의 모션 세기"
-          options={[{ id: undefined, name: INHERIT, description: '발표 설정에서 정한 발표 전체의 모션을 따라요.' }, ...MOTIONS]}
-          value={slide.options.motion ?? undefined}
-          onPick={onPick}
-        />
-      </Opt>
-      <Opt label="화면 전환" wide tip="앞 슬라이드에서 이 슬라이드로 넘어올 때의 모습이에요. 고르면 무대에서 앞 슬라이드부터 한 번 넘겨 보여요.">
-        <div className="mp-grid" role="group" aria-label="이 슬라이드로 넘어올 때">
-          {SLIDE_TRANSITIONS.map((t) => {
-            const on = own === t.id
-            return (
-              <button key={String(t.id)} type="button" className={cx('mp-pick', on && 'is-on')} aria-pressed={on} title={t.description} onClick={() => {
-                  setOptions(slide.id, { transition: t.id })
-                  onTransition()
-                }}>
-                {t.name}
-              </button>
-            )
-          })}
+    <section className="ms-sec ms-own">
+      <button type="button" className="ms-own-h" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span>
+          <b>이 슬라이드만 다르게</b>
+          <span className="ms-own-sum">{ownMotion || ownTr ? now : `${INHERIT}: ${now}`}</span>
+        </span>
+        <ChevronIcon />
+      </button>
+      {open && (
+        <div className="ms-own-body">
+          <p className="ms-h">모션</p>
+          <div className="ds-cards ms-own-motions" role="group" aria-label="이 슬라이드의 모션">
+            <DemoCard name={INHERIT} sub={nameOf(MOTIONS, deckMotion)} title="발표 설정에서 정한 발표 전체의 모션을 따라요." on={!ownMotion} onPick={() => pickMotion(undefined)}>
+              <MotionDemo level={deckMotion} look={look} />
+            </DemoCard>
+            {MOTIONS.map((m) => (
+              <DemoCard key={m.id} name={m.name} title={m.description} on={ownMotion === m.id} onPick={() => pickMotion(m.id)}>
+                <MotionDemo level={m.id} look={look} />
+              </DemoCard>
+            ))}
+          </div>
+          <p className="ms-h">화면 전환</p>
+          <div className="ds-cards ms-own-trs" role="group" aria-label="이 슬라이드로 넘어올 때">
+            {SLIDE_TRANSITIONS.map((t) => (
+              <DemoCard
+                key={String(t.id)}
+                name={t.name}
+                sub={t.id ? undefined : nameOf(TRANSITIONS, deckTr)}
+                title={`${t.description} 고르면 앞 슬라이드부터 한 번 넘겨 보여요.`}
+                on={ownTr === t.id}
+                onPick={() => pickTr(t.id)}
+              >
+                <TransitionDemo id={t.id && t.id !== 'auto' ? t.id : deckTr} look={look} />
+              </DemoCard>
+            ))}
+          </div>
         </div>
-      </Opt>
+      )}
     </section>
   )
 }
