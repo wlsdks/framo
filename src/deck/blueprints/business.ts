@@ -9,7 +9,7 @@ export const business: Blueprint = {
   storyline: ['배경', '제안', '효과', '결정 요청'],
   showcase: ['기회의 크기', '바뀌는 모습', '매출 전망', '결정 요청'],
   defaultTitle: '사업 제안',
-  // 마법사에서 먼저 골라 둘 값: 승인을 내리는 본부장·임원 앞에서 근거까지 말할 시간
+  // 프레임 잡기에서 먼저 골라 둘 값: 승인을 내리는 본부장·임원 앞에서 근거까지 말할 시간
   defaults: { audience: 'exec', minutes: 20 },
   examples: { title: '중소 제조사 대상 구독형 품질 관리 사업 제안', ask: '시범 사업 예산 1.2억 원 승인' },
   recipes: [

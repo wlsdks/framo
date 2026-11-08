@@ -120,7 +120,7 @@ describe('createDeck', () => {
   }
 
   it('발표 종류 미리 보기에 보일 장은 이야기 흐름마다 하나씩, 그 보고의 구성에 있는 장이다', () => {
-    // 마법사(Wizard.tsx)는 구성(recipes)에서 이 장들을 찾아 그린다
+    // 프레임 잡기(Wizard.tsx)는 구성(recipes)에서 이 장들을 찾아 그린다
     for (const type of DECK_TYPES) {
       const bp = BLUEPRINTS[type]
       expect(bp.type).toBe(type)
@@ -139,7 +139,7 @@ describe('createDeck', () => {
     }
   })
 
-  it('마법사의 묶음은 빈 발표를 뺀 모든 종류를 한 번씩 담는다', () => {
+  it('프레임 잡기의 묶음은 빈 발표를 뺀 모든 종류를 한 번씩 담는다', () => {
     const grouped = DECK_GROUPS.flatMap((g) => g.types)
     expect(new Set(grouped).size).toBe(grouped.length)
     expect([...grouped].sort()).toEqual(Object.keys(BLUEPRINTS).filter((t) => t !== 'blank').sort())
@@ -329,7 +329,7 @@ describe('createDeck', () => {
   })
 })
 
-describe('마법사에서 먼저 골라 둘 값 (defaults)', () => {
+describe('프레임 잡기에서 먼저 골라 둘 값 (defaults)', () => {
   it('종류마다 고를 수 있는 듣는 사람과 시간이고, 모두 같은 값은 아니다', () => {
     for (const bp of Object.values(BLUEPRINTS)) {
       expect(AUDIENCES.map((a) => a.id)).toContain(bp.defaults.audience)

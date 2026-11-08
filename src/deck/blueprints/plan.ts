@@ -10,7 +10,7 @@ export const plan: Blueprint = {
   storyline: ['돌아보기', '목표', '과제', '일정'],
   showcase: ['올해 돌아보기', '내년 목표', '중점 과제', '분기별 일정'],
   defaultTitle: '사업 계획',
-  // 마법사에서 먼저 골라 둘 값: 한 해나 반기를 정하는 자리라 길게
+  // 프레임 잡기에서 먼저 골라 둘 값: 한 해나 반기를 정하는 자리라 길게
   defaults: { audience: 'exec', minutes: 30 },
   examples: { title: '2027년 사업본부 사업 계획', ask: '내년 예산 12억 원과 인력 2명 승인' },
   recipes: [

@@ -161,7 +161,7 @@ export function blockFitter() {
       const el = n.parentElement
       if (!text || !el) continue
       // 꾸밈 글자는 재는 상자 안에서 읽지 않게 둔 것만이다. 장을 통째로 감춘 바깥 상자(PPT 그림을 그리는 화면 밖 상자,
-      // 마법사의 미리 보기)까지 보면 장의 글이 모두 꾸밈 글자가 되어, 그 장에서는 넘침도 채움도 재지 못했다
+      // 프레임 잡기의 미리 보기)까지 보면 장의 글이 모두 꾸밈 글자가 되어, 그 장에서는 넘침도 채움도 재지 못했다
       const hidden = el.closest('[aria-hidden="true"]')
       if (hidden && hidden !== inner && inner.contains(hidden) && !(hints && hidden.classList.contains('ed-hint')) && !(marks && !el.closest('svg, .ed-halo, .it-remove, .it-grip, .pn-tools, .img-tools, .bk-handle'))) continue
       // 일부러 숨긴 글(쌓은 막대에서 칸보다 큰 칸 안 숫자)은 그려지지 않으니 넘침으로 세지 않는다

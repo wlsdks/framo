@@ -363,7 +363,7 @@ h3 {
   letter-spacing: -0.022em;
 }
 
-/* 앱 마법사 위쪽의 단계 표시와 같은 동그라미 */
+/* 앱의 프레임 잡기 위쪽의 단계 표시와 같은 동그라미 */
 .step-head {
   display: flex;
   align-items: center;

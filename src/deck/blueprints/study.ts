@@ -10,7 +10,7 @@ export const study: Blueprint = {
   storyline: ['핵심', '전과 후', '방법', '정리'],
   showcase: ['핵심 내용', '전과 후', '따라 하는 순서', '정리'],
   defaultTitle: '지식 공유',
-  // 마법사에서 먼저 골라 둘 값: 동료와 나누는 자리라 질문까지 넉넉히
+  // 프레임 잡기에서 먼저 골라 둘 값: 동료와 나누는 자리라 질문까지 넉넉히
   defaults: { audience: 'peers', minutes: 30 },
   examples: { title: '경비 정산, 이렇게 하면 빨라요', lead: '재무팀 사내 세미나' },
   recipes: [

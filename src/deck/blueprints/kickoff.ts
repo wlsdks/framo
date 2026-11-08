@@ -10,7 +10,7 @@ export const kickoff: Blueprint = {
   storyline: ['목표', '범위', '일정', '역할'],
   showcase: ['목표', '하는 일과 하지 않는 일', '일정', '역할과 담당'],
   defaultTitle: '프로젝트 착수 보고',
-  // 마법사에서 먼저 골라 둘 값: 여러 팀이 같이 듣는 자리
+  // 프레임 잡기에서 먼저 골라 둘 값: 여러 팀이 같이 듣는 자리
   defaults: { audience: 'mixed', minutes: 20 },
   examples: { title: '설비 점검 전산화 프로젝트 착수 보고', lead: '함께할 네 팀이 목표와 일정을 맞춰요' },
   recipes: [

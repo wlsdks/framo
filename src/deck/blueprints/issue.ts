@@ -10,7 +10,7 @@ export const issue: Blueprint = {
   storyline: ['영향', '경과', '원인', '대책'],
   showcase: ['영향', '경과', '원인', '재발 방지 대책'],
   defaultTitle: '문제 보고',
-  // 마법사에서 먼저 골라 둘 값: 급한 보고라 결정할 윗분께 짧게
+  // 프레임 잡기에서 먼저 골라 둘 값: 급한 보고라 결정할 윗분께 짧게
   defaults: { audience: 'exec', minutes: 10 },
   examples: { title: '10월 21일 주문 시스템 장애 보고', ask: '재발 방지 예산 2,000만 원 승인' },
   recipes: [

@@ -174,7 +174,7 @@ export interface SegmentOption<T> {
 /**
  * 몇 가지 가운데 하나를 고르는 단추 줄. 고른 단추에 is-on과 aria-pressed를 단다.
  * 보통은 붙어 있는 단추(.seg: 오른쪽 칸, 테마 메뉴, 장 모음)이고 label이 그 묶음의 이름이다.
- * chips면 떨어진 알약 단추(.chip: 마법사). 그때는 둘레의 fieldset과 legend가 이름을 맡아서 label 없이 쓴다
+ * chips면 떨어진 알약 단추(.chip: 프레임 잡기). 그때는 둘레의 fieldset과 legend가 이름을 맡아서 label 없이 쓴다
  */
 export function Segmented<T extends string | number | undefined>({
   label,

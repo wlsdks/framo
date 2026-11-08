@@ -83,7 +83,7 @@ export function Wizard() {
   }
   const [method, setMethod] = useState<Method>('live')
   const [title, setTitle] = useState('')
-  // 소속과 발표자는 지난번 마법사에서 적은 것으로 먼저 채운다. 주간 보고처럼 자주 만드는 발표는 매번 같은 것을 다시 쳐야 했다.
+  // 소속과 발표자는 지난번 프레임 잡기에서 적은 것으로 먼저 채운다. 주간 보고처럼 자주 만드는 발표는 매번 같은 것을 다시 쳐야 했다.
   // 이 브라우저에만 두고, 비워서 만들면 다음에도 비운다
   const [org, setOrg] = useState(() => lastAuthor().org)
   const [presenter, setPresenter] = useState(() => lastAuthor().presenter)
@@ -439,7 +439,7 @@ function CoverPreview(props: {
   return <SlideCanvas deck={{ meta, theme: { id }, title }} slide={slide} mode={mode} />
 }
 
-/** 마법사에서 마지막으로 적은 소속과 발표자 (이 브라우저에만) */
+/** 프레임 잡기에서 마지막으로 적은 소속과 발표자 (이 브라우저에만) */
 const AUTHOR_KEY = 'html-maker:last-author'
 
 function lastAuthor(): { org: string; presenter: string } {

@@ -9,7 +9,7 @@ export const report: Blueprint = {
   storyline: ['실적', '분석', '대책', '계획'],
   showcase: ['핵심 실적', '증감 요인', '문제와 대책', '다음 계획'],
   defaultTitle: '실적 보고',
-  // 마법사에서 먼저 골라 둘 값: 실적은 본부장·임원이 숫자 위주로 본다
+  // 프레임 잡기에서 먼저 골라 둘 값: 실적은 본부장·임원이 숫자 위주로 본다
   defaults: { audience: 'exec', minutes: 20 },
   examples: { title: '3분기 실적 보고', ask: '신규 인력 1명 충원' },
   recipes: [

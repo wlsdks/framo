@@ -46,7 +46,7 @@ export const BLUEPRINTS: Record<DeckType, Blueprint> = {
 }
 
 /**
- * 마법사에서 고르는 묶음: 제안하는 자리, 한 일을 알리는 자리, 알고 있는 것을 나누는 자리.
+ * 프레임 잡기에서 고르는 묶음: 제안하는 자리, 한 일을 알리는 자리, 알고 있는 것을 나누는 자리.
  * 묶음 안은 자주 쓰는 순서.
  */
 export const DECK_GROUPS: { name: string; types: DeckType[] }[] = [
@@ -56,14 +56,14 @@ export const DECK_GROUPS: { name: string; types: DeckType[] }[] = [
 ]
 
 /**
- * 결정을 받는 발표인지. 마법사는 결정을 받는 발표에만 결정 요청을 묻고, 표지도 그런 발표에만 결정 요청 칸을 둔다.
+ * 결정을 받는 발표인지. 프레임 잡기는 결정을 받는 발표에만 결정 요청을 묻고, 표지도 그런 발표에만 결정 요청 칸을 둔다.
  * 나누고 알리는 발표(examples에 ask가 없는 것)에 그 칸이 있으면 무엇을 적을지 헷갈리고, 비워 두면 표지에 빈자리가 남는다
  */
 export function asksDecision(type: DeckType): boolean {
   return !!(BLUEPRINTS[type] ?? BLUEPRINTS.blank).examples.ask
 }
 
-/** 빈 발표를 뺀 모든 종류. 마법사의 묶음 순서 그대로 */
+/** 빈 발표를 뺀 모든 종류. 프레임 잡기의 묶음 순서 그대로 */
 export const DECK_TYPES: DeckType[] = DECK_GROUPS.flatMap((g) => g.types)
 
 /**

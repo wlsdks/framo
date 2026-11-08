@@ -9,7 +9,7 @@ export const deal: Blueprint = {
   storyline: ['사업 기회', '제안 전략', '가격', '결정 요청'],
   showcase: ['사업 규모', '제안 내용', '가격 안', '결정 요청'],
   defaultTitle: '고객 제안 계획',
-  // 마법사에서 먼저 골라 둘 값: 가격과 조건을 승인하는 윗분께 짧게
+  // 프레임 잡기에서 먼저 골라 둘 값: 가격과 조건을 승인하는 윗분께 짧게
   defaults: { audience: 'exec', minutes: 10 },
   examples: { title: '한빛제조 품질 관리 시스템 제안 계획', ask: '제안 가격 4.8억 원 승인' },
   recipes: [

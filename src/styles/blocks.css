@@ -926,7 +926,7 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   transition: color 0.14s;
 }
 
-/* 고른 묶음은 글자만 짙고 굵게(마법사의 종류 목록과 같은 말투). 예전의 검은 알약은 칩 줄에서 혼자 튀었다 */
+/* 고른 묶음은 글자만 짙고 굵게(프레임 잡기의 종류 목록과 같은 말투). 예전의 검은 알약은 칩 줄에서 혼자 튀었다 */
 .lib-tab:hover:not(.is-on) {
   color: var(--ink);
 }

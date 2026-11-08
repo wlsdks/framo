@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useState, type RefObject } from 'react'
 import { flushSync } from 'react-dom'
 
-// 작은 장 그림을 화면이 그려진 뒤에 차례로 그리기. 편집기(목록 그림, 새 슬라이드 창)와 마법사(구성 미리 보기)가 같이 쓴다
+// 작은 장 그림을 화면이 그려진 뒤에 차례로 그리기. 편집기(목록 그림, 새 슬라이드 창)와 프레임 잡기(구성 미리 보기)가 같이 쓴다
 
 /** 그림을 그릴 차례를 기다리는 것들 (먼저 온 것부터) */
 const soon: (() => void)[] = []

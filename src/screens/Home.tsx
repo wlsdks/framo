@@ -18,7 +18,7 @@ import { UpdateNote } from './UpdateNote'
 
 const SAMPLE_ID = 'sample'
 
-/** 빈 홈에 보이는 새 발표의 차례. 마법사의 세 단계와 이름을 맞춘다 */
+/** 빈 홈에 보이는 새 발표의 차례. 프레임 잡기의 세 단계와 이름을 맞춘다 */
 const EMPTY_STEPS: [string, string][] = [
   ['발표 종류', '사업 제안, 주간 업무 보고처럼 어떤 자리인지 골라요'],
   ['발표 상황', '듣는 사람과 시간에 맞춰 슬라이드 수가 정해져요'],
