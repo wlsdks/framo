@@ -17,7 +17,7 @@ export const OPEN_STUDIO = 'framo-open-studio'
 const dirty = new Map<string, string | undefined>()
 
 /**
- * 이 장에 넣는다. 컴포넌트를 넣지 않는 장(표지, 섹션)이거나 자리가 없으면 이 장 다음에 새 컴포넌트 장을 만들어 넣는다(물어보고 기다리게 하지
+ * 이 장에 넣는다. 컴포넌트를 넣지 않는 장(표지, 섹션)이거나 이미 모션 그래픽이 있거나 자리가 없으면 이 장 다음에 새 컴포넌트 장을 만들어 넣는다(물어보고 기다리게 하지
  * 않는다: 모션 그래픽은 판을 다 쓰는 장면이라 새 장이 대개 맞다). 넣은 부품 id
  */
 export function insertCine(recipe: CineRecipe, blocks: BlockEditing, slide: Slide, fresh: boolean): string {
@@ -26,7 +26,9 @@ export function insertCine(recipe: CineRecipe, blocks: BlockEditing, slide: Slid
   const block: Block = { ...makeBlock('cine'), fields: { ...(presetSpec(recipe.preset).sample as Record<string, string>) }, cine: id }
   if (fresh) dirty.set(block.id, undefined)
   const closed = slide.layout !== 'compose' && !canCompose(slide.layout)
-  if (closed || blocks.issueFor(block)) blocks.insertNew(block)
+  // 한 장에 모션 그래픽은 하나(장면의 무대는 하나다): 이미 있으면 새 장에
+  const taken = (slide.blocks ?? []).some((b) => b.type === 'cine') && slide.layout === 'compose'
+  if (closed || taken || blocks.issueFor(block)) blocks.insertNew(block)
   else blocks.insertBlock(block)
   requestAnimationFrame(() => window.dispatchEvent(new CustomEvent(OPEN_STUDIO, { detail: block.id })))
   return block.id
