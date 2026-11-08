@@ -72,7 +72,7 @@ export function splitNumber(text: string): { pre?: string; num: string; unit: st
 }
 
 /** 숫자 하나와 그 뒤의 단위 */
-export interface NumberRun {
+interface NumberRun {
   num: string
   unit: string
 }

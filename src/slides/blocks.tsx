@@ -566,7 +566,7 @@ function outerSign(area: HTMLElement): string {
   return `${area.clientWidth}x${area.clientHeight}|${slide?.className}|${slide?.getAttribute('style')}|${loadedFonts()}`
 }
 
-export function BlockArea() {
+function BlockArea() {
   const { slide, mode } = useSlide()
   const edit = useContext(BlockEditContext)
   const live = mode === 'edit' && edit ? edit : null
