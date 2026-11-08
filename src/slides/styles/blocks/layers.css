@@ -1,10 +1,10 @@
 /* ---------- 층 ----------
-   위에서 비스듬히 본 얇은 판(평행사변형 윗면과 얇은 두께, 옅은 농담과 1px 선)이 사이를 두고 위에서 아래로 포개진다. 맨 아래가 받치는 바탕이다.
-   층 이름(굵게)과 무엇이 있는지(--ink-2)는 판 옆에 글자 위계로 둔다: 판 안에 글을 넣으면 글이 든 상자가 된다.
-   강조할 층 하나만 판과 이름이 강조색(답). 예전에는 이름 | 설명 두 단의 줄 선 표라 판을 혼자 쓰면 빽빽한 세 줄 표로만
-   보였다(사용자: 너무 붙어 있고 예전 PPT 규격 같다).
-   판의 크기는 칸을 따른다: 너비는 칸 너비의 몫(cqw), 두께는 너비의 5분의 1이되 소제목과 안쪽 여백을 뺀 칸 높이(cqh)를 층 수로 나눈 몫을 넘지 않는다.
-   그래서 판을 혼자 쓰면 그림이 커지고, 낮은 칸에서는 판이 얇아져 줄 높이는 글이 정한다(잰 높이, blockHeights.ts) */
+   글자 위계와 여백으로 쌓은 지층. 층마다 이름(소제목 단계, 굵게)과 무엇이 있는지(본문 단계, --ink-2)를 한 줄에 두고, 위층일수록
+   왼쪽을 들여(--ly-step) 맨 아래가 가장 넓게 받치는 계단이 된다. 넓은 칸에서는 층마다 그 층 너비만큼의 옅은 1px 선(--line)을
+   글 아래에 깔아 아래로 갈수록 넓어지는 지층의 단면(피라미드의 반쪽)으로 읽힌다: 선은 층이라는 데이터의 짜임이다(VISUAL-RULES 2).
+   강조할 층 하나만 글자와 선이 강조색(답).
+   예전에는 이름 | 설명 두 단의 줄 선 표라 판을 혼자 쓰면 빽빽한 세 줄 표로만 보였고(사용자: 예전 PPT 규격 같다), 그다음의 비스듬한
+   입체 판은 PPT 도형 모음처럼 읽혔다(검수). 계단만 두면 '들여 쓴 목록'으로 읽혀 넓은 칸에서는 지층 선을 더한다 */
 .bk-ly {
   display: flex;
   flex-direction: column;
@@ -16,13 +16,10 @@
 }
 
 .bk-ly-list {
-  /* 판 사이: 판 두께(윗면 높이의 0.12)의 두 배 남짓. 판마다 넉넉히 띄우면(36px × 키운 단계) 같은 판 넷이 따로 떠 '나란한 넷'으로만
-     읽히고 쌓인 덩어리로 읽히지 않았다(검수). 사이는 판 너비를 따른다(윗면 높이가 너비의 0.2라 두께의 두 배 남짓) */
-  --ly-pw: clamp(200px, 40cqw, calc(640px * var(--bk-fit, 1)));
-  --ly-gap: max(12px, calc(var(--ly-pw) * 0.05));
-  --ly-ph: max(48px, min(calc(var(--ly-pw) * 0.2), calc((100cqh - 200px) / var(--n, 3) - var(--ly-gap))));
+  /* 층 하나를 들이는 너비: 칸 너비의 7%(넓은 칸에서 120px 남짓) */
+  --ly-step: 7cqw;
   display: grid;
-  row-gap: var(--ly-gap);
+  row-gap: calc(18px * var(--bk-fit, 1));
   margin: 0;
   padding: 0;
   list-style: none;
@@ -30,71 +27,14 @@
 
 .bk-ly-row {
   position: relative;
-  display: grid;
-  grid-template-columns: var(--ly-pw) minmax(0, 1fr);
-  align-items: center;
-  column-gap: calc(56px * var(--bk-fit, 1));
-}
-
-/* 판: 윗면과 두께(앞면, 옆면). 속이 빈 1px 테두리만일 때는 와이어프레임처럼 싸 보였고 검은 바탕에서는 판이 묻혔다(검수).
-   데이터 그림처럼 옅은 농담으로 칠하고(윗면이 가장 옅고 앞면이 가장 짙다: 위에서 비스듬히 본 빛), 답인 판만 강조색 농담이다.
-   선은 svg에 두어 세 면이 물려받는다(발표할 때 판의 선이 차례로 강조색이 되는 움직임이 svg의 stroke를 바꾼다, engine.ts) */
-.bk-ly-plate {
-  --ly-c: var(--ink);
-  display: block;
-  width: 100%;
-  height: calc(var(--ly-ph) * 1.12);
-  overflow: visible;
-  stroke: color-mix(in srgb, var(--ink-3) 70%, var(--bg));
-  stroke-width: var(--rule-hair);
-  stroke-linejoin: round;
-}
-
-.bk-ly-top {
-  fill: color-mix(in srgb, var(--ly-c) 4%, var(--bg));
-}
-
-.bk-ly-side {
-  fill: color-mix(in srgb, var(--ly-c) 9%, var(--bg));
-}
-
-.bk-ly-front {
-  fill: color-mix(in srgb, var(--ly-c) 13%, var(--bg));
-}
-
-/* 어두운 바탕에서는 같은 몫으로 섞으면 판이 바탕에 묻혀서 한 단계 짙게 */
-.is-dark .bk-ly-top {
-  fill: color-mix(in srgb, var(--ly-c) 9%, var(--bg));
-}
-
-.is-dark .bk-ly-side {
-  fill: color-mix(in srgb, var(--ly-c) 15%, var(--bg));
-}
-
-.is-dark .bk-ly-front {
-  fill: color-mix(in srgb, var(--ly-c) 22%, var(--bg));
-}
-
-.bk-ly-row.is-hl .bk-ly-plate {
-  --ly-c: var(--accent);
-  stroke: var(--accent);
-}
-
-.bk-ly-row.is-hl .bk-ly-top {
-  fill: color-mix(in srgb, var(--ly-c) 12%, var(--bg));
-}
-
-.bk-ly-row.is-hl .bk-ly-side {
-  fill: color-mix(in srgb, var(--ly-c) 26%, var(--bg));
-}
-
-.bk-ly-row.is-hl .bk-ly-front {
-  fill: color-mix(in srgb, var(--ly-c) 36%, var(--bg));
+  padding-left: calc((var(--n, 3) - 1 - var(--k, 0)) * var(--ly-step));
 }
 
 .bk-ly-txt {
-  display: grid;
-  row-gap: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.7em;
   min-width: 0;
 }
 
@@ -117,86 +57,58 @@
   text-wrap: pretty;
 }
 
-/* 넓은 칸(판을 혼자 쓸 때 같은): 판을 넓혀 그림이 제목 축(왼쪽 끝)에서 오른쪽으로 커진다. 묶음째 가운데에 두면 소제목과 판의
-   왼쪽 끝이 장 제목 축에서 떨어져(460) 장을 넘길 때 내용이 왼쪽과 가운데를 오갔다(검수: 머리말이 있는 그림은 제목 축에서 시작) */
+/* 지층 선: 층의 글 아래에 그 층 너비만큼(들인 자리부터 칸 오른쪽 끝까지). 발표할 때 맨 아래 선부터 왼쪽에서 그어진다(engine.ts).
+   선끼리는 층 높이(글 + 위아래 사이)만큼 떨어져 40px 안의 겹선이 되지 않는다 */
+.bk-ly-rule {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: calc((var(--n, 3) - 1 - var(--k, 0)) * var(--ly-step));
+  display: none;
+  height: var(--rule-hair);
+  background: var(--line);
+  content: '';
+}
+
+.bk-ly-row.is-hl .bk-ly-rule {
+  background: var(--accent);
+}
+
+/* 넓은 칸(판을 혼자 쓸 때 같은): 지층 선을 깐다. 묶음은 장 제목 축(왼쪽 끝)에서 시작해 오른쪽으로 넓다.
+   좁은 칸이나 옆에 글이 선 칸은 계단만(선이 짧게 끊겨 표의 줄처럼 보이지 않게) */
 @container bk (min-width: 1200px) {
-  .bk-ly-list {
-    --ly-pw: clamp(200px, 48cqw, calc(760px * var(--bk-fit, 1)));
-  }
-}
-
-/* 낮은 칸: 판 사이를 좁히고 층 이름과 무엇이 있는지를 한 줄에 둔다(--ly-tight). 넉넉한 짜임(이름 아래 설명, 넓은 판 사이)이
-   글자를 줄이지 않고 들어가는 높이는 층 수마다 달라서(소제목 75 + 층마다 92 + 판 사이 36) 층 수마다 문턱을 둔다. 들여 쓰기와 강조는
-   안쪽 위아래 여백(88)만큼 더 높다. 문턱 없이 넉넉한 짜임 그대로면 잘리지 않는 높이(blockHeights.ts)가 예전 표 꼴보다 200px 넘게 높아졌다 */
-@container bk (max-height: 309px) {
-  .bk-ly {
-    --ly-tight: 1;
-  }
-}
-
-@container bk (max-height: 439px) {
-  .bk-ly:not([data-n='2']) {
-    --ly-tight: 1;
-  }
-}
-
-@container bk (max-height: 569px) {
-  .bk-ly:is([data-n='4'], [data-n='5']) {
-    --ly-tight: 1;
-  }
-}
-
-@container bk (max-height: 699px) {
-  .bk-ly[data-n='5'] {
-    --ly-tight: 1;
-  }
-}
-
-@container bk (max-height: 399px) {
-  :is(.bk-look-card, .bk-look-bold) .bk-ly {
-    --ly-tight: 1;
-  }
-}
-
-@container bk (max-height: 529px) {
-  :is(.bk-look-card, .bk-look-bold) .bk-ly:not([data-n='2']) {
-    --ly-tight: 1;
-  }
-}
-
-@container bk (max-height: 659px) {
-  :is(.bk-look-card, .bk-look-bold) .bk-ly:is([data-n='4'], [data-n='5']) {
-    --ly-tight: 1;
-  }
-}
-
-@container bk (max-height: 789px) {
-  :is(.bk-look-card, .bk-look-bold) .bk-ly[data-n='5'] {
-    --ly-tight: 1;
-  }
-}
-
-@container style(--ly-tight: 1) {
-  .bk-ly-list {
-    --ly-gap: calc(14px * var(--bk-fit, 1));
-  }
-
-  .bk-ly-txt {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: 0.8em;
-  }
-}
-
-/* 좁은 칸: 판을 그리면 이름표가 두세 글자마다 꺾인다. 판 없이 위층일수록 들여 쓴 계단으로(아래가 넓게 받친다) */
-@container bk (max-width: 640px) {
   .bk-ly-row {
-    grid-template-columns: minmax(0, 1fr);
-    padding-left: calc((var(--n, 3) - 1 - var(--k, 0)) * 28px);
+    padding-bottom: calc(12px * var(--bk-fit, 1));
   }
 
-  .bk-ly-plate {
+  .bk-ly-rule {
+    display: block;
+  }
+}
+
+/* 넓고 높은 바탕 없는 칸: 층 사이를 넉넉히. 문턱(560)은 다섯 층이 넉넉한 사이로도 글자를 줄이지 않고 들어가는 높이라, 낮은 칸의
+   잘리지 않는 높이(blockHeights.ts)는 좁은 사이로 잰다. 들여 쓰기와 강조는 안쪽 위아래 여백(88)만큼 낮아 좁은 사이 그대로 */
+@container bk (min-width: 1200px) and (min-height: 560px) {
+  .bk-look-plain .bk-ly-list {
+    row-gap: calc(28px * var(--bk-fit, 1));
+  }
+
+  .bk-look-plain .bk-ly-row {
+    padding-bottom: calc(18px * var(--bk-fit, 1));
+  }
+}
+
+/* 낮은 칸: 층 사이를 좁힌다 */
+@container bk (max-height: 340px) {
+  .bk-ly-list {
+    row-gap: calc(10px * var(--bk-fit, 1));
+  }
+
+  .bk-ly-row {
+    padding-bottom: 0;
+  }
+
+  .bk-ly-rule {
     display: none;
   }
 }

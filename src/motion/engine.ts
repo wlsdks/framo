@@ -2473,19 +2473,20 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'layers': {
-          // 아래가 위를 받친다: 맨 아래 판부터 차례로 위에서 내려앉아 쌓이고(움직이는 것은 판뿐), 판이 자리에 닿을 즈음 그 층의 이름과
-          // 무엇이 있는지가 제자리에서 나타난다. 다 쌓이면 요청이 층을 타고 내려갔다 올라오는 것을 판의 선이 위에서 아래로, 다시
-          // 위로 차례로 잠깐 강조색이 되는 것으로 보인다. 예전에는 줄째(글까지) 위에서 떨어졌다: 글은 날아오지 않는다(사용자)
+          // 아래가 위를 받친다: 맨 아래 층의 지층 선이 먼저 왼쪽에서 그어지고, 선이 거의 닿을 즈음 그 층의 이름과 무엇이 있는지가
+          // 제자리에서 맺힌다. 그 위로 한 층씩 같은 차례로 쌓인다(선이 없는 좁은 칸은 글만 아래 층부터). 다 쌓이면 요청이 층을 타고
+          // 내려갔다 올라오는 것을 층 이름이 위에서 아래로, 다시 위로 차례로 잠깐 강조색이 되는 것으로 보인다.
+          // 글은 날아오거나 떨어지지 않는다(사용자): 움직이는 것은 선이고 글은 제자리에서 나타난다
           const rows = $('.bk-ly-row')
           if (!rows.length) break
           lines(one('.bk-h'), 60)
-          const hop = 150
+          const hop = 220
           rows.forEach((row, k) => {
             const at = 120 + (rows.length - 1 - k) * hop
-            const plate = row.querySelector<SVGElement>('.bk-ly-plate')
-            // 좁은 칸은 판이 없다(계단): 글만 제자리에서
-            if (plate && getComputedStyle(plate).display !== 'none') run(anims, plate, [{ opacity: 0, translate: `0 ${-L.y * 1.6}px` }], s(at), { easing: CARRY, duration: d(560) })
-            fade(row.querySelector('.bk-ly-txt'), at + 280, 420)
+            const rule = row.querySelector('.bk-ly-rule')
+            const ruled = !!rule && getComputedStyle(rule).display !== 'none'
+            if (ruled) draw(rule, at, 520, 'left center')
+            fade(row.querySelector('.bk-ly-txt'), at + (ruled ? 260 : 0), 420)
           })
           const built = 120 + rows.length * hop + 520
           if (rows.length > 1 && !still) {
@@ -2493,12 +2494,10 @@ export function motionEngine(): MotionEngine {
             const accent = getComputedStyle(rows[0]).getPropertyValue('--accent').trim()
             const order = [...rows.keys(), ...[...rows.keys()].reverse().slice(1)]
             order.forEach((k, n) => {
-              const plate = rows[k].querySelector<SVGElement>('.bk-ly-plate')
-              const t = plate && getComputedStyle(plate).display !== 'none' ? plate : rows[k].querySelector<HTMLElement>('.bk-ly-t')
+              const t = rows[k].querySelector<HTMLElement>('.bk-ly-t')
               if (!t) return
-              const prop = t === plate ? 'stroke' : 'color'
-              const was = getComputedStyle(t)[prop]
-              run(anims, t, [{ [prop]: was }, { [prop]: accent, offset: 0.3 }, { [prop]: was }], s(built + per * n), { easing: 'ease-out', duration: d(560) })
+              const ink = getComputedStyle(t).color
+              run(anims, t, [{ color: ink }, { color: accent, offset: 0.3 }, { color: ink }], s(built + per * n), { easing: 'ease-out', duration: d(560) })
             })
           }
           break
