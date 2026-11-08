@@ -82,3 +82,11 @@
     margin-bottom: 4px;
   }
 }
+
+/* 장에 겹친 수고 하나뿐이면 묶음째 칸 가운데에: 팀 이름과 짧은 일이 왼쪽 절반에만 서서 오른쪽이 통째로 비었다(사용자: 오른쪽 공백).
+   묶음 안에서는 왼쪽 끝을 맞춘다(소제목, 목록, 아래의 하나가 한 줄로 선다) */
+.bk-area:not(:has(> .bk ~ .bk)) .bk-dp {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
