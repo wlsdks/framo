@@ -76,6 +76,14 @@ export function blockFitter() {
     return !!el && el.classList.contains('ed-input') && area.classList.contains('is-live') && area.contains(el)
   }
 
+  /** 편집 화면에서 이 레이아웃 장의 글 칸에 쓰는 중인지 (fitPart가 눈높이와 키운 단계를 붙잡아 둔다) */
+  function typingIn(slide: HTMLElement): boolean {
+    const el = document.activeElement
+    return !!el && el.classList.contains('ed-input') && slide.classList.contains('m-edit') && slide.contains(el)
+  }
+  // 레이아웃 장의 본문마다 쓰기 전에 맞춘 눈높이(--eye, 캔버스 px)와 키운 단계(--bk-fit)
+  const heldLayout = new WeakMap<HTMLElement, { eye: number; up: number }>()
+
   /** 판의 짜임 (칸마다 부품과 자리). 붙잡아 둔 자리는 짜임이 그대로일 때만 쓴다 */
   function boardOf(cells: HTMLElement[]): string {
     return cells.map((c) => `${c.dataset.block}@${['--x', '--y', '--w', '--h'].map((v) => c.style.getPropertyValue(v)).join(',')}`).join('|')
@@ -2159,27 +2167,24 @@ export function blockFitter() {
       const bottom = drawnBottom()
       return bottom === -Infinity ? 1 : (bottom - b.top) / room
     }
-    if (fill() >= FILL_AIR) return
-    const shapes = shapesOf(body)
-    const bad = () => {
-      if (crowded(body, shapes) || rivals(slide, [body])) return true
-      // 본문 아래(출처와 하단 표시 자리)로 나간 글
-      for (const q of lines(body)) if (q.b > end + 2) return true
-      // 넘침 경고가 보는 상자 밖으로 나간 것: 그려지지 않는 줄 상자의 아래 여백이라도 경고는 넘쳤다고 본다
-      return spill(slide) > allow
-    }
+    // 편집 화면에서 이 장의 글 칸에 쓰는 동안(typingIn)은 쓰기 전에 맞춘 눈높이와 글자 단계를 붙잡아 둔다(부품 장의 typing과 같다):
+    // 줄이 하나 늘 때마다 눈높이 가운데를 다시 잡으면 본문 전체가 17px씩 오르내려 쓰는 줄이 손 아래에서 달아났고, 글을 지우다 글자가
+    // 한 단계 커지기도 했다. 줄 사이와 줄이는 단계는 그대로 맞춰서 조립되는 모습은 쓰는 동안에도 보인다. 다 쓰고 나가면 다시 맞춘다
+    // (SlideCanvas가 칸을 떠날 때 부른다. 바뀐 자리로는 미끄러진다, liveMotion.ts)
+    const hold = typingIn(slide) ? heldLayout.get(body) : undefined
     // (다) 눈높이 가운데로: 위의 빈 곳과 아래(장 틀의 아랫선까지)의 빈 곳이 1 : 1.2. 하단 표시 몫 밖으로는 내리지 않는다.
     // 아직 덜 쓴 장은 위에 둔다: 머리 줄뿐인 얇은 내용(본문의 4분의 1 밑)을 내리면 '지금 → 추진 후' 같은 글자만 가운데에 뜬다.
     // 제목이 없는 완성된 일정도 가운데로 두어 아래가 통째로 비지 않게 한다.
     const eye = () => {
       const f = fill()
-      if (f >= FILL_EYE || f < 0.25) return
+      if (!hold && (f >= FILL_EYE || f < 0.25)) return
       const bottom = drawnBottom()
       if (bottom === -Infinity) return
       // 위의 빈 곳은 보이는 그대로 장 머리(제목, 부제) 아래부터 센다: 본문 윗선부터 세면 --body-gap만큼 위가 넓어져
       // 단계 흐름이 가운데보다 아래에 앉았다. (gap + move) : (아래 - move) = 1 : 1.2
       const gap = head?.getClientRects().length ? Math.max(0, b.top - head.getBoundingClientRect().bottom) : 0
-      const move = Math.round(Math.min((frame - bottom - 1.2 * gap) / 2.2, end - bottom) / k)
+      // 붙잡아 둔 값도 하단 표시 몫 밖으로는 내리지 않는다(글이 늘어 아래가 모자라면 그만큼 덜 내린다)
+      const move = Math.round(Math.min(hold ? hold.eye * k : (frame - bottom - 1.2 * gap) / 2.2, end - bottom) / k)
       if (move < 8) return
       // 내린 만큼 본문 상자가 줄어 마지막 줄 상자의 아래 여백이 상자 밖으로 나가면 나간 만큼 덜 내린다
       const m = eyeRoom(move, (v) => setB('--eye', v + 'px'), () => spill(slide) - allow)
@@ -2189,9 +2194,24 @@ export function blockFitter() {
       }
       body.dataset.eye = '1'
     }
+    const done = () => {
+      eye()
+      if (!hold) heldLayout.set(body, { eye: parseFloat(body.style.getPropertyValue('--eye')) || 0, up: Number(body.style.getPropertyValue('--bk-fit')) || 1 })
+    }
+    if (fill() >= FILL_AIR) return done()
+    const shapes = shapesOf(body)
+    const bad = () => {
+      if (crowded(body, shapes) || rivals(slide, [body])) return true
+      // 본문 아래(출처와 하단 표시 자리)로 나간 글
+      for (const q of lines(body)) if (q.b > end + 2) return true
+      // 넘침 경고가 보는 상자 밖으로 나간 것: 그려지지 않는 줄 상자의 아래 여백이라도 경고는 넘쳤다고 본다
+      return spill(slide) > allow
+    }
     // (가) 글자 단계는 60%를 못 채울 때만 올린다
     if (fill() < FILL_MIN) {
       for (const [j, f] of steps.entries()) {
+        // 쓰는 동안은 쓰기 전보다 키우지 않는다 (줄이는 것은 그대로)
+        if (hold && f > hold.up) break
         setB('--bk-fit', String(f))
         if (bad()) {
           if (j === 0) delB('--bk-fit')
@@ -2201,15 +2221,14 @@ export function blockFitter() {
         if (fill() >= FILL_MIN) break
       }
     }
-    if (fill() >= FILL_AIR) return
+    if (fill() >= FILL_AIR) return done()
     // (나) 줄 사이: 바꿔도 그려진 것이 그대로면(이 레이아웃은 --fill-air를 쓰지 않는다) 그만둔다
     const before = fill()
     setB('--fill-air', airMax + 'px')
     const full = fill()
     if (full <= before + 0.001) {
       delB('--fill-air')
-      eye()
-      return
+      return done()
     }
     // 넘치지 않고 85%를 넘지 않는 가장 넓은 값 (반씩 나눠 찾는다)
     const ok = (v: number) => {
@@ -2245,7 +2264,7 @@ export function blockFitter() {
     const now = body.style.getPropertyValue('--fill-air')
     if (lo > 0 && now !== lo + 'px') setB('--fill-air', lo + 'px')
     else if (lo === 0 && now) delB('--fill-air')
-    eye()
+    done()
   }
 
   /**
