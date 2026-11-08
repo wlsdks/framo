@@ -227,6 +227,12 @@ describe('움직임 엔진', () => {
     const vars = /VALUE_VARS = \[([^\]]*)\]/.exec(src)?.[1] ?? ''
     expect(vars).toMatch(/["']--p["']/)
     for (const v of ['--n', '--i', '--k', '--cols', '--rows']) expect(vars, v).not.toMatch(new RegExp(`["']${v}["']`))
+    // 눈금은 두 장에서 따로 찾아 단계를 나눈다(막대가 숫자와 거꾸로 움직이지 않게), 단계마다 같은 곡선을 엔진이 셈한다
+    const carry = src.slice(at, src.indexOf('stops.push(end)', at))
+    expect(carry).toMatch(/const fit = /)
+    expect(carry).toMatch(/curve\(EASE\.out\)/)
+    // 누르고 곧 떠난다(0.3초 넘게 가만히 있지 않게)
+    expect(Number(/delay: (\d+),\s*easing: ["']linear["']/.exec(carry)?.[1])).toBeLessThanOrEqual(100)
     // 옮겨 온 숫자를 0부터 다시 쌓거나 나오는 조각을 다시 띄우지 않는다
     const tally = src.slice(src.indexOf('const tally = ('), src.indexOf('const tally = (') + 300)
     expect(tally).toMatch(/data-mo-keep/)

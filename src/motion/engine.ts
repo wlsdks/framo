@@ -91,6 +91,29 @@ export function motionEngine(): MotionEngine {
   } as const
   const OUT = EASE.out
 
+  /**
+   * 곡선(cubic-bezier) 하나를 JS에서 셈한다(EASE의 이름 그대로). 시계 하나를 여러 단계로 나누고 단계마다 같은 곡선을 입힐 때 쓴다
+   * (값 이어 움직이기). x(t)가 늘기만 하는 곡선이라 t를 반씩 좁혀 찾는다
+   */
+  function curve(css: string) {
+    const m = /cubic-bezier\(([^)]+)\)/.exec(css)
+    const [x1, y1, x2, y2] = m ? m[1].split(',').map(Number) : [0, 0, 1, 1]
+    const at = (a: number, b: number, t: number) => 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t
+    return (x: number) => {
+      if (x <= 0) return 0
+      if (x >= 1) return 1
+      let lo = 0
+      let hi = 1
+      let t = x
+      for (let i = 0; i < 24; i++) {
+        t = (lo + hi) / 2
+        if (at(x1, x2, t) < x) lo = t
+        else hi = t
+      }
+      return at(y1, y2, t)
+    }
+  }
+
   const LEVELS = {
     calm: { span: 480, y: 20, step: 60, word: 30, ink: 0, scale: 0.98, move: SPRINGS.quick, grow: SPRINGS.glide, pop: SPRINGS.quick, speed: 0.8 },
     lively: { span: 720, y: 44, step: 100, word: 50, ink: 5, scale: 0.96, move: SPRINGS.settle, grow: SPRINGS.settle, pop: SPRINGS.firm, speed: 1.1 },
@@ -793,43 +816,41 @@ export function motionEngine(): MotionEngine {
     /**
      * 값 이어 움직이기: 이어 움직이기로 짝이 된 것(el) 안의 값을 앞 장의 값(was)에서 지금 값으로 옮긴다. 숫자가 든 글은 앞 값에서 새 값까지
      * 세고(숫자 밖의 글이 같은 것만: '42%'에서 '58%'로. 단위나 꼴이 바뀌면 그대로 둔다), 값 변수와 그림의 좌표는 사이 값으로 옮긴다.
-     * 모두 한 시계(아무것도 바꾸지 않는 움직임 하나의 진행)를 읽어서 같이 움직이고 같이 닿으며, 발표 화면이 끝 모습으로 보내면 같이 끝난다.
-     * 짝을 바꿔 끼우는 동안(View Transitions의 old와 new가 겹치는 처음 0.26초)은 앞 값 그대로라 두 모습이 겹쳐도 같은 그림이다.
-     * 끝나면 글과 값을 원래 문자열 그대로 돌려 둔다(끝 모습이 편집 화면과 같다)
+     *
+     * 눈금(축): 차트는 장마다 제 값에 맞춘 눈금으로 그린다(막대는 가장 큰 값을 끝까지, 추이는 값의 범위를 위아래 끝까지). 길이를 그대로
+     * 사이 값으로 옮기면 두 장의 눈금이 섞여, 3.5에서 5.0으로 오르는 막대가 그대로 있고 2.5에서 3.0으로 오르는 막대는 줄어들었다
+     * (감성 검수). 그래서 값 변수마다 그 요소 안의 숫자와 길이를 맞대어 눈금(길이 = α + β·값)을 두 장에서 각각 찾고, 찾으면 단계를 나눈다
+     * (Heer & Robertson 2007의 '눈금을 먼저, 값은 그다음'): ① 앞 장의 눈금에서 두 장을 다 담는 눈금으로(모든 막대가 같은 비율로 줄어든다),
+     * ② 그 한 눈금 위에서 값이 바뀌고(막대와 숫자가 같은 쪽으로 같이), ③ 필요하면 새 장의 눈금으로. 숫자가 없는 것(목표선)도 같은 눈금을
+     * 따라가서, 값이 같은 목표선은 값이 바뀌는 동안 가만히 있다. 눈금을 찾지 못한 값은 예전처럼 사이 값으로 옮긴다.
+     *
+     * 시계는 아무것도 바꾸지 않는 움직임 하나(곡선 없이 흐르는 진행)이고, 단계마다 '들어와 자리 잡기' 곡선(EASE.out: 빨리 떠나 천천히 멈춘다)을
+     * 입힌다. 누르고 0.06초에 떠난다: 0.3초 넘게 가만히 있던 때는 발표하는 사람이 넘어가지 않은 줄 알고 한 번 더 눌렀다(감성 검수).
+     * 짝의 앞 모습은 그 사이(motion.css의 0.14초)에 거의 다 옅어져 두 겹으로 보이지 않는다. 끝나면 글과 값을 원래 문자열 그대로 돌려 둔다
      */
     const carry = (el: HTMLElement, was: Values) => {
       if (still) return
-      const sets: ((p: number) => void)[] = []
+      type Tick = { v: number; at: (group: string, u: number) => number | null }
+      const sets: ((t: Tick) => void)[] = []
       const undo: (() => void)[] = []
       const NUM = /^(\D*)(\d[\d,]*)(\.\d+)?(\D*)$/
       const plain = /^\s*-?(?:\d+\.?\d*|\.\d+)\s*$/
       const NUMS = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi
       /** 켜짐이 바뀐 몫 표시(칸 조립의 칸, 비율의 막대) */
       const flips: { el: Element; to: boolean }[] = []
+      /** 점 숫자가 서는 쪽이 바뀐 것 */
+      const sides: { el: Element; before: string[]; after: string[] }[] = []
+      /** 숫자가 든 글(바뀌지 않은 것도: 눈금을 찾는 데 쓴다) */
+      const nums: { node: Text; old: string; now: string; from: number; to: number; m: RegExpExecArray }[] = []
+      /** 값 변수 */
+      const vars: { n: HTMLElement; name: string; group: string; before: string; now: string; q0: number; q1: number; prio: string }[] = []
       walkPaths(el, (n, path) => {
         const w = was.get(path)
         const on = n.classList.contains('is-on')
         if (on !== !!(w && w.on)) flips.push({ el: n, to: on })
         if (!w) return
-        // 점 숫자가 서는 쪽이 바뀌었으면(점이 오르내려 선과 부딪히는 쪽이 달라졌다) 반까지는 앞 장의 쪽에 두고, 가운데에서 숫자만 잠깐
-        // 옅어졌다가 새 쪽에서 다시 선다. 그대로 두면 짝을 바꿔 끼우는 처음 0.26초에 숫자가 점의 반대쪽으로 건너뛰었다(필름)
         const side = sideOf(n)
-        if (side !== (w.side || '')) {
-          const before = (w.side || '').split(' ')
-          const after = side.split(' ')
-          const labels = (Array.prototype.slice.call(n.children) as HTMLElement[]).filter((c) => (c.textContent || '').trim())
-          const styles = labels.map((c) => c.getAttribute('style'))
-          sets.push((p) => {
-            const list = p < 0.5 ? before : after
-            for (const c of SIDES) n.classList.toggle(c, list.indexOf(c) >= 0)
-            const o = Math.min(1, Math.abs(p - 0.5) / 0.14)
-            for (const c of labels) c.style.opacity = o >= 1 ? '' : String(o)
-          })
-          undo.push(() => {
-            for (const c of SIDES) n.classList.toggle(c, after.indexOf(c) >= 0)
-            labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
-          })
-        }
+        if (side !== (w.side || '')) sides.push({ el: n, before: (w.side || '').split(' '), after: side.split(' ') })
         let k = 0
         for (const c of Array.prototype.slice.call(n.childNodes) as Node[]) {
           if (c.nodeType !== 3) continue
@@ -838,31 +859,19 @@ export function motionEngine(): MotionEngine {
           const now = node.nodeValue || ''
           const a = old ? NUM.exec(old) : null
           const b = NUM.exec(now)
-          if (!old || !a || !b || old === now || a[1] !== b[1] || a[4] !== b[4] || (a[2] + b[2]).length > 30) continue
+          if (!old || !a || !b || a[1] !== b[1] || a[4] !== b[4] || (a[2] + b[2]).length > 30) continue
           const from = parseFloat((a[2] + (a[3] || '')).replace(/,/g, ''))
           const to = parseFloat((b[2] + (b[3] || '')).replace(/,/g, ''))
-          if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) continue
-          // 새 값의 꼴로 센다(소수 자리, 세 자리 쉼표). 앞 값이나 새 값에 쉼표가 있으면 세는 동안에도 쉼표를 둔다
-          const decimals = b[3] ? b[3].length - 1 : 0
-          const grouped = (a[2] + b[2]).indexOf(',') >= 0
-          const format = (v: number) => {
-            const [whole, frac] = v.toFixed(decimals).split('.')
-            return b[1] + (grouped ? whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : whole) + (frac ? '.' + frac : '') + b[4]
-          }
-          sets.push((p) => (node.nodeValue = p <= 0 ? old : p >= 1 ? now : format(from + (to - from) * p)))
-          undo.push(() => (node.nodeValue = now))
+          if (Number.isFinite(from) && Number.isFinite(to)) nums.push({ node, old, now, from, to, m: b })
         }
         const st = (n as HTMLElement).style
         for (const name in w.vars) {
           const before = w.vars[name]
           const now = st ? st.getPropertyValue(name) : ''
-          if (!now || now.trim() === before.trim() || !plain.test(now) || !plain.test(before)) continue
+          if (!now || !plain.test(now) || !plain.test(before)) continue
           if (SOFT_VARS.indexOf(name) >= 0 && now.indexOf('.') < 0) continue
-          const a = parseFloat(before)
-          const b = parseFloat(now)
-          const prio = st.getPropertyPriority(name)
-          sets.push((p) => st.setProperty(name, p >= 1 ? now : String(Math.round((a + (b - a) * p) * 1000) / 1000), prio))
-          undo.push(() => st.setProperty(name, now, prio))
+          // 목표선의 높이(--ty)는 점의 높이(--y)와 같은 눈금이다
+          vars.push({ n: n as HTMLElement, name, group: name === '--ty' ? '--y' : name, before, now, q0: parseFloat(before), q1: parseFloat(now), prio: st.getPropertyPriority(name) })
         }
         for (const name in w.attrs) {
           const before = w.attrs[name]
@@ -872,11 +881,92 @@ export function motionEngine(): MotionEngine {
           const b = (now.match(NUMS) || []).map(Number)
           const parts = now.split(NUMS)
           if (a.length !== b.length || parts.length !== b.length + 1) continue
-          const at = (p: number) => parts.map((part, i) => part + (i < b.length ? String(Math.round((a[i] + (b[i] - a[i]) * p) * 100) / 100) : '')).join('')
-          sets.push((p) => n.setAttribute(name, p >= 1 ? now : at(p)))
+          // 추이의 선과 면(0~100 그림, 위가 0)은 점과 같은 눈금으로: 짝수 자리는 가로, 홀수 자리는 세로(100 - 높이)
+          const line = name === 'points' && !!n.closest('.tn-svg')
+          const text = (vals: number[]) => parts.map((part, i) => part + (i < vals.length ? String(Math.round(vals[i] * 100) / 100) : '')).join('')
+          sets.push((t) => {
+            if (t.v >= 1 && !line) return n.setAttribute(name, now)
+            const vals = b.map((y, i) => {
+              const x = a[i] + (y - a[i]) * t.v
+              if (!line || i % 2 === 0) return x
+              // 바닥(면의 아래 끝)은 늘 바닥이다. 값이 아니라 그림의 가장자리라서 눈금을 따라 뜨지 않게
+              if (a[i] === 100 && y === 100) return 100
+              const u0 = axes['--y'] ? (100 - a[i] - axes['--y'].a0.al) / axes['--y'].a0.be : NaN
+              const u1 = axes['--y'] ? (100 - y - axes['--y'].a1.al) / axes['--y'].a1.be : NaN
+              const q = t.at('--y', u0 + (u1 - u0) * t.v)
+              return q === null ? x : 100 - q
+            })
+            n.setAttribute(name, text(vals))
+          })
           undo.push(() => n.setAttribute(name, now))
         }
       })
+
+      // ---- 눈금 찾기: 값 변수마다, 그 요소 안에 숫자가 하나뿐인 것들로 길이 = α + β·값을 두 장에서 각각 맞춘다 ----
+      type Fit = { al: number; be: number }
+      const fit = (pts: { u: number; q: number }[]): Fit | null => {
+        // 막대는 아주 작은 값을 2%로 올려 그린다(Bars.tsx): 그 바닥에 걸린 점은 눈금을 맞출 때 뺀다
+        const use = pts.filter((p) => p.q > 2.5).length >= 2 ? pts.filter((p) => p.q > 2.5) : pts
+        if (!use.length) return null
+        const mu = use.reduce((x, p) => x + p.u, 0) / use.length
+        const mq = use.reduce((x, p) => x + p.q, 0) / use.length
+        const vu = use.reduce((x, p) => x + (p.u - mu) * (p.u - mu), 0)
+        // 값이 하나뿐이면 0에서 시작하는 눈금으로 본다(막대 하나)
+        const be = vu > 1e-9 ? use.reduce((x, p) => x + (p.u - mu) * (p.q - mq), 0) / vu : mu ? mq / mu : 0
+        const al = vu > 1e-9 ? mq - be * mu : 0
+        if (!(be > 0) || !Number.isFinite(al)) return null
+        return use.every((p) => Math.abs(al + be * p.u - p.q) <= 1) ? { al, be } : null
+      }
+      const axes: Record<string, { a0: Fit; a1: Fit; d0: [number, number]; d1: [number, number]; u: [number, number] }> = {}
+      const groups = Array.from(new Set(vars.map((x) => x.group)))
+      for (const g of groups) {
+        const own = vars.filter((x) => x.group === g)
+        const p0: { u: number; q: number }[] = []
+        const p1: { u: number; q: number }[] = []
+        for (const x of own) {
+          const inside = nums.filter((t) => x.n.contains(t.node))
+          if (inside.length !== 1) continue
+          p0.push({ u: inside[0].from, q: x.q0 })
+          p1.push({ u: inside[0].to, q: x.q1 })
+        }
+        const a0 = fit(p0)
+        const a1 = fit(p1)
+        if (!a0 || !a1) continue
+        // 눈금이 담는 값의 범위(길이 0과 100에 놓이는 값)와, 두 장을 다 담는 범위
+        const d0: [number, number] = [-a0.al / a0.be, (100 - a0.al) / a0.be]
+        const d1: [number, number] = [-a1.al / a1.be, (100 - a1.al) / a1.be]
+        axes[g] = { a0, a1, d0, d1, u: [Math.min(d0[0], d1[0]), Math.max(d0[1], d1[1])] }
+      }
+      const same = (a: [number, number], b: [number, number]) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) <= 0.002 * (b[1] - b[0])
+      const first = Object.keys(axes).some((g) => !same(axes[g].d0, axes[g].u))
+      const last = Object.keys(axes).some((g) => !same(axes[g].d1, axes[g].u))
+
+      // ---- 바뀌는 값 ----
+      for (const t of nums) {
+        if (t.old === t.now || t.from === t.to) continue
+        const { node, old, now, from, to, m: b } = t
+        // 새 값의 꼴로 센다(소수 자리, 세 자리 쉼표). 앞 값이나 새 값에 쉼표가 있으면 세는 동안에도 쉼표를 둔다
+        const decimals = b[3] ? b[3].length - 1 : 0
+        const grouped = (old + now).indexOf(',') >= 0
+        const format = (v: number) => {
+          const [whole, frac] = v.toFixed(decimals).split('.')
+          return b[1] + (grouped ? whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : whole) + (frac ? '.' + frac : '') + b[4]
+        }
+        sets.push((k) => (node.nodeValue = k.v <= 0 ? old : k.v >= 1 ? now : format(from + (to - from) * k.v)))
+        undo.push(() => (node.nodeValue = now))
+      }
+      for (const x of vars) {
+        const ax = axes[x.group]
+        // 눈금이 같고 길이도 같으면 옮길 것이 없다(값이 같은 막대). 눈금이 바뀌면 값이 같아도 눈금을 따라간다
+        if (x.before.trim() === x.now.trim() && (!ax || (same(ax.d0, ax.u) && same(ax.d1, ax.u)))) continue
+        const u0 = ax ? (x.q0 - ax.a0.al) / ax.a0.be : 0
+        const u1 = ax ? (x.q1 - ax.a1.al) / ax.a1.be : 0
+        sets.push((t) => {
+          const q = ax ? t.at(x.group, u0 + (u1 - u0) * t.v) : null
+          x.n.style.setProperty(x.name, String(Math.round((q === null ? x.q0 + (x.q1 - x.q0) * t.v : q) * 1000) / 1000), x.prio)
+        })
+        undo.push(() => x.n.style.setProperty(x.name, x.now, x.prio))
+      }
       // 몫을 칸마다 칠한 표시는 숫자가 세는 대로 하나씩 켜지고(늘 때는 앞에서부터) 꺼진다(줄 때는 뒤에서부터). 그대로 두면 새 몫의 칸이
       // 처음 0.26초에 한꺼번에 바뀌고 숫자만 혼자 세었다
       const ups = flips.filter((f) => f.to)
@@ -884,14 +974,59 @@ export function motionEngine(): MotionEngine {
       for (const list of [ups, downs])
         list.forEach((f, k) => {
           const at = (k + 1) / (list.length + 1)
-          sets.push((p) => f.el.classList.toggle('is-on', p >= at ? f.to : !f.to))
+          sets.push((t) => f.el.classList.toggle('is-on', t.v >= at ? f.to : !f.to))
           undo.push(() => f.el.classList.toggle('is-on', f.to))
         })
+      // 점 숫자가 서는 쪽이 바뀌었으면(점이 오르내려 선과 부딪히는 쪽이 달라졌다) 그때까지는 앞 장의 쪽에 두고, 숫자만 아주 잠깐 옅어졌다가
+      // 새 쪽에서 다시 선다. 숫자마다 읽는 차례(왼쪽부터)로 엇갈려서 여럿이 한꺼번에 깜빡이지 않게. 그대로 두면 짝을 바꿔 끼우는 처음에
+      // 숫자가 점의 반대쪽으로 건너뛰었다(필름)
+      sides.forEach((sd, k) => {
+        const mid = sides.length > 1 ? 0.3 + (0.4 * k) / (sides.length - 1) : 0.5
+        const labels = (Array.prototype.slice.call(sd.el.children) as HTMLElement[]).filter((c) => (c.textContent || '').trim())
+        const styles = labels.map((c) => c.getAttribute('style'))
+        sets.push((t) => {
+          const list = t.v < mid ? sd.before : sd.after
+          for (const c of SIDES) sd.el.classList.toggle(c, list.indexOf(c) >= 0)
+          const o = Math.min(1, Math.abs(t.v - mid) / 0.09)
+          for (const c of labels) c.style.opacity = o >= 1 ? '' : String(o)
+        })
+        undo.push(() => {
+          for (const c of SIDES) sd.el.classList.toggle(c, sd.after.indexOf(c) >= 0)
+          labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
+        })
+      })
       if (!sets.length) return
-      // 앞 장이 다 옅어지고(SWAP_LEAD) 짝을 바꿔 끼운 뒤에 옮기기 시작한다. 곡선은 자리에서 자리로 옮기기(carry): 앞 값도 새 값도 머문 값이다
-      const clock = el.animate([], { duration: d(1000), delay: s(60), easing: EASE.carry })
+
+      // ---- 시계와 단계: ① 앞 눈금 → 두 장을 다 담는 눈금, ② 값, ③ 새 눈금. 없는 단계는 건너뛴다 ----
+      const ease = curve(EASE.out)
+      // 단계는 조금씩 겹친다: 곡선이 빨리 떠나 천천히 멈춰서, 앞 단계가 거의 다 왔을 때(남은 것이 눈에 띄지 않을 때) 다음 단계가 떠난다.
+      // 겹치지 않던 때는 눈금이 다 바뀐 뒤 0.2초 남짓 아무것도 움직이지 않다가 값이 떠났다(필름)
+      const a1 = first ? 0.3 : 0
+      const v0 = first ? 0.16 : 0
+      const v1 = last ? 0.82 : 1
+      const a3 = last ? 0.6 : 1
+      const clamp = (x: number) => Math.max(0, Math.min(1, x))
+      const tick = (raw: number): Tick => {
+        const e1 = first ? ease(clamp(raw / a1)) : 1
+        const e3 = last ? ease(clamp((raw - a3) / (1 - a3))) : 0
+        const v = raw >= 1 ? 1 : ease(clamp((raw - v0) / (v1 - v0)))
+        return {
+          v,
+          at: (g, u) => {
+            const ax = axes[g]
+            if (!ax) return null
+            const lerp = (a: [number, number], b: [number, number], k: number): [number, number] => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]
+            const dom = e3 > 0 ? lerp(ax.u, ax.d1, e3) : lerp(ax.d0, ax.u, e1)
+            return ((u - dom[0]) / (dom[1] - dom[0])) * 100
+          },
+        }
+      }
+      const clock = el.animate([], { duration: d(1100), delay: 60, easing: 'linear' })
       anims.push(clock)
-      const apply = (p: number) => sets.forEach((f) => f(p))
+      const apply = (raw: number) => {
+        const t = tick(raw)
+        sets.forEach((f) => f(t))
+      }
       apply(0)
       let frame = 0
       let done = () => {}
@@ -901,13 +1036,13 @@ export function motionEngine(): MotionEngine {
         undo.forEach((f) => f())
         done()
       }
-      const tick = () => {
+      const step = () => {
         if (clock.playState === 'finished' || clock.playState === 'idle') return end()
         const p = clock.effect ? clock.effect.getComputedTiming().progress : null
         apply(typeof p === 'number' ? p : 0)
-        frame = requestAnimationFrame(tick)
+        frame = requestAnimationFrame(step)
       }
-      frame = requestAnimationFrame(tick)
+      frame = requestAnimationFrame(step)
       stops.push(end)
     }
     /**
