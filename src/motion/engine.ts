@@ -2373,13 +2373,14 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-sr-l'), 60, 400)
           draw(list, 120, 600, 'left center', '::before')
           its.forEach((it, k) => {
-            run(anims, it.querySelector('.bk-sr-tick') as Element, [{ scale: '1 0' }], s(160 + k * 80), { easing: OUT, duration: d(300) })
-            rise(it.querySelector('.bk-sr-t'), 200 + k * 80, L.y * 0.4)
-            fade(it.querySelector('.bk-sr-m'), 260 + k * 80, 400)
+            run(anims, it.querySelector('.bk-sr-tick') as Element, [{ scale: '1 0' }], s(140 + k * 60), { easing: OUT, duration: d(280) })
+            rise(it.querySelector('.bk-sr-t'), 160 + k * 60, L.y * 0.4)
+            fade(it.querySelector('.bk-sr-m'), 200 + k * 60, 360)
           })
-          rise(one('.bk-sr-num'), 200, L.y * 0.4)
-          const hop = levelName === 'lively' ? 480 : 400
-          const t0 = 260 + its.length * 80 + 300
+          // 곳들이 서자마자 뒤지기 시작한다. 수는 뒤지기 시작할 때 나온다: 먼저 나오면 '00'으로 1초 넘게 멈춰 있었다(발표 녹화)
+          const hop = levelName === 'lively' ? 400 : 340
+          const t0 = 160 + its.length * 60 + 80
+          rise(one('.bk-sr-num'), t0 - 120, L.y * 0.4)
           const visible = cursor && getComputedStyle(cursor).display !== 'none' && !still
           if (visible) {
             const frames: Keyframe[] = []
