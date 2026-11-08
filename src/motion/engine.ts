@@ -2309,33 +2309,53 @@ export function motionEngine(): MotionEngine {
             const neu = row.querySelector<HTMLElement>('.bk-wp-new')
             return { old, neu, o: old ? spot(old, root) : null, n: neu ? spot(neu, root) : null }
           })
-          fade(one('.bk-wp-hf'), 60, 400)
+          const hf = one('.bk-wp-hf')
+          const ht = one('.bk-wp-ht')
+          const frame = one('.bk-wp-frame')
+          // 선은 글이 있는 자리만 훑는다: 위아래는 글 묶음(.bk-wp-frame), 옆은 맨 왼쪽 글에서 맨 오른쪽 글까지. 칸 전체(높이 100%, 칸 너비)를
+          // 훑던 때는 칸이 높으면 글 아래 빈 자리까지 긴 선이 서 있었고(필름: 글보다 선이 몇 배 길었다), 글 밖의 빈 너비를 지나는 동안
+          // 듣는 사람을 기다리게 했다. 끝에서는 0.04만에 사라져 오른쪽 끝에서 뚝 끊겼다. 이제 마지막 5분의 1 동안 옅어지며 빠져나간다
+          const boxes = [...spots.flatMap((sp) => [sp.o, sp.n]), hf ? spot(hf, root) : null, ht ? spot(ht, root) : null].filter((b): b is ReturnType<typeof spot> => !!b)
+          const L0 = boxes.length ? Math.max(0, Math.min(...boxes.map((b) => b.l)) - 24) : 0
+          const R0 = boxes.length ? Math.min(W, Math.max(...boxes.map((b) => b.r)) + 24) : W
+          const span = Math.max(1, R0 - L0)
+          fade(hf, 60, 400)
           rows.forEach((row, k) => rise(row.querySelector('.bk-wp-was'), 120 + k * 90, L.y * 0.4))
           const t0 = 260 + rows.length * 90
-          const T = levelName === 'lively' ? 1500 : 1200
-          const x = (px: number) => t0 + (T * Math.max(0, Math.min(W, px))) / W
+          // 훑는 빠르기는 예전(칸 너비를 1.2초)과 같게 두되 너무 짧게 끝나지 않게
+          const T = (levelName === 'lively' ? 1500 : 1200) * Math.max(0.6, Math.min(1, span / W))
+          const x = (px: number) => t0 + (T * Math.max(0, Math.min(span, px - L0))) / span
           if (bar && !still) {
+            const fr = frame ? spot(frame, root) : null
+            if (fr) {
+              const style = bar.getAttribute('style')
+              bar.style.top = fr.t - 12 + 'px'
+              bar.style.bottom = 'auto'
+              bar.style.height = fr.b - fr.t + 24 + 'px'
+              restores.push(() => (style === null ? bar.removeAttribute('style') : bar.setAttribute('style', style)))
+            }
             run(
               anims,
               bar,
               [
-                { opacity: 0, translate: '0 0', offset: 0 },
-                { opacity: 1, translate: `${W * 0.04}px 0`, offset: 0.04 },
-                { opacity: 1, translate: `${W * 0.96}px 0`, offset: 0.96 },
-                { opacity: 0, translate: `${W}px 0`, offset: 1 },
+                { opacity: 0, translate: `${L0}px 0`, offset: 0 },
+                { opacity: 1, translate: `${L0 + span * 0.06}px 0`, offset: 0.06 },
+                { opacity: 1, translate: `${L0 + span * 0.8}px 0`, offset: 0.8 },
+                { opacity: 0, translate: `${R0}px 0`, offset: 1 },
               ],
               s(t0),
               { easing: 'linear', duration: d(T) },
             )
           }
-          fade(one('.bk-wp-ht'), x(W * 0.4), 300)
+          fade(ht, ht ? x(spot(ht, root).l) : x(L0 + span * 0.4), 300)
           for (const sp of spots) {
             if (sp.old && sp.o) {
               const ink = getComputedStyle(sp.old).color
               run(anims, sp.old, [{ textDecorationColor: 'transparent', color: getComputedStyle(root).getPropertyValue('--ink-2').trim() || ink }], s(x(sp.o.r)), { easing: OUT, duration: d(260) })
             }
             if (sp.neu && sp.n)
-              run(anims, sp.neu, [{ clipPath: 'inset(-20% 100% -20% 0)' }, { clipPath: 'inset(-20% 0% -20% 0)' }], s(x(sp.n.l)), {
+              // 끝은 글 상자보다 조금 넓게: 상자 끝에 딱 맞추면 상자 밖으로 조금 나온 마지막 글자의 끝이 움직임이 끝날 때까지 잘려 있다가 튀었다
+              run(anims, sp.neu, [{ clipPath: 'inset(-20% 100% -20% 0)' }, { clipPath: 'inset(-20% -0.25em -20% 0)' }], s(x(sp.n.l)), {
                 easing: 'linear',
                 duration: d(Math.max(80, x(sp.n.r) - x(sp.n.l))),
               })
