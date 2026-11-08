@@ -9,7 +9,7 @@ import { BLOCK_EFFECTS, BLOCK_FROMS, BLOCK_LINKS, BLOCK_LOOKS, BLOCK_SPEEDS, BLO
 import { pageInfo } from '../../deck/fields'
 import { LAYOUTS } from '../../deck/layouts'
 import { sceneOf, sceneSpec } from '../../deck/scenes'
-import { motionOf, MOTIONS, THEMES, TONES, TRANSITIONS } from '../../deck/themes'
+import { FONTS, FOOTERS, motionOf, MOTIONS, TEXT_SIZES, THEMES, TONES, TRANSITIONS } from '../../deck/themes'
 import type { Deck, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { josa } from '../../lib/josa'
@@ -661,8 +661,15 @@ function describe(deck: Deck, op: Op, named: Map<string, string>, applied: Appli
       const parts: string[] = []
       if (op.theme) parts.push(`테마: ${THEMES[deck.theme.id].name} → ${THEMES[op.theme].name}`)
       if (op.accent !== undefined) parts.push(op.accent === null ? '강조색: 테마 기본색' : `강조색: ${op.accent}`)
-      if (op.motion) parts.push(`모션 세기: ${MOTIONS.find((m) => m.id === (deck.motion ?? 'calm'))?.name} → ${MOTIONS.find((m) => m.id === op.motion)?.name}`)
-      return { text: op.theme || op.accent !== undefined ? '테마 바꾸기' : '모션 세기 바꾸기', detail: parts.join(', ') }
+      if (op.font !== undefined) parts.push(`글꼴: ${op.font === null ? '테마 글꼴' : FONTS.find((f) => f.id === op.font)?.name}`)
+      if (op.size) parts.push(`글자 크기: ${TEXT_SIZES.find((x) => x.id === op.size)?.name}`)
+      if (op.motion) parts.push(`모션: ${MOTIONS.find((m) => m.id === (deck.motion ?? 'calm'))?.name} → ${MOTIONS.find((m) => m.id === op.motion)?.name}`)
+      if (op.footer) parts.push(`슬라이드 아래쪽: ${FOOTERS.find((x) => x.id === op.footer)?.name}`)
+      if (op.transition) parts.push(`화면 전환: ${TRANSITIONS.find((t) => t.id === op.transition)?.name}`)
+      // 생김새(테마 메뉴)를 바꾸는지, 발표하는 방식(발표 설정)만 바꾸는지를 화면의 두 단추 이름대로. 예전에는 글꼴이나 글자 크기만 바꿔도
+      // '모션 세기 바꾸기'로 보였다
+      const look = !!op.theme || op.accent !== undefined || op.font !== undefined || !!op.size
+      return { text: look ? '테마 바꾸기' : '발표 설정 바꾸기', detail: parts.join(', ') }
     }
     case 'set_guide':
       return { text: `${name(op.slide)}의 안내 바꾸기`, detail: op.text }

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { makeSlide } from '../../deck/generate'
-import { ACCENT_COMBOS, comboName, comboSwatch, FONTS, FOOTERS, MOTIONS, TEXT_SIZES, THEMES, THEME_ORDER, TRANSITIONS, accentOf, fontOf, fontPreview, footerOf } from '../../deck/themes'
+import { ACCENT_COMBOS, comboName, comboSwatch, FONTS, TEXT_SIZES, THEMES, THEME_ORDER, accentOf, fontOf, fontPreview } from '../../deck/themes'
 import type { Deck } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
@@ -11,7 +11,7 @@ import { CheckIcon, ChevronIcon, DownloadIcon, Info, PlayIcon, Popover, Segmente
 
 /**
  * 지금 장의 움직임을 발표할 때처럼 한 번 보여 달라는 창(window) 이벤트. 내용 없이 신호만 보낸다 (new Event).
- * 보내는 곳: 테마 메뉴(발표할 때 움직임을 고를 때, '이 슬라이드에서 보기'), 이 장 설정의 움직임 ▶(Inspector).
+ * 보내는 곳: 발표 설정의 '이 슬라이드에서 보기'(DeckSettings.tsx), 모션 탭의 '미리 보기'(MotionPanel.tsx).
  * 받는 곳: 편집 화면의 무대(SlideStage)가 받아 지금 장에 움직임을 한 번 돌린다.
  * 메뉴와 무대는 화면 나무에서 멀리 떨어져 있어 속성으로 잇지 않고 이벤트로 보낸다. 이 창 안에서만 오가고 저장하지 않는다
  */
@@ -20,16 +20,16 @@ export const PREVIEW_MOTION = 'html-maker:preview-motion'
 /** 테마 견본 하나의 너비 (메뉴의 고르는 칸을 둘로 나눈 너비, styles/ui.css의 .theme-menu) */
 const THEME_THUMB = 226
 
+/**
+ * 테마: 생김새만(바탕, 강조색, 글꼴, 글자 크기). 슬라이드 아래쪽, 모션, 화면 전환은 발표 설정(DeckSettings.tsx)에 따로 둔다:
+ * 한 메뉴에 다 있던 때는 생김새를 고르러 온 메뉴가 길고 복잡해 보였고, '아래 표시', '모션 세기'가 무엇인지 알기 어려웠다
+ */
 export function ThemeMenu({ deck }: { deck: Deck }) {
   const setTheme = useDeck((s) => s.setTheme)
   const setAccent = useDeck((s) => s.setAccent)
-  const setMotion = useDeck((s) => s.setMotion)
   const setLook = useDeck((s) => s.setLook)
-  const motion = deck.motion ?? 'calm'
   const font = fontOf(deck.theme)
   const size = deck.theme.size ?? 'normal'
-  const footer = footerOf(deck)
-  const transition = deck.theme.transition ?? 'auto'
   // 테마 견본은 이 발표의 표지 모양 그대로, 제목만 넣어서
   const cover = useMemo(() => {
     const real = deck.slides.find((x) => x.layout === 'cover')
@@ -55,9 +55,8 @@ export function ThemeMenu({ deck }: { deck: Deck }) {
         </button>
       )}
     >
-      {(close) => (
-        // 이름은 왼쪽, 고르는 것은 오른쪽에 한 줄씩 (오른쪽 칸의 '이 장 설정'과 같은 꼴). 예전에는 줄마다 머리말을 위에 따로 두어
-        // 1280×600에서 메뉴가 보이는 높이(526px)보다 150px쯤 길었고, '발표할 때 움직임'과 '장 넘기기'는 스크롤해야 보였다
+      {() => (
+        // 이름은 왼쪽, 고르는 것은 오른쪽에 한 줄씩 (오른쪽 칸의 '이 장 설정'과 같은 꼴)
         <div className="theme-menu">
           <p className="menu-h is-top">테마</p>
           <div className="theme-grid">
@@ -121,39 +120,6 @@ export function ThemeMenu({ deck }: { deck: Deck }) {
           <Segmented className="seg-full" label="글꼴" options={FONTS.map((o) => ({ ...o, style: fontPreview(o.id) }))} value={font} onPick={(id) => setLook({ font: id })} />
           <p className="menu-h">글자 크기</p>
           <Segmented className="seg-full" label="글자 크기" options={TEXT_SIZES} value={size} onPick={(id) => setLook({ size: id })} />
-          <p className="menu-h">아래 표시</p>
-          <Segmented className="seg-full" label="아래 표시" options={FOOTERS} value={footer} onPick={(id) => setLook({ footer: id })} />
-          <p className="menu-h">모션 세기</p>
-          <div className="theme-row">
-            <Segmented
-              className="seg-full"
-              label="발표 전체의 모션 세기"
-              options={MOTIONS}
-              value={motion}
-              onPick={(id) => {
-                setMotion(id)
-                // 메뉴가 슬라이드를 가리지 않게 닫고 보여 준다
-                if (id !== 'none') {
-                  close()
-                  window.dispatchEvent(new Event(PREVIEW_MOTION))
-                }
-              }}
-            />
-            {motion !== 'none' && (
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => {
-                  close()
-                  window.dispatchEvent(new Event(PREVIEW_MOTION))
-                }}
-              >
-                이 슬라이드에서 보기
-              </button>
-            )}
-          </div>
-          <p className="menu-h">화면 전환</p>
-          <Segmented className="seg-full" label="화면 전환" options={TRANSITIONS} value={transition} onPick={(id) => setLook({ transition: id })} />
         </div>
       )}
     </Popover>

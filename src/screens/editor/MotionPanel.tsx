@@ -19,19 +19,19 @@ import { SceneAll, SceneOverride, ScenePicker } from './ScenePicker'
 
 /**
  * 이 장만 바꾸지 않고 발표 전체 설정을 따르는 값의 이름. 예전에는 '기본'이라서, 기본이 무엇인지(차분하게? 없음?)
- * 테마 메뉴를 열어 봐야 알았다. 무엇을 따르는지는 머리말 아래에 지금 값으로 같이 보인다
+ * 발표 설정을 열어 봐야 알았다. 무엇을 따르는지는 머리말 아래에 지금 값으로 같이 보인다
  */
 export const INHERIT = '발표 설정대로'
 
 /** 이 장 설정의 '장 넘기기'에 보일 것. 움직임에 맞춰(auto)는 발표 전체에만 있는 값이라 '전체대로' 하나로 묶는다 */
 export const SLIDE_TRANSITIONS: { id: Transition | undefined; name: string; description: string }[] = [
-  { id: undefined, name: INHERIT, description: '테마 메뉴에서 정한 발표 전체의 화면 전환을 따라요.' },
+  { id: undefined, name: INHERIT, description: '발표 설정에서 정한 발표 전체의 화면 전환을 따라요.' },
   ...TRANSITIONS.filter((t) => t.id !== 'auto'),
 ]
 
 export const nameOf = <T,>(list: { id: T; name: string }[], id: T) => list.find((o) => o.id === id)?.name ?? ''
 
-/** '발표 설정대로'를 고르면 무엇이 되는지. 테마 메뉴의 값이 바뀌면 같이 바뀐다. 모션 편집의 좁은 칸에서도 한 줄에 들게 끝말 없이 */
+/** '발표 설정대로'를 고르면 무엇이 되는지. 발표 설정의 값이 바뀌면 같이 바뀐다. 모션 편집의 좁은 칸에서도 한 줄에 들게 끝말 없이 */
 export function InheritNote({ deck }: { deck: Deck }) {
   const motion = nameOf(MOTIONS, deck.motion ?? 'calm')
   const transition = nameOf(TRANSITIONS, deck.theme.transition ?? 'auto')
@@ -89,7 +89,7 @@ export function MotionPanel({
             미리 보기
           </button>
         </div>
-        {/* '전체대로'가 지금 무엇인지. 테마 메뉴의 값이 바뀌면 같이 바뀐다 */}
+        {/* '전체대로'가 지금 무엇인지. 발표 설정의 값이 바뀌면 같이 바뀐다 */}
         <p className="mp-inherit">
           <InheritNote deck={deck} />
         </p>
@@ -97,7 +97,7 @@ export function MotionPanel({
           <Segmented<Motion | undefined>
             className="seg-fill seg-fit"
             label="이 슬라이드의 모션 세기"
-            options={[{ id: undefined, name: INHERIT, description: '테마 메뉴에서 정한 발표 전체의 모션 세기를 따라요.' }, ...MOTIONS]}
+            options={[{ id: undefined, name: INHERIT, description: '발표 설정에서 정한 발표 전체의 모션을 따라요.' }, ...MOTIONS]}
             value={slide.options.motion ?? undefined}
             onPick={(m) => setOptions(slide.id, { motion: m })}
           />

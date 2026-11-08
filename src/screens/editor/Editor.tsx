@@ -23,6 +23,7 @@ import { ASK_ERROR, AiInbox, AiMenu, AiReview, AskStatus } from './AiShare'
 import { useBlockEditing } from './BlockEditor'
 import { BlockLibrary } from './BlockLibrary'
 import { ExportMenu, PresentButton, ThemeMenu } from './DeckMenus'
+import { DeckSettings } from './DeckSettings'
 import { useExports } from './exports'
 import { Inspector } from './Inspector'
 import { MotionPanel } from './MotionPanel'
@@ -293,6 +294,7 @@ function EditorBody({ deck }: { deck: Deck }) {
           <span className="ed-top-sep" aria-hidden="true" />
           <AiMenu deck={deck} ai={ai} ask={ask} />
           <ThemeMenu deck={deck} />
+          <DeckSettings deck={deck} slide={slide} />
           <ExportMenu
             onHtml={() => void exporting.exportHtml()}
             onPdf={() => exporting.printPdf()}

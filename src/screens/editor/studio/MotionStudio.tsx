@@ -527,7 +527,7 @@ function SlideMotion({ deck, slide, onTransition }: { deck: Deck; slide: Slide; 
         <Segmented<Motion | undefined>
           className="seg-fill seg-fit"
           label="이 슬라이드의 모션 세기"
-          options={[{ id: undefined, name: INHERIT, description: '테마 메뉴에서 정한 발표 전체의 모션 세기를 따라요.' }, ...MOTIONS]}
+          options={[{ id: undefined, name: INHERIT, description: '발표 설정에서 정한 발표 전체의 모션을 따라요.' }, ...MOTIONS]}
           value={slide.options.motion ?? undefined}
           onPick={onPick}
         />

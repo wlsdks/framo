@@ -185,7 +185,7 @@ function FrameSection({ slide }: { slide: Slide }) {
     <section className="ins-sec">
       <h2 className="ins-h">표시</h2>
       <Toggle label="제목과 부제" on={slide.options.hideHead !== true} onChange={(on) => setOptions(slide.id, { hideHead: on ? undefined : true })} />
-      <Toggle label="출처와 아래 표시" on={slide.options.hideFoot !== true} onChange={(on) => setOptions(slide.id, { hideFoot: on ? undefined : true })} />
+      <Toggle label="출처와 슬라이드 아래쪽" on={slide.options.hideFoot !== true} onChange={(on) => setOptions(slide.id, { hideFoot: on ? undefined : true })} />
     </section>
   )
 }
