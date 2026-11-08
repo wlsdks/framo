@@ -509,7 +509,8 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
                   <p className="lib-group-d">‘{query.trim()}’에 맞는 컴포넌트가 없어요. 막대, 순서, 사람처럼 다른 말로 찾아보세요.</p>
                 ) : (
                   <div className="lib-grid is-found">
-                    {found.map(card)}
+                    {/* 이 슬라이드에 넣을 수 있는 것을 먼저: 찾자마자 맨 앞에 잠긴 카드가 서면 찾은 것이 없는 것처럼 보였다 */}
+                    {[...found.filter((t) => !issues.get(t)), ...found.filter((t) => issues.get(t))].map(card)}
                     {foundLinks.map(linkCard)}
                   </div>
                 )}
