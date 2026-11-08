@@ -290,3 +290,99 @@
     margin: 0 4px 0 0;
   }
 }
+
+/* ---------- 상자 걷기 ----------
+   단계마다 두른 옅은 테두리 상자를 걷는다: 글이 든 상자는 선도 면도 두르지 않는다(AGENTS.md 디자인, VISUAL-RULES). 차례는 번호 줄로:
+   번호 뒤로 가는 선이 단계 끝까지 가고, 단계 사이의 선(.bk-fw-link)이 같은 높이에서 이어 받아 '01 ── 02 ── 03'처럼 한 줄로 읽힌다.
+   그러려고 목록을 세 줄(번호, 이름과 설명, 오가는 양)의 격자로 짜고 단계는 그 줄을 나눠 쓴다(subgrid). 잇는 선은 번호 줄의 가운데 */
+.bk-fw-list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: auto auto 1fr;
+  row-gap: 18px;
+}
+
+.bk-fw[data-n='2'] .bk-fw-list {
+  grid-template-columns: minmax(0, 1fr) var(--fw-lw) minmax(0, 1fr);
+}
+
+.bk-fw[data-n='3'] .bk-fw-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr) var(--fw-lw)) minmax(0, 1fr);
+}
+
+.bk-fw[data-n='4'] .bk-fw-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr) var(--fw-lw)) minmax(0, 1fr);
+}
+
+.bk-fw[data-n='5'] .bk-fw-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr) var(--fw-lw)) minmax(0, 1fr);
+}
+
+.bk-fw[data-n='6'] .bk-fw-list {
+  grid-template-columns: repeat(5, minmax(0, 1fr) var(--fw-lw)) minmax(0, 1fr);
+}
+
+.bk-fw-node {
+  display: grid;
+  grid-row: 1 / -1;
+  grid-template-rows: subgrid;
+  padding: 0;
+  box-shadow: none;
+}
+
+.bk-fw-link {
+  grid-row: 1;
+  width: auto;
+}
+
+.bk-fw-i {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+}
+
+/* 번호 뒤의 선: 단계 사이의 선과 같은 굵기와 색. 마지막 단계는 이을 곳이 없어 긋지 않는다 */
+.bk-fw-i::after {
+  flex: 1 1 auto;
+  height: var(--rule-hair);
+  background: var(--ink-3);
+  content: '';
+  opacity: 0.7;
+}
+
+.bk-fw-node:last-child .bk-fw-i::after {
+  content: none;
+}
+
+.bk-fw-v {
+  align-self: end;
+}
+
+@container style(--fw-stack: 1) {
+  .bk-fw-list {
+    display: flex;
+    row-gap: 0;
+  }
+
+  .bk-fw-node {
+    display: flex;
+    padding: 0;
+  }
+
+  .bk-fw-i {
+    display: block;
+    min-width: 1.4em;
+  }
+
+  .bk-fw-i::after {
+    content: none;
+  }
+
+  /* 세로로 쌓이면 선은 번호 아래에서 다음 번호로: 칸 가운데에 두면 상자가 없어 허공에 뜬 선이 됐다 */
+  .bk-fw-link {
+    align-self: flex-start;
+    width: 1.4em;
+    margin: 8px 0;
+  }
+}

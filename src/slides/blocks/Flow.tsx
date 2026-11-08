@@ -18,7 +18,8 @@ export function flowHighlight(chosen: number | undefined, n: number): number {
  * 받는 상자 가장자리에 끝이 닿는 꽉 찬 머리로 끝난다(flow.css): 예전에는 칸 사이에 떠 있는 가는 선과 꺾쇠라 화살표 글자를
  * 쳐 넣은 것처럼 보였다. 발표할 때는 선이 그어지며 작은 데이터 조각이 선을 따라 건너가고, 닿는 단계가 받아서 나타난다.
  * 오가는 양은 단계마다 상자 아래 끝에 숫자로(나란한 단계끼리 한 줄에 선다).
- * 좁은 칸에서는 상자를 세로로 쌓고 선도 아래로 긋는다(flow.css): 나란히 두면 단계 이름이 두세 글자마다 꺾인다
+ * 좁은 칸에서는 상자를 세로로 쌓고 선도 아래로 긋는다(flow.css): 나란히 두면 단계 이름이 두세 글자마다 꺾인다.
+ * 단계는 상자로 두르지 않는다: 번호 줄을 잇는 가는 선 하나가 차례를 보여 준다(flow.css의 '상자 걷기')
  */
 export function Flow() {
   const { slide, meta, mode, folds } = useSlide()
@@ -50,11 +51,11 @@ export function Flow() {
               </span>
             )}
             <div className={cx('it bk-fw-node', i === hl && 'is-hl')}>
+              {/* 단계 번호: 차례는 화살표 머리가 아니라 번호로 읽는다. 번호 줄에 단계 사이의 선이 이어진다(flow.css) */}
+              <span className="bk-fw-i" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
               <div className="bk-fw-text">
-                {/* 단계 번호: 차례는 화살표 머리가 아니라 번호로 읽는다 */}
-                <span className="bk-fw-i" aria-hidden="true">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
                 <IT i={i} k="title" className="bk-fw-t" />
                 <IT i={i} k="meta" className="bk-fw-m" />
               </div>
