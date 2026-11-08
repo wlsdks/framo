@@ -235,3 +235,9 @@
   overflow-wrap: anywhere;
   text-wrap: balance;
 }
+
+/* 옆에 다른 컴포넌트가 선 칸: 나가는 것을 칸 끝에 붙이지 않는다. 붙이면 나가는 것과 옆 글 사이(72px)가 관문 사이보다 좁아
+   한 줄로 읽혔다(검수: '처리된 신청 배포 시간을 줄여요') */
+.bk.is-shared > .bk-in > .bk-gw {
+  padding-right: var(--bk-col-gap);
+}
