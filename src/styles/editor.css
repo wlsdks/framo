@@ -1671,3 +1671,8 @@
 .pck-over {
   color: var(--danger);
 }
+
+/* 왼쪽 목록에서 오른쪽 클릭한 슬라이드의 메뉴 (SlideMenu.tsx). 누른 자리에 화면 기준으로 */
+.slide-ctx {
+  position: fixed;
+}

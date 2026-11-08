@@ -9,6 +9,8 @@ import { blockFitter } from '../slides/fitBlocks'
 /** 보기 화면에 쓰이는 글자 (폰트 묶음 고르기에 쓴다) */
 export const VIEWER_TEXT = 'PDF로 저장 발표 시작 0123456789 /'
 
+// 처음 보이는 목록의 장 너비(.v-slide)는 창 높이에도 맞춘다: 받는 분 대부분이 쓰는 1280×600 노트북 창에서 1280 너비의 장은
+// 720 높이라 창보다 높아서, 장 하나를 다 보려면 스크롤해야 했고 어느 장도 한눈에 보이지 않았다. 112는 위 막대와 장 위아래 여백
 export const VIEWER_CSS = `
 html,body{margin:0;background:#eeeeee;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased}
 .v-bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:rgb(255 255 255/.94);border-bottom:1px solid #e1e1e1;backdrop-filter:blur(8px)}
@@ -18,14 +20,14 @@ html,body{margin:0;background:#eeeeee;font-family:'Pretendard Variable',Pretenda
 .v-btn:focus-visible{outline:2px solid #2b4fc0;outline-offset:2px}
 .v-btn-primary{border-color:#1a1a1a;background:#1a1a1a;color:#fff}
 .v-deck{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px 16px 64px}
-.v-slide{width:100%;max-width:1280px}
+.v-slide{width:min(100%,1280px,calc((100vh - 112px)*16/9))}
 .v-frame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:2px;box-shadow:0 0 0 1px rgb(20 20 20/.06),0 4px 16px rgb(20 20 20/.06);cursor:pointer}
 .v-scale{position:absolute;top:0;left:0;width:1920px;height:1080px;transform:scale(var(--s,.5));transform-origin:0 0}
 .v-count{display:none}
 body.is-present{overflow:hidden;background:#000}
 body.is-present .v-bar{display:none}
 body.is-present .v-deck{position:fixed;inset:0;display:block;padding:0;background:#000}
-body.is-present .v-slide{position:absolute;inset:0;display:none;max-width:none}
+body.is-present .v-slide{position:absolute;inset:0;display:none;width:auto;max-width:none}
 body.is-present .v-slide.is-current{display:flex;align-items:center;justify-content:center}
 body.is-present .v-frame{width:var(--pw);height:var(--ph);aspect-ratio:auto;border-radius:0;box-shadow:none;cursor:default}
 body.is-present .v-count{position:fixed;right:20px;top:16px;display:block;padding:8px 12px;border-radius:999px;background:rgb(0 0 0/.45);color:rgb(255 255 255/.8);font:600 13px/1 inherit;opacity:0;transition:opacity .2s}

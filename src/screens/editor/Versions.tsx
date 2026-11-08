@@ -125,11 +125,9 @@ export function VersionPanel({ deck, onClose, notify }: { deck: Deck; onClose: (
     const show = opened && slideAfterRestore(deck, opened, was)
     if (show) useDeck.getState().select(show)
     const saved = await persistNow(next)
-    notify(
-      saved
-        ? `${fullFmt.format(version.createdAt)} 버전으로 되돌렸어요. 되돌리기 전 상태도 기록에 남겨 뒀어요.`
-        : `${fullFmt.format(version.createdAt)} 버전으로 되돌렸지만 저장하지 못했어요. ${SAVE_HELP}`,
-    )
+    // 이름 붙인 버전은 이름으로 (되돌릴지 묻는 창과 같게). 날짜로만 알리면 이름을 붙여 둔 버전으로 돌아왔는지 알기 어려웠다
+    const which = version.named ? `‘${version.name}’${particle(version.name, '으로', '로')}` : `${fullFmt.format(version.createdAt)} 버전으로`
+    notify(saved ? `${which} 되돌렸어요. 되돌리기 전 상태도 기록에 남겨 뒀어요.` : `${which} 되돌렸지만 저장하지 못했어요. ${SAVE_HELP}`)
   }
 
   const openCopy = async (version: DeckVersion) => {
