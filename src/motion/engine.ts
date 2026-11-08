@@ -858,6 +858,9 @@ export function motionEngine(): MotionEngine {
      */
     type Stepper = { cell: HTMLElement; marks: number[]; i: number; born: number; held: number; at: number | null; raf: number }
     const steppers: Stepper[] = []
+    /** 다 보인 장(뒤로 돌아온 장, 넘긴 장): 그 뒤에 재는 '하나씩'은 멈추지 않는다. 멈출 자리는 다음 프레임에 재므로, 그사이에
+     *  다 보이게 한 장을 다시 멈춰 세웠다(뒤로 돌아온 대화가 두 마디에서 멈춰 있었다) */
+    let shown = false
     const logical = (st: Stepper) => (st.at ?? performance.now()) - st.held - st.born
     const cellAnims = (st: Stepper) => st.cell.getAnimations({ subtree: true })
     const watch = (st: Stepper) => {
@@ -879,6 +882,7 @@ export function motionEngine(): MotionEngine {
       st.raf = requestAnimationFrame(tick)
     }
     const stepIn = (cell: HTMLElement) => {
+      if (shown) return
       // 그 순간 컴포넌트에 걸린 움직임으로 잰다: 장면은 연출표의 움직임을 다시 짜므로(scene) 만들 때 모은 목록은 이미 바뀌어 있다
       const mine = cell.getAnimations({ subtree: true })
       const items = Array.prototype.slice.call(cell.querySelectorAll('.it')).filter((it: HTMLElement) => !it.parentElement?.closest('.it')) as HTMLElement[]
@@ -3542,6 +3546,7 @@ export function motionEngine(): MotionEngine {
       return true
     }
     const finish = () => {
+      shown = true
       for (const st of steppers.splice(0)) {
         cancelAnimationFrame(st.raf)
         for (const a of cellAnims(st)) a.play()
