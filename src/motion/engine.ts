@@ -3012,14 +3012,14 @@ export function motionEngine(): MotionEngine {
           // 흩어져 있던 칸이 단마다 왼쪽부터 날아와 한 판으로 맞춰지고(모두 옅은 칸으로), 다 맞춰질 즈음 채운 칸이 차례로(왼쪽 단부터,
           // 단마다 아래에서 위로) 물든다. 숫자는 칸이 물드는 만큼 오른다
           fade(one('.bk-tl-l'), 60, 500)
-          rise(one('.bk-tl-v'), 120, L.y * 0.4)
-          fade(one('.bk-tl-of'), 200, 500)
-          fade(one('.bk-tl-n'), 260, 500)
           const root = one('.bk-tl')
           const grid = one('.bk-tl-grid')
           const sqs = $('.bk-tl-sq')
           if (!root || !grid || !sqs.length) {
+            rise(one('.bk-tl-v'), 120, L.y * 0.4)
             count(one('.bk-tl-v'), 160)
+            fade(one('.bk-tl-of'), 200, 500)
+            fade(one('.bk-tl-n'), 260, 500)
             break
           }
           const lively = levelName === 'lively'
@@ -3053,6 +3053,12 @@ export function motionEngine(): MotionEngine {
           // 채운 칸이 물드는 차례: 판이 거의 다 맞춰진 뒤(옅은 판이 한 번 보이게) 0.6초 안에
           const on = sqs.filter((sq) => sq.classList.contains('is-on'))
           const paint = 140 + (cols - 1) * wave + 420
+          // 숫자는 칸이 물들기 시작할 때 나타나 바로 오르고, 전체와 덧붙임이 뒤따른다. 처음부터 두면 옅은 판이 맞춰지는 동안(생동감 1.2초
+          // 남짓) '0%'가 답처럼 서 있었다(필름)
+          const shown = Math.max(120, paint - 160)
+          rise(one('.bk-tl-v'), shown, L.y * 0.4)
+          fade(one('.bk-tl-of'), shown + 80, 500)
+          fade(one('.bk-tl-n'), shown + 140, 500)
           const each = Math.min(14, 600 / Math.max(1, on.length))
           if (off) on.forEach((sq, i) => run(anims, sq, [{ backgroundColor: off }], s(paint + i * each), { easing: OUT, duration: d(260) }))
           // 숫자는 단마다 그 단까지 물든 몫만큼
