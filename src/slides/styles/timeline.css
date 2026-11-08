@@ -130,13 +130,40 @@
   --tl-gap: 64px;
   grid-template-rows: repeat(4, auto);
   gap: 0 var(--tl-gap);
+  /* 시기의 한 줄 줄이기(.one-line)가 잴 칸 너비: 목록 너비에서 단 하나의 몫(아래 .tl-item의 --line-room) */
+  container-type: inline-size;
 }
 
+/* 단계는 칸을 담지(container) 않는다: 담는 칸은 제 안을 따로 짜서(레이아웃 격리) subgrid가 꺼지고, 단계마다 네 줄을 제 높이에
+   늘려 나눴다. 그래서 설명이 세 줄인 단계만 이름이 27px 위에 서서 옆 단계의 이름과 바닥선이 어긋났다(사용자: 'Cloudflare'만 다른 높이).
+   시기가 잴 너비는 목록(.tl)에서 단 하나의 몫으로 준다 */
 .l-timeline.va-base .tl-item {
+  --line-room: calc((100cqi - (var(--tl-n) - 1) * var(--tl-gap)) / var(--tl-n));
   display: grid;
   grid-row: 1 / -1;
   grid-template-rows: subgrid;
   padding-right: 0;
+  container-type: normal;
+}
+
+.l-timeline.va-base .tl[data-n='2'] {
+  --tl-n: 2;
+}
+
+.l-timeline.va-base .tl[data-n='3'] {
+  --tl-n: 3;
+}
+
+.l-timeline.va-base .tl[data-n='4'] {
+  --tl-n: 4;
+}
+
+.l-timeline.va-base .tl[data-n='5'] {
+  --tl-n: 5;
+}
+
+.l-timeline.va-base .tl[data-n='6'] {
+  --tl-n: 6;
 }
 
 /* 선은 점의 가운데를 지난다: 시기 줄 높이 + 점 위 틈 + 점 반지름 */
