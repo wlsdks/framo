@@ -37,23 +37,27 @@
   aspect-ratio: 1;
 }
 
-/* 바깥 원부터 가는 테두리 둘, 마지막(목표)만 강조색으로 칠한다. 목표가 답이라 강조색은 거기에만(docs/VISUAL-RULES.md 4). 바깥 원까지
-   옅은 강조색으로 칠하던 때는 커다란 파란 원이 장식처럼 쨍했고(사용자), 회색으로 칠하던 때는 장에서 가장 큰 회색 면이 되었다
-   (칠은 데이터의 답에만, VISUAL-RULES 3). 원은 바닥이 맞닿아 안쪽 원이 바깥 원 안에 든 것이 그대로 보인다 */
+/* 원은 규모를 그린 데이터 면이라 칠한다: 바깥 원부터 강조색의 옅은 농담 둘(나누기의 나머지 조각, 구성비와 같은 단계, tints.ts의
+   --ta-*: 검은 바탕에서는 더 진한 단계), 마지막(목표)만 강조색. 목표가 답이라 진한 강조색은 거기에만(docs/VISUAL-RULES.md 4).
+   바깥 원을 66% 농담으로 칠하던 때는 커다란 파란 원이 장식처럼 쨍했고(사용자), 회색으로 칠하면 장에서 가장 큰 회색 면이었고,
+   1px 옅은 테두리로 두면 3~5m 떨어진 회의실 화면에서 사라져(검은 테마는 아예) 데이터의 절반이 안 보였다.
+   원은 바닥이 맞닿아 안쪽 원이 바깥 원 안에 든 것이 그대로 보인다 */
 .bk-mk-c {
   position: absolute;
   bottom: 0;
   left: 50%;
-  box-sizing: border-box;
   width: 100%;
   aspect-ratio: 1;
-  border: var(--rule-hair) solid var(--line-strong);
   border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) var(--ta-4, 18%), var(--bg));
   translate: -50% 0;
 }
 
+.bk-mk[data-n='3'] .bk-mk-c:nth-child(2) {
+  background: color-mix(in srgb, var(--accent) var(--ta-2, 44%), var(--bg));
+}
+
 .bk-mk-c:last-child:not(:first-child) {
-  border: 0;
   background: var(--accent);
 }
 
