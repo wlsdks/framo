@@ -146,6 +146,14 @@ function foldsOf(type: BlockType): ReadonlySet<string> {
   return m
 }
 
+/** 칸에 처음 쓰면 그 칸은 더는 예시 글이 아니다 */
+function withoutExample(b: Block, k: string): Block {
+  if (!b.examples?.includes(k)) return b
+  const { examples, ...rest } = b
+  const left = examples.filter((x) => x !== k)
+  return left.length ? { ...rest, examples: left } : rest
+}
+
 function BlockBody({ block, span }: { block: Block; span: number }) {
   const ctx = useSlide()
   const opened = useContext(BlockEditContext)?.opened
@@ -171,7 +179,7 @@ function BlockBody({ block, span }: { block: Block; span: number }) {
           ? outer.setField(k, v)
           : block.type === 'image' && k === 'image' && v && outer.placeImage
             ? outer.placeImage(block.id, v)
-            : update(block.id, (b) => ({ ...b, fields: { ...b.fields, [k]: v } }), `${block.id}.${k}`),
+            : update(block.id, (b) => ({ ...withoutExample(b, k), fields: { ...b.fields, [k]: v } }), `${block.id}.${k}`),
       setItem: (i, k, v) => update(block.id, (b) => ({ ...b, items: b.items.map((it, j) => (j === i ? { ...it, [k]: v } : it)) }), `${block.id}.${i}.${k}`),
       removeItem: (i) =>
         update(block.id, (b) => {
@@ -203,6 +211,7 @@ function BlockBody({ block, span }: { block: Block; span: number }) {
         span,
         scale: ctx.scales?.get(block.id),
         cineId: block.type === 'cine' ? block.cine : undefined,
+        examples: block.examples,
       }}
     >
       <div className="bk-in">

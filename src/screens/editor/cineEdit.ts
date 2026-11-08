@@ -23,7 +23,8 @@ const dirty = new Map<string, string | undefined>()
 export function insertCine(recipe: CineRecipe, blocks: BlockEditing, slide: Slide, fresh: boolean): string {
   const id = stageCine(recipe)
   // 칸에는 틀의 지어낸 예시 글을 넣는다: 빈 칸이면 발표 모습(모션 편집의 무대)에 그릴 글자가 없어 장면이 비었다. 슬라이드 위에서 바로 고쳐 쓴다
-  const block: Block = { ...makeBlock('cine'), fields: { ...(presetSpec(recipe.preset).sample as Record<string, string>) }, cine: id }
+  const sample = presetSpec(recipe.preset).sample as Record<string, string>
+  const block: Block = { ...makeBlock('cine'), fields: { ...sample }, cine: id, examples: Object.keys(sample) }
   if (fresh) dirty.set(block.id, undefined)
   const closed = slide.layout !== 'compose' && !canCompose(slide.layout)
   // 한 장에 모션 그래픽은 하나(장면의 무대는 하나다): 이미 있으면 새 장에

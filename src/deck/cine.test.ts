@@ -204,4 +204,9 @@ describe('모션 그래픽 레시피', () => {
     expect(cineId(off)).toBe(cineId(r))
   })
 
+  it('예시 글 표시는 글이 있는 칸 이름만 남긴다', () => {
+    const b = cleanBlock({ id: 'b', type: 'cine', fields: { title: '예시', sub: '' }, items: [], examples: ['title', 'sub', 'title', 3, 'none'] }, { left: 10 })
+    expect(b?.examples).toEqual(['title'])
+    expect(cleanBlock({ id: 'b', type: 'cine', fields: {}, items: [], examples: ['title'] }, { left: 10 })?.examples).toBeUndefined()
+  })
 })

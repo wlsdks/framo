@@ -406,6 +406,11 @@ export interface Block {
   linkBelow?: BlockLink
   /** 모션 그래픽(cine)만: 쓰는 레시피의 버전 id(내용 해시, deck.cines의 열쇠). 발표마다 쓰던 버전에 고정된다 */
   cine?: string
+  /**
+   * 아직 예시 글인 칸(넣을 때 틀이 채운 지어낸 글). 편집 화면에서 안내 색으로 보이고, 그 칸에 처음 쓰면 이 목록에서 빠진다.
+   * 발표 모습에는 다른 글과 같게 그린다(장면에 그릴 글자가 있게)
+   */
+  examples?: string[]
 }
 
 export interface Slide {

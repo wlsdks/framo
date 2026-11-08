@@ -151,6 +151,15 @@
   display: none;
 }
 
+/* 예시 글(넣을 때 틀이 채운 지어낸 글): 안내처럼 옅게. 처음 쓰면 이 표시가 빠진다. 발표 모습에는 다른 글과 같다 */
+.slide.m-edit .ed.is-example > .ed-input {
+  opacity: 0.5;
+}
+
+.slide.m-edit .ed.is-example:focus-within > .ed-input {
+  opacity: 0.85;
+}
+
 .one-line > .ed-input {
   white-space: nowrap;
 }
