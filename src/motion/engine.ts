@@ -3758,6 +3758,19 @@ export function motionEngine(): MotionEngine {
       if (count[type] === 1) keys.push('bk1:' + type)
       out.push({ el, keys })
     }
+    // 레이아웃 장의 항목과 이미지도(reveal.js의 Auto-Animate처럼 글과 그림으로 짝을 짓는다): 목록을 이어 가는 장, 같은 사진을
+    // 크게 다시 쓰는 장에서 항목이 사라졌다 나타나지 않고 새 자리로 옮겨 간다. 부품 장은 부품째로 맞추므로 넣지 않는다.
+    // 한 장에 같은 글이 둘 이상이면 어느 것이 짝인지 알 수 없어 넣지 않는다
+    if (!cells.length) {
+      const seen: Record<string, HTMLElement | null> = {}
+      const add = (key: string, el: HTMLElement) => (seen[key] = key in seen ? null : el)
+      const its = Array.prototype.slice.call(slide.querySelectorAll(':scope > .s-body .it')) as HTMLElement[]
+      for (const el of its) if (text(el) && !el.parentElement?.closest('.it')) add('it:' + text(el), el)
+      const imgs = Array.prototype.slice.call(slide.querySelectorAll(':scope > .s-body img, :scope > .ix img')) as HTMLImageElement[]
+      // 그림은 data: 주소라 길다: 길이와 앞뒤 조각으로 가린다(같은 그림이면 같고, 다른 그림이 우연히 같을 일은 없다)
+      for (const el of imgs) if (el.src) add('img:' + el.src.length + el.src.slice(0, 48) + el.src.slice(-48), el)
+      for (const key in seen) if (seen[key]) out.push({ el: seen[key]!, keys: [key] })
+    }
     return out
   }
 
