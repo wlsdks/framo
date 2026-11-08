@@ -2493,63 +2493,33 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'rank': {
-          // 순위 바뀌기: 순위가 바뀌는 움직임이 곧 할 말이다. 지난 순위가 위에서부터 서고, 지금 칸의 항목들이 지난 순서 그대로
-          // (자기의 지난 줄에) 나타난다. 잠깐 머문 뒤 모두 함께 지금 자리로 옮겨 가고, 옮기는 동안 잇는 선이 왼쪽에서부터 같은
-          // 빠르기로 그어져 항목이 지나간 길이 선으로 남는다. 처음 든 항목은 아래에서 올라와 빈 줄을 채운다. 다 서면 바뀐 만큼(▲3)이 나온다.
-          // 좁은 칸(지난 목록과 선이 없다)에서는 지금 목록이 아래에서부터 차례로 선다. 자리는 움직임을 걸기 전에 잰다
+          // 순위 바뀌기: 순위가 바뀐 길이 곧 할 말이다. 지난 순위가 위에서부터 서고, 잇는 선이 왼쪽에서부터 한꺼번에 그어져 서로
+          // 엇갈린다(4위에서 1위로 치고 오르는 강조색 선이 이야기를 한다). 선이 오른쪽에 닿으면 지금 순위가 제자리에서 위부터
+          // 차례로 나타나고(선이 그 줄에 닿는 때), 다 서면 바뀐 만큼(▲3)이 나온다. 이름을 지난 줄에서 지금 줄로 옮기던 때는 옮기는 동안 이름끼리 서로
+          // 가로질러 글이 겹쳤고(듣는 분에게 화면이 깨진 것처럼 보였다), 지금 목록이 지난 순서로 먼저 떠 1위가 맨 아래에 있는 순간이 생겼다.
+          // 좁은 칸(지난 목록과 선이 없다)에서는 지금 목록이 위에서부터 선다. 자리는 움직임을 걸기 전에 잰다
           const board = one('.bk-ra-board')
           const now = $('.bk-ra-it')
           if (!board || !now.length) break
           fade(one('.bk-ra-l'), 0, 500)
           const links = one('.bk-ra-links')
           const wide = !!links && getComputedStyle(links).display !== 'none'
+          // 글은 날아오거나 미끄러지지 않고 제자리에서 나타난다(움직임은 선과 조각이 맡는다)
           if (!wide) {
             fade(one('.bk-ra-when.is-to'), 60, 500)
-            items('.bk-ra-it', 120, (el, at) => rise(el, at, L.y * 0.5))
+            items('.bk-ra-it', 120, (el, at) => fade(el, at, 420))
             break
           }
           fade(one('.bk-ra-when.is-from'), 40, 500)
           const was = $('.bk-ra-wi')
-          was.forEach((el, i) => rise(el, 80 + i * 70, L.y * 0.4))
-          const tops = now.map((el) => spot(el, board).t)
-          // 줄의 높이는 모두 같다(rank.css의 1fr 줄): 지난 줄 a의 자리는 첫 줄에서 a줄 아래
-          const pitch = now.length > 1 ? (tops[now.length - 1] - tops[0]) / (now.length - 1) : 0
-          const shown = 80 + was.length * 70 + 260
-          const hold = 520
-          const go = shown + hold
-          const travel = levelName === 'lively' ? 1250 : 1000
-          fade(one('.bk-ra-when.is-to'), shown - 120, 500)
-          now.forEach((el, k) => {
-            const a = el.dataset.from === '' || el.dataset.from === undefined ? null : Number(el.dataset.from)
-            if (a === null) {
-              // 처음 든 항목: 옮기기가 끝날 무렵 아래에서 올라온다
-              rise(el, go + travel * 0.7, L.y * 0.8)
-              return
-            }
-            const dy = tops[0] + a * pitch - tops[k]
-            const total = go + travel - shown
-            const leave = (go - shown) / total
-            // 옮기는 동안 강조할 항목 밖의 것은 옅어진다: 자리를 바꾸며 서로 지나칠 때 글이 겹쳐도 오르는 하나가 또렷하게 읽힌다
-            const pass = el.classList.contains('is-hl') ? 1 : 0.35
-            run(
-              anims,
-              el,
-              [
-                { opacity: 0, translate: `0 ${dy}px`, offset: 0, easing: OUT },
-                { opacity: 1, translate: `0 ${dy}px`, offset: 360 / total },
-                { opacity: 1, translate: `0 ${dy}px`, offset: leave, easing: CARRY },
-                { opacity: pass, offset: leave + (1 - leave) * 0.5 },
-                { opacity: 1, translate: '0px 0px', offset: 1 },
-              ],
-              s(shown),
-              { easing: 'linear', duration: d(total) },
-            )
-          })
-          // 선은 항목이 옮겨 가는 동안 왼쪽에서부터 그어진다(같은 때, 같은 이징): 선 끝이 항목을 따라간다. 선마다 점선 길이(dasharray)로
-          // 긋지 않고 선의 띠 전체를 왼쪽부터 걷는다: 띠는 늘여 그린 그림(preserveAspectRatio none)이라 굵기를 지키는 선(non-scaling-stroke)의
-          // 점선 길이가 화면 px로 읽혀, 긋는 동안 선이 여러 토막의 점선으로 보였다
+          was.forEach((el, i) => fade(el, 80 + i * 70, 420))
+          const go = 80 + was.length * 70 + 300
+          const travel = levelName === 'lively' ? 1100 : 900
           run(anims, links!, [{ clipPath: 'inset(-8px 100% -8px 0)' }, { clipPath: 'inset(-8px 0 -8px 0)' }], s(go), { easing: CARRY, duration: d(travel) })
-          for (const mv of $('.bk-ra-mv')) fade(mv, go + travel + 80, 500)
+          const land = go + travel * 0.8
+          fade(one('.bk-ra-when.is-to'), land - 120, 400)
+          now.forEach((el, k) => fade(el, land + k * 60, 420))
+          for (const mv of $('.bk-ra-mv')) fade(mv, land + now.length * 60 + 160, 500)
           break
         }
         case 'spread': {

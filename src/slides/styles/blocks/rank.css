@@ -137,12 +137,6 @@
   font-weight: 600;
 }
 
-/* 강조할 항목: 이름과 바뀐 만큼, 번호까지 강조색(답 한 줄). 발표할 때 자리를 옮기며 다른 항목을 지나칠 때 그 위로 지나간다 */
-.bk-ra-it.is-hl {
-  position: relative;
-  z-index: 1;
-}
-
 /* 강조할 항목: 이름과 바뀐 만큼, 번호까지 강조색(답 한 줄) */
 .bk-ra-it.is-hl :is(.bk-ra-t, .bk-ra-mv, .bk-ra-no) {
   color: var(--accent);
