@@ -3,12 +3,13 @@
 // Chrome DevTools Protocol(Node 내장 WebSocket)로 다룬다. 연결은 이 PC 안(127.0.0.1의 디버그 포트)뿐이고,
 // 브라우저는 매번 빈 임시 프로필로 띄워 쓰는 사람의 크롬 프로필과 화면을 건드리지 않는다.
 //
-//   npm run look -- shot  <주소> [--size 1280x600] [--wait 2000] [--scrollbars] [--out a.png]
+//   npm run look -- shot  <주소> [--size 1280x600] [--wait 2000] [--scrollbars] [--run a.js] [--out a.png]
 //   npm run look -- check [--base http://localhost:5199] [--seeds 1-4] [--themes white,navy,serif] [--large]
 //   npm run look -- frame --only cover,kpi [--base …]
 //   npm run look -- film  <갤러리 주소> --slide 0 [--level lively] [--every 300] [--count 12] [--out film.png]
 //
-// shot   한 화면을 찍는다. --scrollbars는 윈도우처럼 늘 보이는 스크롤바를 흉내 낸다.
+// shot   한 화면을 찍는다. --scrollbars는 윈도우처럼 늘 보이는 스크롤바를 흉내 낸다. --run은 찍기 전에 페이지에서 돌릴 스크립트 파일
+//        (async 함수의 몸통. 개발 서버의 모듈을 import('/src/…')로 불러 발표를 만들고 편집기를 열거나 단추를 누른다). 돌려준 값은 출력한다.
 // check  부품 조합(set=combos)을 조건마다 열어 checkCombos()와 checkAssembly()를 돌린다. 문제가 있으면 1로 끝난다.
 // frame  레이아웃의 모든 모양(variants=1)을 두 테마, 명조, 큰 글자, 편집 화면에서 열어 checkFrame()을 돌린다.
 // film   갤러리의 장 하나를 playSlide로 움직이며 every ms마다 찍어 한 장의 필름 띠로 묶는다(모션 검토).
@@ -149,6 +150,10 @@ async function shot(o) {
   try {
     await page.go(url, Number(o.wait ?? 2000))
     if (o.scrollbars) await page.eval(SCROLLBARS)
+    if (o.run) {
+      const said = await page.eval(`(async () => {\n${readFileSync(o.run, 'utf8')}\n})()`)
+      if (said !== undefined) console.log(typeof said === 'string' ? said : JSON.stringify(said, null, 2))
+    }
     const out = o.out || 'shot.png'
     writeFileSync(out, await page.shot())
     console.log(out)

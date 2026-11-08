@@ -167,7 +167,7 @@ describe('AI에게 부탁', () => {
     expect((await post({ ...target, deck: 'd00000000' })).status).toBe(404)
     expect((await post({ ...target, slide: 's00000000' })).status).toBe(404)
     // 컴포넌트 장에만 맞는 부탁은 다른 장에 받지 않는다 (예시 발표의 표지)
-    expect(shape.slides[0].layout).not.toBe('compose')
+    expect(shape.slides[0]).not.toMatchObject({ layout: 'compose' })
     expect((await post({ ...target, ask: 'slide_compose' })).status).toBe(400)
     // 다른 웹사이트는 머리글이 없어서 막힌다
     expect((await call('/__html-maker/ai/asks', 'POST', target, {})).status).toBe(403)

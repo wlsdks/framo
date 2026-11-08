@@ -4,7 +4,7 @@ import type { AskError, AskId, AskRun } from './asks'
 import { askRun, cancelAsk } from './client'
 import { pollAsk } from './askPoll'
 import { startSharedAsk } from './askStart'
-import { shapeSlideId, toShape } from './share'
+import { shapeSlideId, toShape, type ShapeOver } from './share'
 
 const POLL_MS = 900
 
@@ -31,14 +31,17 @@ export interface AiAsk {
 
 /**
  * 'AI에게 부탁'. 로컬 서버가 이 PC의 Claude Code를 띄워 부탁을 전하고, 제안이 오면 알려 준다.
- * share는 발표의 AI 공유를 켜는 법(편집 상태가 넘겨 준다). ai/는 편집 상태(store)를 가져오지 않는다
+ * share는 발표의 AI 공유를 켜는 법(편집 상태가 넘겨 준다). ai/는 편집 상태(store)를 가져오지 않는다.
+ * measure는 편집기가 그린 장에서 잰 넘침(useAiShare와 같다): 부탁하기 바로 전의 모양에도 넘친 장이 보이게
  */
-export function useAiAsk(deck: Deck, share: () => void): AiAsk {
+export function useAiAsk(deck: Deck, share: () => void, measure?: (deck: Deck) => ShapeOver): AiAsk {
   const [job, setJob] = useState<AskJob | null>(null)
   const latest = useRef(deck)
   latest.current = deck
   const shareRef = useRef(share)
   shareRef.current = share
+  const measureRef = useRef(measure)
+  measureRef.current = measure
   // 서버가 받기 전에 그만두기를 누르면, 늦게 돌아온 응답이 부탁을 되살리지 않게
   const turn = useRef(0)
 
@@ -50,7 +53,7 @@ export function useAiAsk(deck: Deck, share: () => void): AiAsk {
     setJob({ ...base, id: '', state: 'running', step: 'starting' })
     // AI가 부탁을 들어주려면 모양을 봐야 한다. 부탁을 누른 것이 보여 주겠다는 뜻이라 공유를 켠다 (끄기는 위쪽 AI 단추에서)
     if (!d.aiShare) shareRef.current()
-    const run = await startSharedAsk(toShape(d), ask, slide ? shapeSlideId(slide) : null, () => mine === turn.current)
+    const run = await startSharedAsk(toShape(d, measureRef.current?.(d)), ask, slide ? shapeSlideId(slide) : null, () => mine === turn.current)
     if (!run) return
     if (typeof run === 'string') return void fail(run)
     if (mine !== turn.current) return void cancelAsk(run.id)
