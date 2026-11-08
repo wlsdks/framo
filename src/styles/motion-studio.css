@@ -402,6 +402,38 @@
   background: var(--sel-soft);
 }
 
+/* 고른 모션 그래픽의 구간 줄: 줄 아래에 구간마다 얇은 막대 하나 */
+.ms-tl-row.has-parts {
+  grid-template-rows: 32px auto;
+  height: auto;
+}
+
+.ms-parts {
+  grid-column: 1 / -1;
+  padding-bottom: 6px;
+}
+
+.ms-part-row {
+  display: grid;
+  grid-template-columns: var(--lane-l) minmax(0, 1fr);
+  align-items: center;
+  height: 20px;
+}
+
+.ms-part-l {
+  overflow: hidden;
+  padding: 0 10px 0 52px;
+  color: var(--ink-3);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-part-row .ms-bar {
+  height: 4px;
+  border-radius: 2px;
+}
+
 .ms-tl-row.is-dragging {
   position: relative;
   z-index: 4;

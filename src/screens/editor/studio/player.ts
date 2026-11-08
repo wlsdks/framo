@@ -18,6 +18,8 @@ export interface Lane {
   end: number
   /** 몇 번째 누를 때 나오는지 (0은 장이 나올 때) */
   step: number
+  /** 모션 그래픽의 구간(맺힘, 번짐, 모임 …): 고른 줄 아래에 구간마다 한 줄로 */
+  parts?: { name: string; start: number; end: number }[]
 }
 
 export interface Plan {
@@ -56,8 +58,33 @@ function laneOf(a: Animation): string {
   return 'body'
 }
 
+/** 모션 그래픽 구간의 이름(시간표에 보이는 말) */
+const PART_NAMES: Record<string, string> = { seed: '맺힘', spread: '번짐', gather: '모임', resolve: '또렷해짐', write: '글', pull: '물러남', hold: '머묾' }
+
+/**
+ * 모션 그래픽의 시계(장면 전체에 하나)에서 구간마다의 때를 읽는다: 레시피의 구간(data-script)을 시계의 길이에 맞춰 늘이고 줄인다.
+ * 장면이 한 막대 하나로만 보이면 3초 동안 무엇이 일어나는지 알 수 없었다
+ */
+function cineParts(a: Animation): Lane['parts'] {
+  const target = a.effect instanceof KeyframeEffect ? a.effect.target : null
+  if (!(target instanceof HTMLElement) || !target.matches('.bk-cn[data-script]')) return undefined
+  try {
+    const s = JSON.parse(target.dataset.script!) as { total: number; spans: { kind: string; start: number; end: number }[] }
+    const t = timing(a)
+    const k = (t.end - t.start) / Math.max(1, s.total)
+    return s.spans.map((p) => ({ name: PART_NAMES[p.kind] ?? p.kind, start: t.start + p.start * k, end: t.start + p.end * k }))
+  } catch {
+    return undefined
+  }
+}
+
 /** 실제로 건 움직임에서 시간표를 만든다 */
 function readPlan(slide: Slide, anims: Animation[]): Plan {
+  const parts = new Map<string, NonNullable<Lane['parts']>>()
+  for (const a of anims) {
+    const p = cineParts(a)
+    if (p) parts.set(laneOf(a), p)
+  }
   const spans = new Map<string, { start: number; end: number }>()
   for (const a of anims) {
     const id = laneOf(a)
@@ -69,7 +96,7 @@ function readPlan(slide: Slide, anims: Animation[]): Plan {
   const add = (id: string, name: string, step = 0, block?: string) => {
     const span = spans.get(id)
     // 움직이지 않는 컴포넌트(움직임 없음)도 줄은 둔다: 차례를 바꾸고 고를 수 있게. 막대는 없다
-    lanes.push({ id, name, step, block, start: span?.start ?? -1, end: span?.end ?? -1 })
+    lanes.push({ id, name, step, block, start: span?.start ?? -1, end: span?.end ?? -1, ...(parts.has(id) ? { parts: parts.get(id) } : {}) })
   }
   if (spans.has('head')) add('head', '제목')
   if (slide.layout === 'compose') {

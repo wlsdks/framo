@@ -284,7 +284,7 @@ function SortRow({
   return (
     <div
       ref={setNodeRef}
-      className={cx('ms-tl-row', on && 'is-on', hot && 'is-hot', isDragging && 'is-dragging', solo && 'is-solo')}
+      className={cx('ms-tl-row', on && 'is-on', hot && 'is-hot', isDragging && 'is-dragging', solo && 'is-solo', on && lane.parts && 'has-parts')}
       style={{ transform: DndCss.Translate.toString(transform), transition }}
       onPointerEnter={() => onHot(lane.block!)}
       onPointerLeave={() => onHot(null)}
@@ -315,6 +315,19 @@ function SortRow({
       <div className="ms-track" onClick={onSelect}>
         <Bar lane={lane} span={span} />
       </div>
+      {/* 고른 모션 그래픽은 구간마다 한 줄씩 펼친다(맺힘, 번짐, 모임 …) */}
+      {on && lane.parts && (
+        <div className="ms-parts">
+          {lane.parts.map((p, i) => (
+            <div key={i} className="ms-part-row">
+              <span className="ms-part-l">{p.name}</span>
+              <div className="ms-track">
+                <Bar lane={{ ...lane, start: p.start, end: p.end, parts: undefined }} span={span} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
