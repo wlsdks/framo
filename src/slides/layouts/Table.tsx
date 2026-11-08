@@ -33,7 +33,7 @@ export function Table() {
   return (
     <>
       <Head />
-      <div className="s-body tb" data-n={items.length} style={style}>
+      <div className="s-body tb" data-n={items.length} data-cols={cols.length} style={style}>
         <div className="tb-row tb-headrow">
           {cols.map((c) =>
             // 발표할 때 빈 칸은 그리지 않아서(fields.tsx) 빈 머리말과 빈 칸은 그 자리에 빈 칸을 둔다: 비우면 뒤 칸이 앞 열로 당겨져
