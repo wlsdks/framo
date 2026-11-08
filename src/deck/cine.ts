@@ -136,8 +136,9 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
     recipe: {
       frame: 'mark',
       material: 'particles',
-      // 번짐이 끝나기 전에 모임이 시작한다(볼 곳 없는 먼지 구간을 두지 않는다). 글자는 생동감 1.9초, 차분하게 1.5초에 읽힌다
-      phases: phases(['seed', 350], ['spread', 800, 100], ['gather', 1200, 400], ['resolve', 550, 250], ['write', 900, 200], ['pull', 1900, 800]),
+      // 번짐이 끝나기 전에 모임이 시작한다(볼 곳 없는 먼지 구간을 두지 않는다). 큰 글자는 생동감 1.9초, 차분하게 1.5초에 읽힌다
+      // 큰 글자가 맺히는 동안 제목이 써지기 시작한다(이름이 2.7초에야 읽혔다, 감성 검수)
+      phases: phases(['seed', 350], ['spread', 800, 100], ['gather', 1200, 400], ['resolve', 550, 250], ['write', 900, 450], ['pull', 1900, 800]),
       particles: { amount: 'many', size: 1, tone: 'ink', depth: 0.7, trail: true, spread: 'round' },
       shape: { kind: 'glyph', field: 'glyph' },
       light: true,
@@ -215,7 +216,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
     recipe: {
       frame: 'line',
       material: 'line',
-      phases: phases(['seed', 300], ['gather', 1400, 150], ['resolve', 400, 200], ['write', 500, 150]),
+      phases: phases(['seed', 300], ['gather', 1600, 150], ['resolve', 400, 200], ['write', 500, 150]),
       particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.3, trail: false, spread: 'side' },
       shape: { kind: 'line' },
       light: false,
@@ -227,7 +228,8 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
         { key: 'before', enter: 'settle', on: 'seed', lag: 0.4 },
         { key: 'label', enter: 'settle', on: 'seed', lag: 0.6 },
         { key: 'after', enter: 'carry', on: 'gather', answer: true },
-        { key: 'note', enter: 'settle', on: 'write' },
+        // 닿을 곳은 처음부터 보인다(끝 이름이 마지막에 켜지면 어디로 가는지 모른 채 선이 달렸다, 감성 검수)
+        { key: 'note', enter: 'settle', on: 'seed', lag: 0.7 },
       ],
       handoff: false,
       loop: false,

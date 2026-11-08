@@ -362,7 +362,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
    * 장면을 만든다: 칸과 글의 자리를 재고, 입자 n개의 씨앗 값과 모일 자리를 정한다. 재는 동안에는 카메라를 잠깐 풀어 둔다
    * (배율이 걸린 채로 재면 글의 자리가 어긋난다)
    */
-  function build(el: HTMLElement, s: CineScript, n: number, host: { x: number; y: number; w: number; h: number }, kz: number, dark: boolean): Scene {
+  function build(el: HTMLElement, s: CineScript, n: number, host: { x: number; y: number; w: number; h: number }, kz: number, dark: boolean, lively: boolean): Scene {
     const R = rng((s.seed * 7919 + 13) >>> 0)
     const er = el.getBoundingClientRect()
     const cw = el.offsetWidth || er.width / kz
@@ -387,7 +387,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
         const bw = el.querySelector<HTMLElement>('[data-cn="before"]')
         const bc = bw && /\S/.test(bw.textContent || '') ? countOf(bw) : undefined
         const dx = bw ? (bw.getBoundingClientRect().left - wr.left) / kz : -cw * 0.6
-        tb.from = { el: bw, dx, value: bc ? bc.value : null, clear: bw ? clamp((bw.getBoundingClientRect().width / kz + 16) / Math.max(1, Math.abs(dx))) : 0.2 }
+        tb.from = { el: bw, dx, value: bc ? bc.value : null, clear: bw ? clamp((bw.getBoundingClientRect().width / kz + 72) / Math.max(1, Math.abs(dx))) : 0.2 }
       }
       texts.push(tb)
     }
@@ -408,7 +408,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const mode: Scene['mode'] = s.material === 'wash' ? 'wash' : s.material === 'threads' ? 'threads' : s.material === 'line' ? 'pen' : spans.spread ? 'burst' : 'scatter'
     // 번지는 크기: 뒤에 모임이 있으면 장의 한가운데를 채울 만큼, 번짐으로 끝나면 장 끝 너머까지
     const far = Math.hypot(Math.max(fx, host.w - fx), Math.max(fy, host.h - fy))
-    const reach = spans.gather ? Math.min(host.w, host.h) * 0.46 : far * 1.05
+    // 모이기 전의 구름은 장의 한쪽에 머물게(장 절반을 덮으면 흰 바탕에서 그을음으로 읽혔다, 감성 검수). 차분하게는 같은 안무의 작은 판
+    const reach = (spans.gather ? Math.min(host.w, host.h) * 0.38 : far * 1.05) * (lively || !spans.gather ? 1 : 0.85)
     const ang = new Float32Array(n)
     const rad = new Float32Array(n)
     const z = new Float32Array(n)
@@ -567,8 +568,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const threads = new Float32Array(K * 8)
     for (let k = 0; k < K; k++) {
       const side = R() < 0.5 ? -1 : 1
-      const y0 = oy + R() * ch * 1.2 - ch * 0.1
       const y1 = wy + runs![k * 3 + 2]
+      const y0 = y1 + (R() - 0.5) * ch * 0.5
       const len0 = host.w * (0.1 + 0.3 * R())
       const len1 = runs![k * 3 + 1] - runs![k * 3]
       threads[k * 8] = y0
@@ -819,10 +820,11 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       const u = carry(p)
       const f = t.from
       const clear = f ? f.clear : 0.2
-      st.opacity = String(smooth(clear * 0.5, clear, u))
+      st.opacity = String(smooth(clear * 0.85, clear * 1.2, u))
       st.transform = f && u < 1 ? `translateX(${(f.dx * (1 - u)).toFixed(1)}px)` : ''
-      if (t.count) rollTo(t.count, lerp(f?.value ?? 0, t.count.value, u))
-      const dim = smooth(clear * 0.3, clear, u)
+      // 지금 값을 벗어난 뒤부터 굴러간다(붙은 채 굴러가면 두 값이 한 낱말로 읽혔다, 감성 검수)
+      if (t.count) rollTo(t.count, lerp(f?.value ?? 0, t.count.value, clamp((u - clear) / Math.max(0.01, 1 - clear))))
+      const dim = smooth(clear * 0.5, clear * 1.2, u)
       if (f?.el) f.el.style.color = dim <= 0 ? 'var(--ink)' : dim >= 1 ? '' : `color-mix(in srgb, var(--ink) ${((1 - dim) * 100).toFixed(1)}%, var(--ink-3))`
       return
     }
@@ -1187,7 +1189,7 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         return done(null)
       }
       unzoom()
-      scene = build(el, s, n, box, kz, dark)
+      scene = build(el, s, n, box, kz, dark, lively)
       xs = new Float32Array(n * 5 * (s.trail && painter?.mode === 'gl' ? 3 : 1))
       if (cam) applyCam(zoom(s, 0), scene.fx - scene.ox, scene.fy - scene.oy, null, 0, 0)
       return done(true)
@@ -1331,25 +1333,13 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
           }
           w.closePath()
         }
-        const A = c.dark ? 0.55 : 1
+        const A = c.dark ? 0.85 : 1
         // 안: 옅은 먹, 마르듯 걷힌다
         outline(R0, 0)
         w.fillStyle = rgbCss(ink.c, 0.05 * A * env * (1 - smooth(0.1, 0.55, sp)))
         w.fill()
         w.save()
         w.clip()
-        // 지나온 자리의 물때 두 겹(결): 가늘고 옅게, 흐리게
-        w.filter = 'blur(1.5px)'
-        for (const [m, turn] of [
-          [0.42, 1.7],
-          [0.7, 3.1],
-        ]) {
-          if (k * m * c.reach < 12) continue
-          outline(R0 * m, turn)
-          w.strokeStyle = rgbCss(ink.c, 0.14 * A * env * (1 - smooth(0.3, 0.85, sp)))
-          w.lineWidth = 5
-          w.stroke()
-        }
         // 테두리: 짙은 먹이 가장자리에 모인다. 바깥 끝은 또렷하고(종이에 멈춘 자리) 안으로 갈수록 풀린다: 테두리 안쪽만 남기고 흐리게 긋는다
         const rim = R0 * 0.07 + 8
         outline(R0, 0)
@@ -1389,14 +1379,16 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       const K = c.threads.length / 8
       for (let k = 0; k < K; k++) {
         const o = k * 8
-        const g = carry(clamp((e - G.start - c.threads[o + 6] * len) / (len * 0.62)))
+        // 장 밖에서 빠르게 들어와 천천히 내려앉는다(힘을 모으는 첫 박자가 있으면 처음 0.3초가 빈 장이었다, 필름)
+        const g = out(clamp((e - G.start - c.threads[o + 6] * len) / (len * 0.62)))
         if (g <= 0) continue
         // 높이는 건너오며 천천히 맞춘다(옆으로 건너오며 줄을 선다)
         const gy = smooth(0, 0.85, g)
         const y = lerp(c.threads[o], c.threads[o + 1], gy)
         const cx = lerp(c.threads[o + 2], c.threads[o + 3], g)
         const l = lerp(c.threads[o + 4], c.threads[o + 5], g)
-        let a = smooth(0, 0.1, g) * c.threads[o + 7] * lerp(0.55, 1, g)
+        // 건너오는 동안은 옅고, 닿을수록 짙다: 오가는 선보다 모여 선 문장이 보이게
+        let a = smooth(0, 0.1, g) * c.threads[o + 7] * lerp(0.3, 1, g * g)
         // 글이 맺히는 만큼 선은 걷힌다(글 아래로 스며든다)
         if (pr > 0) a *= 1 - smooth(0.05, 0.85, pr)
         if (a <= 0.02) continue
@@ -1447,15 +1439,15 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         m++
       }
       for (let i = 0; i < count; i++) {
-        if (ink2 && i % 5 > 1) continue
+        if (ink2 && i % 3) continue
         particle(c, i, e, tmp)
         if (tmp[3] <= 0.004) continue
-        put(i, ink2 ? tmp[2] * 2.3 : tmp[2], ink2 ? Math.min(1, tmp[3] * 2.1) * 0.92 : Math.min(1, tmp[3]) * 0.8)
+        put(i, ink2 ? tmp[2] * 1.8 : tmp[2], ink2 ? Math.min(1, tmp[3] * 2.1) * 0.92 : Math.min(1, tmp[3]) * 0.8)
         if (moving && i % 2 === 0) {
           for (let g = 1; g <= 2; g++) {
             particle(c, i, e - g * 34, tmp)
             if (tmp[3] <= 0.004) continue
-            put(i, (ink2 ? tmp[2] * 2.3 : tmp[2]) * (1 - 0.15 * g), Math.min(1, tmp[3]) * (ink2 ? 0.88 : 0.8) * (g === 1 ? 0.42 : 0.18))
+            put(i, (ink2 ? tmp[2] * 1.8 : tmp[2]) * (1 - 0.15 * g), Math.min(1, tmp[3]) * (ink2 ? 0.88 : 0.8) * (g === 1 ? 0.42 : 0.18))
           }
         }
       }
