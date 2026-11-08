@@ -17,7 +17,7 @@ import { validAsk, type AskError } from '../src/ai/asks'
 import { isObj, onlyKeys } from '../src/ai/guards'
 import { isOpCode, MAX_OPS, parseRequest, type ChangeRequest, type OpCode } from '../src/ai/ops'
 import { AI_PREFIX, DECK_ID, deckOfFile, REQUEST_ID, RESULT_FORMAT, SHARE_SUBDIRS, type ResultStatus, type ShareSubdir } from '../src/ai/protocol'
-import { checkShape } from '../src/ai/share'
+import { checkShape, isPrivate } from '../src/ai/share'
 import { ASK_RUN_ID, createAgent, type AgentCommand } from './agent'
 import { fromApp } from './guard'
 import { readJson, realDir } from './shareFiles'
@@ -237,13 +237,15 @@ export function createAiHandler(shareRoot: string, setup: AiSetup) {
     nodePath: setup.nodePath ?? process.execPath,
     find: setup.findAgent,
     timeoutMs: setup.agentTimeoutMs,
+    // AI에게 숨긴 장에는 장 부탁을 받지 않는다: AI가 그 장을 볼 수도 바꿀 수도 없다
     hasTarget(deck, slide) {
       const shape = readJson(join(dirs.decks, `${deck}.json`))
-      return checkShape(shape) && shape.deck === deck && (slide === null || shape.slides.some((s) => s.id === slide))
+      return checkShape(shape) && shape.deck === deck && (slide === null || shape.slides.some((s) => s.id === slide && !isPrivate(s)))
     },
     layoutOf(deck, slide) {
       const shape = readJson(join(dirs.decks, `${deck}.json`))
-      return checkShape(shape) && shape.deck === deck ? (shape.slides.find((s) => s.id === slide)?.layout ?? null) : null
+      const s = checkShape(shape) && shape.deck === deck ? shape.slides.find((x) => x.id === slide) : undefined
+      return s && !isPrivate(s) ? s.layout : null
     },
     // Claude Code가 끝날 때(요청 밖에서) 부르므로 여기서 던지면 서버가 꺼진다. 읽지 못하면 없는 것으로 친다
     requestIds(deck) {

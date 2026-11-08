@@ -88,6 +88,9 @@ const CODE_HELP: Record<Exclude<OpCode, 'applied'> | 'invalid', string> = {
   look_clash: '한 장에는 면 한 가지만 써요: 들여 쓰기(card)끼리, 또는 강조(bold) 하나와 바탕 없는(plain) 부품들. 혼자 장 너비를 다 쓰는 부품은 바탕 없이 그려져요.',
   link_clash: '이음표가 잇는 두 부품의 갈래(blocks[].kind)가 맞지 않아요. 더하기와 견주기는 같은 갈래끼리, 결과는 숫자나 한마디로 맺을 때만 써요.',
   scene_unfit: '이 장에 맞지 않는 장면이에요. 카탈로그 scenes[].layouts와 blocks를 보고 맞는 장면을 고르거나 빼세요.',
+  private:
+    '사람이 AI에게 숨긴 장이나 부품(get_shape의 private)을 바꾸거나 옮기게 돼요. 숨긴 장은 가리키지 말고(그 뒤에 장을 넣거나 옮기는 것은 돼요), ' +
+    '숨긴 부품이 있는 장에서는 그 자리, 크기, 나오는 차례가 바뀌지 않는 op만 보내세요(다른 부품의 바탕, 움직임, 모양은 돼요).',
   invalid: '꼴이 맞지 않아요: 그 op에 없는 키, 목록에 없는 값, 빠진 값, 너무 긴 글. key가 있으면 그 키를 고치세요. 이런 op가 하나라도 있으면 propose_changes는 제안을 통째로 받지 않아요.',
 }
 /** 빠진 op들의 코드마다 풀이 하나씩. op마다 붙이면 같은 글이 되풀이되어 AI가 읽을 것만 늘었다 */
@@ -104,13 +107,15 @@ const PROTOCOL_WORDS = [
   ...TEXT_STATES, 'filled',
   // 편집기가 그린 장에서 글이 넘친 장과 부품
   'over',
+  // 사람이 AI에게 숨긴 장과 부품 (자리만 보인다)
+  'private',
   // 장면 (장의 options.scene). id는 카탈로그에도 있지만 모양의 값이라 여기에도 적어 둔다
   'scene', ...SCENE_IDS,
   // 부품 장
   'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'reveal', 'each', 'all', 'from', 'order', 'link', 'linkBelow',
   // 목록과 결과
   'decks', 'slideCount', 'visibleSlides', 'request', 'status', 'results', 'ok', 'code', 'message', 'pending', 'applied', 'rejected', 'invalid', 'unknown',
-  'no_slide', 'has_content', 'out_of_range', 'not_for_layout', 'last_slide', 'unknown_role', 'no_change', 'not_reviewed', 'no_block', 'no_room', 'look_clash', 'link_clash', 'scene_unfit',
+  'no_slide', 'has_content', 'out_of_range', 'not_for_layout', 'last_slide', 'unknown_role', 'no_change', 'not_reviewed', 'no_block', 'no_room', 'look_clash', 'link_clash', 'scene_unfit', 'private',
   ...OP_NAMES,
   ...Object.values(MESSAGES),
   // 미리 돌려 보기(check_changes)와 결과의 풀이
@@ -264,7 +269,8 @@ const TOOLS = [
       '부품 장(layout compose)은 가로 12칸, 세로 12칸의 판을 부품들이 빈틈없이 나눠 덮은 장으로, blocks에 부품마다 id(b로 시작), 종류, 자리(x, y는 왼쪽 위 칸, w, h는 너비와 높이의 칸 수), 모양, 바탕, 움직임, 이음표(link는 오른쪽 선, linkBelow는 아래 선), 칸 상태가 읽는 차례로 나온다. ' +
         '부품의 when/speed/reveal/from은 기본값이 아닐 때만 나오고, 장의 options.order는 부품이 나오는 차례를 정했을 때만 나온다. ' +
         '장의 options.scene은 골라 둔 장면(카탈로그 scenes)이고, 그 장에 맞을 때만 나온다. ' +
-      '사람이 적은 글은 이 서버에 없다. 글의 내용을 추측하거나 사용자에게 붙여 달라고 하지 말고 모양만으로 판단한다.',
+      'private: true인 장과 부품은 사람이 AI에게 숨긴 것이라 자리만 보인다(장은 id와 hidden, 부품은 판의 자리 x, y, w, h). 무엇인지 추측하지 말고 그대로 둔다: 숨긴 장을 바꾸거나 옮기는 op, 숨긴 부품의 자리, 크기, 나오는 차례가 바뀌는 op는 건너뛴다(private). ' +
+        '사람이 적은 글은 이 서버에 없다. 글의 내용을 추측하거나 사용자에게 붙여 달라고 하지 말고 모양만으로 판단한다.',
     inputSchema: {
       type: 'object',
       properties: { deck: { type: 'string', description: 'list_decks의 deck (d로 시작하는 9글자)' } },
@@ -468,7 +474,7 @@ type Message = { jsonrpc?: unknown; id?: unknown; method?: unknown; params?: unk
 
 const INSTRUCTIONS =
   'Framo(gyeol)는 보고, 제안, 지식 공유 같은 발표를 만드는 앱이다. 이 서버로는 발표의 모양(장 구성, 레이아웃, 테마, 안내 문구)만 보고 바꾸자고 제안할 수 있다. ' +
-  '사람이 적은 글은 보안 때문에 이 서버에 없고, 사용자에게 붙여 달라고 하지도 않는다. ' +
+  '사람이 적은 글은 보안 때문에 이 서버에 없고, 사용자에게 붙여 달라고 하지도 않는다. 사람이 AI에게 숨긴 장과 부품(private)은 자리만 보이고 바꿀 수 없다. ' +
   '순서: list_decks → get_shape → get_catalog(deck을 주고, 부품 장이 없으면 blocks: false) → check_changes(미리 돌려 보고 고치기) → propose_changes → (사용자가 앱에서 적용) → get_result.'
 
 function toolText(value: unknown, isError = false) {

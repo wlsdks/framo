@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { copiedAiHidden } from '../deck/aiHidden'
 import { asCompose, boardSig, cleanDeckBlocks, copyBlocks, mapBlock, settleDeck, tidyLinks, withLayout } from '../deck/blocks'
 import { unknownParts } from '../deck/compat'
 import { pastedItems, withOneMore } from '../deck/edits'
@@ -399,10 +400,12 @@ export const useDeck = create<DeckState>((set, get) => {
         ...(blocks ? { blocks } : {}),
       }
       // 컴포넌트가 나오는 차례(options.order)는 컴포넌트 id로 적는다. 복제한 장의 컴포넌트는 새 id라서 옛 id를 그대로 두면
-      // 차례가 아무것도 가리키지 않아, 복제한 장만 정해 둔 차례 대신 읽는 차례로 나왔다. 같은 자리의 새 id로 바꾼다
-      if (source.blocks && blocks && source.options.order) {
+      // 차례가 아무것도 가리키지 않아, 복제한 장만 정해 둔 차례 대신 읽는 차례로 나왔다. 같은 자리의 새 id로 바꾼다.
+      // AI에게 숨긴 컴포넌트(options.aiHiddenBlocks)도 같다: 옛 id를 두면 복제한 장에서는 숨긴 컴포넌트가 AI에게 보인다
+      if (source.blocks && blocks) {
         const ids = new Map(source.blocks.map((b, i) => [b.id, blocks[i].id]))
-        copy.options = { ...copy.options, order: source.options.order.flatMap((id) => ids.get(id) ?? []) }
+        if (source.options.order) copy.options = { ...copy.options, order: source.options.order.flatMap((id) => ids.get(id) ?? []) }
+        copy.options = copiedAiHidden(copy.options, ids)
       }
       commit((d) => {
         const slides = [...d.slides]

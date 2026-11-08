@@ -10,7 +10,7 @@ import { OP_CODES, OP_KEYS } from '../src/ai/ops'
 import { MCP_TOOLS, RESULT_FORMAT } from '../src/ai/protocol'
 import { SECRET, secretDeck } from '../src/ai/secretDeck'
 import { TEXT_STATES, toShape } from '../src/ai/share'
-import { autoPlace, makeBlock } from '../src/deck/blocks'
+import { autoPlace, insertAt, makeBlock } from '../src/deck/blocks'
 import { makeSlide } from '../src/deck/generate'
 import { createSampleDeck } from '../src/deck/sample'
 import { sandboxArgs, sandboxTight } from './server'
@@ -67,6 +67,11 @@ beforeAll(async () => {
     items: decision.items.map((item) => ({ ...item, title: SECRET, body: SECRET })),
   })!
   example.slides.push({ ...makeSlide('compose'), fields: { title: SECRET }, blocks })
+  // 사람이 AI에게 숨긴 것: 비밀을 적은 숫자 컴포넌트(옆의 글은 보인다)와 통째로 숨긴 장
+  const secretNumber = { ...makeBlock('number'), fields: { label: SECRET, value: SECRET, note: SECRET.repeat(40) } }
+  const shut = insertAt(autoPlace([], secretNumber)!, { at: secretNumber.id, side: 'right' }, { ...makeBlock('text'), fields: { body: '글' } })!
+  example.slides.push({ ...makeSlide('compose'), fields: { title: '제목' }, blocks: shut, options: { aiHiddenBlocks: [secretNumber.id] } })
+  example.slides.push({ ...makeSlide('statement'), fields: { title: SECRET }, options: { aiHidden: true, scene: 'answer' } })
   // 편집기가 잰 넘침: 둘째 장과 조건별 흐름 부품
   const shape = toShape(example, { slides: new Set([example.slides[1].id]), blocks: new Set([blocks[0].id]) })
   writeFileSync(join(share, 'decks', `${shape.deck}.json`), JSON.stringify(shape))
@@ -145,7 +150,8 @@ describe('MCP 서버', () => {
     const { value: list } = await tool('list_decks')
     const { value: shape } = await tool('get_shape', { deck: list.decks[0].deck })
     type Cells = { fields: Record<string, string>; items: Record<string, string>[] }
-    const cells = (x: Cells) => [...Object.values(x.fields), ...x.items.flatMap((it) => Object.values(it))]
+    // 숨긴 장과 컴포넌트에는 칸이 없다
+    const cells = (x: Cells) => (x.fields ? [...Object.values(x.fields), ...x.items.flatMap((it) => Object.values(it))] : [])
     const states = shape.slides.flatMap((s: Cells & { blocks?: Cells[] }) => [...cells(s), ...(s.blocks ?? []).flatMap(cells)])
     expect(states.length).toBeGreaterThan(50)
     expect(states.every((v: string) => v === 'filled' || (TEXT_STATES as readonly string[]).includes(v))).toBe(true)
@@ -157,6 +163,33 @@ describe('MCP 서버', () => {
     const res = await rpc('tools/list')
     const get = (res.result!.tools as { name: string; description: string }[]).find((t) => t.name === 'get_shape')!
     for (const word of ['1-10', '281+', 'lines', 'over: true']) expect(get.description).toContain(word)
+  })
+
+  it('AI에게 숨긴 장과 컴포넌트는 자리만 보이고, 바꾸자고 하면 private으로 알린다', async () => {
+    const { value: list } = await tool('list_decks')
+    const { value: shape, isError } = await tool('get_shape', { deck: list.decks[0].deck })
+    expect(isError).toBe(false)
+    const last = shape.slides.at(-1)
+    expect(Object.keys(last).sort()).toEqual(['hidden', 'id', 'private'])
+    const compose = shape.slides.at(-2)
+    expect(compose.blocks.map((b: Record<string, unknown>) => (b.private ? Object.keys(b).sort().join() : b.type))).toEqual(['h,private,w,x,y', 'text'])
+    // 비밀을 적은 숫자의 종류, 길이, 비밀은 나가지 않는다
+    expect(JSON.stringify(compose)).not.toContain('number')
+    expect(JSON.stringify(compose)).not.toContain('281+')
+    const res = await tool('check_changes', {
+      deck: shape.deck,
+      ops: [
+        { op: 'set_options', slide: last.id, tone: 'invert' },
+        { op: 'add_slide', after: last.id, layout: 'points' },
+        { op: 'set_size', slide: compose.id, block: compose.blocks[1].id, w: 8 },
+        { op: 'set_block', slide: compose.id, block: compose.blocks[1].id, effect: 'rise' },
+      ],
+    })
+    expect(res.value.results.map((r: { code: string }) => r.code)).toEqual(['private', 'applied', 'private', 'applied'])
+    expect(res.value.help.private).toContain('숨긴')
+    const tools = (await rpc('tools/list')).result!.tools as { name: string; description: string }[]
+    expect(tools.find((t) => t.name === 'get_shape')!.description).toContain('private: true')
+    expect(raw.join('\n')).not.toContain(SECRET)
   })
 
   it('조건별 흐름도 실제 MCP 창구에서 모양만 보이고 질문과 경로의 글은 나가지 않는다', async () => {
@@ -225,7 +258,8 @@ describe('MCP 서버', () => {
     const { value: shape } = await tool('get_shape', { deck: list.decks[0].deck })
     // 비밀을 심은 덱: 표지의 맞는 장면만 나간다 (마지막 그물을 지난다)
     expect(shape.slides[0].options.scene).toBe('opening')
-    expect(shape.slides.slice(1).every((x: { options: Record<string, unknown> }) => x.options.scene === undefined)).toBe(true)
+    // 숨긴 장(private)은 고른 장면도 보이지 않는다
+    expect(shape.slides.slice(1).every((x: { private?: true; options: Record<string, unknown> }) => x.private || x.options.scene === undefined)).toBe(true)
     const { value: cat } = await tool('get_catalog')
     expect(cat.scenes.map((x: { id: string }) => x.id)).toEqual(['opening', 'answer', 'numbers', 'flow', 'compare', 'time', 'picture', 'closing'])
     const ok = await tool('propose_changes', {

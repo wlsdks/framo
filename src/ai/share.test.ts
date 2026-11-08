@@ -5,11 +5,18 @@ import { createDeck, makeSlide } from '../deck/generate'
 import { createSampleDeck } from '../deck/sample'
 import { SCENE_IDS, sceneFits, sceneOf, withScenes } from '../deck/scenes'
 import { LAYOUTS } from '../deck/layouts'
-import type { Block, LayoutId } from '../deck/types'
+import type { Block, LayoutId, Slide } from '../deck/types'
 import { parseOp } from './ops'
 import { HIGHLIGHT_MAX, HIGHLIGHT_MIN } from './protocol'
 import { SECRET, secretDeck } from './secretDeck'
-import { checkShape, onlyKnownStrings, TEXT_STATES, toShape } from './share'
+import { checkShape, isPrivate, onlyKnownStrings, shapeBlockId, shapeSlideId, TEXT_STATES, toShape as shapeOf, type ShapeBlock, type ShapeDeck, type ShapeSlide } from './share'
+
+/** 숨긴 장과 부품이 없는 발표의 모양: 장마다 레이아웃과 칸을 바로 읽는다 (숨긴 것은 share.test.ts의 'AI에게 숨기기'에서 본다) */
+type OpenShape = Omit<ShapeDeck, 'slides'> & { slides: (Omit<ShapeSlide, 'blocks'> & { blocks?: ShapeBlock[] })[] }
+const toShape = (...a: Parameters<typeof shapeOf>) => shapeOf(...a) as unknown as OpenShape
+
+/** 모양 파일의 키와 정해진 값 (MCP 서버의 PROTOCOL_WORDS 가운데 모양에 나오는 것) */
+const SHAPE_WORDS = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene', 'over']
 
 describe('모양만 고르기', () => {
   it('적은 글, 제목, 이름, 노트, 이미지, 원래 id가 하나도 들어가지 않는다', () => {
@@ -245,7 +252,7 @@ describe('모양만 고르기', () => {
 
   it('마지막 그물은 모르는 글자를 잡는다', () => {
     const shape = toShape(createSampleDeck())
-    const words = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene', 'over']
+    const words = SHAPE_WORDS
     expect(onlyKnownStrings(shape, words)).toBe(true)
     expect(onlyKnownStrings(toShape(withScenes(createSampleDeck(), true)), words)).toBe(true)
     expect(onlyKnownStrings(toShape(secretDeck()), words)).toBe(true)
@@ -358,6 +365,89 @@ describe('칸의 글 길이 (글자 수 구간)', () => {
     // 2판은 칸이 empty, filled, long 셋이었다. 앱이 발표를 열면 3판으로 다시 쓴다
     const old = { ...toShape(createSampleDeck()), version: 2 }
     expect(checkShape(old)).toBe(false)
+  })
+})
+
+describe('AI에게 숨기기', () => {
+  // 숫자(n) 옆에 인용(d), 그 아래 장 너비의 글(t). 숫자에 비밀을 적고 AI에게 숨긴다
+  const board = () => {
+    const b = (type: Block['type'], id: string, fields: Record<string, string> = {}): Block => ({ ...makeBlock(type), id, fields })
+    let blocks = insertAt(autoPlace([], b('number', 'n', { label: SECRET, value: `${SECRET}억 원`, note: SECRET.repeat(30) }))!, { at: 'n', side: 'right' }, b('quote', 'd', { quote: '인용할 말' }))!
+    blocks = withLink(insertAt(blocks, { at: null, side: 'below' }, b('text', 't', { body: '가나다' }))!, { id: 'n', dir: 'h' }, 'arrow')
+    return blocks
+  }
+  const deckWith = (options: Slide['options'], extra: Partial<Slide> = {}) => {
+    const deck = createSampleDeck()
+    const slide = { ...makeSlide('compose'), id: 'c1', blocks: board(), options: { order: ['t', 'n', 'd'], ...options }, ...extra }
+    return { ...deck, slides: [...deck.slides, slide] }
+  }
+
+  it('숨긴 컴포넌트는 판의 자리만 보이고 종류, 칸, 바탕, 넘침, id, 나오는 차례는 보이지 않는다', () => {
+    const deck = deckWith({ aiHiddenBlocks: ['n'] })
+    const shape = shapeOf(deck, { slides: new Set(), blocks: new Set(['n', 'd']) })
+    const slide = shape.slides.at(-1) as ShapeSlide
+    const n = board().find((b) => b.id === 'n')!.at!
+    expect(slide.blocks![0]).toEqual({ private: true, x: n.x, y: n.y, w: n.w, h: n.h })
+    // 보이는 컴포넌트는 그대로 (숫자 옆의 이음표도 숫자의 것이라 보이지 않는다)
+    expect(slide.blocks!.slice(1).map((b) => !isPrivate(b) && [b.type, b.over ?? false])).toEqual([['quote', true], ['text', false]])
+    // 나오는 차례에서 숨긴 컴포넌트의 해시 id는 빠진다
+    expect(slide.options.order).toEqual([shapeBlockId({ id: 't' }), shapeBlockId({ id: 'd' })])
+    const text = JSON.stringify(slide)
+    for (const word of [SECRET, 'number', shapeBlockId({ id: 'n' }), 'arrow', '281+']) expect(text).not.toContain(word)
+    expect(checkShape(shape)).toBe(true)
+    expect(onlyKnownStrings(shape, [...SHAPE_WORDS, 'private'])).toBe(true)
+  })
+
+  it('숨긴 컴포넌트 때문에만 맞는 장면은 보이지 않는다', () => {
+    // 숫자 장면은 숫자 컴포넌트가 있어야 맞는다: 숫자를 숨기면 그 장면을 보이는 것이 숫자가 있다고 알리는 셈이다
+    const open = shapeOf(deckWith({ scene: 'numbers' })).slides.at(-1) as ShapeSlide
+    expect(open.options.scene).toBe('numbers')
+    const shut = shapeOf(deckWith({ scene: 'numbers', aiHiddenBlocks: ['n'] }))
+    expect((shut.slides.at(-1) as ShapeSlide).options.scene).toBeUndefined()
+    expect(checkShape(shut)).toBe(true)
+  })
+
+  it('숨긴 슬라이드는 해시 id와 발표에서 뺐는지만 보인다', () => {
+    const deck = deckWith({ aiHidden: true, aiHiddenBlocks: ['n'] }, { hidden: true, purpose: '한 장 요약', fields: { title: SECRET } })
+    const shape = shapeOf(deck, { slides: new Set(['c1']), blocks: new Set(['n']) })
+    expect(shape.slides.at(-1)).toEqual({ id: shapeSlideId({ id: 'c1' }), private: true, hidden: true })
+    expect(JSON.stringify(shape.slides.at(-1))).not.toContain('compose')
+    expect(checkShape(shape)).toBe(true)
+    expect(onlyKnownStrings(shape, [...SHAPE_WORDS, 'private'])).toBe(true)
+    // 숨긴 슬라이드도 차례의 자리는 그대로다 (다른 장을 그 뒤에 넣을 수 있게)
+    expect(shape.slides).toHaveLength(deck.slides.length)
+  })
+
+  it('숨긴 것에 꼴 밖의 값이 붙으면 받지 않는다', () => {
+    const shape = shapeOf(deckWith({ aiHiddenBlocks: ['n'] }))
+    const at = shape.slides.length - 1
+    const bad = (fn: (b: Record<string, unknown>, s: Record<string, unknown>) => void) => {
+      const copy = structuredClone(shape) as unknown as { slides: (Record<string, unknown> & { blocks: Record<string, unknown>[] })[] }
+      fn(copy.slides[at].blocks[0], copy.slides[0])
+      return checkShape(copy)
+    }
+    expect(bad(() => {})).toBe(true)
+    expect(bad((b) => (b.type = 'number'))).toBe(false)
+    expect(bad((b) => (b.fields = {}))).toBe(false)
+    expect(bad((b) => (b.id = 'b12345678'))).toBe(false)
+    expect(bad((b) => (b.over = true))).toBe(false)
+    expect(bad((b) => (b.private = false))).toBe(false)
+    expect(bad((b) => (b.w = 13))).toBe(false)
+    // 숨긴 컴포넌트도 판을 덮는다: 자리를 빼거나 겹치면 받지 않는다
+    expect(bad((b) => (b.x = 6))).toBe(false)
+    // 숨긴 슬라이드: 해시 id와 hidden 말고는 받지 않는다
+    expect(bad((_, s) => ((s.private = true), delete s.layout))).toBe(false)
+    expect(bad((_, s) => { for (const k of Object.keys(s)) if (k !== 'id') delete s[k]; Object.assign(s, { private: true, hidden: false }) })).toBe(true)
+    expect(bad((_, s) => { for (const k of Object.keys(s)) if (k !== 'id') delete s[k]; Object.assign(s, { private: true, hidden: false, layout: 'cover' }) })).toBe(false)
+    expect(bad((_, s) => { for (const k of Object.keys(s)) if (k !== 'id') delete s[k]; Object.assign(s, { private: true, hidden: SECRET }) })).toBe(false)
+  })
+
+  it('없는 컴포넌트의 id, 꼴이 틀린 값은 숨긴 것으로 치지 않는다 (가져온 파일)', () => {
+    const shape = shapeOf(deckWith({ aiHiddenBlocks: [SECRET, 3, 'gone'] as unknown as string[], aiHidden: 'yes' as unknown as boolean }))
+    const slide = shape.slides.at(-1) as ShapeSlide
+    expect(slide.blocks!.every((b) => !isPrivate(b))).toBe(true)
+    expect(JSON.stringify(shape)).not.toContain(SECRET)
+    expect(checkShape(shape)).toBe(true)
   })
 })
 

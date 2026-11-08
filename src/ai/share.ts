@@ -38,6 +38,7 @@ import {
   whenOf, revealOf,
   BLOCK_REVEALS,
 } from '../deck/blocks'
+import { aiHiddenIds, slideAiHidden } from '../deck/aiHidden'
 import { AUDIENCES, BLUEPRINTS, DECK_TYPES, DURATIONS, METHODS } from '../deck/blueprints'
 import { readField, visibleItems } from '../deck/fields'
 import { LAYOUTS, LAYOUT_ORDER, placeOf, variantIds, variantOf } from '../deck/layouts'
@@ -87,8 +88,11 @@ export interface ShapeSlide {
   options: { highlight?: number; flip?: boolean; pane?: number; contain?: boolean; motion?: Motion; tone?: Tone; place?: Place; transition?: Transition; order?: string[]; scene?: SceneId; hideHead?: boolean; hideFoot?: boolean }
   /** 레이아웃 안의 모양 id. 카탈로그 layouts[].variants 중 하나, 한 가지뿐이면 'base' */
   variant: string
-  /** 부품 장(layout 'compose')만: 판(12×12)에 놓인 부품들, 읽는 차례(위에서 아래, 왼쪽에서 오른쪽)로. 부품의 종류, 자리, 바탕, 움직임과 칸의 글 길이만 */
-  blocks?: ShapeBlock[]
+  /**
+   * 부품 장(layout 'compose')만: 판(12×12)에 놓인 부품들, 읽는 차례(위에서 아래, 왼쪽에서 오른쪽)로. 부품의 종류, 자리, 바탕, 움직임과 칸의 글 길이만.
+   * 사람이 AI에게 숨긴 부품은 자리만(ShapePrivateBlock)
+   */
+  blocks?: (ShapeBlock | ShapePrivateBlock)[]
   /** 편집기가 그린 이 장에서 글이 넘쳤으면 true (편집기의 '글이 넘쳤어요'와 같은 잣대). 넘치지 않았거나 재지 못했으면 빠진다 */
   over?: true
 }
@@ -133,6 +137,28 @@ export interface ShapeBlock {
   over?: true
 }
 
+/**
+ * 사람이 AI에게 숨긴 장(deck/aiHidden.ts). 차례 속의 자리와 발표에서 뺐는지만 보인다: 레이아웃, 역할, 칸, 옵션은 없다.
+ * 장 id는 다른 장을 그 뒤에 넣거나 옮길 때 가리키라고 둔다. 이 장을 바꾸거나 옮기는 제안은 건너뛴다(private)
+ */
+export interface ShapePrivateSlide {
+  id: string
+  private: true
+  hidden: boolean
+}
+
+/** 사람이 AI에게 숨긴 부품: 판에서 차지한 자리만. 종류, 칸, 바탕, 움직임, 넘침, id는 없다(가리킬 수 없다) */
+export interface ShapePrivateBlock {
+  private: true
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+/** 숨긴 장이나 부품인지 */
+export const isPrivate = <T extends object>(v: T): v is Extract<T, { private: true }> => 'private' in v
+
 export interface ShapeDeck {
   format: typeof SHAPE_FORMAT
   version: typeof SHAPE_VERSION
@@ -150,7 +176,7 @@ export interface ShapeDeck {
   footer?: FooterMode
   transition?: Transition
   updatedAt: number
-  slides: ShapeSlide[]
+  slides: (ShapeSlide | ShapePrivateSlide)[]
 }
 
 const ALL_TYPES: DeckType[] = [...DECK_TYPES, 'blank']
@@ -352,7 +378,10 @@ export function toShape(deck: Deck, over: ShapeOver = NO_OVER): ShapeDeck {
     footer: footerOf(deck),
     transition: isOneOf(TRANSITIONS, deck.theme.transition) ? deck.theme.transition : 'auto',
     updatedAt: Math.round(deck.updatedAt) || 0,
-    slides: deck.slides.filter((s) => hasKey(LAYOUTS, s.layout)).map((s) => shapeSlide(deck, s, over)),
+    // AI에게 숨긴 장은 자리만: 레이아웃, 역할, 칸의 길이, 옵션, 넘침도 내보내지 않는다
+    slides: deck.slides
+      .filter((s) => hasKey(LAYOUTS, s.layout))
+      .map((s) => (slideAiHidden({ options: s.options ?? {} }) ? { id: shapeSlideId(s), private: true as const, hidden: !!s.hidden } : shapeSlide(deck, s, over))),
   }
 }
 
@@ -386,9 +415,12 @@ function shapeSlide(deck: Deck, slide: Slide, over: ShapeOver): ShapeSlide {
   if (isOneOf(TONES, o.tone) && o.tone !== 'base') options.tone = o.tone
   const place = placeOf(slide)
   if (place) options.place = place
-  // 부품 장은 모양에 보이는 부품(꼴을 맞춘 것)으로 맞는지 본다. 가져온 파일의 모르는 부품 때문에 맞는다고 보지 않게
+  // 부품 장은 모양에 보이는 부품(꼴을 맞춘 것)으로 맞는지 본다. 가져온 파일의 모르는 부품 때문에 맞는다고 보지 않게.
+  // AI에게 숨긴 부품도 빼고 본다: 숨긴 부품의 종류 때문에만 맞는 장면이 보이면 그 종류를 알리는 셈이고, 꼴 확인도 보이는 부품으로 본다
   const blocks = slide.layout === 'compose' ? byReading(cleanBlocks(slide.blocks)) : undefined
-  const scene = sceneOf({ layout: slide.layout, blocks, options: o })
+  const shut = aiHiddenIds({ options: o, blocks })
+  const shown = blocks?.filter((b) => !shut.has(b.id))
+  const scene = sceneOf({ layout: slide.layout, blocks: shown, options: o })
   if (scene) options.scene = scene
   const out: ShapeSlide = {
     id: shapeSlideId(slide),
@@ -404,9 +436,9 @@ function shapeSlide(deck: Deck, slide: Slide, over: ShapeOver): ShapeSlide {
   }
   if (blocks) {
     // 가져온 파일일 수 있어서 꼴부터 맞춘다 (모르는 부품, 넘치는 개수는 빼고, 판을 덮지 않는 자리는 다시 나눈다)
-    out.blocks = blocks.map((b) => shapeBlock(b, over))
-    // 나오는 차례는 장에 있는 부품의 해시 id로만 (지운 부품의 id가 남아 있으면 뺀다)
-    const byId = new Map(blocks.map((b) => [b.id, b]))
+    out.blocks = blocks.map((b) => (shut.has(b.id) ? { private: true as const, ...b.at! } : shapeBlock(b, over)))
+    // 나오는 차례는 장에 있는 부품의 해시 id로만 (지운 부품, AI에게 숨긴 부품의 id는 뺀다)
+    const byId = new Map(shown!.map((b) => [b.id, b]))
     const order = [...new Set(Array.isArray(o.order) ? o.order : [])].filter((id) => byId.has(id)).map((id) => shapeBlockId(byId.get(id)!))
     if (order.length) options.order = order
   }
@@ -450,7 +482,11 @@ function checkStates(v: unknown, fields: readonly FieldKind[]): boolean {
   return fields.every((f) => (f.image ? IMAGE_STATES : f.multiline ? TEXT_STATES : LINE_STATES).includes(v[f.key] as FieldState))
 }
 
+/** AI에게 숨긴 부품: 판 안의 자리만 */
+const checkPrivateBlock = (v: Record<string, unknown>): boolean => onlyKeys(v, ['private', 'x', 'y', 'w', 'h']) && isArea({ x: v.x, y: v.y, w: v.w, h: v.h })
+
 function checkBlock(v: unknown): boolean {
+  if (isObj(v) && v.private !== undefined) return v.private === true && checkPrivateBlock(v)
   if (!isObj(v) || !onlyKeys(v, ['id', 'type', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'reveal', 'from', 'variant', 'highlight', 'link', 'linkBelow', 'fields', 'items', 'over'])) return false
   if (v.over !== undefined && v.over !== true) return false
   // 자리는 판 안의 칸이고, 이음표는 선 건너편에 부품이 있는 쪽에만 (판 끝에는 이을 부품이 없다)
@@ -474,14 +510,19 @@ function checkBlock(v: unknown): boolean {
 
 function checkSlide(v: unknown): boolean {
   if (!isObj(v)) return false
+  // AI에게 숨긴 장: 해시 id와 발표에서 뺐는지만
+  if (v.private !== undefined)
+    return v.private === true && onlyKeys(v, ['id', 'private', 'hidden']) && typeof v.id === 'string' && OPAQUE_ID.test(v.id) && v.id[0] === 's' && typeof v.hidden === 'boolean'
   if (!onlyKeys(v, ['id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'variant', 'blocks', 'over'])) return false
   if (v.over !== undefined && v.over !== true) return false
-  let at: Block[] = []
+  // 보이는 부품(종류가 있는 것). 장면이 맞는지는 이것으로 본다 (toShape도 숨긴 부품을 빼고 본다)
+  let shown: Block[] = []
   if (v.blocks !== undefined) {
     if (v.layout !== 'compose' || !Array.isArray(v.blocks) || v.blocks.length > MAX_BLOCKS || !v.blocks.every((b) => checkBlock(b))) return false
-    // 부품들이 판을 빈틈없이, 겹치지 않게 나눠 덮는다 (빈 장은 부품이 없다)
-    at = (v.blocks as ShapeBlock[]).map((b, i) => ({ id: String(i), type: b.type, fields: {}, items: [], at: { x: b.x, y: b.y, w: b.w, h: b.h } }))
-    if (at.length && !tiles(at)) return false
+    // 부품들이 판을 빈틈없이, 겹치지 않게 나눠 덮는다 (빈 장은 부품이 없다). 숨긴 부품도 자리는 덮는다
+    const all = (v.blocks as (ShapeBlock | ShapePrivateBlock)[]).map((b, i) => ({ id: String(i), type: isPrivate(b) ? null : b.type, fields: {}, items: [], at: { x: b.x, y: b.y, w: b.w, h: b.h } }))
+    if (all.length && !tiles(all as Block[])) return false
+    shown = all.filter((b): b is typeof b & { type: BlockType } => b.type !== null)
   }
   if (typeof v.id !== 'string' || !OPAQUE_ID.test(v.id) || v.id[0] !== 's') return false
   if (!hasKey(LAYOUTS, v.layout)) return false
@@ -498,7 +539,7 @@ function checkSlide(v: unknown): boolean {
   if (o.hideHead !== undefined && typeof o.hideHead !== 'boolean') return false
   if (o.hideFoot !== undefined && typeof o.hideFoot !== 'boolean') return false
   // 장면은 목록의 id이고 이 장에 맞는 것만 (toShape도 맞을 때만 넣는다)
-  if (o.scene !== undefined && !(isScene(o.scene) && sceneFits({ layout: v.layout as LayoutId, blocks: at }, o.scene))) return false
+  if (o.scene !== undefined && !(isScene(o.scene) && sceneFits({ layout: v.layout as LayoutId, blocks: shown }, o.scene))) return false
   if (o.transition !== undefined && !(isOneOf(TRANSITIONS, o.transition) && o.transition !== 'auto')) return false
   if (o.order !== undefined) {
     if (v.layout !== 'compose' || !Array.isArray(o.order) || !o.order.length || o.order.length > MAX_BLOCKS) return false

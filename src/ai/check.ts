@@ -7,11 +7,12 @@
 // 앱에서 적용할 때와 다를 수 있는 것: 모양에 없는 것(노트, 글의 정확한 길이, 보고 구성이 미리 넣은 이름표)에 기대는 판단.
 // 노트만 있는 장은 대역에서 빈 장이고, 미리 넣은 이름표만 있는 칸은 대역에서 찬 칸이다.
 
+import { BLOCK_TYPES, BLOCKS, boardAreaH, boardFit } from '../deck/blocks'
 import { LAYOUTS } from '../deck/layouts'
 import type { Block, Deck, Item, ItemKey, Slide } from '../deck/types'
 import { isObj } from './guards'
 import { applyOps, OP_KEYS, parseOp, type Op, type OpCode } from './ops'
-import { shapeBlockId, shapeSlideId, TEXT_LENGTHS, TEXT_LINES, type FieldState, type ShapeBlock, type ShapeDeck, type ShapeSlide } from './share'
+import { isPrivate, shapeBlockId, shapeSlideId, TEXT_LENGTHS, TEXT_LINES, type FieldState, type ShapeBlock, type ShapeDeck, type ShapePrivateBlock, type ShapePrivateSlide, type ShapeSlide } from './share'
 
 /** 글자 수 구간마다 대역에 적는 글자 수: 구간 안의 흔한 길이 (281자 넘으면 320자) */
 const LENGTH_FILL = [8, 16, 32, 64, 120, 220, 320]
@@ -43,7 +44,14 @@ function fillItem(states: Record<string, FieldState>, i: number): Item {
   return it
 }
 
-function standInBlock(b: ShapeBlock, i: number): Block {
+/**
+ * AI에게 숨긴 부품의 대역이 될 종류: 항목이 없는 부품, 작은 부품부터. 숨긴 부품은 종류를 모르니 그 자리에 들어가는 것으로 세운다(fitPrivate).
+ * 대역이 그 자리보다 커야 하면 판을 다시 맞출 때 자리가 바뀌어, 앱에서는 되는 op도 숨긴 부품을 옮긴다고(private) 잘못 알렸다
+ */
+const PRIVATE_TYPES = BLOCK_TYPES.filter((t) => !BLOCKS[t].items).sort((a, b) => Number(!!BLOCKS[b].small) - Number(!!BLOCKS[a].small))
+
+function standInBlock(b: ShapeBlock | ShapePrivateBlock, i: number): Block {
+  if (isPrivate(b)) return { id: `x${i}`, type: PRIVATE_TYPES[0], fields: {}, items: [], at: { x: b.x, y: b.y, w: b.w, h: b.h } }
   const id = b.id ?? `x${i}`
   return {
     id,
@@ -87,13 +95,38 @@ function standInSlide(s: ShapeSlide): Slide {
   }
 }
 
+/** AI에게 숨긴 장의 대역: 아무것도 적지 않은 장. 숨긴 장을 가리키는 op는 앱처럼 private로 건너뛴다 */
+function standInPrivateSlide(s: ShapePrivateSlide): Slide {
+  return { id: s.id, layout: 'statement', purpose: '', section: '', fields: {}, items: [], hints: {}, guide: '', notes: '', options: { aiHidden: true }, ...(s.hidden ? { hidden: true } : {}) }
+}
+
+/** 숨긴 부품의 대역을 AI에게 숨긴 것으로 적고, 종류를 그 자리에 들어가는 것으로 고른다 */
+function fitPrivate(slide: Slide, shape: ShapeSlide, look: Pick<Deck, 'meta' | 'theme'>): Slide {
+  const blocks = slide.blocks ?? []
+  const shut = blocks.filter((_, i) => isPrivate(shape.blocks![i])).map((b) => b.id)
+  if (!shut.length) return slide
+  const fit = boardFit(boardAreaH(slide, look), blocks)
+  const sized = blocks.map((b) => {
+    if (!shut.includes(b.id) || !b.at) return b
+    const { w, h } = b.at
+    const type = PRIVATE_TYPES.find((t) => {
+      const x = { ...b, type: t }
+      return fit.minW(x) <= w && fit.minH(x, w) <= h
+    })
+    return type ? { ...b, type } : b
+  })
+  return { ...slide, blocks: sized, options: { ...slide.options, aiHiddenBlocks: shut } }
+}
+
 /** 모양으로 세운 대역 발표 */
 export function standInDeck(shape: ShapeDeck): Deck {
   // 발표 전체의 값($org 같은 칸)은 장마다 같은 값이 보인다. 어느 장에서든 찼으면 찬 것으로
   const meta: Record<string, string> = { org: '', presenter: '', date: '', contact: '', logo: '' }
-  for (const s of shape.slides)
+  for (const s of shape.slides) {
+    if (isPrivate(s)) continue
     for (const [k, v] of Object.entries(s.fields)) if (k.startsWith('$') && k.slice(1) in meta && !meta[k.slice(1)]) meta[k.slice(1)] = fill(v)
-  return {
+  }
+  const deck: Deck = {
     id: shape.deck,
     version: 2,
     title: '',
@@ -109,14 +142,15 @@ export function standInDeck(shape: ShapeDeck): Deck {
       ...(shape.transition ? { transition: shape.transition } : {}),
     },
     motion: shape.motion,
-    slides: shape.slides.map(standInSlide),
+    slides: shape.slides.map((s) => (isPrivate(s) ? standInPrivateSlide(s) : standInSlide(s))),
   }
+  return { ...deck, slides: deck.slides.map((s, i) => (s.blocks ? fitPrivate(s, shape.slides[i] as ShapeSlide, deck) : s)) }
 }
 
 /** op가 가리키는 모양의 해시 id를 대역의 해시 id로. 모르는 id는 그대로 두어 앱처럼 no_slide, no_block이 난다 */
 function refsFor(shape: ShapeDeck) {
   const slides = new Map(shape.slides.map((s) => [s.id, shapeSlideId({ id: s.id })]))
-  const blocks = new Map(shape.slides.flatMap((s) => (s.blocks ?? []).flatMap((b) => (b.id ? [[b.id, shapeBlockId({ id: b.id })] as const] : []))))
+  const blocks = new Map(shape.slides.flatMap((s) => (isPrivate(s) ? [] : (s.blocks ?? [])).flatMap((b) => (!isPrivate(b) && b.id ? [[b.id, shapeBlockId({ id: b.id })] as const] : []))))
   const slide = (v: unknown) => (typeof v === 'string' ? (slides.get(v) ?? v) : v)
   const block = (v: unknown) => (typeof v === 'string' ? (blocks.get(v) ?? v) : v)
   return (op: Op): Op => {

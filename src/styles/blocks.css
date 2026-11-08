@@ -462,6 +462,18 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   rotate: 180deg;
 }
 
+/* AI에게 숨긴 컴포넌트: 이름 옆의 작은 자물쇠 (장 위의 .bk-ai-hidden과 같은 그림). 메뉴를 열어도 돌지 않는다 */
+.sel-tools .sel-name-btn .sel-name-lock {
+  display: inline-flex;
+}
+
+.sel-tools .sel-name-btn .sel-name-lock .icon {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-3);
+  rotate: none;
+}
+
 .bk-menu.is-more {
   width: 300px;
 }
