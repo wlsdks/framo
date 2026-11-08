@@ -3,12 +3,13 @@ import { BACKDROP_CELL, backdropOf } from '../deck/backdrops'
 import { BOARD_COLS, BOARD_ROWS } from '../deck/blocks'
 import type { Slide } from '../deck/types'
 import { backdropMotion } from '../motion/backdrop'
+import { drawKit } from '../motion/draw'
 
 // 장의 배경(글과 컴포넌트 뒤의 그래픽). 늘 끝 모습을 SVG로 그려 두고(편집 화면, 목록, PDF, PPT, 내보낸 HTML),
 // 발표할 때는 엔진이 장을 움직이며 보내는 알림(mo-backdrop)을 받아 같은 그림을 캔버스로 움직인다(motion/backdrop.ts).
 // 알림을 받는 곳은 문서에 하나다: 앱은 여기서, 내보낸 HTML은 뷰어가 같은 함수로 연다
 
-export const backdrops = backdropMotion()
+export const backdrops = backdropMotion(drawKit())
 if (typeof document !== 'undefined') backdrops.listen(document)
 
 /** 장 가장자리에 닿지 않는 쪽은 그림이 서서히 옅어진다(자리의 네모 끝이 선처럼 보이지 않게). 닿는 쪽은 장 밖까지 이어진 것처럼 그대로 */

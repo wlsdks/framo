@@ -73,6 +73,7 @@
 | 발표할 때의 움직임 | `src/motion/engine.ts` |
 | 장의 배경: 목록, 이름, 어울리는 장, 자주 쓰는 자리, 처음 자리(`BACKDROPS`, `backdropOf`, `baseBackdrop`) | `src/deck/backdrops.ts`. 편집기, 장 모음, AI 카탈로그(`backdrops`), 모양(`backdrop`), 제안(`set_backdrop`)이 같이 쓴다 |
 | 배경의 그림과 움직임(끝 모습 SVG와 발표할 때의 캔버스가 같은 함수) | `src/motion/backdrop.ts`. 엔진은 `mo-backdrop` 알림 하나만 보낸다. 내보낸 HTML에 소스째 들어간다 |
+| 모션 그래픽을 그리는 도구(시간의 순수 함수, 이징, 정해진 씨앗의 난수, 점과 선만 그리는 SVG·캔버스 그리기, 캔버스 재생기) | `src/motion/draw.ts`의 `drawKit`. 배경이 인자로 받아 쓰고, 다른 모션 그래픽도 같은 그림(`Scene`: 때 e의 모습을 그리는 순수 함수)을 다시 쓴다. 내보낸 HTML에 소스째 들어간다 |
 | 편집 화면에서 다시 맞춘 자리로 미끄러지기(쓰는 동안의 조립. 부품 칸의 FLIP도 같은 시간과 곡선) | `src/slides/liveMotion.ts` |
 | 영상으로 저장할 때 장마다 머무는 시간과 걸리는 시간 어림 | `src/present/pace.ts`. 녹화(`Present.tsx`)와 묻는 창이 같이 쓴다 |
 | 단축키 표기 | `src/lib/keys.ts` |

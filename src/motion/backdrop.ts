@@ -1,9 +1,11 @@
 // 배경: 장의 글과 컴포넌트 뒤에 까는 잔잔한 그래픽과 그 움직임. 앱의 발표 화면과 내보낸 HTML의 뷰어가 똑같이 쓴다.
 // 기준은 docs/MOTION.md의 '9. 바탕 움직임'이다: 분위기 일곱(확산, 모여 시작, 흐름, 깊이, 구조, 여운, 연결)이 곧 배경 일곱이다.
 //
-// - 배경마다 '때 e의 모습'을 그리는 함수 하나(draw)다. 끝 모습(들어오기가 끝나고 머무는 모습)은 이 함수로 SVG를 만들어 장에 넣고
-//   (편집 화면, 목록 그림, PDF, PPT, 내보낸 HTML의 처음 모습), 발표할 때는 같은 함수를 캔버스에 프레임마다 그린다.
+// - 배경마다 '때 e의 모습'을 그리는 그림 하나(Scene)다. 끝 모습(들어오기가 끝나고 머무는 모습)은 이 그림으로 SVG를 만들어 장에 넣고
+//   (편집 화면, 목록 그림, PDF, PPT, 내보낸 HTML의 처음 모습), 발표할 때는 같은 그림을 캔버스에 프레임마다 그린다.
 //   그래서 움직임이 끝난 모습과 멈춘 그림이 같다. 숫자 하나, 글 한 줄 없이 자리의 크기만으로 그린다.
+//   그리는 도구(시간의 순수 함수, SVG와 캔버스 그리기, 캔버스 재생기)는 motion/draw.ts에 있고 인자(kit)로 받는다.
+//   여기에는 배경 일곱의 그림과 배경만의 규칙(세기, 이어지는 장, 살아 있는 그림이 있는 장)만 둔다
 // - 움직임: 장이 나올 때 한 번 들어오고(엔진이 mo-backdrop으로 알린다, motion/engine.ts) 3초 안에 가라앉는다. 차분하게는 그 한 번뿐이고,
 //   생동감만 그 뒤로 아주 느린 흐름(한 주기 12초 넘게, 장 폭의 2% 안)이 이어진다. 장에 살아 있는 그림(되풀이하는 컴포넌트)이 있으면
 //   생동감도 들어오기 한 번 뒤로 멈춘다(계속 움직이는 것은 한 장에 하나). 움직임 없음과 '동작 줄이기'에서는 끝 모습 그대로다.
@@ -11,26 +13,10 @@
 //   강조색은 씨앗, 닫는 점, 한 가닥처럼 그림의 '답' 한 곳에만.
 // - 움직임은 처음부터 직접 만들었다. 이징은 엔진의 쓰임새 표(EASE)와 같은 곡선이다.
 //
-// 뷰어에는 이 함수의 소스(toString)가 그대로 들어간다. 그래서 바깥의 아무것도 참조하지 않게, 필요한 것은 모두 이 함수 안에 둔다.
+// 뷰어에는 이 함수와 drawKit의 소스(toString)가 그대로 들어간다. 그래서 바깥의 아무것도 참조하지 않고(받는 것은 kit뿐), 필요한 것은
+// 모두 이 함수 안에 둔다. 다른 이름을 바깥에서 가져다 쓰면 빌드가 이름을 바꿔 뷰어에서 찾지 못한다
 
-/** 배경 하나의 그림: 장 px 단위의 자리 크기(w × h) 안에 그린다 */
-interface Scene {
-  /** 들어오기가 끝나는 때 (ms, 생동감 기준. 차분하게는 1.3배 빠르게) */
-  end: number
-  /**
-   * e: 들어오기의 때(0~end). tau: 들어오기가 끝난 뒤 흐른 때(ms, 생동감의 느린 흐름에만 0보다 크다)
-   * 끝 모습은 draw(P, end, 0)이다: 느린 흐름은 tau가 0일 때 아무것도 옮기지 않는다
-   */
-  draw(P: Paint, e: number, tau: number): void
-}
-
-/** 그리는 쪽. 점과 선 둘뿐이다. tone 0은 글자색, 1은 강조색. a는 짙기(0~1) */
-interface Paint {
-  dot(x: number, y: number, r: number, tone: number, a: number): void
-  /** 선의 점을 하나씩 넣고 stroke로 긋는다 */
-  to(x: number, y: number): void
-  stroke(width: number, tone: number, a: number, closed?: boolean): void
-}
+import type { DrawKit, Paint, Scene } from './draw'
 
 /** 움직임의 한 순간: 들어오기가 시작된 뒤 e ms (끝을 지나면 생동감의 느린 흐름의 때) */
 interface Frame {
@@ -53,82 +39,9 @@ interface BackdropRuntime {
   endOf(kind: string, w: number, h: number): number
 }
 
-export function backdropMotion(): BackdropRuntime {
-  const TAU = Math.PI * 2
-  const clamp = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x)
-  const lerp = (a: number, b: number, k: number) => a + (b - a) * k
-
-  // ---------- 이징: 엔진(EASE)과 같은 곡선. 매 프레임 수천 번 부르므로 표로 만들어 둔다 ----------
-  function bezier(x1: number, y1: number, x2: number, y2: number) {
-    const at = (a: number, b: number, t: number) => 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t
-    const n = 256
-    const table = new Float32Array(n + 1)
-    // x(t)가 늘어나는 차례로 t를 훑어 x마다 y를 적는다 (뉴턴법 없이, 표 칸 사이는 곧게 잇는다)
-    let t = 0
-    for (let i = 0; i <= n; i++) {
-      const x = i / n
-      while (t < 1 && at(x1, x2, t) < x) t += 1 / 2048
-      table[i] = at(y1, y2, Math.min(1, t))
-    }
-    return (x: number) => {
-      if (x <= 0) return 0
-      if (x >= 1) return 1
-      const f = x * n
-      const i = f | 0
-      return table[i] + (table[i + 1] - table[i]) * (f - i)
-    }
-  }
-  /** 들어와 자리 잡기 */
-  const out = bezier(0.16, 1, 0.3, 1)
-  /** 걷히며 드러나기(선 긋기) */
-  const reveal = bezier(0.25, 0.8, 0.25, 1)
-  /** 자리에서 자리로 옮기기(조각이 건너가기) */
-  const carry = bezier(0.45, 0, 0.25, 1)
-  /** 끝없이 오가기(느린 흐름) */
-  const breathe = bezier(0.45, 0, 0.55, 1)
-  /** 느린 흐름이 들어오기 끝에서 0부터 천천히 붙는 세기 */
-  const amp = (tau: number, ramp = 3000) => {
-    const k = clamp(tau / ramp)
-    return k * k * (3 - 2 * k)
-  }
-  /** 같은 까닭으로 시계: 처음에는 멈춰 있다가 ramp 동안 제 빠르기에 이른다(자리와 빠르기가 끊기지 않는다) */
-  const clock = (tau: number, ramp = 3000) => (tau < ramp ? (tau * tau) / (2 * ramp) : tau - ramp / 2)
-  /** 오가는 흐름: 주기 period의 -1~1. 곡선은 breathe(같은 모양으로 오간다) */
-  const sway = (tau: number, period: number, phase: number) => {
-    const k = (((tau / period + phase) % 1) + 1) % 1
-    return breathe(k < 0.5 ? k * 2 : 2 - k * 2) * 2 - 1
-  }
-  /** 이 사이에서 0→1 */
-  const span = (e: number, a: number, d: number) => clamp((e - a) / d)
-  /** 생동감의 드문 일: period(12초 넘게)마다 first부터 한 번씩, len 동안. 그 안이면 몇 번째인지와 진행(0~1), 아니면 null */
-  const every = (tau: number, first: number, period: number, len: number): [number, number] | null => {
-    if (tau < first) return null
-    const n = Math.floor((tau - first) / period)
-    const k = (tau - first - n * period) / len
-    return k < 1 ? [n, k] : null
-  }
-
-  function rng(seed: number) {
-    let a = seed >>> 0
-    return () => {
-      a = (a + 0x6d2b79f5) >>> 0
-      let t = a
-      t = Math.imul(t ^ (t >>> 15), t | 1)
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-    }
-  }
-
-  /** 타원(또는 원, 그 일부)을 선으로 */
-  const ellipse = (P: Paint, cx: number, cy: number, rx: number, ry: number, from: number, to: number, width: number, tone: number, a: number) => {
-    if (a <= 0.004 || rx <= 0) return
-    const n = Math.max(12, Math.ceil((Math.abs(to - from) * Math.max(rx, ry)) / 14))
-    for (let i = 0; i <= n; i++) {
-      const t = from + ((to - from) * i) / n
-      P.to(cx + Math.cos(t) * rx, cy + Math.sin(t) * ry)
-    }
-    P.stroke(width, tone, a, Math.abs(to - from) >= TAU - 1e-6)
-  }
+export function backdropMotion(kit: DrawKit): BackdropRuntime {
+  const { TAU, clamp, lerp, amp, clock, sway, span, every, rng, ellipse, svgPaint } = kit
+  const { out, reveal, carry } = kit.ease
 
   // ======================================================================
   // 배경 일곱. 저마다 '들어올 때 한 번'의 몸짓이 그 분위기의 말이다(docs/MOTION.md 9절의 표)
@@ -781,93 +694,6 @@ export function backdropMotion(): BackdropRuntime {
     return sc
   }
 
-  // ---------- 그리는 쪽 둘: SVG(끝 모습)와 캔버스(움직임). 같은 짙기와 굵기끼리 모아 한 번에 그린다 ----------
-  const Q = 100
-  const num = (v: number) => String(Math.round(v * 10) / 10)
-
-  function svgPaint(m: number): Paint & { markup(): string } {
-    const dots = new Map<number, string[]>()
-    const strokes = new Map<number, string[]>()
-    const pts: number[] = []
-    const bucket = (map: Map<number, string[]>, key: number) => map.get(key) || map.set(key, []).get(key)!
-    return {
-      dot(x, y, r, tone, a) {
-        const q = Math.round(Math.min(0.95, a * m) * Q)
-        if (q <= 0 || r <= 0.05) return
-        // 점은 길이 없는 선의 둥근 끝으로, 자리는 정수로, 크기는 0.25px 단계로: 원 경로보다 다섯 배쯤 짧아 장 그림(목록, 내보낸 HTML)이
-        // 가볍다(망점 수천 개도 50KB 안). 0.5px 안의 차이는 장을 줄여 그리는 화면에서 보이지 않는다
-        bucket(dots, tone * 1e6 + q * 1000 + Math.min(999, Math.round(r * 4) * 5)).push(`M${Math.round(x)} ${Math.round(y)}h0`)
-      },
-      to(x, y) {
-        pts.push(x, y)
-      },
-      stroke(width, tone, a, closed) {
-        const q = Math.round(Math.min(0.95, a * m) * Q)
-        if (q > 0 && pts.length >= 4) {
-          let d = `M${num(pts[0])} ${num(pts[1])}L`
-          for (let i = 2; i < pts.length; i += 2) d += `${num(pts[i])} ${num(pts[i + 1])} `
-          bucket(strokes, tone * 1e6 + q * 1000 + Math.round(width * 4)).push(d.trim() + (closed ? 'Z' : ''))
-        }
-        pts.length = 0
-      },
-      markup() {
-        let s = ''
-        const path = (key: number, width: number, d: string[]) =>
-          `<path${Math.floor(key / 1e6) ? ' class="bd-a"' : ''} fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="${Math.floor((key % 1e6) / 1000) / Q}" stroke-width="${width}" d="${d.join('')}"/>`
-        for (const [key, d] of strokes) s += path(key, (key % 1000) / 4, d)
-        for (const [key, d] of dots) s += path(key, (key % 1000) / 10, d)
-        return s
-      },
-    }
-  }
-
-  function canvasPaint(ctx: CanvasRenderingContext2D, colors: string[], m: number): Paint & { flush(): void } {
-    const fills = new Map<number, Path2D>()
-    const strokes = new Map<number, Path2D>()
-    const pts: number[] = []
-    const bucket = (map: Map<number, Path2D>, key: number) => map.get(key) || map.set(key, new Path2D()).get(key)!
-    return {
-      dot(x, y, r, tone, a) {
-        const q = Math.round(Math.min(0.95, a * m) * Q)
-        if (q <= 0 || r <= 0.05) return
-        const p = bucket(fills, tone * 1000 + q)
-        p.moveTo(x + r, y)
-        p.arc(x, y, r, 0, TAU)
-      },
-      to(x, y) {
-        pts.push(x, y)
-      },
-      stroke(width, tone, a, closed) {
-        const q = Math.round(Math.min(0.95, a * m) * Q)
-        if (q > 0 && pts.length >= 4) {
-          const p = bucket(strokes, tone * 1e6 + q * 1000 + Math.round(width * 4))
-          p.moveTo(pts[0], pts[1])
-          for (let i = 2; i < pts.length; i += 2) p.lineTo(pts[i], pts[i + 1])
-          if (closed) p.closePath()
-        }
-        pts.length = 0
-      },
-      flush() {
-        ctx.lineCap = 'round'
-        ctx.lineJoin = 'round'
-        for (const [key, p] of strokes) {
-          ctx.globalAlpha = Math.floor((key % 1e6) / 1000) / Q
-          ctx.strokeStyle = colors[Math.floor(key / 1e6)]
-          ctx.lineWidth = (key % 1000) / 4
-          ctx.stroke(p)
-        }
-        for (const [key, p] of fills) {
-          ctx.globalAlpha = (key % 1000) / Q
-          ctx.fillStyle = colors[Math.floor(key / 1000)]
-          ctx.fill(p)
-        }
-        ctx.globalAlpha = 1
-        fills.clear()
-        strokes.clear()
-      },
-    }
-  }
-
   const stills = new Map<string, string>()
   function still(kind: string, w: number, h: number, strength = 'base', at?: Frame): string {
     const key = `${kind}|${Math.round(w)}|${Math.round(h)}|${strength}`
@@ -924,96 +750,28 @@ export function backdropMotion(): BackdropRuntime {
     if (!sc || !svg || typeof document === 'undefined') return () => leave(0)
     // 차분하게는 같은 들어오기를 1.3배 빠르게(보고 자리에서 기다리게 하지 않는다)
     const sp = lively ? 1 : 1.3
-    const endMs = sc.end / sp
-    const t0 = carried >= 0 ? now0 - endMs - carried : now0 + Math.max(0, at)
+    const t0 = carried >= 0 ? now0 - sc.end / sp - carried : now0 + Math.max(0, at)
 
-    // 장을 넘기는 첫 프레임에는 끝 모습(SVG)만 감춘다(들어오기의 처음은 거의 비어 있다). 캔버스를 만들고 크기를 재고 색을 읽는 일은
-    // 다음 프레임에: 엔진이 장을 짜는 한가운데에서 자리를 재면(getBoundingClientRect) 장 전체를 한 번 더 배치해서, 그 프레임이
-    // CPU 4배 느림에서 33~50ms였다
-    svg.style.visibility = 'hidden'
-    const m = STRENGTH[strength] ?? 1
-    let cv: HTMLCanvasElement | null = null
-    let ctx: CanvasRenderingContext2D | null = null
-    let P: (Paint & { flush(): void }) | null = null
-    let k = 0
-    let frames = 0
-    let tau = 0
-    const fitCanvas = () => {
-      const r = el.getBoundingClientRect()
-      // 화면에 그려지는 크기에 맞추되 화소는 1.5배까지, 다 해서 240만 화소까지(윈도우 노트북도 한 프레임 안에)
-      const dpr = Math.min(1.5, window.devicePixelRatio || 1)
-      const next = Math.min(Math.max(0.1, (r.width / w) * dpr), Math.sqrt(2.4e6 / (w * h)))
-      if (Math.abs(next - k) / Math.max(k, 0.01) < 0.08) return
-      k = next
-      cv!.width = Math.max(1, Math.round(w * k))
-      cv!.height = Math.max(1, Math.round(h * k))
-    }
-    const setup = () => {
-      cv = document.createElement('canvas')
-      cv.className = 'bd-cv'
-      cv.setAttribute('aria-hidden', 'true')
-      el.appendChild(cv)
-      ctx = cv.getContext('2d')
-      if (!ctx) return false
-      // 강조색은 장마다 달라서(어두운 면, 강조색 바탕) 그려진 색을 읽는다
-      const probe = document.createElement('i')
-      probe.className = 'bd-a'
-      el.appendChild(probe)
-      const colors = [getComputedStyle(el).color, getComputedStyle(probe).color]
-      probe.remove()
-      fitCanvas()
-      P = canvasPaint(ctx, colors, m)
-      return true
-    }
-    const draw = (now: number) => {
-      const t = Math.max(0, now - t0)
-      tau = flows ? Math.max(0, t - endMs) : 0
-      if (++frames % 30 === 0) fitCanvas()
-      ctx!.setTransform(1, 0, 0, 1, 0, 0)
-      ctx!.clearRect(0, 0, cv!.width, cv!.height)
-      ctx!.setTransform(k, 0, 0, k, 0, 0)
-      sc.draw(P!, Math.min(sc.end, t * sp), tau)
-      P!.flush()
-      return t
-    }
-    let raf = 0
-    let visible = true
     let settle = () => {}
     waits?.push(new Promise<void>((r) => (settle = r)))
-    const tick = (now: number) => {
-      raf = 0
-      if (!el.isConnected || (!cv && !setup())) return finish()
-      const t = draw(now)
-      if (t >= endMs) settle()
-      // 흐름이 없으면 들어오기가 끝나는 대로 끝 모습(SVG)으로 돌아가 쉰다
-      if (!flows && t >= endMs) return finish()
-      if (visible) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    // 화면 밖(접힌 미리 보기, 스크롤된 목록)이면 쉰다. 다른 탭이면 브라우저가 requestAnimationFrame을 멈춘다
-    const io =
-      typeof IntersectionObserver === 'function'
-        ? new IntersectionObserver((entries) => {
-            visible = entries.some((x) => x.isIntersecting)
-            if (visible && !raf) raf = requestAnimationFrame(tick)
-          })
-        : null
-    io?.observe(el)
-    let stopped = false
-    /** 캔버스를 걷고 끝 모습(SVG)으로. 여러 번 불러도 한 번만 */
-    function finish() {
-      if (stopped) return
-      stopped = true
-      if (raf) cancelAnimationFrame(raf)
-      io?.disconnect()
-      cv?.remove()
-      svg!.style.visibility = ''
-      running.delete(el)
-      settle()
-    }
+    const pl = kit.player(el, sc, {
+      w,
+      h,
+      t0,
+      speed: sp,
+      flows,
+      strength: STRENGTH[strength] ?? 1,
+      className: 'bd-cv',
+      accentClass: 'bd-a',
+      onSettled: () => {
+        running.delete(el)
+        settle()
+      },
+    })
+    const finish = pl.finish
     const stop = () => {
       finish()
-      leave(tau)
+      leave(pl.tau())
     }
     running.set(el, finish)
     return stop

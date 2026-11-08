@@ -4,6 +4,7 @@
 
 import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
 import { backdropMotion } from '../motion/backdrop'
+import { drawKit } from '../motion/draw'
 import { motionEngine } from '../motion/engine'
 import { blockFitter } from '../slides/fitBlocks'
 
@@ -58,7 +59,7 @@ body.is-present .v-blank.is-white{background:#fff}
 export const VIEWER_JS = `(function(){
 var engine=(${motionEngine.toString()})();
 // 장의 배경: 엔진이 장을 움직일 때 알리면(mo-backdrop) 같은 그림을 캔버스로 움직이고, 장을 떠나면 끝 모습(SVG)으로 돌아온다
-(${backdropMotion.toString()})().listen(document);
+(${backdropMotion.toString()})((${drawKit.toString()})()).listen(document);
 var fitBlocks=(${blockFitter.toString()})().fit;
 var presentKey=(${presentKey.toString()}),presentAction=(${presentAction.toString()}),slideNumber=(${slideNumber.toString()}),num=slideNumber();
 var slides=[].slice.call(document.querySelectorAll('.v-slide'));

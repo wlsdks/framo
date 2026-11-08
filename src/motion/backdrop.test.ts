@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { BACKDROP_IDS } from '../deck/backdrops'
 import { backdropMotion } from './backdrop'
+import { drawKit } from './draw'
 
-const bd = backdropMotion()
+const bd = backdropMotion(drawKit())
 const SIZES = [
   [1920, 1080],
   [1120, 720],
@@ -12,7 +13,8 @@ const SIZES = [
 
 describe('배경의 그림과 움직임', () => {
   it('바깥의 아무것도 참조하지 않아서 소스만으로 다시 만들 수 있다 (내보낸 HTML에 소스가 그대로 들어간다)', () => {
-    const rebuilt = (new Function(`return (${backdropMotion.toString()})`)() as typeof backdropMotion)()
+    const kit = (new Function(`return (${drawKit.toString()})`)() as typeof drawKit)()
+    const rebuilt = (new Function(`return (${backdropMotion.toString()})`)() as typeof backdropMotion)(kit)
     expect(rebuilt.kinds).toEqual(bd.kinds)
     expect(rebuilt.still('diffuse', 640, 360)).toBe(bd.still('diffuse', 640, 360))
   })
@@ -27,7 +29,7 @@ describe('배경의 그림과 움직임', () => {
         const svg = bd.still(kind, w, h)
         expect(svg, `${kind} ${w}×${h}`).toMatch(/^<path /)
         expect(svg).not.toMatch(/NaN|Infinity|undefined/)
-        expect(backdropMotion().still(kind, w, h)).toBe(svg)
+        expect(backdropMotion(drawKit()).still(kind, w, h)).toBe(svg)
         // 장 그림(목록, 내보낸 HTML)에 들어가니 가볍게
         expect(svg.length, `${kind} ${w}×${h}`).toBeLessThan(60_000)
       }
