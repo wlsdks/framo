@@ -147,7 +147,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       pace: 'normal',
       texts: [
         { key: 'glyph', enter: 'settle', on: 'resolve', lag: 0.2 },
-        { key: 'title', enter: 'write', on: 'write', answer: true },
+        { key: 'title', enter: 'write', on: 'write' },
         { key: 'lead', enter: 'settle', on: 'write', lag: 0.55 },
       ],
       handoff: true,
@@ -199,7 +199,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       camera: 'none',
       pace: 'normal',
       texts: [
-        { key: 'title', enter: 'settle', on: 'resolve', answer: true },
+        { key: 'title', enter: 'settle', on: 'resolve' },
         { key: 'sub', enter: 'settle', on: 'write' },
       ],
       handoff: false,

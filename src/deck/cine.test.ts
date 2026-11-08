@@ -162,13 +162,17 @@ describe('모션 그래픽 레시피', () => {
     expect(knobsFor(presetRecipe('stroke', 'l'))).not.toContain('bleed')
   })
 
-  it('강조색은 장의 답 하나에만, 다 들어온 뒤 한 번: 그 시간까지 장면에 든다', () => {
+  it('강조색은 값이 맺히는 장면의 답 하나에만, 다 들어온 뒤 한 번: 이름·문장 장면은 글자색으로 끝난다', () => {
+    const answered = { light: 0, diffuse: 1, gather: 0, stroke: 1 }
     for (const p of CINE_PRESETS) {
       const s = cineScript(presetRecipe(p.id, 'l'))!
       const answers = s.texts.filter((t) => t.accent !== undefined)
-      expect(answers, p.id).toHaveLength(1)
-      expect(answers[0].accent!).toBeGreaterThan(answers[0].end)
-      expect(s.total).toBeGreaterThanOrEqual(answers[0].accent!)
+      expect(answers, p.id).toHaveLength(answered[p.id])
+      for (const a of answers) {
+        expect(['value', 'after']).toContain(a.key)
+        expect(a.accent!).toBeGreaterThan(a.end)
+        expect(s.total).toBeGreaterThanOrEqual(a.accent!)
+      }
     }
     // 답을 둘 적은 레시피도 첫째만
     const two = presetRecipe('light', 'l')
