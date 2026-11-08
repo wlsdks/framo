@@ -15,7 +15,9 @@
   display: grid;
   grid-template-columns: minmax(0, max-content) minmax(0, max-content);
   justify-content: center;
-  column-gap: 120px;
+  /* 두 단 사이는 칸 너비에 비례해(14%, 120px부터): 120px로 고정하면 넓은 칸에서 묶음이 가운데에 작게 모여 오른쪽이 26% 넘게
+     비었다(checkAssembly). 묶음은 가운데라 좌우 여백은 같다 */
+  column-gap: max(120px, 14cqw);
 }
 
 .bk-wp-head,

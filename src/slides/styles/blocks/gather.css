@@ -28,9 +28,9 @@
 }
 
 .bk-gt2-c {
-  /* 장 제목(62)보다 두 단계 작게: 같은 굵기로 제목 ÷ 1.2 넘게 크면 장 제목과 다퉜다(checkAssembly) */
+  /* 장 제목(62)보다 두 단계 작게. 모이는 곳은 이 그림의 답이라 강조색: 글자색이면 칸이 커질 때(--bk-fit) 장 제목과 다퉜다(checkAssembly) */
   --fs: 44px;
-  color: var(--ink);
+  color: var(--accent);
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.15;
