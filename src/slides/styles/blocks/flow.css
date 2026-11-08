@@ -437,3 +437,15 @@
 .bk.is-shared > .bk-in > .bk-fw {
   padding-right: var(--bk-col-gap);
 }
+
+/* 번호 줄의 선: 단계 사이의 선과 번호 뒤의 선을 같은 짙기의 불투명한 색으로(반투명 선 둘이 맞닿아 두 짙기로 끊겨 보였다), 다음
+   번호 앞에서 번호 사이만큼 멈춘다(선이 '02', '03' 글자에 닿았다, 검수) */
+.bk-fw-i::after,
+.bk-fw-link .bk-fw-wire {
+  background: color-mix(in srgb, var(--ink-3) 70%, var(--bg));
+  opacity: 1;
+}
+
+.bk-fw-link .bk-fw-wire {
+  right: 16px;
+}
