@@ -2019,21 +2019,21 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'hub': {
-          // 모이고 퍼지기(모션 그래픽 장면). 모이기는 곳들이 먼저 나오고 선이 가운데로 그어진 뒤 가운데가 서고, 퍼지기는 가운데가 먼저
-          // 서고 선이 곳들로 뻗는다. 다 서면 빛나는 데이터 조각이 꼬리를 끌며 길을 따라 쉬지 않고 흐르고, 가운데가 숨 쉬듯 빛나며
-          // 둘레의 고리가 돈다. 흐름은 이 장을 떠날 때(stops)까지 이어진다: 이 컴포넌트는 '살아 있는 그림'이라서 다른 컴포넌트와 달리
-          // 되풀이한다. 끝맺음(묶음이 끝났는지)을 기다리는 목록(anims)에는 넣지 않아 장의 다른 움직임 차례를 붙잡지 않는다
+          // 모이고 퍼지기(모션 그래픽 장면). 모이기는 끝점이 위에서부터 맺히고 선이 가운데로 그어진 뒤 계기판이 서고, 퍼지기는
+          // 계기판이 먼저 서고 선이 끝점으로 뻗는다. 다 서면 데이터 조각이 길을 따라 쉬지 않고 흐르고, 조각이 닿는 순간 그 길의
+          // 가운데 테(모이기)나 끝점(퍼지기)이 잠깐 강조색으로 밝아진다: 움직임이 '전달됐다'는 뜻을 갖게. 떠나는 쪽도 조각이 출발할 때
+          // 살짝 밝아진다. 계속 움직이는 것은 이 흐름 하나다(번짐 빛, 숨쉬기, 도는 호는 쓰지 않는다: docs/MOTION.md).
+          // 흐름은 이 장을 떠날 때(stops)까지 이어진다. 끝맺음(묶음이 끝났는지)을 기다리는 목록(anims)에는 넣지 않는다
           const root = one('.bk-hb')
           if (!root) break
           const out = root.classList.contains('is-out')
           const lines = $('.bk-hb-line')
           const dots = $('.bk-hb-dot')
-          const rings = $('.bk-hb-ring-s')
           const nodes = $('.bk-hb-node')
           const core = one('.bk-hb-core')
-          const halo = one('.bk-hb-halo')
+          const ticks = one('.bk-hb-ticks')
           const hubText = one('.bk-hb-hub')
-          const orbits = $('.bk-hb-orbit')
+          const hits = $('.bk-hb-hit')
           const n = Math.max(1, lines.length)
           const step = Math.min(levelName === 'lively' ? 170 : 150, 800 / n)
           const lineDur = d(levelName === 'lively' ? 700 : 620)
@@ -2041,22 +2041,20 @@ export function motionEngine(): MotionEngine {
             if (el) run(anims, el, [{ opacity: 0, scale: '0.4' }], s(at), L.pop)
           }
           const stroke = (el: Element, at: number) =>
-            run(anims, el, [{ strokeDasharray: '100 100', strokeDashoffset: out ? 100 : 100 }, { strokeDasharray: '100 100', strokeDashoffset: 0 }], s(at), { easing: OUT, duration: lineDur })
+            run(anims, el, [{ strokeDasharray: '100 100', strokeDashoffset: 100 }, { strokeDasharray: '100 100', strokeDashoffset: 0 }], s(at), { easing: OUT, duration: lineDur })
           const coreAt = out ? 60 : 200 + (n - 1) * step + 420
-          grow(halo, coreAt)
+          // 계기판: 테가 먼저 서고 눈금이 한 바퀴 그어진다
           grow(core, coreAt)
-          rise(hubText, coreAt + 120, L.y * 0.5)
-          orbits.forEach((o, k) => fade(o, coreAt + 300 + k * 120, 700))
+          if (ticks) run(anims, ticks, [{ strokeDasharray: '0 1' }, { strokeDasharray: '0.35 0.65' }], s(coreAt + 80), { easing: OUT, duration: d(700) })
+          rise(hubText, coreAt + 160, L.y * 0.5)
           lines.forEach((line, k) => {
             const at = out ? coreAt + 260 + k * step : 60 + k * step
             if (out) {
               stroke(line, at)
               grow(dots[k], at + 380)
-              grow(rings[k], at + 440)
               rise(nodes[k], at + 400, L.y * 0.5)
             } else {
               grow(dots[k], at)
-              grow(rings[k], at + 60)
               rise(nodes[k], at + 40, L.y * 0.5)
               stroke(line, at + 160)
             }
@@ -2068,6 +2066,7 @@ export function motionEngine(): MotionEngine {
           const fast = levelName === 'lively' ? 0.85 : 1
           const heads = $('.bk-hb-pk')
           const tails = $('.bk-hb-tail')
+          const accent = getComputedStyle(root).getPropertyValue('--accent').trim() || 'currentColor'
           heads.forEach((head, k) => {
             // 조각은 길마다 둘(Hub.tsx): 같은 길의 둘째는 반 주기 늦게
             const way = Math.floor(k / 2)
@@ -2077,13 +2076,24 @@ export function motionEngine(): MotionEngine {
             const fadeIn = [{ opacity: 0, offset: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.84 }, { opacity: 0, offset: 1 }]
             loops.push(head.animate(fadeIn.map((f, i) => ({ ...f, strokeDashoffset: [0.4, -9.6, -84, -99.6][i] })), timing))
             const tail = tails[k]
-            if (tail) loops.push(tail.animate(fadeIn.map((f, i) => ({ ...f, opacity: f.opacity * 0.55, strokeDashoffset: [12, 2, -72, -88][i] })), timing))
+            if (tail) loops.push(tail.animate(fadeIn.map((f, i) => ({ ...f, opacity: f.opacity * 0.6, strokeDashoffset: [9, -1, -75, -91][i] })), timing))
+            // 닿는 순간: 모이기는 그 길의 가운데 테, 퍼지기는 그 길의 끝점이 잠깐 강조색. 떠나는 쪽 끝점(모이기)은 출발할 때
+            // 한 길의 조각 둘은 반 주기 엇갈려 있으니, 반 주기마다 한 번 밝히는 움직임 하나로 둘 다 받는다(같은 요소에 둘을 걸면 뒤의 것이 덮는다)
+            if (k % 2) return
+            const flashAt = { duration: period / 2, delay, iterations: Infinity, easing: 'linear' }
+            const hit = hits[way]
+            const dot = dots[way]
+            // 조각은 주기의 0.88쯤에 닿는다(가속·감속 곡선). 반 주기 고리로 옮기면 0.76쯤
+            if (!out && hit) loops.push(hit.animate([{ opacity: 0, offset: 0 }, { opacity: 0, offset: 0.68 }, { opacity: 0.9, offset: 0.76 }, { opacity: 0, offset: 0.92 }, { opacity: 0, offset: 1 }], flashAt))
+            if (dot) {
+              const lit = { background: accent, scale: '1.35' }
+              const rest = { background: getComputedStyle(dot).backgroundColor, scale: '1' }
+              const frames = out
+                ? [{ ...rest, offset: 0 }, { ...rest, offset: 0.68 }, { ...lit, offset: 0.76 }, { ...rest, offset: 0.92 }, { ...rest, offset: 1 }]
+                : [{ ...lit, offset: 0 }, { ...rest, offset: 0.12 }, { ...rest, offset: 1 }]
+              loops.push(dot.animate(frames, flashAt))
+            }
           })
-          // 고리는 아주 느리게(한 바퀴 24초, 36초) 돈다. 가운데가 숨 쉬듯 커졌다 작아지는 움직임은 넣지 않는다: 5초 안팎으로
-          // 되풀이하는 흔들림은 오래 보면 어지럽고(Apple HIG의 모션), 계속 움직이는 것은 데이터 흐름 하나로 족하다(docs/MOTION.md)
-          orbits.forEach((o, k) =>
-            loops.push(o.animate([{ rotate: '0deg' }, { rotate: k ? '-360deg' : '360deg' }], { duration: k ? 36000 : 24000, delay: start, iterations: Infinity })),
-          )
           stops.push(() => loops.forEach((a) => a.cancel()))
           break
         }

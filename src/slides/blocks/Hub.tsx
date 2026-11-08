@@ -50,8 +50,9 @@ const pct = (v: number, of: number) => `${r((v / of) * 100)}%`
 
 /**
  * 모이고 퍼지기: 여러 곳의 것이 가운데로 모여들거나(모이기), 가운데에서 여러 곳으로 퍼져 나간다(퍼지기).
- * 선과 흐르는 조각은 SVG, 점과 가운데 원과 빛은 HTML, 글은 그 위의 HTML(글자 크기 단계를 그대로 쓰려고).
- * 발표할 때 선이 그어진 뒤 빛나는 데이터 조각이 쉬지 않고 흐르고 둘레의 고리가 천천히 돈다(engine.ts).
+ * 선과 흐르는 조각은 SVG, 점과 가운데 계기판은 HTML 위의 SVG, 글은 그 위의 HTML(글자 크기 단계를 그대로 쓰려고).
+ * 번짐 빛과 칠한 원, 네온처럼 빛나는 조각은 쓰지 않는다: 흔한 'AI 대시보드' 모양이다(사용자). 가는 선과 눈금, 강조색은 데이터가 닿는 순간에만.
+ * 발표할 때 선이 그어진 뒤 데이터 조각이 쉬지 않고 흐르고, 닿을 때마다 가운데 테와 끝점이 잠깐 강조색으로 밝아진다(engine.ts).
  * 멈춰 있는 그림(편집, PDF, PPT)에서는 조각을 감춘다
  */
 export function Hub() {
@@ -66,7 +67,6 @@ export function Hub() {
   return (
     <div className={cx('bk-hb', out ? 'is-out' : 'is-in')} data-n={shown.length}>
       <div className="bk-hb-stage">
-        <span className="bk-hb-halo" style={at(center)} aria-hidden="true" />
         <svg className="bk-hb-svg" viewBox={`0 0 ${HUB_W} ${HUB_H}`} preserveAspectRatio="none" aria-hidden="true">
           {spots.map((p, k) => (
             <g key={shown[k].it.id} className="bk-hb-way">
@@ -83,14 +83,18 @@ export function Hub() {
         </svg>
         {spots.map((p, k) => (
           <span key={shown[k].it.id} className="bk-hb-spot" style={at(p)} aria-hidden="true">
-            <span className="bk-hb-ring-s" />
             <span className="bk-hb-dot" />
           </span>
         ))}
         <div className="bk-hb-core" style={at(center)}>
-          <svg className="bk-hb-orbits" viewBox="0 0 100 100" aria-hidden="true">
-            <circle className="bk-hb-orbit is-a" cx="50" cy="50" r="58" pathLength={100} />
-            <circle className="bk-hb-orbit is-b" cx="50" cy="50" r="66" pathLength={100} />
+          {/* 계기판: 바깥 눈금 고리와 안쪽의 가는 테. 칠한 원에 번짐을 두른 흔한 모양 대신 Framo의 지면 말투(가는 선, 정확한 눈금)로 */}
+          <svg className="bk-hb-dial" viewBox="0 0 100 100" aria-hidden="true">
+            <circle className="bk-hb-ticks" cx="50" cy="50" r="47" pathLength={120} />
+            <circle className="bk-hb-rim" cx="50" cy="50" r="41" />
+            {/* 데이터가 닿을 때 밝아지는 테: 길마다 하나(engine.ts가 그 길의 조각과 같은 때에 맞춘다) */}
+            {spots.map((_, k) => (
+              <circle key={k} className="bk-hb-hit" cx="50" cy="50" r="41" />
+            ))}
           </svg>
           <div className="bk-hb-hub">
             <T k="center" as="p" className="bk-hb-c" />

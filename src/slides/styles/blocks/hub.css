@@ -2,7 +2,8 @@
    모션 그래픽 장면: 여러 곳에서 가운데로 데이터가 모여들거나(모이기), 가운데에서 여러 곳으로 퍼져 나간다(퍼지기).
    무대는 칸을 가득 채운다: 다른 그림 컴포넌트처럼 내용 크기로 줄이면 큰 장 가운데에 작게 떠서 심심했다(사용자).
    선은 칸 크기대로 늘어난 좌표계(Hub.tsx)에 굵기를 지켜 긋고, 둥근 것(점, 가운데 원, 빛)은 HTML이라 찌그러지지 않는다.
-   선과 점은 강조색, 가운데는 짙은 면(--bold-bg). 빛(번짐)은 가운데와 흐르는 조각에만.
+   AI가 만든 듯한 모양(번짐 빛, 칠한 원, 네온 조각)을 쓰지 않는다: 인쇄물처럼 가는 먹선(--ink-3)과 계기판 눈금, 강조색은
+   데이터(흐르는 조각)와 데이터가 닿는 순간(가운데 테, 끝점이 잠깐 밝아짐)에만 쓴다.
    흐르는 조각과 도는 고리의 움직임은 발표할 때만(engine.ts). 멈춘 그림에서는 조각을 감추고 고리는 제자리에 둔다.
    움직임의 원칙(계속 움직이는 것은 하나, 5초 안팎으로 흔들리는 반복은 쓰지 않음)은 docs/MOTION.md */
 
@@ -31,66 +32,42 @@
 
 .bk-hb-line {
   fill: none;
-  stroke: color-mix(in srgb, var(--accent) 38%, transparent);
-  stroke-width: 2.5;
+  stroke: var(--ink-3);
+  stroke-opacity: 0.55;
+  stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
 
-/* ---------- 둥근 것: 점, 가운데 원, 빛 (자리는 Hub.tsx가 %로) ---------- */
-:is(.bk-hb-spot, .bk-hb-core, .bk-hb-halo) {
+/* ---------- 끝점과 가운데 계기판 (자리는 Hub.tsx가 %로) ---------- */
+:is(.bk-hb-spot, .bk-hb-core) {
   position: absolute;
   translate: -50% -50%;
 }
 
+/* 끝점: 먹색 점 하나. 데이터가 떠나거나 닿을 때만 강조색으로 밝아진다(engine.ts) */
 .bk-hb-spot {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-}
-
-.bk-hb-spot > * {
-  grid-area: 1 / 1;
-  border-radius: 50%;
+  width: 16px;
+  height: 16px;
 }
 
 .bk-hb-dot {
-  width: 22px;
-  height: 22px;
-  background: var(--accent);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink-2);
 }
 
-.bk-hb-ring-s {
-  width: 44px;
-  height: 44px;
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
-}
-
+/* 가운데: 칠하지 않은 계기판. 바깥 눈금 고리, 안쪽 가는 테, 데이터가 닿을 때 밝아지는 테(길마다 하나) */
 .bk-hb-core {
   display: grid;
   place-items: center;
   width: var(--hb-core);
   height: var(--hb-core);
-  border-radius: 50%;
-  background: var(--bold-bg);
-  box-shadow: 0 0 0 3px var(--accent);
 }
 
-.bk-hb-halo {
-  /* 빛은 원 둘레만큼: 넓게 퍼뜨리면 가운데가 칸 오른쪽(퍼지기는 왼쪽) 끝에 가까워 칸 밖으로 번졌다 */
-  width: calc(var(--hb-core) * 1.8);
-  height: calc(var(--hb-core) * 1.8);
-  border-radius: 50%;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 14%, transparent), transparent);
-}
-
-/* 어두운 바탕에서는 빛이 번짐으로 보인다. 밝은 바탕에서 같은 농도면 가운데 둘레가 탁한 회색 얼룩이 되었다 */
-.is-dark .bk-hb-halo {
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 34%, transparent), transparent);
-}
-
-/* 둘레의 고리: 원 위의 짧은 호. 발표할 때 서로 반대로 천천히 돈다 */
-.bk-hb-orbits {
+.bk-hb-dial {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -98,24 +75,27 @@
   overflow: visible;
 }
 
-.bk-hb-orbit {
+/* 눈금: 고리 위의 짧은 획 120개(길이를 120으로 맞춘 원에 0.35짜리 획) */
+.bk-hb-ticks {
   fill: none;
-  stroke: var(--accent);
-  stroke-linecap: round;
-  stroke-width: 2.4;
-  opacity: 0.55;
+  stroke: var(--ink-3);
+  stroke-dasharray: 0.35 0.65;
+  stroke-width: 3;
   transform-box: view-box;
   transform-origin: 50% 50%;
 }
 
-.bk-hb-orbit.is-a {
-  stroke-dasharray: 22 78;
+.bk-hb-rim {
+  fill: var(--bg);
+  stroke: var(--ink);
+  stroke-width: 1.2;
 }
 
-.bk-hb-orbit.is-b {
-  stroke-dasharray: 10 90;
-  stroke-dashoffset: 40;
-  opacity: 0.35;
+.bk-hb-hit {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.4;
+  opacity: 0;
 }
 
 /* ---------- 흐르는 데이터 조각 ----------
@@ -130,14 +110,13 @@
 }
 
 .bk-hb-pk {
-  stroke-width: 13;
+  stroke-width: 10;
   stroke-dasharray: 0.4 99.6;
-  filter: drop-shadow(0 0 10px var(--accent)) drop-shadow(0 0 3px var(--accent));
 }
 
 .bk-hb-tail {
-  stroke-width: 6;
-  stroke-dasharray: 12 88;
+  stroke-width: 3;
+  stroke-dasharray: 9 91;
 }
 
 /* ---------- 글 ---------- */
@@ -152,7 +131,7 @@
 
 .bk-hb-c {
   --fs: var(--t-h);
-  color: var(--bold-ink);
+  color: var(--ink);
   font-weight: 800;
   line-height: 1.15;
   word-break: keep-all;
@@ -161,7 +140,7 @@
 .bk-hb-n {
   --fs: var(--t-source);
   margin-top: 6px;
-  color: color-mix(in srgb, var(--bold-ink) 70%, transparent);
+  color: var(--ink-3);
   line-height: 1.3;
 }
 
