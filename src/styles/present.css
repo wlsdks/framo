@@ -187,7 +187,12 @@
   background: #e5484d;
 }
 
-/* 녹화할지 묻는 창: 문단 사이를 조금 띄운다 (보통 창은 문단 하나) */
+/* 녹화할지 묻는 창: 끝 줄에 낱말 하나('Framo예요.')만 남지 않게 */
+.rec-intro .modal-body p {
+  text-wrap: pretty;
+}
+
+/* 문단 사이를 조금 띄운다 (보통 창은 문단 하나) */
 .rec-intro .modal-body p + p {
   margin-top: 8px;
 }

@@ -50,8 +50,11 @@ export function barRoom(w: number, h: number): BarRoom {
 /** 녹화가 어떻게 끝났는지: 파일로 저장함, 담긴 장면이 없음, 시작하지 못함(화면 고르기를 거절했거나 막혔다) */
 export type RecordResult = 'saved' | 'empty' | 'failed'
 
-/** 녹화를 묻는 창의 안심 한 줄. 브라우저 창과 녹화 중 띠에 '공유'라는 말이 나와도 놀라지 않게 */
-const RECORD_SAFE = '브라우저 창에 ‘공유’라고 나와도 아무 데도 보내지 않아요. 녹화는 이 PC 안에서만 하고 다운로드 폴더에 저장돼요.'
+/**
+ * 녹화를 묻는 창의 안심 한 줄. 브라우저 창과 녹화 중 띠에 '공유'라는 말이 나와도 놀라지 않게.
+ * '이 PC'는 줄에서 가르지 않는다(\u00a0): '녹화는 이 / PC 안에서만'으로 갈라지면 안심시키는 말이 읽히지 않았다
+ */
+const RECORD_SAFE = '브라우저 창에 ‘공유’라고 나와도 아무 데도 보내지 않아요. 녹화는 이\u00a0PC 안에서만 하고 다운로드 폴더에 저장돼요.'
 
 /** 녹화하는 동안 장 위에 비워 두는 띠의 높이(화면 px). '녹화 중' 표시가 여기 있어 잘라 녹화하는 자리 밖이다 */
 const REC_BAND = 36
@@ -510,7 +513,7 @@ export function Present({
             <>
               <p>
                 ‘녹화 시작’을 누르면 브라우저가 이 탭을 보여 줘도 되는지 물어요. ‘허용’을 눌러 주세요. 창에 나오는 {location.hostname}
-                {particle(location.hostname, '은', '는')} 이 PC에서 켜진 Framo예요.
+                {particle(location.hostname, '은', '는')} 이{'\u00a0'}PC에서 켜진{'\u00a0'}Framo예요.
               </p>
               <p>{RECORD_SAFE}</p>
               <p>
