@@ -152,6 +152,15 @@ function heightCount(block: Block, variant: string): number {
 }
 
 /** 부품 고르기 그림처럼 놓일 너비를 모를 때: 보기 좋은 너비에 놓았을 때 */
+/**
+ * 짧은 값(띄어쓰기를 빼고 세 글자까지: 'D', '7', '3배')인가. 큰 숫자는 이런 값을 넓고 높은 칸에서 칸 높이를 따라 크게 그리고
+ * (slides/styles/blocks/number.css), 판은 좁게 준다(prefW): 넓게 주면 한 글자가 칸 왼쪽에 서고 옆 글과 사이가 800px 비었다(검수)
+ */
+export function shortNumber(value: string): boolean {
+  const v = value.replace(/\s/g, '')
+  return !!v && [...v].length <= 3
+}
+
 export const blockPrefH = (block: Block) => blockMinH(block, BLOCKS[block.type].prefSpan)
 
 /**
@@ -230,7 +239,7 @@ export function boardFit(areaH: number, blocks: readonly Block[] = []): Fit {
     },
     // 항목이 많은 목록은 300px 이하에서 글자 단계가 작아진다. 자동 배치에 여유가 있을 때만 이 높이를 먼저 확보한다.
     readableH: (b) => b.type === 'bullets' && blockItems(b).length >= 5 ? rowsFor(320 + linkRoom(b, blocks), areaH) : 0,
-    prefW: (b) => (BLOCKS[b.type] ? Math.min(BOARD_COLS, Math.max(minW(b), BLOCKS[b.type].prefSpan)) : 1),
+    prefW: (b) => (BLOCKS[b.type] ? Math.min(BOARD_COLS, Math.max(minW(b), b.type === 'number' && shortNumber(b.fields.value ?? '') ? 4 : BLOCKS[b.type].prefSpan)) : 1),
     stretchy: (b) => STRETCHY.has(b.type),
     // 그려지는 면으로 본다: 판 너비를 다 쓰는 부품은 고른 면이 있어도 바탕 없이 그려진다(shownLook)
     fills: (b) => !!BLOCKS[b.type] && shownLook(b, b.at?.w === BOARD_COLS) !== 'plain',
