@@ -364,14 +364,18 @@ export function Present({
     // 고르는 창이 전체 화면을 풀었으면 다시 들어가 본다(누른 지 얼마 안 됐으면 된다). 안 되면 이 창 크기로 녹화한다
     if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.().catch(() => {})
     setRecLive(rec.mode)
+    // 멈추면(Esc, 브라우저의 '공유 중지') 기다리던 것을 바로 끝낸다: 장마다 글을 읽을 만큼(15초까지) 머무는데, 머무는 동안 누른
+    // Esc가 그 시간이 다 지나서야 먹어 영상에 원치 않는 장면이 남았다
     let stopped = false
-    recStop.current = () => {
+    let wake = () => {}
+    const halted = new Promise<void>((r) => (wake = r))
+    const halt = () => {
       stopped = true
+      wake()
     }
-    void rec.ended.then(() => {
-      stopped = true
-    })
-    const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms))
+    recStop.current = halt
+    void rec.ended.then(halt)
+    const wait = (ms: number) => Promise.race([new Promise((r) => window.setTimeout(r, ms)), halted])
     // 첫 장부터 움직이며 시작한다
     flushSync(() => {
       setAhead(null)
@@ -379,7 +383,7 @@ export function Present({
     })
     await wait(START_MS)
     while (!stopped) {
-      await motionSettled(() => stageRef.current)
+      await Promise.race([motionSettled(() => stageRef.current), halted])
       if (stopped) break
       const left = playing.current?.left() ?? 0
       const last = left <= 0 && now.current.index >= slides.length - 1
