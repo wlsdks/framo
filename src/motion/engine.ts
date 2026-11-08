@@ -1597,15 +1597,24 @@ export function motionEngine(): MotionEngine {
           }, L.step * 1.4)
           break
         case 'gantt':
-          // 기간 칸과 지금 띠가 먼저 깔리고, 할 일마다 이름이 올라오며 막대가 시작 칸에서 끝 칸으로 그어진다
+          // 기간 칸이 먼저 깔리고, 할 일마다 이름이 올라오며 막대가 시작 칸에서 끝 칸으로 그어진다. 막대가 다 서면 '지금' 선이
+          // 첫 칸에서 출발해 시간을 따라 오늘의 칸까지 미끄러져 와 선다: 일정 위에서 지금 어디쯤인지를 움직임이 짚는다
           lines(one('.bk-h'), 60)
           fade(one('.bk-gt-cols'), 120, 500)
-          fade(one('.bk-gt-now'), 160, 800)
-          items('.bk-gt-row', 240, (el, at) => {
+          const rowsEnd = items('.bk-gt-row', 240, (el, at) => {
             ruled(el, at)
             rise(el.querySelector('.bk-gt-label'), at, L.y * 0.4)
             grow(el.querySelector('.bk-gt-bar'), at + 120, 'x')
           })
+          const nowLine = one('.bk-gt-now')
+          const nowAt = parseFloat(nowLine?.closest<HTMLElement>('.bk-gt')?.style.getPropertyValue('--now') ?? '') || 0
+          if (nowLine && nowAt > 0) {
+            const shift = nowLine.offsetWidth * nowAt
+            run(anims, nowLine, [{ opacity: 0, translate: `${-shift}px 0`, offset: 0 }, { opacity: 1, translate: `${-shift}px 0`, offset: 0.12 }, { opacity: 1, translate: '0 0' }], s(rowsEnd + 200), {
+              easing: CARRY,
+              duration: d(Math.min(1200, 420 + nowAt * 220)),
+            })
+          } else fade(nowLine, rowsEnd + 200, 600)
           break
         case 'people': {
           lines(one('.bk-h'), 60)
