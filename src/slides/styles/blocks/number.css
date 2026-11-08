@@ -85,3 +85,20 @@
     --fs: var(--t-body);
   }
 }
+
+/* 짧은 값('D', '7', '3배')은 넓고 높은 칸에서 칸 높이를 따라 크게(칸 높이의 46%, 360px까지, 키운 단계를 곱한다): 큰 숫자는 크기로
+   답이 되는데, 12×7 칸을 받아도 단계(154)에 묶여 한 글자가 칸 귀퉁이에 작게 서고 칸 대부분이 비었다(검수). 장 제목보다 커도 된다:
+   숫자는 보통 굵기(--num-weight)라 제목과 다투지 않는다. 이름표와 설명은 값을 따라 한 단계씩만 */
+@container bk (min-width: 560px) and (min-height: 400px) {
+  .bk-num[data-short] .bk-num-v {
+    --fs: clamp(154px, 46cqh, 360px);
+  }
+
+  .bk-num[data-short] .bk-num-l {
+    --fs: var(--t-small);
+  }
+
+  .bk-num[data-short] .bk-num-n {
+    --fs: var(--t-h);
+  }
+}
