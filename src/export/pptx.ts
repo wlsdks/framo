@@ -16,15 +16,15 @@ import type { Deck, Slide } from '../deck/types'
 import { zip, type ZipEntry } from './zip'
 
 /** 16:9 장 크기 (EMU, 1인치 = 914400). PowerPoint의 와이드스크린(13.333 × 7.5인치)과 같다 */
-export const SLIDE_CX = 12192000
-export const SLIDE_CY = 6858000
+const SLIDE_CX = 12192000
+const SLIDE_CY = 6858000
 /** 노트 쪽은 세로 7.5 × 10인치 */
 const NOTES_CX = 6858000
 const NOTES_CY = 9144000
 
 export const PPTX_TYPE = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
 
-export interface PptxSlide {
+interface PptxSlide {
   /** 장 그림 (16:9 PNG) */
   png: Uint8Array
   notes: string
@@ -118,7 +118,7 @@ interface Rel {
   target: string
 }
 
-export interface PptxPart {
+interface PptxPart {
   /** 묶음 안의 경로 (앞의 / 없이) */
   name: string
   data: string | Uint8Array

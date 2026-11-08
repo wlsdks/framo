@@ -2,7 +2,7 @@
 import { inflateRawSync } from 'node:zlib'
 import { crc32 } from './zip'
 
-export interface ReadEntry {
+interface ReadEntry {
   name: string
   method: number
   flags: number
