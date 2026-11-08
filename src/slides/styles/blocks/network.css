@@ -254,3 +254,13 @@
     border-left: var(--nw-line) solid var(--nw-c);
   }
 }
+
+/* 넓고 높은 칸(판을 혼자 쓸 때 같은): 잇는 선을 길게, 연결된 것 사이를 넉넉히 벌려 그림이 칸을 쓴다. 판을 혼자 써도 가운데 띠에
+   작은 그림이 떠 본문 높이의 3분의 1만 쓰고 양옆이 비었다(사용자). 사이는 글자 크기를 따라(--bk-fit) 같이 크고 줄어서
+   넘치면 맞추기가 함께 줄인다. 선의 세로 길이는 같은 사이(--nw-g)로 재므로 그대로 잇는다 */
+@container bk (min-width: 1200px) and (min-height: 520px) {
+  .bk-nw {
+    --nw-w: clamp(160px, 15cqi, 280px);
+    --nw-g: calc(52px * var(--bk-fit, 1));
+  }
+}

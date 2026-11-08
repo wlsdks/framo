@@ -113,7 +113,7 @@ export function useExports(deck: Deck, markVersion: (reason: VersionReason) => v
 }
 
 function PrintDeck({ deck, onDone }: { deck: Deck; onDone: () => void }) {
-  const info = pageInfo(deck.slides)
+  const info = pageInfo(deck.slides, deck)
   const doneRef = useRef(onDone)
   doneRef.current = onDone
   const rootRef = useRef<HTMLDivElement>(null)

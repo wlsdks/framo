@@ -750,6 +750,42 @@
   white-space: nowrap;
 }
 
+/* 이웃 슬라이드와 같은 잣대라는 안내(StageTools의 SharedScaleNote): 장의 글이 아니라 편집기 표시라서 선택 색의 작은 표로.
+   단추줄이 좁으면 글은 줄임표로 줄고 (i)는 남는다 */
+.stage-scale {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 2px 0 8px;
+  border-radius: var(--r-sm);
+  background: var(--sel-soft);
+  color: var(--sel);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stage-scale-t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-scale .info-btn {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  color: inherit;
+}
+
+.stage-scale .info-btn .icon {
+  width: 15px;
+  height: 15px;
+}
+
 /* 가려지는 칸이 있다는 말은 잘리지 않게 두 줄까지 */
 .stage-peek.is-hiding {
   display: -webkit-box;

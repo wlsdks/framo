@@ -15,7 +15,7 @@ import { Head, useItems, useUnitOpen } from './parts'
  * 값 이름표는 점 위에, 양옆보다 낮은 점은 선에 가리지 않게 점 아래에 둔다.
  */
 export function Trend() {
-  const { slide, meta, mode } = useSlide()
+  const { slide, meta, mode, scale } = useSlide()
   const items = useItems()
   const highlight = highlightOf(slide)
   const final = mode === 'final'
@@ -35,7 +35,10 @@ export function Trend() {
   const target = dataSeries.ok && withTarget.ok ? withTarget.values[items.length] : null
   const invalidTarget = !!targetField.trim() && (!withTarget.ok || withTarget.values[items.length] === null)
   const known = values.filter((v): v is number => v !== null)
-  const { floor, y, x } = lineAxis(target === null ? known : [...known, target], items.length)
+  // 이어 움직이기로 이어지는 이웃 장과는 한 잣대로(sharedScale.ts): 넘길 때 점이 숫자와 같은 쪽으로 움직이게. 예시로 그릴 때는 제 값으로
+  const own = target === null ? known : [...known, target]
+  const shared = !!scale && !demo && known.length > 0
+  const { floor, y, x } = lineAxis(shared && scale ? [...own, scale.lo, scale.hi] : own, items.length, shared)
   const pts = values.map((v, i) => (v === null ? null : { x: x(i), y: y(v) }))
   // 값이 없는 시기를 건너뛰어 선을 이으면 그 사이에도 측정값이 있는 것처럼 보인다.
   // 이어진 값만 각각 선과 면으로 만들고, 하나뿐인 값은 점으로만 남긴다.

@@ -209,6 +209,45 @@ describe('움직임 엔진', () => {
     expect(src.slice(t, src.indexOf('\n    }', t))).toMatch(/digitTexts\(el\) > 1/)
   })
 
+  it('이어 움직이기의 짝은 값이 바뀌었으면 앞 값에서 새 값으로 간다 (숫자만 바뀐 컴포넌트와 본문도 짝이 된다)', () => {
+    const src = motionEngine.toString()
+    const keys = src.slice(src.indexOf('function morphKeys('), src.indexOf('function nameFrom('))
+    // 숫자만 다른 컴포넌트, 숫자만 다른 항목, 값만 바꾼 차트의 본문
+    // (변환을 거친 소스라 따옴표 꼴은 가리지 않는다)
+    for (const k of ['bkn:', 'itn:', 'body:']) expect(keys, k).toMatch(new RegExp(`["']${k}["']`))
+    // 앞 장이 사라지기 전에 값을 읽고, 짝에게 넘기고, play가 옮긴다
+    expect(src.slice(src.indexOf('function nameFrom('), src.indexOf('function pairUp('))).toMatch(/readValues\(el\)/)
+    expect(src.slice(src.indexOf('function pairUp('), src.indexOf('function swap('))).toMatch(/carried\.set\(/)
+    expect(src).toMatch(/carry\(el, was, /)
+    // 움직이지 않을 때(움직임 없음, 동작 줄이기)는 옮기지 않는다
+    const at = src.indexOf('const carry = (')
+    expect(at).toBeGreaterThan(0)
+    expect(/if \(([^)]*\)?)*?\) return/.exec(src.slice(at))?.[0]).toMatch(/\bstill\b/)
+    // 차례와 개수는 사이 값이 없다: 옮기면 판이 깨진다
+    const vars = /VALUE_VARS = \[([^\]]*)\]/.exec(src)?.[1] ?? ''
+    expect(vars).toMatch(/["']--p["']/)
+    for (const v of ['--n', '--i', '--k', '--cols', '--rows']) expect(vars, v).not.toMatch(new RegExp(`["']${v}["']`))
+    // 눈금은 두 장에서 따로 찾아 단계를 나눈다(막대가 숫자와 거꾸로 움직이지 않게), 단계마다 같은 곡선을 엔진이 셈한다
+    const carry = src.slice(at, src.indexOf('stops.push(end)', at))
+    expect(carry).toMatch(/const fit = /)
+    expect(carry).toMatch(/curve\(EASE\.out\)/)
+    // 누르고 곧 떠난다(0.3초 넘게 가만히 있지 않게). 차트가 둘이면 이끄는 차트 다음 것은 한 박자(0.1~0.15초) 뒤에
+    expect(Number(/delay: (\d+)(?: \+ lag)?,\s*easing: ["']linear["']/.exec(carry)?.[1])).toBeLessThanOrEqual(100)
+    const lag = Number(/\? d\((\d+)\) : 0\)/.exec(src)?.[1])
+    expect(lag * 0.8).toBeGreaterThanOrEqual(100)
+    expect(lag * 1.1).toBeLessThanOrEqual(150)
+    // 크게 뛰어 다시 자라는 짝은 바닥(0)까지 내리지 않고 두 박자로: 잣대 먼저(늘 때) 또는 값 먼저(줄 때)
+    expect(carry).toMatch(/const regrowAt = /)
+    expect(carry).toMatch(/beats: \(wider\)/)
+    // 장 머리와 아래 띠의 글은 같은 자리끼리 짝이 된다(사라졌다 돌아오며 깜빡이지 않게)
+    for (const k of ['title*', 'lead', 'src']) expect(keys, k).toMatch(new RegExp(`["']${k.replace('*', '\\*')}`))
+    // 옮겨 온 숫자를 0부터 다시 쌓거나 나오는 조각을 다시 띄우지 않는다
+    const tally = src.slice(src.indexOf('const tally = ('), src.indexOf('const tally = (') + 300)
+    expect(tally).toMatch(/data-mo-keep/)
+    const packet = src.slice(src.indexOf('const packet = ('), src.indexOf('const packet = (') + 400)
+    expect(packet).toMatch(/data-mo-keep/)
+  })
+
   it('고를 수 있는 장면마다 엔진이 짠 컷이 있다 (없으면 장면을 골라도 소리 없이 연출표만 움직인다)', () => {
     const src = motionEngine.toString()
     const scene = src.slice(src.indexOf('function scene('), src.indexOf('const batches'))

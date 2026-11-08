@@ -5,12 +5,13 @@ import { readPercent } from '../../deck/percent'
 import { unshownCount, visibleItems } from '../../deck/fields'
 import type { Deck, Slide } from '../../deck/types'
 import type { OverField } from '../../slides/overflow'
+import type { Scale } from '../../slides/sharedScale'
 import type { AiAsk } from '../../ai/useAiAsk'
 import type { AiShare } from '../../ai/useAiShare'
 import { cx } from '../../lib/cx'
 import { onMenuKeys } from '../../lib/menuKeys'
 import { useDeck } from '../../store/deckStore'
-import { AlertIcon, BlocksIcon, MoreIcon, PlayIcon, PlusIcon, Popover, ScreenIcon, SlidersIcon } from '../ui'
+import { AlertIcon, BlocksIcon, Info, MoreIcon, PlayIcon, PlusIcon, Popover, ScreenIcon, SlidersIcon } from '../ui'
 import { keys } from '../../lib/keys'
 import { SHORTCUT } from './shortcuts'
 import { SlideAsk } from './AiShare'
@@ -182,6 +183,31 @@ function OverflowNote({ slide, overflow, side }: { slide: Slide; overflow: Overf
   )
 }
 
+/** 이 장의 차트가 어느 이웃 장과 같은 잣대로 그려지는지(장 하나에 안내 하나): 앞, 다음, 앞뒤. 같이 쓰지 않으면 null */
+export function sharedWith(scales: ReadonlyMap<string, Scale> | undefined): '앞' | '다음' | '앞뒤' | null {
+  const all = Array.from(scales?.values() ?? []).map((s) => s.with)
+  if (!all.length) return null
+  if (all.includes('both') || (all.includes('prev') && all.includes('next'))) return '앞뒤'
+  return all.includes('next') ? '다음' : '앞'
+}
+
+/**
+ * 이어 움직이는 이웃 슬라이드와 같은 잣대로 그리는 차트가 있다는 안내(sharedScale.ts). 숫자가 낮은 쪽 슬라이드는 이웃의 잣대 때문에 차트가
+ * 끝까지 차지 않아서, 처음 쓰는 사람이 까닭을 알게 한다. 장 아래 단추줄에 편집기 표시(선택 색의 작은 표)로 장마다 하나만 둔다:
+ * 차트마다 차트 위에 장의 단위 글과 같은 생김새로 두던 때는 발표에도 나오는 글처럼 보였다(5차 감성 검수)
+ */
+function SharedScaleNote({ who }: { who: '앞' | '다음' | '앞뒤' }) {
+  return (
+    <span className="stage-scale">
+      <span className="stage-scale-t">{who} 슬라이드와 같은 잣대로 그려요</span>
+      <Info label="같은 잣대로 그리는 이유">
+        화면 전환 ‘이어지게’로 이어지는 슬라이드끼리 차트를 같은 잣대로 그려서, 넘길 때 바뀐 값만큼만 움직여요. 그래서 이 슬라이드만 보면 차트가
+        끝까지 차지 않을 수 있어요. 발표 화면에는 이 안내가 보이지 않아요.
+      </Info>
+    </span>
+  )
+}
+
 /**
  * 슬라이드 아래 단추줄: 왼쪽은 이 장에 넣고 바꾸는 일, 오른쪽은 이 장 미리 보기와 '더 보기'(복제, 숨기기, 지우기).
  * 예전에는 '모양'과 '지금 장부터 발표'도 여기 있었다. 모양은 오른쪽 '이 장 설정'에, 지금 장부터 발표는 위 '발표하기' 옆 메뉴(Shift+F5)에
@@ -197,6 +223,7 @@ export function StageTools({
   peekSlide,
   peek,
   overflow,
+  shareWith,
   onTogglePeek,
   onReplay,
   onRemove,
@@ -212,6 +239,8 @@ export function StageTools({
   /** 이 장 미리보기 중 */
   peek: boolean
   overflow: Overflow
+  /** 이 장의 차트가 같은 잣대로 그려지는 이웃(sharedWith) */
+  shareWith: '앞' | '다음' | '앞뒤' | null
   onTogglePeek: () => void
   /** 미리보기의 움직임을 한 번 더 */
   onReplay: () => void
@@ -289,6 +318,7 @@ export function StageTools({
       )}
       {/* 단추가 한 줄에 다 들어가지 않으면 오른쪽부터 글자를 숨기고 그림만 남긴다 (이름은 title로, useTightTools) */}
       <div className="stage-tools-r">
+        {shareWith && !peek && !peekSlide && <SharedScaleNote who={shareWith} />}
         <button
           type="button"
           className={cx('btn btn-ghost btn-sm', peek && 'is-on')}

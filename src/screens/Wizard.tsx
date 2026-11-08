@@ -112,7 +112,7 @@ export function Wizard() {
       }),
     [type, audience, minutes, method, theme],
   )
-  const previewInfo = useMemo(() => pageInfo(preview.slides), [preview])
+  const previewInfo = useMemo(() => pageInfo(preview.slides, preview), [preview])
 
   // 단계를 넘기면 맨 위부터 보이게. 앞 단계에서 내려 둔 스크롤이 남으면 제목과 단계 표시가 가려진다
   useEffect(() => {

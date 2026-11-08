@@ -199,6 +199,7 @@ function BlockBody({ block, span }: { block: Block; span: number }) {
         labels: spec,
         folds,
         span,
+        scale: ctx.scales?.get(block.id),
       }}
     >
       <div className="bk-in">

@@ -13,6 +13,7 @@ import { selectWord } from '../../slides/fields'
 import { liveMoving } from '../../slides/liveMotion'
 import { overflowAt, type OverField } from '../../slides/overflow'
 import { FitSlide, pageProps, SlideCanvas } from '../../slides/SlideCanvas'
+import { sharedScales } from '../../slides/sharedScale'
 import { useDeck } from '../../store/deckStore'
 import { useEscape } from '../ui'
 import { BackdropFrame } from './BackdropFrame'
@@ -22,7 +23,7 @@ import { layoutPreview } from './Inspector'
 import { useLook } from './look'
 import { SelectionBar, StageSlot } from './SelectionBar'
 import type { SidePanel } from './sidePanel'
-import { StageTools } from './StageTools'
+import { sharedWith, StageTools } from './StageTools'
 import { useTypingStill } from './typingStill'
 
 // 편집기 가운데: 고치는 장(무대), 그 위에 뜨는 도구, 아래 단추줄과 발표자 노트
@@ -51,7 +52,7 @@ export function SlideStage({
 }) {
   // 할 일(액션)만 쓴다: 덱 전체를 구독하면 고칠 때마다 이 장이 한 번 더 그려진다 (장과 덱은 위에서 받는다)
   const store = useDeck.getState()
-  const info = pageInfo(deck.slides)
+  const info = pageInfo(deck.slides, deck)
   const canvasRef = useRef<HTMLDivElement>(null)
   const look = useLook(deck)
   // 테마, 글꼴, 글자 크기, 발표 정보(아래 표시의 이름, 소속)를 바꿔도 다시 잰다
@@ -166,6 +167,7 @@ export function SlideStage({
                 peekSlide={peekSlide}
                 peek={peek}
                 overflow={overflow}
+                shareWith={sharedWith(sharedScales(info).get(slide.id))}
                 onTogglePeek={() => (peek ? setPeek(false) : startPeek())}
                 onReplay={() => setPreview((n) => n + 1)}
                 onRemove={onRemove}

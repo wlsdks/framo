@@ -14,7 +14,7 @@ import { VIEWER_CSS, VIEWER_JS, VIEWER_TEXT } from './viewer'
 const DATA_ID = 'html-maker-deck'
 
 function ExportSlides({ deck }: { deck: Deck }) {
-  const info = pageInfo(deck.slides)
+  const info = pageInfo(deck.slides, deck)
   return (
     <>
       {deck.slides

@@ -985,7 +985,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
   layers: {
     name: '층',
     description: '위가 아래에 기대어 선 층. 쓰는 것, 잇는 것, 바탕이 되는 것을 위에서 아래로',
-    motion: '층이 위에서부터 쌓이고, 요청이 층을 타고 내려갔다가 답으로 올라와요',
+    motion: '맨 아래 판부터 차례로 내려앉아 쌓이고, 요청이 층을 타고 내려갔다가 올라와요',
     fields: [{ key: 'heading', label: '소제목', hint: '예: 어떻게 이어지나요', optional: true }],
     items: {
       label: '층',
@@ -997,6 +997,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
         { key: 'meta', label: '무엇이 있나', hint: '이 층에 있는 것', hints: ['사내 포털, 메신저', '하나의 연결 창구', '정리한 문서와 기록', '인사, 결재, 일정', '백업과 기록'], optional: true },
       ],
     },
+    highlight: { label: '강조할 층', fallback: -1 },
     minSpan: 6,
     prefSpan: 12,
     sample: {

@@ -146,7 +146,7 @@ export const TRANSITIONS: { id: Transition; name: string; description: string }[
   { id: 'fade', name: '흐리게', description: '앞 슬라이드가 흐려지며 다음 슬라이드가 나타나요.' },
   { id: 'slide', name: '밀기', description: '다음 슬라이드가 옆에서 밀고 들어와요.' },
   { id: 'zoom', name: '다가오기', description: '다음 슬라이드가 앞으로 다가오듯 커지며 나타나요.' },
-  { id: 'morph', name: '이어지게', description: '두 슬라이드에 같은 제목이나 컴포넌트가 있으면 사라지지 않고 새 자리와 크기로 옮겨 가요(PowerPoint의 모핑). 나머지는 흐리게 바뀌어요.' },
+  { id: 'morph', name: '이어지게', description: '두 슬라이드에 같은 제목이나 컴포넌트가 있으면 사라지지 않고 새 자리와 크기로 옮겨 가요(PowerPoint의 모핑). 숫자만 바꿨으면 값이 바뀌어 가고, 막대와 추이는 두 슬라이드를 같은 잣대로 그려요. 나머지는 흐리게 바뀌어요.' }
 ]
 
 /** 제목 덩어리의 자리 (표지, 섹션). 장 위에서 제목을 위아래로 끌거나 이 장 설정에서 고른다 */

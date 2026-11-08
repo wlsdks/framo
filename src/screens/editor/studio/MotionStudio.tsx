@@ -72,7 +72,7 @@ export function MotionStudio({
 }) {
   const store = useDeck.getState()
   const look = useLook(deck)
-  const info = pageInfo(deck.slides)
+  const info = pageInfo(deck.slides, deck)
   const sections = useStableSections(info)
   const level = motionOf(deck, slide)
   const compose = slide.layout === 'compose'
