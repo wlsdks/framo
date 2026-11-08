@@ -131,3 +131,11 @@
     padding-bottom: 0;
   }
 }
+
+/* 넓고 높은 칸(판을 혼자 쓸 때 같은): 줄 사이를 넉넉히. 13px로는 판을 혼자 써도 네 줄이 본문 위 3분의 1에 빽빽한 표로 모이고
+   아래가 통째로 비었다(사용자: 표 규격 같다). 줄 사이는 한 줄 내용의 두 배 안이다(VISUAL-RULES 6) */
+@container bk (min-width: 1300px) and (min-height: 520px) {
+  .bk-fc-row {
+    padding: calc(26px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
+  }
+}
