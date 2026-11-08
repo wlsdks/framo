@@ -166,7 +166,9 @@ export function backdropMotion(): BackdropRuntime {
         Y.push(y)
       }
     const n = X.length
-    const T = 2600
+    // 씨앗이 먼저 맺히고(여기서 시작한다) 그 뒤에 퍼진다. 둘이 함께 나오면 처음부터 덩어리가 터지는 것처럼 보였다(필름)
+    const LEAD = 180
+    const T = 2450
     // 앞서 나간 알갱이: 멀리 갈수록 늦게 닿는다(거리의 제곱에 비례)
     const R = rng(7)
     const K = 72
@@ -177,12 +179,12 @@ export function backdropMotion(): BackdropRuntime {
     for (let k = 0; k < K; k++) {
       PA[k] = R() * TAU
       PR[k] = 1.7 + 1.4 * Math.pow(R(), 0.8)
-      PT[k] = 200 + (T * 0.98 * (PR[k] * PR[k])) / (3.1 * 3.1)
+      PT[k] = LEAD + 120 + (T * 0.98 * (PR[k] * PR[k])) / (3.1 * 3.1)
       for (let j = 0; j < 3; j++) PP[k * 3 + j] = R()
     }
     const end = Math.max(T, ...PT) + 120
     /** 들어오는 동안의 퍼진 너비(끝을 1로). 시간의 제곱근이라 처음에 빠르고 끝에서 느리게 멈춘다. 처음부터 너비가 있게 0.03에서 */
-    const spread = (e: number) => Math.sqrt(0.03 + 0.97 * (1 - Math.pow(1 - clamp(e / T), 2.2)))
+    const spread = (e: number) => Math.sqrt(0.03 + 0.97 * (1 - Math.pow(1 - clamp((e - LEAD) / T), 2.2)))
     return {
       end,
       draw(P, e, tau) {
@@ -194,7 +196,7 @@ export function backdropMotion(): BackdropRuntime {
         const inv = 1 / (sg * sg)
         const mx = DX * (sg - SG0)
         const my = DY * (sg - SG0)
-        const show = span(e, 0, 240)
+        const show = span(e, LEAD, 240)
         for (let i = 0; i < n; i++) {
           const ux = (X[i] - cx - mx) / sx
           const uy = (Y[i] - cy - my) / sy
@@ -210,7 +212,7 @@ export function backdropMotion(): BackdropRuntime {
         }
         const jig = amp(tau) * 2.4
         for (let k = 0; k < K; k++) {
-          const p = span(e, 120, PT[k] - 120)
+          const p = span(e, LEAD + 60, PT[k] - LEAD - 60)
           if (p <= 0) continue
           const pe = Math.sqrt(out(p))
           const rr = PR[k] * pe
@@ -224,8 +226,8 @@ export function backdropMotion(): BackdropRuntime {
           }
           P.dot(x, y, 1.5, 0, 0.36 * clamp(p * 4))
         }
-        // 퍼지는 앞: 두 배 너비에서 옅어지는 강조색 고리
-        if (e < T) ellipse(P, cx + mx, cy + my, 2.1 * sg * sx, 2.1 * sg * sy, 0, TAU, 1.25, 1, 0.45 * Math.pow(1 - e / T, 1.4) * span(e, 0, 200))
+        // 퍼지는 앞: 망점이 끝나는 언저리(1.7배 너비)에서 옅어지는 강조색 고리
+        if (e > LEAD && e < LEAD + T) ellipse(P, cx + mx, cy + my, 1.7 * sg * sx, 1.7 * sg * sy, 0, TAU, 1.25, 1, 0.45 * Math.pow(1 - (e - LEAD) / T, 1.4) * span(e, LEAD, 200))
         if (wave) ellipse(P, cx + mx, cy + my, wr * sx * sg, wr * sy * sg, 0, TAU, 1, 1, 0.16 * Math.sin(Math.PI * wave[1]))
         // 씨앗: 가장 먼저 서는 강조색 점
         P.dot(cx, cy, 4.5 * out(span(e, 0, 360)), 1, 0.9)
@@ -372,7 +374,7 @@ export function backdropMotion(): BackdropRuntime {
     const amp1 = Math.min(18, h * 0.018)
     const lines = Array.from({ length: L }, (_, i) => ({
       y0: h * (0.06 + (0.88 * i) / Math.max(1, L - 1)),
-      a: 0.07 + 0.04 * (((i * 7) % 3) / 2),
+      a: 0.1 + 0.05 * (((i * 7) % 3) / 2),
       delay: 80 + Math.abs(i - mid) * 70,
     }))
     const G = new Float32Array(N + 1)
@@ -562,7 +564,7 @@ export function backdropMotion(): BackdropRuntime {
           for (const [pts, closed] of LEVELS[k]) {
             for (let i = 0; i < pts.length; i += 2) P.to(pts[i] + ox, pts[i + 1] + oy)
             if (top) P.stroke(1.3, 1, 0.42 * clamp(p * 1.6), closed)
-            else P.stroke(index ? 1.5 : 1, 0, (index ? 0.13 : 0.085) * clamp(p * 1.6), closed)
+            else P.stroke(index ? 1.5 : 1, 0, (index ? 0.17 : 0.11) * clamp(p * 1.6), closed)
           }
         }
         const pk = span(e, end - 450, 420)
@@ -630,7 +632,7 @@ export function backdropMotion(): BackdropRuntime {
       draw(P, e) {
         for (let i = 0; i < BX.length; i++) {
           const show = span(e, 40 + BU[i] * 700, 420)
-          if (show > 0) P.dot(BX[i], BY[i], 1.3, 0, 0.13 * show)
+          if (show > 0) P.dot(BX[i], BY[i], 1.3, 0, 0.16 * show)
         }
         for (let i = 0; i < MX.length; i++) {
           const k = span(e, MW[i], IN)
@@ -638,7 +640,7 @@ export function backdropMotion(): BackdropRuntime {
           // 맞춰지기: 조금 크게 나타났다가 제 크기로 줄어 앉는다(넘치지 않는다)
           const size = 1 + 0.45 * (1 - out(k))
           const accent = MK[i] === last
-          P.dot(MX[i], MY[i], (accent ? 2 : 1.7) * size, accent ? 1 : 0, (accent ? 0.55 : 0.3) * clamp(k * 2.5))
+          P.dot(MX[i], MY[i], (accent ? 2.5 : 2.1) * size, accent ? 1 : 0, (accent ? 0.6 : 0.34) * clamp(k * 2.5))
         }
       },
     }
@@ -737,7 +739,7 @@ export function backdropMotion(): BackdropRuntime {
             P.to(x, y)
           }
           if (a.accent) P.stroke(1.4, 1, 0.45)
-          else P.stroke(1, 0, 0.1 + 0.05 * ((a.b - a.a) / w))
+          else P.stroke(1, 0, 0.12 + 0.06 * ((a.b - a.a) / w))
         }
         const b = span(e, drawn - 150, BEAD)
         if (b > 0 && b < 1) {

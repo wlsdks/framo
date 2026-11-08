@@ -85,8 +85,16 @@ export const placeOfArea = (at: BlockAt) => BACKDROP_PLACES.find((p) => sameArea
  */
 const FOCAL_PLACE: Partial<Record<LayoutId, string>> = { cover: 'top', section: 'top', closing: 'top', statement: 'corner' }
 
-/** 배경을 처음 고를 때의 값: 장 전체에 고르게 깔리는 그림은 전체, 한 점이 있는 그림은 글이 적은 쪽 */
+/** 글이 적은 장(표지, 섹션, 맺음): 처음 고를 때 또렷하게. 보통 짙기는 글이 많은 장에 맞춘 것이라 큰 화면에서 표지가 비어 보였다 */
+const BOLD_PLACES: readonly LayoutId[] = ['cover', 'section', 'closing']
+
+/** 배경을 처음 고를 때의 값: 장 전체에 고르게 깔리는 그림은 전체, 한 점이 있는 그림은 글이 적은 쪽. 글이 적은 장은 또렷하게 */
 export function baseBackdrop(slide: Pick<Slide, 'layout' | 'variant' | 'options'>, kind: BackdropId): Backdrop {
+  const strong = BOLD_PLACES.includes(slide.layout) ? { strength: 'strong' as const } : {}
+  return { ...placeOf(slide, kind), ...strong }
+}
+
+function placeOf(slide: Pick<Slide, 'layout' | 'variant' | 'options'>, kind: BackdropId): Backdrop {
   if (!backdropSpec(kind).focal) return { kind }
   // 옆 면이 있는 표지: 옆 면 밖(제목이 있는 판)의 위쪽. 옆 면이 씨앗을 가리지 않게
   const side = slide.layout === 'cover' ? sideOf(slide) : null

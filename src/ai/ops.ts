@@ -822,10 +822,11 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
         }
         // 지금 그리는 배경이 있으면 그 자리와 짙기에서, 없으면(처음이거나 모르는 배경) 그 장의 처음 자리에서
         const now = backdropOf(s)
+        const base = baseBackdrop(s, op.backdrop)
         const next = tidyBackdrop({
           kind: op.backdrop,
-          at: op.x !== undefined ? { x: op.x, y: op.y!, w: op.w!, h: op.h! } : (now?.at ?? baseBackdrop(s, op.backdrop).at),
-          strength: op.strength ?? now?.strength,
+          at: op.x !== undefined ? { x: op.x, y: op.y!, w: op.w!, h: op.h! } : (now?.at ?? base.at),
+          strength: op.strength ?? now?.strength ?? base.strength,
         })
         if (now && JSON.stringify(tidyBackdrop(now)) === JSON.stringify(next)) return fail('no_change')
         put(i, { ...rest, backdrop: next })
