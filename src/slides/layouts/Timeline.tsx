@@ -12,7 +12,7 @@ export function Timeline() {
   const now = highlightOf(slide)
   return (
     <>
-      <Head />
+      <Head lead />
       <ol className={cx('s-body tl', now >= 0 && 'has-now')} data-n={items.length}>
         {items.map((it, i) => (
           <li key={it.id} className={cx('it tl-item', now >= 0 && i < now && 'is-done', i === now && 'is-now')}>

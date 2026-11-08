@@ -506,7 +506,7 @@ export const LAYOUTS: Record<LayoutId, LayoutSpec> = {
     ],
     // 지나온 단계까지 선을 채워서 어디까지 왔는지 보여 준다. 계획만 보여 줄 때는 '없음'
     highlight: { label: '지금 단계', fallback: -1 },
-    fields: [title('일정을 요약하는 제목')],
+    fields: [title('일정을 요약하는 제목'), lead()],
     items: {
       label: '단계',
       min: 2,

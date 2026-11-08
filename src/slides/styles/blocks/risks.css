@@ -9,9 +9,10 @@
   column-gap: 48px;
 }
 
+/* 머리말(걱정되는 점 · 대책)은 두 단의 작은 머리글: 아래에 선을 긋지 않고 첫 줄에 가까이 둔다(줄 사이보다 좁게). 머리줄 아래 선과
+   줄마다 그은 선은 어느 크기에서나 선 그은 표로 읽혔다(사용자: 표 규격 같다) */
 .bk-rk-head {
-  padding-bottom: 14px;
-  border-bottom: var(--rule-hair) solid var(--line);
+  padding-bottom: 6px;
 }
 
 .bk-rk-hk {
@@ -25,16 +26,11 @@
   grid-column: 3;
 }
 
-/* 줄 선은 줄 사이에만: 머리 아래 선이 첫 줄 위를 맡고, 마지막 줄 아래는 여백이 닫는다(VISUAL-RULES 2).
+/* 줄 사이에 선을 긋지 않는다: 짝(걱정과 대책)은 같은 줄과 글자 위계(대책이 짙고 굵다)가 묶고, 줄은 여백이 나눈다.
    줄 사이는 한 줄 내용의 두 배 안: 32px씩 위아래에 바람(--bk-air)까지 다 더하던 때는 줄 사이가 90px로 내용(40px)의 두 배를 넘어
    걱정과 대책의 짝이 줄마다 떨어진 섬으로 보였다. 바람은 줄 사이 하나에 한 번만 들어가게 반씩 */
 .bk-rk-row {
   padding: calc(22px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
-  border-bottom: var(--rule-hair) solid var(--line);
-}
-
-.bk-rk-row:last-child {
-  border-bottom: 0;
 }
 
 .bk-rk-list[data-n='4'] .bk-rk-row {
@@ -145,10 +141,18 @@
    꺾쇠를 감춘 뒤에도 꺾쇠 열(56px)과 그 양옆 사이(48px씩)가 남아 걱정과 대책 사이가 150px 넘게 비었고, 대책 열이 좁아 두 줄로
    꺾였다(사용자: 표가 보기 힘들다). 꺾쇠 열을 빼고 걱정 1 : 대책 1.4로 나눈다. 머리말은 이름표보다 또렷하게, 대책은 덜 무겁게(500) */
 @container bk (min-width: 981px) {
+  /* 걱정 단은 가장 긴 걱정만큼만(본문 너비의 45%까지, Risks.tsx의 --rk-tw는 걱정 글자 em), 두 단 사이는 줄 사이(글자 사이까지 47)보다 좁게(32):
+     줄 선을 걷은 뒤 1 : 1.4로 나눈 단 사이가 72px에 짧은 걱정 뒤가 300px 넘게 비어, 같은 줄의 짝보다 위아래 줄이 먼저 묶여
+     '걱정 목록 하나, 대책 목록 하나'로 읽혔다(검수). 같은 줄의 짝이 먼저 묶이게 대책을 걱정 가까이 둔다. 줄 사이는 더 넓히지
+     않는다: 한 줄 내용의 두 배를 넘으면 줄끼리 떨어진 섬으로 보인다(VISUAL-RULES 6) */
+  .bk-rk {
+    --rk-fs: max(var(--fs-min, 0px), calc(var(--t-body) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1)));
+  }
+
   .bk-rk-head,
   .bk-rk-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-    column-gap: 72px;
+    grid-template-columns: minmax(0, min(calc(var(--rk-tw, 99) * var(--rk-fs)), 45%)) minmax(0, 1fr);
+    column-gap: 32px;
   }
 
   .bk-rk-arrow {
@@ -178,16 +182,10 @@
   font-weight: 500;
 }
 
-/* 넓고 높은 칸(판을 혼자 쓸 때 같은): 선 그은 표가 아니라 여백과 글자 위계로. 14px 줄 사이에 머리줄 아래 선과 줄 선을 그어
-   판을 혼자 써도 세 줄이 빽빽한 표로 모였다(사용자: 표 규격 같다). 선을 걷고 줄 사이를 넉넉히 둔다(한 줄 내용의 두 배 안,
-   VISUAL-RULES 6). 걱정과 대책의 짝은 같은 줄과 글자 위계(대책이 굵다)가 묶는다 */
+/* 넓고 높은 칸(판을 혼자 쓸 때 같은): 줄 사이를 넉넉히 둔다(한 줄 내용의 두 배 안, VISUAL-RULES 6). 14px 줄 사이면 판을 혼자 써도
+   세 줄이 빽빽하게 모였다(사용자: 표 규격 같다) */
 @container bk (min-width: 1300px) and (min-height: 520px) {
   .bk-rk-list[data-n] .bk-rk-row {
     padding: calc(28px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
-    border-bottom: 0;
-  }
-
-  .bk-rk-head {
-    border-bottom: 0;
   }
 }

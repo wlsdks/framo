@@ -130,13 +130,40 @@
   --tl-gap: 64px;
   grid-template-rows: repeat(4, auto);
   gap: 0 var(--tl-gap);
+  /* 시기의 한 줄 줄이기(.one-line)가 잴 칸 너비: 목록 너비에서 단 하나의 몫(아래 .tl-item의 --line-room) */
+  container-type: inline-size;
 }
 
+/* 단계는 칸을 담지(container) 않는다: 담는 칸은 제 안을 따로 짜서(레이아웃 격리) subgrid가 꺼지고, 단계마다 네 줄을 제 높이에
+   늘려 나눴다. 그래서 설명이 세 줄인 단계만 이름이 27px 위에 서서 옆 단계의 이름과 바닥선이 어긋났다.
+   시기가 잴 너비는 목록(.tl)에서 단 하나의 몫으로 준다 */
 .l-timeline.va-base .tl-item {
+  --line-room: calc((100cqi - (var(--tl-n) - 1) * var(--tl-gap)) / var(--tl-n));
   display: grid;
   grid-row: 1 / -1;
   grid-template-rows: subgrid;
   padding-right: 0;
+  container-type: normal;
+}
+
+.l-timeline.va-base .tl[data-n='2'] {
+  --tl-n: 2;
+}
+
+.l-timeline.va-base .tl[data-n='3'] {
+  --tl-n: 3;
+}
+
+.l-timeline.va-base .tl[data-n='4'] {
+  --tl-n: 4;
+}
+
+.l-timeline.va-base .tl[data-n='5'] {
+  --tl-n: 5;
+}
+
+.l-timeline.va-base .tl[data-n='6'] {
+  --tl-n: 6;
 }
 
 /* 선은 점의 가운데를 지난다: 시기 줄 높이 + 점 위 틈 + 점 반지름 */
@@ -421,7 +448,10 @@
   translate: -50% -50%;
 }
 
-:is(.tl-item:is(.is-done, .is-now) .tl-dot, .va-steps .tl-item:is(.is-done, .is-now) .tl-dot) {
+/* 지나온 단계와 지금 단계의 눈금은 강조색(지금 단계는 날짜와 같은 색). 위의 눈금 규칙(:is)은 가장 구체적인 항목(.va-steps .tl.has-now …,
+   여섯 단계)의 구체성을 모두에게 주어서, 이 규칙이 그보다 낮으면 늘 져서 지금 단계도 날짜만 강조색이고 눈금은 글자색이었다(검수).
+   같은 구체성의 항목을 넣어 이긴다(이 규칙이 뒤에 온다) */
+:is(.tl-item:is(.is-done, .is-now) .tl-dot, .va-steps .tl.has-now .tl-item:is(.is-done, .is-now) .tl-dot) {
   --tl-c: var(--accent);
 }
 

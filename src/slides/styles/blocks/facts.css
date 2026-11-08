@@ -30,24 +30,13 @@
   column-gap: 56px;
   /* 줄 사이는 글자와 함께 크되 한 줄 내용의 두 배를 넘지 않게(VISUAL-RULES 6). 24px씩 위아래에 두고 바람(--bk-air)도 위아래에 다 더하던 때는
      글자를 키운 장에서 한 줄짜리 줄 사이가 109px로 내용(36px)의 세 배였다. 바람은 줄 사이 하나에 한 번만 들어가게 반씩 나눈다 */
-  /* 10px이던 때는 줄이 선에 붙어 표가 빽빽했다(사용자: 다 붙어 있다). 다만 칸을 키우면(--bk-fit) 바람(--bk-air)까지 더해져
-     15px만 돼도 줄 사이가 내용 높이의 두 배를 넘었다(VISUAL-RULES 6). 13px */
+  /* 10px이던 때는 줄이 붙어 빽빽했다(사용자: 다 붙어 있다). 다만 칸을 키우면(--bk-fit) 바람(--bk-air)까지 더해져
+     15px만 돼도 줄 사이가 내용 높이의 두 배를 넘었다(VISUAL-RULES 6). 13px: 줄 사이(26)가 두 줄로 꺾인 내용의 줄 간격(13)의 두 배다 */
   padding: calc(13px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
 }
 
-/* 줄 사이 선: 옅은 1px, 줄 사이에만(VISUAL-RULES 2). 발표할 때 왼쪽에서부터 그어진다.
-   첫 줄 위의 글자색 선(목록 머리 괘선)은 묶음 표시라 긋지 않는다: 그 위 소제목의 아래와 겹쳐 선 밑에 선처럼 보였다 */
-.bk-fc-row::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: var(--rule-hair);
-  background: var(--line);
-}
-
-.bk-fc-row:first-child::before {
-  content: none;
-}
+/* 줄 사이에 선을 긋지 않는다: 이름 | 내용 줄마다 옅은 선을 그으면 어느 크기에서나 선 그은 표로 읽혔다(사용자: 표 규격 같다).
+   줄은 여백과 글자 위계(옅은 굵은 이름, 보통 굵기의 내용)가 나눈다. 발표할 때도 선 없이 줄이 차례로 들어온다 */
 
 /* 첫 줄은 위에 선이 없으니 위 사이도 없이 맨 위에 붙는다. 항목 수마다의 줄 사이(아래 [data-n]) 규칙보다 앞서게 구체성을 맞춘다 */
 .bk-fc-list:is([data-n]) > .bk-fc-row:first-child {
@@ -91,32 +80,66 @@
   }
 }
 
-/* 넓은 칸에서 줄이 많으면 두 단으로. 두 단의 첫 줄은 둘 다 선 없이 맨 위에.
-   나란한 두 줄의 선은 단 사이를 건너 하나로 잇는다: 끊어 두면 소제목이 왼쪽 단에만 붙은 표 둘로 보이고
-   오른쪽 단의 진한 선 위가 비어 보였다. 이으면 '항목 내용 항목 내용'이 한 줄로 읽히는 표 하나다.
-   짝이 없는 마지막 줄(다섯 줄의 다섯째)은 잇지 않는다 */
-@container bk (min-width: 1300px) {
-  /* 두 단: 단마다 이름 칸과 내용 칸. 줄은 제 단의 두 칸을 나눠 쓴다(단 안의 줄끼리 내용이 한 자리에서 시작한다) */
-  .bk-fc-list:is([data-n='4'], [data-n='5'], [data-n='6']) {
-    --fc-gap: 72px;
-    grid-template-columns: fit-content(17%) minmax(0, 1fr) fit-content(17%) minmax(0, 1fr);
-    column-gap: var(--fc-gap);
+/* 넓은 칸: 이름 | 내용 줄 대신 이름을 내용 위의 작은 머리말로 얹고, 짝을 나란한 단에 놓는다(지면의 개요란). 이름 | 내용 | 이름 | 내용
+   네 칸으로 두 단을 짜던 때는 줄 선이 없어도 넓은 표의 칸으로 읽혔다(사용자: 표 규격 같다). 단 수는 가장 긴 내용이 한 줄에 드는 만큼만
+   (Facts.tsx의 factsColumns가 data-cols에 높은 칸 t, 낮은 칸 l, 크게 T, L마다 적는다): 셋으로 펴면 긴 내용이 괄호 안에서 꺾여 단마다
+   높이가 들쭉날쭉했고 맞추기가 글자를 한 단계 줄였다(검수). 단을 줄이고 줄을 늘린다. 1이면 펴지 않고 이름 | 내용 줄로.
+   짝 사이는 단 사이(72)와 줄 사이(40)로, 짝 안(8)보다 넓다 */
+@container bk (min-width: 1300px) and (max-height: 519.98px) {
+  .slide:not(.sz-large) .bk-fc-list:is([data-cols~='l2'], [data-cols~='l3'], [data-cols~='l4']),
+  .slide.sz-large .bk-fc-list:is([data-cols~='L2'], [data-cols~='L3'], [data-cols~='L4']) {
+    --fc-stack: 1;
+    gap: calc(40px * var(--bk-fit, 1) + var(--bk-air, 0px)) 72px;
+    align-items: start;
   }
 
-  .bk-fc-list:is([data-n='4'], [data-n='5'], [data-n='6']) .bk-fc-row {
-    grid-column: span 2;
+  .slide:not(.sz-large) .bk-fc-list[data-cols~='l2'],
+  .slide.sz-large .bk-fc-list[data-cols~='L2'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .bk-fc-list:is([data-n='4'], [data-n='5'], [data-n='6']) .bk-fc-row:nth-child(2)::before {
-    content: none;
+  .slide:not(.sz-large) .bk-fc-list[data-cols~='l3'],
+  .slide.sz-large .bk-fc-list[data-cols~='L3'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .bk-fc-list:is([data-n='4'], [data-n='5'], [data-n='6']) .bk-fc-row:nth-child(2) {
-    padding-top: 0;
+  .slide:not(.sz-large) .bk-fc-list[data-cols~='l4'],
+  .slide.sz-large .bk-fc-list[data-cols~='L4'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container bk (min-width: 1300px) and (min-height: 520px) {
+  .slide:not(.sz-large) .bk-fc-list:is([data-cols~='t2'], [data-cols~='t3']),
+  .slide.sz-large .bk-fc-list:is([data-cols~='T2'], [data-cols~='T3']) {
+    --fc-stack: 1;
+    gap: calc(40px * var(--bk-fit, 1) + var(--bk-air, 0px)) 72px;
+    align-items: start;
   }
 
-  .bk-fc-list:is([data-n='4'], [data-n='5'], [data-n='6']) .bk-fc-row:nth-child(odd):not(:first-child, :last-child)::before {
-    right: calc(-1 * var(--fc-gap));
+  .slide:not(.sz-large) .bk-fc-list[data-cols~='t2'],
+  .slide.sz-large .bk-fc-list[data-cols~='T2'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .slide:not(.sz-large) .bk-fc-list[data-cols~='t3'],
+  .slide.sz-large .bk-fc-list[data-cols~='T3'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 단으로 편 개요: 줄(.bk-fc-row)의 부모인 목록이 --fc-stack을 가진다(모든 요소는 스타일 질의의 그릇이다). 항목 수마다의 줄 사이,
+   넓고 높은 칸의 줄 사이보다 앞서게 구체성을 높인다 */
+@container style(--fc-stack: 1) {
+  .bk-fc-list[data-cols] > .bk-fc-row.it {
+    display: flex;
+    flex-direction: column;
+    grid-column: auto;
+    padding: 0;
+  }
+
+  .bk-fc-v {
+    margin-top: calc(8px * var(--bk-fit, 1));
   }
 }
 
@@ -126,22 +149,12 @@
   padding-bottom: 0;
 }
 
-@container bk (min-width: 1300px) {
-  .bk:is(.bk-look-card, .bk-look-bold) .bk-fc-list:is([data-n='4'], [data-n='6']) .bk-fc-row:nth-last-child(2) {
-    padding-bottom: 0;
-  }
-}
 
-/* 넓고 높은 칸(판을 혼자 쓸 때 같은): 선 그은 표가 아니라 여백과 글자 위계로. 13px 줄 사이에 줄마다 선을 그어 판을 혼자 써도
-   네 줄이 본문 위 3분의 1에 빽빽한 표로 모이고 아래가 통째로 비었다(사용자: 표 규격 같다). 줄 선을 걷고 줄 사이를 넉넉히
-   두며(한 줄 내용의 두 배 안, VISUAL-RULES 6) 내용을 한 단계 키운다(보통 굵기라 장 제목과 다투지 않는다) */
+/* 넓고 높은 칸(판을 혼자 쓸 때 같은): 내용을 한 단계 키운다(보통 굵기라 장 제목과 다투지 않는다). 줄 하나뿐이면 줄 사이도 넉넉히
+   (한 줄 내용의 두 배 안, VISUAL-RULES 6) */
 @container bk (min-width: 1300px) and (min-height: 520px) {
   .bk-fc-row {
     padding: calc(26px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
-  }
-
-  .bk-fc-row::before {
-    content: none;
   }
 
   .bk-fc-v {

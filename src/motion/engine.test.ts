@@ -175,7 +175,8 @@ describe('움직임 엔진', () => {
     expect(lines).not.toMatch(/getBoundingClientRect|getClientRects/)
     // 묶음을 다 짠 뒤에 쓰고, 장면은 쓴 뒤에 다시 짠다(나눈 낱말이 장 안에 있어야 어느 묶음의 움직임인지 안다)
     const batch = src.slice(src.search(/const batch = /), src.indexOf('const mine = {'))
-    expect(batch).toMatch(/make\(\);?\s*flushJobs\(\)/)
+    // 모아 둔 큰 숫자를 굴리는 일(settleCounts)도 쓰기 전에: 굴리기도 쓸 일을 모아 둔다
+    expect(batch).toMatch(/make\(\);?\s*(settleCounts\(\);?\s*)?flushJobs\(\)/)
     const c = src.indexOf('choreo(layout, slideVariant)')
     const f = src.indexOf('flushJobs()', c)
     expect(c).toBeGreaterThan(0)
@@ -201,8 +202,8 @@ describe('움직임 엔진', () => {
     const at = src.indexOf('const count = (')
     const count = src.slice(at, src.indexOf('\n    }', at))
     expect(count).toMatch(/digitTexts\(el\)/)
-    // 조각마다 몇째 조각인지 넘겨 굴린다
-    expect(count).toMatch(/roll\(el, s\(at\), [^\n]*restores, \w+\)/)
+    // 조각마다 몇째 조각인지 넘겨 굴린다(굴리는 때는 부른 때에 정해 둔 start)
+    expect(count).toMatch(/roll\(el, start, [^\n]*restores, \w+\)/)
     expect(src.slice(src.indexOf('function roll('), src.indexOf('function roll(') + 200)).toMatch(/nth/)
     // 합계 올리기는 숫자 하나만 다루니 숫자가 둘인 합계는 그대로 둔다
     const t = src.indexOf('const tally = (')

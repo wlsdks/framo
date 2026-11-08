@@ -12,7 +12,7 @@ import { IT, ItemTools, T } from '../fields'
 const TIP_GAP = 5
 /** 구간 선은 화살촉 끝보다 이만큼(도) 앞에서 멈춘다: 선 끝이 꽉 찬 머리 밑에 숨어 뾰족한 끝으로 삐져나오지 않게 */
 const UNDER = 2
-/** 이름표와 고리 사이(본문 em). cycle.css의 --cy-gap과 같다 */
+/** 이름표와 고리 사이(이름 글자 em). cycle.css의 --cy-gap과 같다 */
 export const CYCLE_GAP_EM = 0.7
 
 const round = (v: number) => Math.round(v * 100) / 100
@@ -54,34 +54,36 @@ export function cycleRing(n: number, from = 0): { spots: CycleSpot[]; arcs: { d:
   return { spots, arcs }
 }
 
-/** 글 너비 어림(본문 글자 크기 em): 한글과 전각은 1, 그 밖은 0.58, 띄어쓰기 0.3 */
+/** 글 너비 어림(이름 글자 크기 em): 한글과 전각은 1, 그 밖은 0.58, 띄어쓰기 0.3 */
 function widthEm(text: string): number {
   let w = 0
   for (const ch of text) w += ch === ' ' ? 0.3 : /[ᄀ-ᇿ　-鿿가-힯＀-￯]/.test(ch) ? 1 : 0.58
   return w
 }
 
-/** 이름표 한 줄의 너비 한도(본문 em). 넘으면 줄을 바꾼다. cycle.css의 고리 이름표 max-width와 같다 */
+/** 이름표 한 줄의 너비 한도(이름 글자 em). 넘으면 줄을 바꾼다. cycle.css의 고리 이름표 max-width와 같다 */
 export const CYCLE_LABEL_EM = 9
-/** 설명 글자는 본문보다 한 단계 작다(26/30) */
-const META_K = 26 / 30
+/** 설명 글자는 이름보다 한 단계 작다(고리에서 30/36, cycle.css) */
+const META_K = 30 / 36
+/** 이름 앞의 번호('01', 이름의 26/36인 두 자리)와 번호 뒤 틈(cycle.css의 0.4em) */
+const NUM_EM = 1.3
 
 /**
- * 고리 둘레의 이름표마다 차지할 너비와 높이(본문 em) 어림: 번호 한 줄, 이름(줄 수), 설명(줄 수). 재지 않고 어림하는 것은 반지름이
- * 이 값에 따라 정해지고 이름표 자리는 반지름에 따라 정해져서, 재면 서로를 따라 움직이기 때문이다. 어림이 모자라 넘치거나 겹치면
- * 글자 맞추기(fitBlocks)가 단계로 줄인다
+ * 고리 둘레의 이름표마다 차지할 너비와 높이(이름 글자 em) 어림: 번호와 이름(번호는 이름 첫 줄 앞에, 줄 수), 설명(줄 수). 재지 않고 어림하는
+ * 것은 반지름이 이 값에 따라 정해지고 이름표 자리는 반지름에 따라 정해져서, 재면 서로를 따라 움직이기 때문이다. 어림이 모자라
+ * 넘치거나 겹치면 글자 맞추기(fitBlocks)가 단계로 줄인다
  */
 export function cycleLabelBoxes(labels: { title: string; meta: string }[]): { w: number; h: number }[] {
   return labels.map(({ title, meta }) => {
     const tw = widthEm(title)
     const mw = widthEm(meta) * META_K
-    const tl = Math.max(1, Math.ceil(tw / CYCLE_LABEL_EM))
+    const tl = Math.max(1, Math.ceil(tw / (CYCLE_LABEL_EM - NUM_EM)))
     const ml = meta ? Math.ceil(mw / CYCLE_LABEL_EM) : 0
-    return { w: round(Math.max(1.2, Math.min(CYCLE_LABEL_EM, Math.max(tw, mw)))), h: round(0.95 + 0.2 + tl * 1.35 + (ml ? 0.15 + ml * 1.17 : 0)) }
+    return { w: round(Math.max(1.2, Math.min(CYCLE_LABEL_EM, Math.max(NUM_EM + tw, mw)))), h: round(tl * 1.35 + (ml ? 0.15 + ml * 1.17 : 0)) }
   })
 }
 
-/** 고리 가운데에서 한쪽으로 뻗은 거리: a × 반지름 + b(본문 em) */
+/** 고리 가운데에서 한쪽으로 뻗은 거리: a × 반지름 + b(이름 글자 em) */
 type Reach = { a: number; b: number }
 
 /** 같은 쪽으로 뻗은 것 가운데 다른 것보다 반지름에도, 더하는 길이에도 멀지 않은 것은 뺀다 (반지름은 0 이상) */
