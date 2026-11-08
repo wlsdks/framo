@@ -51,6 +51,8 @@ interface CineRuntime {
   play(el: HTMLElement, o: CinePlayOptions): () => void
   /** 엔진이 장을 움직이며 보내는 알림(mo-cine)을 받는다. 한 문서에 한 번 */
   listen(root: Document): void
+  /** 미리 그려 둔 다음 장의 글자 모양을 미리 딴다(한가할 때). 장을 넘기는 프레임에 글자를 따느라 첫 프레임이 늦지 않게 */
+  prewarm(root: ParentNode): void
   stats(): CineStats | null
 }
 
@@ -74,7 +76,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
   // ======================================================================
   // 길(선, 물결): 칸을 0~1000으로 늘린 좌표. 멈춘 그림(SVG)과 캔버스가 같은 길을 긋는다
   // ======================================================================
-  const PATH_Y = 560
+  const PATH_Y = 600
   const pathX = (u: number) => u * 1000
   const pathY = (kind: string, u: number) => (kind === 'wave' ? PATH_Y + 64 * Math.sin(TAU * u * 1.25 + 0.4) * (0.55 + 0.45 * Math.sin(Math.PI * u)) : PATH_Y)
   const isPath = (s: CineScript) => s.shape === 'line' || s.shape === 'wave'
@@ -102,6 +104,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     stops: number[][]
     /** 숫자 굴리기: 그 글 노드, 원래 글, 숫자의 자리 */
     count?: { node: Text; text: string; at: number; len: number; value: number; digits: number; comma: boolean }
+    /** 건너오기: 앞 값(before)의 칸, 그 자리까지의 가로 거리(이 칸 기준 px), 앞 값의 숫자(굴러 오는 출발점), 앞 값을 벗어나는 때(0~1) */
+    from?: { el: HTMLElement | null; dx: number; value: number | null; clear: number }
   }
 
   interface Scene {
@@ -121,12 +125,20 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     /** 모일 모양의 상자(되풀이의 띠가 지나는 곳) [x, y, w, h] */
     gb: number[]
     reach: number
-    /** 모양을 딴 글자의 그림(또렷해질 때 번지는 빛) */
-    img: { cv: HTMLCanvasElement; x: number; y: number; w: number; h: number } | null
+    /** 글자 모양을 땄는지(땄으면 맺히는 순간의 빛 대신 글자가 답이다) */
+    shaped: boolean
+    /** 지금 카메라 배율 - 1(입자의 시차: 가까운 입자는 카메라보다 더, 먼 입자는 덜 움직인다). 프레임마다 fill이 적는다 */
+    cz: number
+    /** 번지는 먹의 가장자리(wash): 굽이마다 [몇 번 굽나, 크기, 위상, 기어가는 빠르기] */
+    edge: Float32Array
+    /** 모여드는 가는 선(threads): 선마다 [처음 y, 닿을 y, 처음 가운데 x, 닿을 가운데 x, 처음 길이, 닿을 길이, 늦춤, 짙기] */
+    threads: Float32Array
+    /** 가는 선의 굵기(글자의 가로 줄 간격에 맞춘다) */
+    threadW: number
     /** 갈래: 입자마다 몇째 갈래인지(-1은 갈래 없이 가운데 둘레), 갈래마다 [뻗는 각도, 길이, 휘는 몫] */
     arm: Int8Array
     arms: number[][]
-    mode: 'burst' | 'scatter' | 'pen'
+    mode: 'burst' | 'scatter' | 'pen' | 'wash' | 'threads'
     N: number
     ang: Float32Array
     rad: Float32Array
@@ -142,7 +154,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     sy: Float32Array
     tx: Float32Array
     ty: Float32Array
-    /** 길 위의 자리(0~1, 펜 모드) */
+    /** 고리 둘레의 자리(0~1): 고리로 모일 때 둘레를 따라 차례로 */
     pu: Float32Array
     texts: TextBox[]
     spans: Record<string, CineSpan | undefined>
@@ -188,10 +200,47 @@ export function cineMotion(kit: DrawKit): CineRuntime {
   }
 
   /**
-   * 글 칸의 글자를 그 글꼴로 화면 밖 캔버스에 그려 모양을 딴다. 글자마다 DOM이 놓은 자리에 그려서 줄바꿈, 자간, 글꼴이 화면과 같다.
-   * 칸 좌표의 점 n개(늘 같은 씨앗으로 고른다)와 모양의 상자. 그릴 글자가 없으면 null
+   * 모양 딴 것의 캐시: 같은 글, 같은 글꼴, 같은 크기면 같은 점들이다(글 칸 기준 좌표). 다음 장의 모양을 앞 장 동안 미리 따 두고(prewarm)
+   * 장을 넘길 때는 꺼내 쓴다. 점은 정해진 씨앗으로 섞은 차례라 앞에서부터 n개를 쓰면 어느 수든 고르게 뽑은 것이다
    */
-  function sampleText(wrap: HTMLElement, n: number, R: () => number, at: (r: DOMRect) => number[], color: string) {
+  interface Shape {
+    /** 점(입자가 모일 자리): 정해진 씨앗으로 섞은 차례 */
+    pts: Float32Array
+    /** 가로 줄(가는 선이 모일 자리): 줄마다 [왼쪽 x, 오른쪽 x, y] */
+    runs: Float32Array
+    /** 글자의 상자 [x, y, w, h] */
+    box: number[]
+  }
+  const shapes = new Map<string, Shape>()
+  const MAX_PTS = 5000
+  function shapeKey(wrap: HTMLElement, kz: number) {
+    const field = (wrap.firstElementChild as HTMLElement | null) || wrap
+    const cs = getComputedStyle(field)
+    const r = wrap.getBoundingClientRect()
+    return `${wrap.textContent}|${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}|${cs.letterSpacing}|${Math.round(r.width / kz)}x${Math.round(r.height / kz)}`
+  }
+  /** 글 칸의 모양(글 칸 기준 좌표). 같은 글, 글꼴, 크기면 캐시에서 */
+  function shapeOf(wrap: HTMLElement, kz: number): Shape | null {
+    const key = shapeKey(wrap, kz)
+    let got = shapes.get(key)
+    if (!got) {
+      const wr = wrap.getBoundingClientRect()
+      const made = traceText(wrap, (r) => [(r.left - wr.left) / kz, (r.top - wr.top) / kz, r.width / kz, r.height / kz])
+      if (!made) return null
+      got = made
+      if (shapes.size > 24) shapes.delete(shapes.keys().next().value!)
+      shapes.set(key, got)
+    }
+    return got
+  }
+
+  /**
+   * 글 칸의 글자를 그 글꼴로 화면 밖 캔버스에 그려 모양을 딴다. 글자마다 DOM이 놓은 자리에 그려서 줄바꿈, 자간, 글꼴이 화면과 같다.
+   * 칸 좌표의 점(늘 같은 씨앗으로 섞는다), 가로 줄, 모양의 상자. 그릴 글자가 없으면 null
+   */
+  function traceText(wrap: HTMLElement, at: (r: DOMRect) => number[]): Shape | null {
+    const R = rng(97)
+    const n = MAX_PTS
     const gs = graphemes(wrap)
     if (!gs.length) return null
     const field = (wrap.firstElementChild as HTMLElement | null) || wrap
@@ -222,7 +271,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     ctx.translate(-x0, -y0)
     ctx.font = font
     ctx.textBaseline = 'alphabetic'
-    ctx.fillStyle = color
+    ctx.fillStyle = '#000'
     gs.forEach((g, k) => {
       const m = ctx.measureText(g.text)
       const asc = m.fontBoundingBoxAscent || m.actualBoundingBoxAscent || 0.8 * parseFloat(cs.fontSize)
@@ -231,9 +280,26 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       ctx.fillText(g.text, b[0], b[1] + (b[3] * asc) / (asc + desc))
     })
     const data = ctx.getImageData(0, 0, cv.width, cv.height).data
+    // 가로 줄: 글자 크기의 26분의 1 간격으로 글자를 가로질러 칠한 구간마다 하나(판화의 선처럼). 선이 모이면 그 줄들이 글자가 된다
+    const fs = parseFloat(cs.fontSize) || 60
+    const gap = Math.max(3, fs / 26) * sc
+    const runs: number[] = []
+    for (let y = gap / 2; y < cv.height; y += gap) {
+      const row = Math.floor(y) * cv.width
+      let x0r = -1
+      for (let x = 0; x <= cv.width; x++) {
+        const on = x < cv.width && data[(row + x) * 4 + 3] > 110
+        if (on && x0r < 0) x0r = x
+        else if (!on && x0r >= 0) {
+          if (x - x0r >= 2) runs.push(x0 + x0r / sc, x0 + x / sc, y0 + y / sc)
+          x0r = -1
+        }
+      }
+    }
     const hits: number[] = []
     const step = cv.width * cv.height > 240000 ? 2 : 1
     for (let y = 0; y < cv.height; y += step) for (let x = 0; x < cv.width; x += step) if (data[(y * cv.width + x) * 4 + 3] > 110) hits.push(x, y)
+    cv.width = cv.height = 0
     const m = hits.length / 2
     if (!m) return null
     const pts = new Float32Array(n * 2)
@@ -251,8 +317,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       pts[i * 2] = x0 + (hits[j * 2] + R() * step) / sc
       pts[i * 2 + 1] = y0 + (hits[j * 2 + 1] + R() * step) / sc
     }
-    // 그린 글자는 남겨 둔다: 또렷해지는 순간 그 글자 모양 그대로 빛(먹)이 번졌다 가라앉는다(bloom)
-    return { pts, box: [x0 + 8, y0 + 8, x1 - x0 - 16, y1 - y0 - 16], img: { cv, x: x0, y: y0, w: x1 - x0, h: y1 - y0 } }
+    return { pts, runs: new Float32Array(runs), box: [x0 + 8, y0 + 8, x1 - x0 - 16, y1 - y0 - 16] }
   }
 
   /** 줄마다의 상자와 글자의 오른쪽 끝(글 칸 안의 자리) */
@@ -297,7 +362,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
    * 장면을 만든다: 칸과 글의 자리를 재고, 입자 n개의 씨앗 값과 모일 자리를 정한다. 재는 동안에는 카메라를 잠깐 풀어 둔다
    * (배율이 걸린 채로 재면 글의 자리가 어긋난다)
    */
-  function build(el: HTMLElement, s: CineScript, n: number, host: { x: number; y: number; w: number; h: number }, kz: number, dark: boolean, ink: string): Scene {
+  function build(el: HTMLElement, s: CineScript, n: number, host: { x: number; y: number; w: number; h: number }, kz: number, dark: boolean): Scene {
     const R = rng((s.seed * 7919 + 13) >>> 0)
     const er = el.getBoundingClientRect()
     const cw = el.offsetWidth || er.width / kz
@@ -316,7 +381,14 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       const rel = (r: DOMRect) => [(r.left - wr.left) / kz, (r.top - wr.top) / kz, r.width / kz, r.height / kz]
       const tb: TextBox = { cue, el: wrap, box: toHost(wr), lines: [], stops: [] }
       if (cue.enter === 'write' || cue.enter === 'letters') Object.assign(tb, linesOf(wrap, rel))
-      if (cue.enter === 'count') tb.count = countOf(wrap)
+      if (cue.enter === 'count' || cue.enter === 'carry') tb.count = countOf(wrap)
+      if (cue.enter === 'carry') {
+        // 건너오기: 앞 값의 자리에서 떠나 앞 값의 숫자에서 굴러 온다
+        const bw = el.querySelector<HTMLElement>('[data-cn="before"]')
+        const bc = bw && /\S/.test(bw.textContent || '') ? countOf(bw) : undefined
+        const dx = bw ? (bw.getBoundingClientRect().left - wr.left) / kz : -cw * 0.6
+        tb.from = { el: bw, dx, value: bc ? bc.value : null, clear: bw ? clamp((bw.getBoundingClientRect().width / kz + 16) / Math.max(1, Math.abs(dx))) : 0.2 }
+      }
       texts.push(tb)
     }
     const shapeWrap = s.field ? el.querySelector<HTMLElement>(`[data-cn="${s.field}"]`) : null
@@ -330,13 +402,13 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       fx = bigBox[0] + bigBox[2] / 2
       fy = bigBox[1] + bigBox[3] / 2
     }
-    const path = isPath(s)
+    const path = s.material === 'line' && isPath(s)
     const P = (u: number) => [ox + (pathX(u) / 1000) * cw, oy + (pathY(s.shape, u) / 1000) * ch]
     if (path) [fx, fy] = P(0)
-    const mode: Scene['mode'] = spans.spread ? 'burst' : path ? 'pen' : 'scatter'
+    const mode: Scene['mode'] = s.material === 'wash' ? 'wash' : s.material === 'threads' ? 'threads' : s.material === 'line' ? 'pen' : spans.spread ? 'burst' : 'scatter'
     // 번지는 크기: 뒤에 모임이 있으면 장의 한가운데를 채울 만큼, 번짐으로 끝나면 장 끝 너머까지
     const far = Math.hypot(Math.max(fx, host.w - fx), Math.max(fy, host.h - fy))
-    const reach = spans.gather ? Math.min(host.w, host.h) * 0.56 : far * 0.95
+    const reach = spans.gather ? Math.min(host.w, host.h) * 0.46 : far * 1.05
     const ang = new Float32Array(n)
     const rad = new Float32Array(n)
     const z = new Float32Array(n)
@@ -416,27 +488,23 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     // 모일 자리
     let gb = bigBox ?? [fx - 80, fy - 80, 160, 160]
     let sampled = false
-    let img: Scene['img'] = null
-    if (s.shape === 'glyph' && shapeWrap) {
-      const got = sampleText(shapeWrap, n, R, toHost, ink)
-      if (got) {
-        tx.set(got.pts.filter((_, j) => j % 2 === 0))
-        ty.set(got.pts.filter((_, j) => j % 2 === 1))
-        gb = got.box
-        img = got.img
+    const traced = shapeWrap && s.shape === 'glyph' && (n || mode === 'threads') ? shapeOf(shapeWrap, kz) : null
+    const [wx, wy] = shapeWrap ? toHost(shapeWrap.getBoundingClientRect()) : [0, 0]
+    if (n && traced) {
+      const got = traced
+      {
+        // 글 칸 기준의 점을 판 좌표로
+        for (let i = 0; i < n; i++) {
+          tx[i] = wx + got.pts[(i * 2) % got.pts.length]
+          ty[i] = wy + got.pts[(i * 2 + 1) % got.pts.length]
+        }
+        gb = [wx + got.box[0], wy + got.box[1], got.box[2], got.box[3]]
         sampled = true
       }
     }
-    if (path) {
-      for (let i = 0; i < n; i++) pu[i] = (i + R()) / n
-      for (let i = 0; i < n; i++) {
-        const [x, y] = P(pu[i])
-        const g = Math.sqrt(-2 * Math.log(1 - R() * 0.99)) * Math.cos(TAU * R())
-        tx[i] = x
-        ty[i] = y + g * 2.2
-      }
-      gb = [ox, oy + (PATH_Y / 1000) * ch - 40, cw, 80]
-    } else if (!sampled) {
+    // 그어지는 선은 입자 없이 선과 글로 그린다(모일 자리가 없다): 상자는 선 둘레
+    if (path) gb = [ox, oy + (PATH_Y / 1000) * ch - 40, cw, 80]
+    else if (!sampled) {
       if (s.shape === 'point') {
         for (let i = 0; i < n; i++) {
           tx[i] = fx + Math.cos(ang[i]) * 3 * R()
@@ -469,7 +537,51 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       idx.forEach((i, r) => (delay[i] = 0.72 * (r / n) + 0.28 * delay[i]))
     }
     const gr = Math.max(40, Math.hypot(gb[2], gb[3]) / 2)
-    return { s, W: host.w, H: host.h, ox, oy, cw, ch, fx, fy, gr, gb, reach, img, arm, arms, mode, N: n, ang, rad, z, size, alpha, tone, delay, bow, ph, w, sx, sy, tx, ty, pu, texts, spans, dark }
+    // 번지는 먹의 가장자리: 둥글지만 고르지 않은 테두리(굽이 몇 개를 겹친다). 고르게 둥글면 원 도형으로, 갈래로 뻗으면 꽃잎 무늬로 읽혔다(필름)
+    const edge = new Float32Array(s.material === 'wash' ? 5 * 4 : 0)
+    ;[3, 5, 7, 11, 17].forEach((k, h) => {
+      if (!edge.length) return
+      edge[h * 4] = k
+      edge[h * 4 + 1] = (0.07 / Math.sqrt(k / 3)) * (0.6 + 0.8 * R())
+      edge[h * 4 + 2] = R() * TAU
+      edge[h * 4 + 3] = (R() - 0.5) * 0.5
+    })
+    // 모여드는 가는 선: 장 밖 왼쪽과 오른쪽, 여러 높이에서 건너와 글자를 가로지르는 줄 하나하나에 내려앉는다. 다 닿으면 판화처럼 가는 줄로 그린
+    // 글자가 되고, 그 자리에서 글이 맺힌다. 글이 없으면 글이 설 띠에 가지런히 모인다
+    let runs = traced && traced.runs.length ? traced.runs : null
+    let threadW = 1.2
+    if (mode === 'threads' && !runs) {
+      const tb0 = bigBox ?? [fx - cw * 0.25, fy - 40, cw * 0.5, 80]
+      const list: number[] = []
+      for (let y = tb0[1] + 6; y < tb0[1] + tb0[3]; y += 6) {
+        const half = tb0[2] * (0.2 + 0.3 * R())
+        const cx = tb0[0] + tb0[2] / 2 + (R() - 0.5) * (tb0[2] - half * 2)
+        list.push(cx - half - wx, cx + half - wx, y - wy)
+      }
+      runs = new Float32Array(list)
+    } else if (runs && shapeWrap) {
+      const fs = parseFloat(getComputedStyle((shapeWrap.firstElementChild as HTMLElement | null) || shapeWrap).fontSize) || 60
+      threadW = Math.max(1.2, (fs / 26) * 0.55)
+    }
+    const K = mode === 'threads' && runs ? runs.length / 3 : 0
+    const threads = new Float32Array(K * 8)
+    for (let k = 0; k < K; k++) {
+      const side = R() < 0.5 ? -1 : 1
+      const y0 = oy + R() * ch * 1.2 - ch * 0.1
+      const y1 = wy + runs![k * 3 + 2]
+      const len0 = host.w * (0.1 + 0.3 * R())
+      const len1 = runs![k * 3 + 1] - runs![k * 3]
+      threads[k * 8] = y0
+      threads[k * 8 + 1] = y1
+      threads[k * 8 + 2] = side < 0 ? -len0 * 0.2 - R() * host.w * 0.08 : host.w + len0 * 0.2 + R() * host.w * 0.08
+      threads[k * 8 + 3] = wx + (runs![k * 3] + runs![k * 3 + 1]) / 2
+      threads[k * 8 + 4] = len0
+      threads[k * 8 + 5] = len1
+      // 늦춤: 먼 높이에서 오는 선일수록, 그리고 조금씩 섞어서(한꺼번에 닿으면 막이 내리듯 읽혔다)
+      threads[k * 8 + 6] = 0.38 * (0.35 * Math.min(1, Math.abs(y0 - y1) / ch) + 0.65 * R())
+      threads[k * 8 + 7] = 0.75 + 0.25 * R()
+    }
+    return { s, W: host.w, H: host.h, ox, oy, cw, ch, fx, fy, gr, gb, reach, shaped: sampled, cz: 0, edge, threads, threadW, arm, arms, mode, N: n, ang, rad, z, size, alpha, tone, delay, bow, ph, w, sx, sy, tx, ty, pu, texts, spans, dark }
   }
 
   /** 구간 안에서의 진행(0~1). 구간이 없으면 없다(-1) */
@@ -523,25 +635,12 @@ export function cineMotion(kit: DrawKit): CineRuntime {
   function particle(c: Scene, i: number, e: number, o: number[]) {
     let a = c.alpha[i]
     let r = c.size[i]
+    // 깊이: 가까운 입자는 초점 밖이라 흐리고, 먼 입자는 또렷하다. 모양에 내려앉을수록 모두 초점 안으로
+    let soft = c.z[i] === 0 ? 1 : Math.min(1, (1 - c.z[i]) ** 2 * c.s.depth * 1.5)
+    let land = 0
     const G = c.spans.gather
     const RS = c.spans.resolve
-    if (c.mode === 'pen') {
-      // 펜 끝이 지나간 자리에서 튀어 나와 길 위로 내려앉는다
-      const q = clamp((penAt(c, e) - c.pu[i]) / 0.07)
-      if (q <= 0) {
-        o[3] = 0
-        return
-      }
-      const k = out(q)
-      // 펜 끝에서 튀는 몫: 대부분은 선 가까이, 몇은 멀리(붓이 종이를 스칠 때의 튐)
-      const side = Math.cos(c.ph[i * 2]) * (10 + 64 * c.rad[i] * c.rad[i])
-      const back = -34 * Math.abs(Math.sin(c.ph[i * 2 + 1]))
-      o[0] = c.tx[i] + back * (1 - k)
-      o[1] = c.ty[i] + side * (1 - k)
-      a *= smooth(0, 0.12, q)
-      // 갓 튄 것은 크고 밝게, 내려앉으며 선의 굵기로(멀리서도 펜 끝이 무엇을 남기는지 보이게)
-      r *= 1 + 0.9 * (1 - k)
-    } else {
+    {
       free(c, i, e, o)
       if (c.mode === 'burst') {
         // 맺힘 동안은 거의 보이지 않다가(빛이 말한다) 번지며 드러나고, 번질수록 조금 옅어진다
@@ -576,6 +675,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
           // 모일수록 밝아진다(흩어진 먼지는 옅게, 모양에 닿은 것은 또렷하게): 모양이 먼지 속에서 떠올라야 '모였다'가 읽힌다
           a = lerp(a * 0.75, c.alpha[i] * 1.35, g)
           r *= 1 - 0.25 * g
+          land = g
+          soft *= 1 - g
         }
       }
     }
@@ -584,7 +685,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       // 남은 떨림이 잦아들고, 입자는 작아지며 사라진다. 열에 하나 꼴은 먼지처럼 조금 떠올랐다 가라앉는다
       o[0] += Math.cos(c.ph[i * 2]) * 2.5 * (1 - pr)
       o[1] += Math.sin(c.ph[i * 2]) * 2.5 * (1 - pr)
-      if (i % 11 === 0 && c.mode !== 'pen') {
+      if (i % 11 === 0) {
         const q = out(clamp((e - RS.start) / Math.max(1, (RS.end - RS.start) * 1.9)))
         o[0] += Math.cos(c.ang[i]) * 34 * q
         o[1] += Math.sin(c.ang[i]) * 22 * q - 16 * q
@@ -595,8 +696,15 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       }
       r *= 1 - 0.35 * pr
     } else if (!RS && G && e > G.end) a *= 1 - clamp((e - G.end) / 400)
+    if (c.cz && land < 1) {
+      // 시차: 카메라가 움직이는 동안 가까운 입자는 카메라보다 더, 먼 입자는 덜 움직인다(내려앉은 입자는 글자에 붙어 있다)
+      const k = 1 + c.cz * (1.1 * (1 - c.z[i]) - 0.35) * (1 - land)
+      o[0] = c.fx + (o[0] - c.fx) * k
+      o[1] = c.fy + (o[1] - c.fy) * k
+    }
     o[2] = r
     o[3] = a
+    o[4] = soft
   }
 
   /**
@@ -620,7 +728,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
         if (!gather) I *= 1 - smooth(0.12, 0.55, p)
       }
       if (gather && e > gather.start) {
-        // 모이는 동안 가운데 빛은 잦아든다: 빛은 입자를 따라 글자로 옮겨 가서 글자째 번진다(bloom). 가운데에 남기면 글자의 빈 속에 점이 떴다
+        // 모이는 동안 가운데 빛은 잦아든다: 빛은 입자를 따라 글자로 옮겨 간다. 가운데에 남기면 글자의 빈 속에 점이 떴다
         const g = carry(prog(gather, e))
         I = 0.26 * (1 - g)
         r = 52 + c.reach * 0.3
@@ -629,11 +737,11 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       const g = carry(prog(gather, e))
       I = 0.4 * g * g
     }
-    if (c.mode !== 'pen' && resolve && e > resolve.start && !c.img) {
+    if (c.mode !== 'pen' && resolve && e > resolve.start && !c.shaped) {
       const p = prog(resolve, e)
       I = (0.5 + 0.3 * Math.sin(Math.PI * Math.min(1, p * 1.8))) * Math.pow(1 - p, 1.6)
       r = c.gr * (0.95 + 0.25 * p)
-    } else if (c.img && resolve && e > resolve.start) I = 0
+    } else if (c.shaped && resolve && e > resolve.start) I = 0
     else if (!resolve && gather && e > gather.end) I *= 1 - clamp((e - gather.end) / 500)
     o[0] = c.mode === 'pen' ? 0 : I
     o[1] = r
@@ -671,10 +779,53 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     return null
   }
 
+  /**
+   * 글 하나의 그 때 모습. 장의 답이면 다 들어온 순간 글자색에서 강조색으로 한 번 바뀌고 그대로 둔다(끝 모습의 강조색과 같다). 강조색은
+   * 장면 전체에서 이때 한 번만 들어온다
+   */
   function textAt(t: TextBox, e: number, lively: boolean) {
+    enterAt(t, e, lively)
+    const cue = t.cue
+    if (cue.accent === undefined) return
+    const a = clamp((e - cue.end) / Math.max(1, cue.accent - cue.end))
+    t.el.style.color = a >= 1 ? '' : a <= 0 ? 'var(--ink)' : `color-mix(in srgb, var(--accent) ${(out(a) * 100).toFixed(1)}%, var(--ink))`
+  }
+
+  const fmtLike = (c: NonNullable<TextBox['count']>, x: number) => {
+    let t = x.toFixed(c.digits)
+    if (c.comma) {
+      const [a, b] = t.split('.')
+      t = a.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (b ? `.${b}` : '')
+    }
+    return t
+  }
+  /** 굴러가는 숫자를 글 노드에 쓴다. 끝 값의 너비를 처음부터 지킨다(모자란 앞자리는 숫자 폭의 빈칸 U+2007, 쉼표 자리는 U+2008) */
+  function rollTo(c: NonNullable<TextBox['count']>, v: number) {
+    const full = fmtLike(c, c.value)
+    let s = fmtLike(c, v)
+    if (s.length < full.length) s = full.slice(0, full.length - s.length).replace(/\d/g, '\u2007').replace(/[^\u2007]/g, '\u2008') + s
+    const next = c.text.slice(0, c.at) + s + c.text.slice(c.at + c.len)
+    if (c.node.nodeValue !== next) c.node.nodeValue = next
+  }
+
+  function enterAt(t: TextBox, e: number, lively: boolean) {
     const st = t.el.style
     const cue = t.cue
     const p = clamp((e - cue.start) / Math.max(1, cue.end - cue.start))
+    if (cue.enter === 'carry') {
+      // 건너오기: 앞 값의 자리에서 떠나 펜 끝과 같은 빠르기로 선을 타고 건너오며, 앞 값의 숫자에서 이 값으로 굴러 온다. 앞 값과 겹친
+      // 동안은 보이지 않다가 앞 값을 벗어나며 짙어지고, 그만큼 앞 값은 지난 값의 색으로 물러난다: 값의 먹이 옮겨 가는 것으로 읽힌다
+      // (겹친 채 둘 다 보이면 깨진 글자로 보였다, 필름)
+      const u = carry(p)
+      const f = t.from
+      const clear = f ? f.clear : 0.2
+      st.opacity = String(smooth(clear * 0.5, clear, u))
+      st.transform = f && u < 1 ? `translateX(${(f.dx * (1 - u)).toFixed(1)}px)` : ''
+      if (t.count) rollTo(t.count, lerp(f?.value ?? 0, t.count.value, u))
+      const dim = smooth(clear * 0.3, clear, u)
+      if (f?.el) f.el.style.color = dim <= 0 ? 'var(--ink)' : dim >= 1 ? '' : `color-mix(in srgb, var(--ink) ${((1 - dim) * 100).toFixed(1)}%, var(--ink-3))`
+      return
+    }
     if (cue.enter === 'settle') {
       const o = out(p)
       st.opacity = String(o)
@@ -684,25 +835,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     }
     if (cue.enter === 'count') {
       st.opacity = String(out(clamp(p * 3)))
-      const c = t.count
-      if (c) {
-        const v = c.value * reveal(p)
-        const fmt = (x: number) => {
-          let t = x.toFixed(c.digits)
-          if (c.comma) {
-            const [a, b] = t.split('.')
-            t = a.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (b ? `.${b}` : '')
-          }
-          return t
-        }
-        // 끝 값의 너비를 처음부터 지킨다: 모자란 앞자리는 숫자 폭의 빈칸(U+2007), 쉼표 자리는 쉼표 폭의 빈칸(U+2008)으로. 가운데 맞춘
-        // 숫자가 자릿수가 늘 때마다 옆으로 밀렸다(검수)
-        const full = fmt(c.value)
-        let s = fmt(v)
-        if (s.length < full.length) s = full.slice(0, full.length - s.length).replace(/\d/g, '\u2007').replace(/[^\u2007]/g, '\u2008') + s
-        const next = c.text.slice(0, c.at) + s + c.text.slice(c.at + c.len)
-        if (c.node.nodeValue !== next) c.node.nodeValue = next
-      }
+      if (t.count) rollTo(t.count, t.count.value * reveal(p))
       return
     }
     // 써지기, 한 글자씩: 줄마다 가림을 하나씩 두고, 펜 끝이 지나간 만큼 왼쪽부터 드러낸다
@@ -765,6 +898,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const st = t.el.style
     st.opacity = ''
     st.filter = ''
+    st.color = ''
+    st.transform = ''
     for (const k of MASK) st.removeProperty(k)
     if (t.count && t.count.node.nodeValue !== t.count.text) t.count.node.nodeValue = t.count.text
   }
@@ -802,7 +937,7 @@ void main(){gl_Position=vec4(p.x/res.x*2.0-1.0,1.0-p.y/res.y*2.0,0.0,1.0);float 
     const fs = `#version 300 es
 precision mediump float;
 in float va;in float vt;uniform vec3 c0;uniform vec3 c1;out vec4 o;
-void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float f=exp(-r*3.4)*(1.0-r*r);float al=va*f;o=vec4(mix(c0,c1,vt)*al,al);}`
+void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float tn=step(1.0,vt);float sf=(vt-tn)*2.0;float f=mix(1.0-smoothstep(0.5,1.0,r),exp(-r*3.4)*(1.0-r*r),sf);float al=va*f;o=vec4(mix(c0,c1,tn)*al,al);}`
     const sh = (type: number, src: string) => {
       const x = gl.createShader(type)!
       gl.shaderSource(x, src)
@@ -867,7 +1002,7 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         ctx.globalCompositeOperation = dark ? 'lighter' : 'source-over'
         for (let i = 0; i < n; i++) {
           const a = xs[i * 5 + 3]
-          if (a > 0.01) P.dot(xs[i * 5], xs[i * 5 + 1], xs[i * 5 + 2] * 0.9, xs[i * 5 + 4], a)
+          if (a > 0.01) P.dot(xs[i * 5], xs[i * 5 + 1], xs[i * 5 + 2] * 0.9, xs[i * 5 + 4] >= 1 ? 1 : 0, a)
         }
         P.flush()
         ctx.restore()
@@ -940,6 +1075,8 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
     let scene: Scene | null = null
     let host: HTMLElement | null = null
     let back: CanvasRenderingContext2D | null = null
+    /** 번지는 먹의 면을 그리는 작은 캔버스(장의 4분의 1) */
+    let wash: HTMLCanvasElement | null = null
     let painter: Painter | null = null
     let xs: Float32Array | null = null
     let q = 1
@@ -955,7 +1092,7 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
     const stats: CineStats = { mode: '', count: 0, tier: 0, setup: 0, steps: [], frames: [] }
     last = stats
     const ink = { c: [1, 1, 1], a: [1, 1, 1], line: 'currentColor' }
-    const tmp = [0, 0, 0, 0]
+    const tmp = [0, 0, 0, 0, 0]
     let bx = 0
     let by = 0
 
@@ -1023,11 +1160,18 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
           return c
         }
         back = mk().getContext('2d')
-        front = mk()
+        // 입자는 앞의 캔버스(GPU)에. 입자가 아닌 재료는 뒤의 캔버스 하나로 그린다
+        front = s.material === 'particles' ? mk() : null
         return done(back ? null : false)
       }
       if (stage === 2) {
         stage = 3
+        // 입자가 아닌 재료(먹의 면, 가는 선, 그어지는 선)는 뒤의 2D 캔버스 하나로 그린다
+        if (!front) {
+          n = 0
+          stats.mode = '2d'
+          return done(null)
+        }
         // 그리기: GPU가 되면 입자를 다(4천~5천), 아니면 캔버스로 1500
         painter = o.gl === false ? null : glPainter(front!, dark, [ink.c, ink.a], q)
         if (!painter) {
@@ -1043,8 +1187,8 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         return done(null)
       }
       unzoom()
-      scene = build(el, s, n, box, kz, dark, rgbCss(ink.c))
-      xs = new Float32Array(n * 5 * (s.trail && painter!.mode === 'gl' ? 3 : 1))
+      scene = build(el, s, n, box, kz, dark)
+      xs = new Float32Array(n * 5 * (s.trail && painter?.mode === 'gl' ? 3 : 1))
       if (cam) applyCam(zoom(s, 0), scene.fx - scene.ox, scene.fy - scene.oy, null, 0, 0)
       return done(true)
     }
@@ -1056,10 +1200,10 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       x.clearRect(0, 0, x.canvas.width, x.canvas.height)
       x.setTransform(q, 0, 0, q, 0, 0)
       const g = [0, 0]
-      if (s.light) {
+      if (s.light && (c.mode === 'burst' || c.mode === 'scatter')) {
         glow(c, e, g)
         const I = g[0]
-        if (I > 0.004 && c.mode !== 'pen') {
+        if (I > 0.004) {
           if (c.dark) {
             // 빛: 작은 심과 넓은 번짐. 세기의 상한은 엔진이 정한다(장의 글보다 밝지 않게)
             x.globalCompositeOperation = 'lighter'
@@ -1073,20 +1217,13 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
             x.fillStyle = rg
             x.fillRect(c.fx - g[1], c.fy - g[1], g[1] * 2, g[1] * 2)
           } else if (c.mode === 'burst') {
-            // 먹: 한 방울이 떨어져 번진다. 빛 번짐 없이 낮은 짙기의 얼룩만. 흩어진 것이 모이는 장면에는 얼룩을 두지 않는다: 모일 자리의
-            // 회색 얼룩이 먹 자국처럼 보였다(검수)
+            // 먹: 한 방울이 떨어져 터진다. 빛 번짐도 회색 얼룩도 없이 또렷한 먹 한 점만(얼룩은 회색 잡티로 읽혔다, 검수)
             x.globalCompositeOperation = 'source-over'
             const drop = Math.min(1, I * 1.4)
-            const rd = 5 + 7 * drop
-            const stain = x.createRadialGradient(c.fx, c.fy, 0, c.fx, c.fy, g[1] * 0.8)
-            stain.addColorStop(0, rgbCss(ink.c, 0.16 * I))
-            stain.addColorStop(0.5, rgbCss(ink.c, 0.06 * I))
-            stain.addColorStop(1, rgbCss(ink.c, 0))
-            x.fillStyle = stain
-            x.fillRect(c.fx - g[1], c.fy - g[1], g[1] * 2, g[1] * 2)
+            const rd = 6 + 8 * drop
             const sp = c.spans.spread ? prog(c.spans.spread, e) : 0
             // 먹 한 방울은 한 점에서 번지는 장면에만(흩어진 것이 모이는 장면은 얼룩만 짙어진다)
-            const da = c.mode === 'burst' ? 0.85 * drop * (1 - Math.sqrt(Math.max(0, sp))) : 0
+            const da = 0.92 * drop * (1 - Math.sqrt(Math.max(0, sp)))
             if (da > 0.01) {
               x.fillStyle = rgbCss(ink.c, da)
               x.beginPath()
@@ -1096,27 +1233,9 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
           }
         }
       }
-      // 또렷해지는 순간: 모양을 딴 글자 그대로 빛이 번졌다 가라앉는다(어두운 바탕). 밝은 바탕은 먹이 번져 있다가 글자로 거두어진다
-      const RS = c.spans.resolve
-      const b0 = RS ? RS.start + (RS.end - RS.start) * 0.35 : 0
-      // 밝은 바탕에서는 번지지 않는다: 글자 둘레의 회색 그림자로 읽혔다(검수). 어두운 바탕도 옅고 짧게(꾸밈 빛으로 보이지 않게)
-      if (c.dark && c.img && RS && e > b0 && e < RS.end + 320) {
-        // 또렷한 글자가 거의 맺힌 뒤에 그 둘레로 번진다: 맺히기 전에 번지면 글자 대신 흐린 회색 덩어리가 보였다(필름).
-        // 어두운 바탕은 글자 둘레의 빛, 밝은 바탕은 글자 둘레로 배어 나온 먹이 다시 거두어진다
-        const p = clamp((e - b0) / (RS.end + 320 - b0))
-        const env = Math.sin(Math.PI * p)
-        if (env > 0.01) {
-          x.globalCompositeOperation = c.dark ? 'lighter' : 'source-over'
-          // 글 한 줄(넓적한 모양)은 짧고 옅게: 오래 번지면 흐린 글이 몇 칸째 떠 있었다(필름)
-          const wide = c.img.w > c.img.h * 2.2 ? 0.5 : 1
-          x.globalAlpha = 0.22 * env * wide
-          x.filter = `blur(${Math.round((c.dark ? 14 - 6 * p : 10 * (1 - p) + 2) * (wide < 1 ? 0.6 : 1))}px)`
-          x.drawImage(c.img.cv, c.img.x, c.img.y, c.img.w, c.img.h)
-          x.filter = 'none'
-          x.globalAlpha = 1
-        }
-      }
       x.globalCompositeOperation = 'source-over'
+      if (c.mode === 'wash') drawWash(x, c, e)
+      if (c.mode === 'threads') drawThreads(x, c, e)
       // 길: 펜 끝이 지나간 만큼 가는 선이 남는다(끝 모습의 SVG와 같은 길, 같은 색, 같은 굵기)
       if (c.mode === 'pen') {
         const u = penAt(c, e)
@@ -1167,25 +1286,143 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       }
     }
 
-    /** 펜 끝: 어두운 바탕은 작은 빛, 밝은 바탕은 먹 한 점 */
+    /**
+     * 번지는 먹(확산): 한 방울이 떨어진 자리에서 고르지 않은 테두리가 √t로 장 끝 너머까지 번진다. 종이에 번진 먹처럼 테두리가 짙고
+     * 안은 옅으며, 지나온 자리에 옅은 물때(결)가 두 겹 남는다. 안쪽은 마르듯 먼저 걷혀 가운데의 숫자가 깨끗한 바탕에 선다.
+     * 장의 4분의 1 크기 캔버스에 그려 늘려 쓴다(면이라 흐려도 되고 그리는 일이 16분의 1). 밝은 바탕은 먹, 어두운 바탕은 옅은 빛
+     */
+    const drawWash = (x: CanvasRenderingContext2D, c: Scene, e: number) => {
+      const sp = c.spans.spread ? prog(c.spans.spread, e) : 1
+      const seed = c.spans.seed ? prog(c.spans.seed, e) : 1
+      if (sp >= 1 || (sp <= 0 && seed <= 0)) return
+      if (!wash) {
+        wash = document.createElement('canvas')
+        wash.width = Math.max(1, Math.round(c.W / 4))
+        wash.height = Math.max(1, Math.round(c.H / 4))
+      }
+      const w = wash.getContext('2d')!
+      w.setTransform(1, 0, 0, 1, 0, 0)
+      w.clearRect(0, 0, wash.width, wash.height)
+      w.setTransform(0.25, 0, 0, 0.25, 0, 0)
+      w.globalCompositeOperation = c.dark ? 'lighter' : 'source-over'
+      const t = e / 1000
+      const k = Math.sqrt(Math.max(0, sp))
+      const R0 = c.reach * k
+      // 떨어진 한 방울: 맺힘에서 짙게, 번지기 시작하면 테두리로 풀린다
+      const drop = out(seed) * (1 - smooth(0, 0.25, sp))
+      if (drop > 0.01) {
+        w.fillStyle = rgbCss(ink.c, (c.dark ? 0.7 : 0.92) * drop)
+        w.beginPath()
+        w.arc(c.fx, c.fy, 8 + 14 * drop, 0, TAU)
+        w.fill()
+      }
+      const env = smooth(0, 0.06, sp) * (1 - smooth(0.62, 1, sp))
+      if (env > 0.005 && R0 > 4) {
+        const outline = (r: number, turn: number) => {
+          w.beginPath()
+          for (let i = 0; i <= 120; i++) {
+            const th = (i / 120) * TAU
+            let f = 1
+            for (let h = 0; h < c.edge.length; h += 4) f += c.edge[h + 1] * Math.sin(c.edge[h] * th + c.edge[h + 2] + turn + c.edge[h + 3] * t)
+            const px = c.fx + Math.cos(th) * r * f
+            const py = c.fy + Math.sin(th) * r * f
+            if (i) w.lineTo(px, py)
+            else w.moveTo(px, py)
+          }
+          w.closePath()
+        }
+        const A = c.dark ? 0.55 : 1
+        // 안: 옅은 먹, 마르듯 걷힌다
+        outline(R0, 0)
+        w.fillStyle = rgbCss(ink.c, 0.05 * A * env * (1 - smooth(0.1, 0.55, sp)))
+        w.fill()
+        w.save()
+        w.clip()
+        // 지나온 자리의 물때 두 겹(결): 가늘고 옅게, 흐리게
+        w.filter = 'blur(1.5px)'
+        for (const [m, turn] of [
+          [0.42, 1.7],
+          [0.7, 3.1],
+        ]) {
+          if (k * m * c.reach < 12) continue
+          outline(R0 * m, turn)
+          w.strokeStyle = rgbCss(ink.c, 0.14 * A * env * (1 - smooth(0.3, 0.85, sp)))
+          w.lineWidth = 5
+          w.stroke()
+        }
+        // 테두리: 짙은 먹이 가장자리에 모인다. 바깥 끝은 또렷하고(종이에 멈춘 자리) 안으로 갈수록 풀린다: 테두리 안쪽만 남기고 흐리게 긋는다
+        const rim = R0 * 0.07 + 8
+        outline(R0, 0)
+        w.filter = `blur(${(rim * 0.45).toFixed(1)}px)`
+        w.strokeStyle = rgbCss(ink.c, 0.36 * A * env)
+        w.lineWidth = rim * 2
+        w.stroke()
+        w.filter = 'none'
+        w.strokeStyle = rgbCss(ink.c, 0.3 * A * env)
+        w.lineWidth = 3
+        w.stroke()
+        w.restore()
+      }
+      x.save()
+      x.setTransform(1, 0, 0, 1, 0, 0)
+      x.imageSmoothingEnabled = true
+      x.drawImage(wash, 0, 0, x.canvas.width, x.canvas.height)
+      x.restore()
+    }
+
+    /**
+     * 모여드는 가는 선(모여 맺힘): 장 밖 여러 높이에서 가는 선들이 건너와 문장이 설 띠 안에 가지런히 모인다. 문장이 맺히면 선은 문장 쪽으로
+     * 짧아지며 걷힌다. 입자가 아니라 선이라 같은 발표의 '빛에서 글자로'와 다른 몸짓으로 읽힌다
+     */
+    const drawThreads = (x: CanvasRenderingContext2D, c: Scene, e: number) => {
+      const G = c.spans.gather
+      const RS = c.spans.resolve
+      if (!G) return
+      const len = Math.max(1, G.end - G.start)
+      const pr = RS ? prog(RS, e) : 0
+      if (pr >= 1) return
+      x.globalCompositeOperation = c.dark ? 'lighter' : 'source-over'
+      x.lineCap = 'butt'
+      x.lineWidth = c.threadW
+      // 짙기를 여섯 묶음으로 나눠 묶음마다 한 번에 긋는다(선 수백 개를 하나씩 그으면 느린 PC에서 한 프레임이 길어졌다)
+      const buckets: number[][] = [[], [], [], [], [], []]
+      const K = c.threads.length / 8
+      for (let k = 0; k < K; k++) {
+        const o = k * 8
+        const g = carry(clamp((e - G.start - c.threads[o + 6] * len) / (len * 0.62)))
+        if (g <= 0) continue
+        // 높이는 건너오며 천천히 맞춘다(옆으로 건너오며 줄을 선다)
+        const gy = smooth(0, 0.85, g)
+        const y = lerp(c.threads[o], c.threads[o + 1], gy)
+        const cx = lerp(c.threads[o + 2], c.threads[o + 3], g)
+        const l = lerp(c.threads[o + 4], c.threads[o + 5], g)
+        let a = smooth(0, 0.1, g) * c.threads[o + 7] * lerp(0.55, 1, g)
+        // 글이 맺히는 만큼 선은 걷힌다(글 아래로 스며든다)
+        if (pr > 0) a *= 1 - smooth(0.05, 0.85, pr)
+        if (a <= 0.02) continue
+        buckets[Math.min(5, Math.floor(a * 6))].push(cx - l / 2, y, cx + l / 2)
+      }
+      const top = c.dark ? 0.8 : 0.92
+      buckets.forEach((b, j) => {
+        if (!b.length) return
+        x.strokeStyle = rgbCss(ink.c, ((j + 0.5) / 6) * top)
+        x.beginPath()
+        for (let i = 0; i < b.length; i += 3) {
+          x.moveTo(b[i], b[i + 1])
+          x.lineTo(b[i + 2], b[i + 1])
+        }
+        x.stroke()
+      })
+      x.globalCompositeOperation = 'source-over'
+    }
+
+    /** 펜 끝: 작은 점 하나(빛 번짐 없이. 번지는 빛은 어두운 바탕의 초점 하나뿐이다) */
     const pen = (x: CanvasRenderingContext2D, c: Scene, px: number, py: number, a: number) => {
       if (a <= 0.01) return
-      if (c.dark && s.light) {
-        x.globalCompositeOperation = 'lighter'
-        // 작은 심과 좁은 둘레만: 크게 번지면 렌즈 반짝이 같은 꾸밈으로 보였다(검수)
-        const rg = x.createRadialGradient(px, py, 0, px, py, 14)
-        rg.addColorStop(0, rgbCss(ink.c, 0.9 * a))
-        rg.addColorStop(0.25, rgbCss(ink.c, 0.45 * a))
-        rg.addColorStop(1, rgbCss(ink.c, 0))
-        x.fillStyle = rg
-        x.fillRect(px - 14, py - 14, 28, 28)
-        x.globalCompositeOperation = 'source-over'
-      } else {
-        x.fillStyle = rgbCss(ink.c, 0.85 * a)
-        x.beginPath()
-        x.arc(px, py, 4.5, 0, TAU)
-        x.fill()
-      }
+      x.fillStyle = rgbCss(ink.c, 0.9 * a)
+      x.beginPath()
+      x.arc(px, py, c.dark ? 3.5 : 4.5, 0, TAU)
+      x.fill()
     }
 
     /** 입자를 버퍼에 채운다. 잔상은 조금 앞의 두 때를 옅고 작게(같은 순수 함수로 셈한다) */
@@ -1194,30 +1431,31 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       let m = 0
       const count = tier ? n >> 1 : n
       const trails = s.trail && painter!.mode === 'gl' && !tier
+      // 밝은 바탕은 또렷한 먹: 다섯에 둘만, 크고 짙게, 가장자리가 또렷하게. 옅고 작은 점이 많으면 화면의 회색 잡티로 읽혔다(검수).
+      // 어두운 바탕만 빛(겹칠수록 밝다)
+      const ink2 = !c.dark
       // 잔상은 빠르게 움직이는 동안(번짐의 처음, 모임)만 뜻이 있다
       const moving = trails && ((c.spans.gather && e > c.spans.gather.start && e < c.spans.gather.end + 200) || (c.spans.spread && e > c.spans.spread.start && e < c.spans.spread.start + 700))
-      for (let i = 0; i < count; i++) {
-        particle(c, i, e, tmp)
-        if (tmp[3] <= 0.004) continue
+      c.cz = zoom(s, e) - 1
+      const put = (i: number, size: number, alpha: number) => {
         b[m * 5] = tmp[0]
         b[m * 5 + 1] = tmp[1]
-        // 밝은 바탕의 먹 알갱이는 조금 크고 옅게: 작고 짙으면 먼지 티끌로 읽혔다(필름). 번짐으로 끝나는 장면(모일 곳이 없다)은 물결이
-        // 주인공이라 조금 크고 짙게
-        const wave = c.spans.gather ? 1 : 1.3
-        b[m * 5 + 2] = (c.dark ? tmp[2] : tmp[2] * 1.7) * wave
-        b[m * 5 + 3] = Math.min(1, tmp[3] * wave) * (c.dark ? 0.78 : 0.42)
-        b[m * 5 + 4] = c.tone[i]
+        b[m * 5 + 2] = size
+        b[m * 5 + 3] = alpha
+        // 흐림(0~1)은 색 값에 얹는다: 1 이상이면 강조색, 소수 부분이 흐림
+        b[m * 5 + 4] = c.tone[i] + 0.5 * Math.min(0.99, ink2 && c.z[i] !== 0 ? tmp[4] * 0.4 : tmp[4])
         m++
+      }
+      for (let i = 0; i < count; i++) {
+        if (ink2 && i % 5 > 1) continue
+        particle(c, i, e, tmp)
+        if (tmp[3] <= 0.004) continue
+        put(i, ink2 ? tmp[2] * 2.3 : tmp[2], ink2 ? Math.min(1, tmp[3] * 2.1) * 0.92 : Math.min(1, tmp[3]) * 0.8)
         if (moving && i % 2 === 0) {
           for (let g = 1; g <= 2; g++) {
             particle(c, i, e - g * 34, tmp)
             if (tmp[3] <= 0.004) continue
-            b[m * 5] = tmp[0]
-            b[m * 5 + 1] = tmp[1]
-            b[m * 5 + 2] = tmp[2] * (1 - 0.15 * g)
-            b[m * 5 + 3] = Math.min(1, tmp[3]) * (c.dark ? 0.78 : 0.42) * (g === 1 ? 0.42 : 0.18)
-            b[m * 5 + 4] = c.tone[i]
-            m++
+            put(i, (ink2 ? tmp[2] * 2.3 : tmp[2]) * (1 - 0.15 * g), Math.min(1, tmp[3]) * (ink2 ? 0.88 : 0.8) * (g === 1 ? 0.42 : 0.18))
           }
         }
       }
@@ -1229,36 +1467,7 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       const b = xs!
       let m = 0
       const env = Math.sin(Math.PI * p)
-      if (c.mode === 'pen') {
-        // 길 위로 작은 빛(먹)이 한 번 지나간다
-        const u = carry(p)
-        for (let j = 0; j < 8; j++) {
-          const uu = Math.max(0, u - j * 0.012)
-          b[m * 5] = c.ox + (pathX(uu) / 1000) * c.cw
-          b[m * 5 + 1] = c.oy + (pathY(s.shape, uu) / 1000) * c.ch
-          b[m * 5 + 2] = 2.6 - j * 0.2
-          b[m * 5 + 3] = env * (c.dark ? 0.7 : 0.4) * (1 - j / 8)
-          b[m * 5 + 4] = j ? 0 : 1
-          m++
-        }
-        return m
-      }
-      if (!c.spans.gather) {
-        // 번짐: 옅은 물결 하나가 다시 지나간다
-        const f = c.reach * 1.3 * out(p)
-        for (let i = 0; i < n; i += 3) {
-          const d = c.reach * c.rad[i]
-          const band = Math.exp(-(((d - f) / (c.reach * 0.12)) ** 2))
-          if (band < 0.02) continue
-          b[m * 5] = c.fx + Math.cos(c.ang[i]) * d
-          b[m * 5 + 1] = c.fy + Math.sin(c.ang[i]) * d
-          b[m * 5 + 2] = c.size[i] * 0.8
-          b[m * 5 + 3] = band * env * 0.3 * (c.dark ? 0.62 : 0.34)
-          b[m * 5 + 4] = c.tone[i]
-          m++
-        }
-        return m
-      }
+      if (!c.spans.gather) return 0
       // 모인 모양 위로 옅은 띠가 왼쪽에서 오른쪽으로 한 번 지나간다(빛이 스치듯, 먹이 다시 배어나듯)
       const bw = Math.max(40, c.gb[2] * 0.16)
       const xb = c.gb[0] - bw + (c.gb[2] + bw * 2) * carry(p)
@@ -1268,7 +1477,7 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         b[m * 5] = c.tx[i]
         b[m * 5 + 1] = c.ty[i] - 3 * band
         b[m * 5 + 2] = c.size[i] * 0.75
-        b[m * 5 + 3] = band * env * 0.5 * (c.dark ? 0.62 : 0.34)
+        b[m * 5 + 3] = band * env * 0.5 * (c.dark ? 0.62 : 0.5)
         b[m * 5 + 4] = c.tone[i]
         m++
       }
@@ -1309,10 +1518,10 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         const tau = now - loopAt
         const k2 = tau < LOOP.first ? -1 : ((tau - LOOP.first) % LOOP.period) / LOOP.len
         if (k2 >= 0 && k2 < 1) {
-          painter!.draw(xs!, fillLoop(c, k2))
+          painter?.draw(xs!, fillLoop(c, k2))
           raf = requestAnimationFrame(frame)
         } else {
-          painter!.clear()
+          painter?.clear()
           if (back) back.clearRect(0, 0, back.canvas.width, back.canvas.height)
           // 다음 되풀이까지는 그리지 않고 쉰다
           const wait = tau < LOOP.first ? LOOP.first - tau : LOOP.period - ((tau - LOOP.first) % LOOP.period)
@@ -1332,16 +1541,16 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       if (e !== lastE) {
         lastE = e
         drawBack(c, e)
-        painter!.draw(xs!, fill(c, e))
+        if (painter) painter.draw(xs!, fill(c, e))
         applyDom(c, e)
       }
       if (done) {
         // 다 맺혔다: 끝 모습(글, 남는 선)으로 돌리고, 생동감의 되풀이가 있으면 캔버스만 남겨 쉰다
         restoreAll()
-        if (lively && s.loop) {
+        if (lively && s.loop && painter) {
           looping = true
           loopAt = now
-          painter!.clear()
+          painter.clear()
           if (back) back.clearRect(0, 0, back.canvas.width, back.canvas.height)
           lastNow = 0
           timer = window.setTimeout(() => {
@@ -1376,7 +1585,7 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       restoreAll()
       painter?.dispose()
       host?.remove()
-      if (scene?.img) scene.img.cv.width = scene.img.cv.height = 0
+      if (wash) wash.width = wash.height = 0
       xs = null
       scene = null
       running.delete(el)
@@ -1406,5 +1615,20 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
     })
   }
 
-  return { still, play, listen, stats: () => last }
+  function prewarm(root: ParentNode) {
+    for (const el of Array.from(root.querySelectorAll<HTMLElement>('.bk-cn[data-script]'))) {
+      let s: CineScript | null = null
+      try {
+        s = JSON.parse(el.dataset.script || 'null') as CineScript | null
+      } catch {
+        s = null
+      }
+      if (!s || s.shape !== 'glyph' || !s.field || (s.material !== 'particles' && s.material !== 'threads')) continue
+      const wrap = el.querySelector<HTMLElement>(`[data-cn="${s.field}"]`)
+      const slide = el.closest('.slide')
+      if (wrap && slide && /\S/.test(wrap.textContent || '') && wrap.getBoundingClientRect().width > 0) shapeOf(wrap, zoomOf(slide))
+    }
+  }
+
+  return { still, play, listen, prewarm, stats: () => last }
 }

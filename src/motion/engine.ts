@@ -1233,11 +1233,11 @@ export function motionEngine(): MotionEngine {
     // 제목보다 먼저 보이면 빈 틀이 깔려 있다가 채워지는 것처럼 보인다 (녹화해 보니 그랬다)
     // 장의 머리와 본문 상자는 장 바로 아래의 것만(:scope >). 부품 장에는 본문 상자가 없고 레이아웃 부품마다 제 본문 상자가 있어서,
     // 그냥 찾으면 첫 레이아웃 부품의 본문 상자를 장 머리의 때에 흐리게 들였다(그 부품의 차례보다 먼저)
-    const head = () => {
+    const head = (at = 0) => {
       if (scope !== slide) return 0
-      const t = words(one(':scope > .s-head .s-title'), 0)
-      fade(one(':scope > .s-head .s-lead'), Math.min(t, 420), d(360))
-      const body = Math.min(t, 520)
+      const t = words(one(':scope > .s-head .s-title'), at)
+      fade(one(':scope > .s-head .s-lead'), Math.min(t, at + 420), d(360))
+      const body = Math.min(t, at + 520)
       fade(one(':scope > .s-body'), Math.max(0, body - 120), 360)
       return body
     }
@@ -1369,8 +1369,16 @@ export function motionEngine(): MotionEngine {
     function choreo(layout: string, variant: string) {
     switch (layout) {
       case 'compose': {
-        const t = head()
-        let end = composeGroup(groups[0], Math.min(t, 420))
+        // '장 제목은 모션 그래픽 다음에'(레시피의 headAfter): 첫 묶음의 장면이 다 맺힌 뒤에 장 제목이 들어온다. 장면의 시계(motion/cine.ts가
+        // 이 묶음의 anims에 넣는다)가 끝나는 때에. 시계가 없으면(움직이지 않는 세기) 묶음이 끝나는 때에
+        const late = groups[0].some((c) => !!c.querySelector('.bk-cn[data-head-after]'))
+        const from = anims.length
+        let end: number
+        if (late) {
+          end = composeGroup(groups[0], 0)
+          const clock = anims.slice(from).find((a) => a.effect instanceof KeyframeEffect && !!(a.effect.target as Element | null)?.classList?.contains('bk-cn'))
+          end = Math.max(end, head(clock ? Number(clock.effect!.getComputedTiming().endTime ?? end) : end))
+        } else end = composeGroup(groups[0], Math.min(head(), 420))
         fade(one('.s-source'), end + 200)
         // 미리 보기: '누르면' 나오는 묶음도 잠깐 쉬었다 이어서
         if (auto) for (const g of groups.slice(1)) end = composeGroup(g, end + 600)

@@ -13,6 +13,7 @@ import type {
   CineEnter,
   CineFieldKey,
   CineFrame,
+  CineMaterial,
   CinePace,
   CinePhase,
   CinePhaseKind,
@@ -34,8 +35,13 @@ export const CINE_MAX_MS = 10000
 // ---------- 정해진 낱말 ----------
 
 const CINE_PHASES: readonly CinePhaseKind[] = ['seed', 'spread', 'gather', 'resolve', 'write', 'pull', 'hold']
-export const CINE_FIELDS: readonly CineFieldKey[] = ['glyph', 'title', 'lead', 'label', 'text', 'sub', 'value', 'note']
-const ENTERS: readonly CineEnter[] = ['settle', 'write', 'letters', 'count']
+export const CINE_FIELDS: readonly CineFieldKey[] = ['glyph', 'title', 'lead', 'label', 'text', 'sub', 'value', 'note', 'before', 'after']
+const ENTERS: readonly CineEnter[] = ['settle', 'write', 'letters', 'count', 'carry']
+const MATERIALS: readonly CineMaterial[] = ['particles', 'wash', 'threads', 'line']
+/** 재료마다 고를 수 있는 모양(첫째가 기본) */
+export const SHAPES_OF: Record<CineMaterial, readonly CineShape[]> = { particles: ['glyph', 'ring', 'point'], wash: ['point'], threads: ['glyph'], line: ['line', 'wave'] }
+/** 장의 답에 강조색이 들어오는 시간(ms, 보통 빠르기) */
+const ACCENT_MS = 450
 const FRAMES: readonly CineFrame[] = ['mark', 'center', 'line']
 const PRESET_IDS: readonly CinePresetId[] = ['light', 'diffuse', 'gather', 'stroke']
 
@@ -82,6 +88,7 @@ export const CINE_ENTERS: Choice<CineEnter>[] = [
   { id: 'write', name: '써지기', description: '왼쪽부터 펜 끝을 따라 써져요' },
   { id: 'letters', name: '한 글자씩', description: '글자가 차례로 내려앉아요' },
   { id: 'count', name: '숫자 굴리기', description: '숫자가 0에서 굴러가 맞춰져요' },
+  { id: 'carry', name: '건너오기', description: '선 끝을 타고 앞 값에서 굴러 오며 건너와요' },
 ]
 
 /** 모션 그래픽 칸의 이름과 안내. 컴포넌트 정의(blocks/native.ts)가 그대로 쓴다 */
@@ -94,6 +101,8 @@ export const CINE_FIELD_SPECS: { key: CineFieldKey; label: string; hint: string;
   { key: 'sub', label: '덧붙이는 말', hint: '뒷받침하는 한 줄', multiline: true },
   { key: 'value', label: '숫자', hint: '1,280명' },
   { key: 'note', label: '끝 이름표', hint: '1년 뒤' },
+  { key: 'before', label: '지금 값', hint: '6시간' },
+  { key: 'after', label: '바뀐 값', hint: '2시간' },
 ]
 
 // ---------- 틀(프리셋) 넷 ----------
@@ -121,13 +130,15 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
   {
     id: 'light',
     name: '빛에서 글자로',
-    description: '한 점의 빛이 번졌다가 입자가 큰 글자로 모여 또렷해지고, 제목이 써지며 카메라가 물러나요.',
+    description: '한 점의 빛이 입자로 터졌다가 곧장 감겨 들어 큰 글자가 되고, 제목이 써지며 카메라가 물러나요.',
     fits: '표지, 새 이름이나 제품, 단락의 시작',
     sample: { glyph: 'N', title: '새 협업 도구', lead: '흩어진 일정을 한곳에서 봐요' },
     recipe: {
       frame: 'mark',
-      phases: phases(['seed', 450], ['spread', 1000, 120], ['gather', 1750, 500], ['resolve', 700, 260], ['write', 1000, 220], ['pull', 1900, 900]),
-      particles: { amount: 'many', size: 1, tone: 'mix', depth: 0.6, trail: true, spread: 'round' },
+      material: 'particles',
+      // 번짐이 끝나기 전에 모임이 시작한다(볼 곳 없는 먼지 구간을 두지 않는다). 글자는 생동감 1.9초, 차분하게 1.5초에 읽힌다
+      phases: phases(['seed', 350], ['spread', 800, 100], ['gather', 1200, 400], ['resolve', 550, 250], ['write', 900, 200], ['pull', 1900, 800]),
+      particles: { amount: 'many', size: 1, tone: 'ink', depth: 0.7, trail: true, spread: 'round' },
       shape: { kind: 'glyph', field: 'glyph' },
       light: true,
       line: false,
@@ -135,57 +146,59 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       pace: 'normal',
       texts: [
         { key: 'glyph', enter: 'settle', on: 'resolve', lag: 0.2 },
-        { key: 'title', enter: 'write', on: 'write' },
+        { key: 'title', enter: 'write', on: 'write', answer: true },
         { key: 'lead', enter: 'settle', on: 'write', lag: 0.55 },
       ],
       handoff: true,
-      loop: true,
+      // 답에 강조색이 들어온 뒤로는 고요하게: 되풀이는 고르는 사람만
+      loop: false,
       bleed: true,
     },
   },
   {
     id: 'diffuse',
     name: '확산',
-    description: '한 점에서 입자가 장 끝까지 번지는 동안 가운데 숫자가 같은 빠르기로 굴러가 맞춰져요.',
+    description: '한 방울이 번지듯 부드러운 면이 장 끝까지 퍼지는 동안 가운데 숫자가 같은 빠르기로 굴러가 맞춰져요.',
     fits: '도입, 커지는 수, 퍼지는 것',
     sample: { value: '1,280명', title: '새로 함께한 사람', sub: '올해 3분기까지' },
     recipe: {
       frame: 'center',
-      phases: phases(['seed', 300], ['spread', 2400, 120], ['write', 900, 1700]),
-      particles: { amount: 'many', size: 1, tone: 'ink', depth: 0.5, trail: false, spread: 'round' },
+      material: 'wash',
+      phases: phases(['seed', 250], ['spread', 1800, 100], ['write', 700, 1100]),
+      particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.5, trail: false, spread: 'round' },
       shape: { kind: 'point' },
-      light: true,
+      light: false,
       line: false,
       camera: 'push',
       pace: 'normal',
       texts: [
-        { key: 'value', enter: 'count', on: 'spread', lag: 0.12 },
+        { key: 'value', enter: 'count', on: 'spread', lag: 0.08, answer: true },
         { key: 'title', enter: 'settle', on: 'write' },
         { key: 'sub', enter: 'settle', on: 'write', lag: 0.5 },
       ],
       handoff: false,
-      loop: true,
+      loop: false,
       bleed: true,
     },
   },
   {
     id: 'gather',
     name: '모여 맺힘',
-    description: '장 곳곳에 흩어진 입자가 가운데로 모여 한 문장의 글자가 되고, 그 글이 또렷하게 맺혀요.',
+    description: '장 밖 여러 곳에서 가는 선들이 건너와 한 줄로 모이고, 그 자리에서 한 문장이 맺혀요.',
     fits: '결론, 통합, 하나로 모으기',
-    sample: { label: '결론', title: '한곳에서 찾아요', sub: '흩어진 고객 정보를 하나로' },
+    sample: { title: '한곳에서 찾아요', sub: '흩어진 고객 정보를 하나로' },
     recipe: {
       frame: 'center',
-      phases: phases(['seed', 550], ['gather', 1950, 250], ['resolve', 800, 420], ['write', 700, 300]),
-      particles: { amount: 'many', size: 0.9, tone: 'mix', depth: 0.5, trail: true, spread: 'round' },
+      material: 'threads',
+      phases: phases(['seed', 200], ['gather', 1500, 100], ['resolve', 600, 250], ['write', 600, 200]),
+      particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.5, trail: false, spread: 'side' },
       shape: { kind: 'glyph', field: 'title' },
-      light: true,
+      light: false,
       line: false,
       camera: 'none',
       pace: 'normal',
       texts: [
-        { key: 'label', enter: 'settle', on: 'seed', lag: 0.3 },
-        { key: 'title', enter: 'settle', on: 'resolve' },
+        { key: 'title', enter: 'settle', on: 'resolve', answer: true },
         { key: 'sub', enter: 'settle', on: 'write' },
       ],
       handoff: false,
@@ -196,13 +209,14 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
   {
     id: 'stroke',
     name: '그어지는 선',
-    description: '펜 끝에서 나온 입자가 왼쪽에서 오른쪽으로 흘러 한 줄의 선이 되고, 두 끝에 이름이 맺혀요.',
-    fits: '과정, 지금에서 다음으로, 이어지는 것',
-    sample: { title: '지금에서 1년 뒤까지', label: '지금', note: '1년 뒤' },
+    description: '왼쪽의 지금 값에서 선이 그어지고, 값이 선 끝을 타고 건너가며 굴러 바뀐 값에 닿아요.',
+    fits: '과정, 지금에서 다음으로, 바뀌는 값',
+    sample: { title: '한 주 회의 시간', label: '지금', before: '6시간', note: '1년 뒤', after: '2시간' },
     recipe: {
       frame: 'line',
-      phases: phases(['seed', 400], ['gather', 1600, 150], ['resolve', 600, 300], ['write', 600, 200]),
-      particles: { amount: 'normal', size: 0.8, tone: 'ink', depth: 0.3, trail: true, spread: 'side' },
+      material: 'line',
+      phases: phases(['seed', 300], ['gather', 1400, 150], ['resolve', 400, 200], ['write', 500, 150]),
+      particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.3, trail: false, spread: 'side' },
       shape: { kind: 'line' },
       light: false,
       line: true,
@@ -210,10 +224,12 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       pace: 'normal',
       texts: [
         { key: 'title', enter: 'settle', on: 'seed' },
-        { key: 'label', enter: 'settle', on: 'seed', lag: 0.5 },
+        { key: 'before', enter: 'settle', on: 'seed', lag: 0.4 },
+        { key: 'label', enter: 'settle', on: 'seed', lag: 0.6 },
+        { key: 'after', enter: 'carry', on: 'gather', answer: true },
         { key: 'note', enter: 'settle', on: 'write' },
       ],
-      handoff: true,
+      handoff: false,
       loop: false,
       bleed: false,
     },
@@ -339,6 +355,8 @@ export interface CineTextCue {
   enter: CineEnter
   start: number
   end: number
+  /** 장의 답: 다 들어온 때(end)부터 이때까지 글자색에서 강조색으로 한 번 바뀐다 */
+  accent?: number
 }
 
 /**
@@ -347,6 +365,7 @@ export interface CineTextCue {
  */
 export interface CineScript {
   frame: CineFrame
+  material: CineMaterial
   seed: number
   spans: CineSpan[]
   /** 다 맺히는 때(ms) */
@@ -368,6 +387,7 @@ export interface CineScript {
   handoff: boolean
   loop: boolean
   bleed: boolean
+  headAfter: boolean
 }
 
 const PACE: Record<CinePace, number> = { slow: 1.3, normal: 1, fast: 0.76 }
@@ -420,14 +440,19 @@ export function cineScript(raw: unknown): CineScript | null {
     const enter = oneOf(ENTERS, t.enter, 'settle')
     // 숫자 굴리기는 1.6초까지: 끝자리가 1초 넘게 꼼지락거리면 기다리게 한다(검수, docs/MOTION.md 4절 '숫자는 2초 안')
     const len = enter === 'settle' ? 620 * pace : enter === 'count' ? Math.min(1600 * pace, Math.max(600 * pace, span.end - start)) : Math.max(600 * pace, span.end - start)
-    texts.push({ key: t.key as CineFieldKey, enter, start, end: start + len })
+    // 장의 답은 하나: 강조색이 들어오는 0.45초를 끝에 더한다
+    texts.push({ key: t.key as CineFieldKey, enter, start, end: start + len, ...(t.answer === true && !texts.some((x) => x.accent !== undefined) ? { accent: start + len + ACCENT_MS * pace } : {}) })
   }
-  const kind = oneOf(CINE_SHAPES.map((s) => s.id), shape.kind, preset.shape.kind)
+  // 모양은 재료마다 뜻이 있는 것만: 입자는 글자, 고리, 한 점으로 모이고, 그어지는 선은 선이나 물결, 먹의 면은 한 점에서, 가는 선은 글자로
+  const material = oneOf(MATERIALS, r.material, preset.material ?? 'particles')
+  const kinds = SHAPES_OF[material]
+  const kind = oneOf(kinds, shape.kind, kinds[0])
   return {
     frame: oneOf(FRAMES, r.frame, preset.frame),
+    material,
     seed: num(r.seed, 0, 2 ** 31, 7) | 0,
     spans,
-    total: Math.max(total, ...texts.map((t) => t.end)),
+    total: Math.max(total, ...texts.map((t) => t.accent ?? t.end)),
     count: COUNT[oneOf(CINE_AMOUNTS.map((a) => a.id), pt.amount, preset.particles.amount)],
     size: num(pt.size, 0.6, 1.6, 1),
     tone: oneOf(CINE_TONES.map((t) => t.id), pt.tone, 'ink'),
@@ -443,6 +468,7 @@ export function cineScript(raw: unknown): CineScript | null {
     handoff: r.handoff === true,
     loop: r.loop === true,
     bleed: r.bleed === true,
+    headAfter: r.headAfter === true,
   }
 }
 
@@ -452,7 +478,7 @@ export const cineKnown = (r: Pick<CineRecipe, 'engine'>) => r.engine <= CINE_ENG
 // ---------- 쉬운 손잡이 ----------
 
 /** 모션 편집의 오른쪽 칸에 보이는 손잡이. 값을 고르면 레시피의 몇 군데를 함께 바꾼다(withKnob) */
-export type CineKnob = 'shape' | 'amount' | 'spread' | 'light' | 'camera' | 'pace' | 'enter' | 'trail' | 'loop' | 'bleed'
+export type CineKnob = 'shape' | 'amount' | 'spread' | 'light' | 'camera' | 'pace' | 'enter' | 'trail' | 'loop' | 'bleed' | 'headAfter'
 
 /** 글이 들어오는 모습을 고를 칸: 레시피에서 처음 나오는 제목이나 숫자(모양을 딴 칸은 맺히기 그대로) */
 export function mainText(r: CineRecipe): CineText | undefined {
@@ -483,22 +509,33 @@ export function knobValue(r: CineRecipe, knob: CineKnob): string | boolean {
       return r.loop === true
     case 'bleed':
       return r.bleed === true
+    case 'headAfter':
+      return r.headAfter === true
   }
 }
 
 /** 이 레시피에서 뜻이 있는 손잡이만(번지는 구간이 없으면 번지는 모양은 고를 것이 없다) */
 export function knobsFor(r: CineRecipe): CineKnob[] {
   const has = (k: CinePhaseKind) => r.phases?.some((p) => p.kind === k)
-  const out: CineKnob[] = ['shape', 'amount']
-  if (has('spread')) out.push('spread')
-  out.push('light', 'camera', 'pace')
+  const material = oneOf(MATERIALS, r.material, presetSpec(oneOf(PRESET_IDS, r.preset, 'light')).recipe.material ?? 'particles')
+  // 재료마다 뜻이 있는 손잡이만: 입자가 아닌 재료에 모일 모양, 번지는 모양, 빛, 잔상을 보이면 눌러도 바뀌는 것이 없다
+  const out: CineKnob[] = []
+  if (material === 'particles') out.push('shape', 'amount')
+  else if (material === 'line') out.push('shape')
+  else out.push('amount')
+  if (material === 'particles' && has('spread')) out.push('spread')
+  if (material === 'particles') out.push('light')
+  if (material !== 'line') out.push('camera')
+  out.push('pace')
   if (mainText(r)) out.push('enter')
-  out.push('trail', 'loop', 'bleed')
+  if (material === 'particles') out.push('trail', 'loop')
+  if (material !== 'line') out.push('bleed')
+  out.push('headAfter')
   return out
 }
 
 /** 글 칸마다 고를 수 있는 들어오기(숫자 굴리기는 숫자 칸에만) */
-export const entersFor = (key: CineFieldKey): CineEnter[] => (key === 'value' ? ['settle', 'write', 'count'] : ['settle', 'write', 'letters'])
+export const entersFor = (key: CineFieldKey): CineEnter[] => (key === 'value' ? ['settle', 'write', 'count'] : key === 'after' ? ['carry', 'settle'] : ['settle', 'write', 'letters'])
 
 /**
  * 손잡이 하나를 바꾼 레시피(새 객체). 모양을 바꾸면 그 모양에 맞는 칸과 선을 함께 고친다: 글자로 모이려면 모양을 딸 칸이 있어야 하고,
@@ -542,6 +579,10 @@ export function withKnob(r: CineRecipe, knob: CineKnob, value: string | boolean)
       break
     case 'bleed':
       next.bleed = value === true
+      break
+    case 'headAfter':
+      if (value === true) next.headAfter = true
+      else delete next.headAfter
       break
   }
   return next

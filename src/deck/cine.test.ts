@@ -13,6 +13,7 @@ import {
   knobsFor,
   knobValue,
   presetRecipe,
+  SHAPES_OF,
   spansOf,
   tidyCines,
   withKnob,
@@ -145,4 +146,62 @@ describe('모션 그래픽 레시피', () => {
     // 모션 그래픽이 아닌 부품에 붙은 레시피 id도 뺀다
     expect(cleanBlock({ id: 'b', type: 'text', fields: {}, items: [], cine: cineId(presetRecipe('light', 'l')) }, { left: 10 })?.cine).toBeUndefined()
   })
+
+  it('틀마다 재료가 달라 한 발표에서도 서로 다른 몸짓이다: 입자는 빛에서 글자로만', () => {
+    const material = (id: (typeof CINE_PRESETS)[number]['id']) => cineScript(presetRecipe(id, 'l'))!.material
+    expect(CINE_PRESETS.map((p) => material(p.id))).toEqual(['particles', 'wash', 'threads', 'line'])
+    // 재료에 뜻이 없는 모양은 그 재료의 첫 모양으로(입자에 선을 고른 예전 레시피 같은)
+    const odd = { ...presetRecipe('light', 'l'), shape: { kind: 'line' as const } }
+    expect(cineScript(odd)!.shape).toBe('glyph')
+    expect(cineScript({ ...presetRecipe('stroke', 'l'), shape: { kind: 'glyph' as const } })!.shape).toBe('line')
+    expect(SHAPES_OF.line).toEqual(['line', 'wave'])
+    // 손잡이도 재료마다 뜻이 있는 것만: 먹의 면과 가는 선에는 모일 모양, 빛, 잔상이 없고, 그어지는 선에는 번지기가 없다
+    expect(knobsFor(presetRecipe('diffuse', 'l'))).not.toContain('shape')
+    expect(knobsFor(presetRecipe('gather', 'l'))).not.toContain('light')
+    expect(knobsFor(presetRecipe('stroke', 'l'))).toEqual(expect.arrayContaining(['shape', 'pace', 'headAfter']))
+    expect(knobsFor(presetRecipe('stroke', 'l'))).not.toContain('bleed')
+  })
+
+  it('강조색은 장의 답 하나에만, 다 들어온 뒤 한 번: 그 시간까지 장면에 든다', () => {
+    for (const p of CINE_PRESETS) {
+      const s = cineScript(presetRecipe(p.id, 'l'))!
+      const answers = s.texts.filter((t) => t.accent !== undefined)
+      expect(answers, p.id).toHaveLength(1)
+      expect(answers[0].accent!).toBeGreaterThan(answers[0].end)
+      expect(s.total).toBeGreaterThanOrEqual(answers[0].accent!)
+    }
+    // 답을 둘 적은 레시피도 첫째만
+    const two = presetRecipe('light', 'l')
+    two.texts = two.texts.map((t) => ({ ...t, answer: true }))
+    expect(cineScript(two)!.texts.filter((t) => t.accent !== undefined)).toHaveLength(1)
+  })
+
+  it('박자: 빛에서 글자로의 큰 글자는 2초 안에, 첫 연출은 차분하게 3초·생동감 4초 안팎', () => {
+    const s = cineScript(presetRecipe('light', 'l'))!
+    const gather = s.spans.find((x) => x.kind === 'gather')!
+    expect(gather.end).toBeLessThanOrEqual(2000)
+    expect(s.total).toBeGreaterThan(3500)
+    expect(s.total).toBeLessThanOrEqual(4200)
+    // 차분하게는 엔진이 같은 안무를 0.78배로(motion/cine.ts의 CALM)
+    expect(s.total * 0.78).toBeLessThanOrEqual(3300)
+  })
+
+  it('그어지는 선: 지금 값과 바뀐 값을 적고, 바뀐 값이 선을 타고 건너온다. 모여 맺힘에는 이름표가 없다', () => {
+    const stroke = CINE_PRESETS.find((p) => p.id === 'stroke')!
+    expect(stroke.sample.before).toBeTruthy()
+    expect(stroke.sample.after).toBeTruthy()
+    expect(cineScript(presetRecipe('stroke', 'l'))!.texts.find((t) => t.key === 'after')?.enter).toBe('carry')
+    expect(CINE_PRESETS.find((p) => p.id === 'gather')!.sample.label).toBeUndefined()
+  })
+
+  it('장 제목은 모션 그래픽 다음에: 손잡이로 켜고 끈다(끄면 레시피에서 빠진다)', () => {
+    const r = presetRecipe('gather', 'l')
+    const on = withKnob(r, 'headAfter', true)
+    expect(cineScript(on)!.headAfter).toBe(true)
+    expect(knobValue(on, 'headAfter')).toBe(true)
+    const off = withKnob(on, 'headAfter', false)
+    expect('headAfter' in off).toBe(false)
+    expect(cineId(off)).toBe(cineId(r))
+  })
+
 })

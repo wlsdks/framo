@@ -11,6 +11,7 @@ import { presentChannel, type Blank, type PresentMessage } from '../present/link
 import { recordSeconds, recordTime, slideHoldMs, START_MS, STEP_HOLD_MS, TURN_MS } from '../present/pace'
 import { canRecord, motionSettled, saveBlob, sizeSettled, startRecording, type RecordMode, type Recording } from '../present/record'
 import { safeFileName } from '../store/deckFile'
+import { cines } from '../slides/blocks/Cine'
 import { FitSlide, pageProps, SlideCanvas } from '../slides/SlideCanvas'
 import { Modal } from './ui'
 
@@ -344,6 +345,16 @@ export function Present({
       cancelIdleCallback(idle)
     }
   }, [view, slides, ahead, ready])
+
+  // 미리 그린 다음 장에 모션 그래픽이 있으면 그 글자 모양을 한가할 때 미리 딴다(장을 넘기는 첫 프레임이 가볍게)
+  useEffect(() => {
+    if (!ahead) return
+    const idle = requestIdleCallback(() => {
+      const el = document.querySelector('.present-ahead')
+      if (el) cines.prewarm(el)
+    })
+    return () => cancelIdleCallback(idle)
+  }, [ahead])
 
   const record = async (): Promise<RecordResult | null> => {
     const frame = stageRef.current?.closest<HTMLElement>('.slide-frame')

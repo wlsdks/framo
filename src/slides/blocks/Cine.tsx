@@ -28,9 +28,9 @@ function heroOf(s: CineScript): CineFieldKey | null {
   return s.field && keys.includes(s.field) ? s.field : keys.includes('value') ? 'value' : keys.includes('title') ? 'title' : null
 }
 
-function Field({ k, hero }: { k: CineFieldKey; hero: boolean }) {
+function Field({ k, hero, answer }: { k: CineFieldKey; hero: boolean; answer: CineFieldKey | undefined }) {
   return (
-    <div className={cx('bk-cn-f', `f-${k}`, hero && 'is-hero')} data-cn={k}>
+    <div className={cx('bk-cn-f', `f-${k}`, hero && 'is-hero', k === answer && 'is-answer')} data-cn={k}>
       <T k={k} className={`bk-cn-${k}`} multiline={MULTI.includes(k)} />
     </div>
   )
@@ -45,24 +45,26 @@ export function Cine() {
   const still = useMemo(() => cines.still(script), [script])
   const keys = script.texts.map((t) => t.key)
   const hero = heroOf(script)
+  // 장의 답(강조색 글자)
+  const answer = script.texts.find((t) => t.accent !== undefined)?.key
   const words = keys.filter((k) => k !== hero)
   // 레시피가 쓰는 칸은 비어 있어도 편집할 때 늘 보인다(접어 두지 않는다): 장면의 짜임이 글 칸으로 정해지므로
   const value = useMemo(() => ({ ...ctx, folds: undefined }), [ctx])
   return (
     <SlideContext.Provider value={value}>
-      <div className={cx('bk-cn', `fr-${script.frame}`, script.bleed && 'is-bleed')} data-script={json}>
+      <div className={cx('bk-cn', `fr-${script.frame}`, script.bleed && 'is-bleed')} data-script={json} data-head-after={script.headAfter ? '' : undefined}>
         <div className="bk-cn-cam">
           <svg className="bk-cn-still" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true" dangerouslySetInnerHTML={{ __html: still }} />
           <div className="bk-cn-txt">
-            {hero && keys.includes(hero) && script.frame === 'mark' && <Field k={hero} hero />}
+            {hero && keys.includes(hero) && script.frame === 'mark' && <Field k={hero} hero answer={answer} />}
             {script.frame === 'mark' ? (
               <div className="bk-cn-words">
                 {words.map((k) => (
-                  <Field key={k} k={k} hero={false} />
+                  <Field key={k} k={k} hero={false} answer={answer} />
                 ))}
               </div>
             ) : (
-              keys.map((k) => <Field key={k} k={k} hero={k === hero} />)
+              keys.map((k) => <Field key={k} k={k} hero={k === hero} answer={answer} />)
             )}
           </div>
         </div>
