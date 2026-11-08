@@ -275,7 +275,7 @@ export function motionEngine(): MotionEngine {
    * 큰 숫자를 0부터 올린다. 숫자가 하나만 있는 칸만. '3~4개월', 날짜는 그대로 둔다.
    * 다 올라가면 waits에 넣은 약속을 지킨다: 글이 원래 숫자로 돌아와야 움직임이 끝난 것이다(play의 끝 표시)
    */
-  function countUp(el: Element, at: number, duration: number, stops: (() => void)[], waits: Promise<void>[]) {
+  function countUp(el: Element, at: number, duration: number, stops: (() => void)[], waits: Promise<void>[], from = 0) {
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
     let node = walker.nextNode() as Text | null
     while (node && !/\d/.test(node.nodeValue || '')) node = walker.nextNode() as Text | null
@@ -303,11 +303,11 @@ export function motionEngine(): MotionEngine {
     let frame = 0
     let done = () => {}
     waits.push(new Promise<void>((r) => (done = r)))
-    target_node.nodeValue = format(0)
+    target_node.nodeValue = format(from)
     const tick = (now: number) => {
       const t = Math.min(1, Math.max(0, (now - start) / duration))
-      // 처음엔 빠르게, 끝에서 천천히 멈춘다
-      target_node.nodeValue = t >= 1 ? text : format(target * (1 - Math.pow(2, -10 * t)))
+      // 처음엔 빠르게, 끝에서 천천히 멈춘다. from에서 출발하면(전과 후) 앞 값에서 새 값으로 바뀌어 간다
+      target_node.nodeValue = t >= 1 ? text : format(from + (target - from) * (1 - Math.pow(2, -10 * t)))
       if (t < 1) frame = requestAnimationFrame(tick)
       else done()
     }
@@ -1467,14 +1467,25 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-num-n'), 520, 600)
           break
         case 'delta': {
+          // 같은 값이 바뀌는 것으로 보이게(대상 일관성, Heer & Robertson 2007): 뒤 값이 0이 아니라 앞 값에서 출발해 새 값으로
+          // 굴러간다(8.4 → 5.1). 앞 값의 사본을 뒤 값 자리로 미끄러뜨려도 봤지만 지나가는 동안 숫자끼리 두 겹으로 겹쳐 지저분했다
+          const fromV = one('.bk-dl-from .bk-dl-v')
+          const toV = one('.bk-dl-to .bk-dl-v')
+          const num = (el: Element | null) => {
+            const all = (el?.textContent ?? '').match(/\d[\d,]*(\.\d+)?/g)
+            return all && all.length === 1 ? parseFloat(all[0].replace(/,/g, '')) : NaN
+          }
+          const before = num(fromV)
           fade(one('.bk-dl-l'), 80, 500)
           rise(one('.bk-dl-from'), 140, L.y * 0.4)
           const arrow = one('.bk-dl-arrow')
           if (arrow) run(anims, arrow, [{ opacity: 0, translate: `${-L.y * 0.6}px 0` }], s(320), L.move)
           rise(one('.bk-dl-to'), 420, L.y * 0.5)
-          count(one('.bk-dl-to .bk-dl-v'), 440)
-          pop(one('.bk-dl-chip'), 900)
-          fade(one('.bk-dl-n'), 980, 500)
+          if (toV && Number.isFinite(before) && Number.isFinite(num(toV)) && !still && !toV.closest('.m-edit, [data-mo-keep]'))
+            countUp(toV, s(560), (levelName === 'lively' ? 1100 : 900) * pace, stops, waits, before)
+          else count(toV, 440)
+          pop(one('.bk-dl-chip'), 1300)
+          fade(one('.bk-dl-n'), 1380, 500)
           break
         }
         case 'goal':
