@@ -54,7 +54,7 @@ describe('배경의 모양', () => {
     expect(onlyKnownStrings(shape, ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene', 'over', 'backdrop', 'strength'])).toBe(true)
   })
 
-  it('카탈로그에 배경 넷과 짙기, 자주 쓰는 자리가 있다', () => {
+  it('카탈로그에 배경 셋과 짙기, 자주 쓰는 자리가 있다', () => {
     const c = catalog()
     expect(c.backdrops.map((b) => b.id)).toEqual([...BACKDROP_IDS])
     expect(c.backdrops.every((b) => b.name && b.fits)).toBe(true)
@@ -73,6 +73,7 @@ describe('배경 제안(set_backdrop)', () => {
     expect(parseOp({ op: 'set_backdrop', slide: sid, backdrop: 'aurora' })).toBeNull()
     // 뺀 배경은 고를 수 없다
     expect(parseOp({ op: 'set_backdrop', slide: sid, backdrop: 'depth' })).toBeNull()
+    expect(parseOp({ op: 'set_backdrop', slide: sid, backdrop: 'link' })).toBeNull()
     expect(parseOp({ op: 'set_backdrop', slide: sid })).toBeNull()
     expect(parseOp({ op: 'set_backdrop', slide: sid, backdrop: 'gather', x: 0, y: 0 })).toBeNull()
     expect(parseOp({ op: 'set_backdrop', slide: sid, backdrop: 'gather', x: 10, y: 0, w: 6, h: 12 })).toBeNull()

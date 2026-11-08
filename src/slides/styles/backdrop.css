@@ -25,7 +25,7 @@
 }
 
 /* 움직이는 캔버스의 마스크: 구멍과 가장자리의 옅어짐(--bd-mask, motion/backdrop.ts의 maskUrl). 끝 모습의 SVG는 같은 마스크를 안에
-   갖는다: PPT 그림(장을 SVG 그림으로 옮겨 그린다)에서는 CSS 마스크가 먹지 않아 배경이 화면의 두 배로 진했다(검수) */
+   갖는다(장을 SVG 그림으로 옮겨 그리는 곳에서는 CSS 마스크가 먹지 않는다) */
 .s-bd > .bd-cv {
   -webkit-mask-image: var(--bd-mask, none);
   mask-image: var(--bd-mask, none);
@@ -35,9 +35,10 @@
   mask-repeat: no-repeat;
 }
 
-/* PDF(인쇄)는 한 단계 옅게: 종이는 화면보다 진하게 읽힌다(결정). PPT 그림은 Backdrop.tsx의 settleForPrint가 같은 값을 준다 */
+/* PDF(인쇄)에는 배경을 넣지 않는다: 움직이는 동안에만 뜻이 서는 몸짓이라 멈춘 출력에는 꾸밈만 남는다(결정).
+   PPT 그림은 Backdrop.tsx의 hideForPrint가 뺀다 */
 @media print {
   .s-bd {
-    opacity: 0.7;
+    display: none;
   }
 }

@@ -13,12 +13,11 @@ import type { Backdrop, Deck, Slide } from './types'
 const withSlides = (...slides: Slide[]): Deck => ({ ...createSampleDeck(), slides })
 
 describe('배경의 값', () => {
-  it('배경 이름은 모션 기준(docs/MOTION.md 9절)의 분위기 이름에서 고른다', () => {
+  it('배경 이름은 모션 기준(docs/MOTION.md 9절)의 분위기 셋과 같다', () => {
     const doc = readFileSync(join(process.cwd(), 'docs', 'MOTION.md'), 'utf8')
     const table = doc.slice(doc.indexOf('| 분위기 |'), doc.indexOf('### 10.'))
     const moods = [...table.matchAll(/^\| ([^|]+?) \| /gm)].map((m) => m[1]).filter((n) => n !== '분위기' && !n.startsWith('---'))
-    expect(moods.length).toBe(7)
-    for (const b of BACKDROPS) expect(moods, b.name).toContain(b.name)
+    expect(BACKDROPS.map((b) => b.name)).toEqual(moods)
   })
 
   it('그릴 배경: 모르는 종류는 그리지 않고, 틀린 자리와 짙기는 기본값으로 그린다(값은 고치지 않는다)', () => {
@@ -36,22 +35,23 @@ describe('배경의 값', () => {
     expect(tidyBackdrop({ kind: 'gather', at: { x: 5, y: 0, w: 7, h: 12 }, strength: 'soft' })).toEqual({ kind: 'gather', at: { x: 5, y: 0, w: 7, h: 12 }, strength: 'soft' })
   })
 
-  it('한 점이 있는 배경은 처음 고를 때 글이 적은 쪽에 놓는다(표지는 옆 면 밖)', () => {
+  it('처음 고를 때는 장 전체에(표지는 옆 면 밖의 판 전체에) 놓는다', () => {
     const cover = makeSlide('cover')
-    expect(baseBackdrop(cover, 'diffuse').at).toEqual({ x: 0, y: 0, w: 8, h: 8 })
-    expect(baseBackdrop({ ...cover, options: { flip: true } }, 'diffuse').at).toEqual({ x: 4, y: 0, w: 8, h: 8 })
+    expect(baseBackdrop(cover, 'diffuse').at).toEqual({ x: 0, y: 0, w: 8, h: 12 })
+    expect(baseBackdrop({ ...cover, options: { flip: true } }, 'diffuse').at).toEqual({ x: 4, y: 0, w: 8, h: 12 })
     expect(baseBackdrop(makeSlide('points'), 'flow')).toEqual({ kind: 'flow' })
+    expect(baseBackdrop(makeSlide('statement'), 'gather')).toEqual({ kind: 'gather', strength: 'strong' })
     // 종류를 바꾸면 고른 자리와 짙기는 그대로
     const chosen = { ...cover, backdrop: { kind: 'diffuse', at: { x: 2, y: 2, w: 8, h: 8 }, strength: 'soft' } as Backdrop }
-    expect(withBackdropKind(chosen, 'link')).toEqual({ kind: 'link', at: { x: 2, y: 2, w: 8, h: 8 }, strength: 'soft' })
+    expect(withBackdropKind(chosen, 'flow')).toEqual({ kind: 'flow', at: { x: 2, y: 2, w: 8, h: 8 }, strength: 'soft' })
   })
 })
 
 describe('배경과 예전 파일', () => {
   const deck = withSlides({ ...makeSlide('cover'), backdrop: { kind: 'diffuse', at: { x: 0, y: 0, w: 8, h: 8 } } }, { ...makeSlide('points'), backdrop: { kind: 'aurora' } as unknown as Backdrop })
 
-  it('뺀 배경(깊이, 구조, 여운)은 그리지 않고 값은 남는다', () => {
-    for (const kind of ['depth', 'structure', 'linger']) {
+  it('뺀 배경(깊이, 구조, 여운, 연결)은 그리지 않고 값은 남는다', () => {
+    for (const kind of ['depth', 'structure', 'linger', 'link']) {
       const slide = { ...makeSlide('points'), backdrop: { kind } as unknown as Backdrop }
       expect(backdropOf(slide), kind).toBeNull()
       const d = withSlides(slide)

@@ -18,12 +18,6 @@ if (typeof document !== 'undefined') backdrops.listen(document)
 const DARK_UP: Record<BackdropStrength, string> = { soft: 'base', base: 'strong', strong: 'vivid' }
 
 /**
- * PDF와 PPT 그림은 한 단계 옅게(styles/backdrop.css의 @media print와 같은 값). 종이와 PPT는 화면보다 진하게 읽혀서
- * 결정했다(검수: 같은 배경이 화면보다 PDF, PPT에서 무거웠다)
- */
-const PRINT_OPACITY = '0.7'
-
-/**
  * 글이 놓인 자리가 바뀌면(쓰기, 글자 맞추기, 글꼴이 늦게 옴, 다른 장 크기) 배경을 장에 다시 맞춘다(구멍, 본문 띠, 장의 답).
  * 한 프레임에 한 번만 재고, 장이 움직이는 동안(엔진의 data-mo-play: 글이 옮겨지는 중)에는 기다렸다가 끝나면(mo-end) 잰다
  */
@@ -63,11 +57,12 @@ function useFit(ref: RefObject<HTMLDivElement | null>) {
   }, [ref])
 }
 
-/** 장을 그림으로 옮기기 직전(PPT): 다 맞춘 자리로 배경을 맞추고 한 단계 옅게 */
-export function settleForPrint(slide: Element) {
-  backdrops.clear(slide)
-  const el = slide.querySelector<HTMLElement>(':scope > .s-bd')
-  if (el) el.style.opacity = PRINT_OPACITY
+/**
+ * 장을 그림으로 옮기기 직전(PPT): 배경을 뺀다. PDF(@media print, slides/styles/backdrop.css)와 같다. 배경은 움직이는 동안에만 뜻이
+ * 서는 몸짓이라 멈춘 출력에는 꾸밈만 남고, 쓰는 사람도 깔끔한 PDF를 원했다(결정)
+ */
+export function hideForPrint(slide: Element) {
+  slide.querySelector<HTMLElement>(':scope > .s-bd')?.remove()
 }
 
 export const Backdrop = memo(function Backdrop({ value, dark }: { value: Slide['backdrop']; dark?: boolean }) {

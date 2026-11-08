@@ -13,7 +13,11 @@ export interface Paint {
   dot(x: number, y: number, r: number, tone: number, a: number): void
   /** 선의 점을 하나씩 넣고 stroke로 긋는다 */
   to(x: number, y: number): void
-  stroke(width: number, tone: number, a: number, closed?: boolean): void
+  /**
+   * flat이면 선의 두 끝을 평평하게(butt). 한 선을 마디마다 짙기를 달리해 이어 그을 때 쓴다: 둥근 끝끼리 이음에서 겹쳐 짙은 점이 생겨
+   * 실선이 점선처럼 보였다(검수)
+   */
+  stroke(width: number, tone: number, a: number, closed?: boolean, flat?: boolean): void
 }
 
 /** 그림 하나: w × h 안에 그린다 */
@@ -183,21 +187,23 @@ export function drawKit(): DrawKit {
       to(x, y) {
         pts.push(x, y)
       },
-      stroke(width, tone, a, closed) {
+      stroke(width, tone, a, closed, flat) {
         const q = Math.round(Math.min(0.95, a * m) * Q)
         if (q > 0 && pts.length >= 4) {
           let d = `M${num(pts[0])} ${num(pts[1])}L`
           for (let i = 2; i < pts.length; i += 2) d += `${num(pts[i])} ${num(pts[i + 1])} `
-          bucket(strokes, tone * 1e6 + q * 1000 + Math.round(width * 4)).push(d.trim() + (closed ? 'Z' : ''))
+          bucket(strokes, (tone + (flat ? 2 : 0)) * 1e6 + q * 1000 + Math.round(width * 4)).push(d.trim() + (closed ? 'Z' : ''))
         }
         pts.length = 0
       },
       markup() {
         let s = ''
         // 선만 stroke-linejoin을 갖는다(점은 길이가 없어 이음이 없다). 장을 아주 작게 줄인 그림(배경 고르기 카드)이 선만 골라
-        // 화면 1px로 그릴 때(vector-effect) 이것으로 가른다
-        const path = (key: number, width: number, d: string[], line: boolean) =>
-          `<path${Math.floor(key / 1e6) ? ` class="${accentClass}"` : ''} fill="none" stroke="currentColor" stroke-linecap="round"${line ? ' stroke-linejoin="round"' : ''} stroke-opacity="${Math.floor((key % 1e6) / 1000) / Q}" stroke-width="${width}" d="${d.join('')}"/>`
+        // 화면 1px로 그릴 때(vector-effect) 이것으로 가른다. 열쇠의 백만 자리: 1은 강조색, 2는 평평한 끝
+        const path = (key: number, width: number, d: string[], line: boolean) => {
+          const t = Math.floor(key / 1e6)
+          return `<path${t & 1 ? ` class="${accentClass}"` : ''} fill="none" stroke="currentColor" stroke-linecap="${t & 2 ? 'butt' : 'round'}"${line ? ' stroke-linejoin="round"' : ''} stroke-opacity="${Math.floor((key % 1e6) / 1000) / Q}" stroke-width="${width}" d="${d.join('')}"/>`
+        }
         for (const [key, d] of strokes) s += path(key, (key % 1000) / 4, d, true)
         for (const [key, d] of dots) s += path(key, (key % 1000) / 10, d, false)
         return s
@@ -224,10 +230,10 @@ export function drawKit(): DrawKit {
       to(x, y) {
         pts.push(x, y)
       },
-      stroke(width, tone, a, closed) {
+      stroke(width, tone, a, closed, flat) {
         const q = Math.round(Math.min(0.95, a * m) * Q)
         if (q > 0 && pts.length >= 4) {
-          const p = bucket(strokes, tone * 1e6 + q * 1000 + Math.round(width * 4))
+          const p = bucket(strokes, (tone + (flat ? 2 : 0)) * 1e6 + q * 1000 + Math.round(width * 4))
           p.moveTo(pts[0], pts[1])
           for (let i = 2; i < pts.length; i += 2) p.lineTo(pts[i], pts[i + 1])
           if (closed) p.closePath()
@@ -235,11 +241,12 @@ export function drawKit(): DrawKit {
         pts.length = 0
       },
       flush() {
-        ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         for (const [key, p] of strokes) {
+          const t = Math.floor(key / 1e6)
+          ctx.lineCap = t & 2 ? 'butt' : 'round'
           ctx.globalAlpha = Math.floor((key % 1e6) / 1000) / Q
-          ctx.strokeStyle = colors[Math.floor(key / 1e6)]
+          ctx.strokeStyle = colors[t & 1]
           ctx.lineWidth = Math.max(line, (key % 1000) / 4)
           ctx.stroke(p)
         }

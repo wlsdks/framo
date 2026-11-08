@@ -1,10 +1,12 @@
-// 배경: 장의 글과 컴포넌트 뒤에서 잔잔히 움직이는 그래픽. 분위기마다 하나라서 장의 말에 맞는 것을 고른다(docs/MOTION.md 9절, 12절).
+// 배경: 장의 글과 컴포넌트 뒤에서 한 번 크게 지나가는 몸짓. 분위기마다 하나라서 장의 말에 맞는 것을 고른다(docs/MOTION.md 9절, 12절).
 // 여기의 목록이 고르는 값의 한 곳이다: 편집기, 장 모음, AI 카탈로그(backdrops), 모양 파일(backdrop), 제안(set_backdrop)이 같이 쓴다.
 // 그림과 움직임은 motion/backdrop.ts. 값은 장의 backdrop(종류, 자리, 짙기)에 남는다.
 
 import { BOARD_COLS, BOARD_ROWS, isArea, sameArea } from './blocks'
 import { sideOf } from './layouts'
 import type { Backdrop, BackdropId, BackdropStrength, BlockAt, LayoutId, Slide } from './types'
+
+// 이 파일의 자리는 장 전체를 12×12칸으로 나눈 칸 수다(세로 한 칸은 90px, 가로 한 칸은 160px)
 
 interface BackdropSpec {
   id: BackdropId
@@ -13,8 +15,6 @@ interface BackdropSpec {
   description: string
   /** 어울리는 장. 고르는 곳과 AI 카탈로그에 그대로 보인다 */
   fits: string
-  /** 한곳에 모인 그림(망점 덩어리, 모이는 갈래): 처음 고를 때 글이 적은 쪽에 놓는다. 아니면 장 전체에 고르게 깔린다 */
-  focal: boolean
   /** 장 모음과 갤러리에서 이 배경을 깔아 보이는 장 (어울리는 장 하나) */
   showOn: LayoutId
 }
@@ -24,11 +24,11 @@ interface BackdropSpec {
  * 차례가 곧 고르는 곳의 차례다
  */
 export const BACKDROPS: readonly BackdropSpec[] = [
-  // 깊이, 구조, 여운은 지형도, 모눈 템플릿, 장식 괘선 두 줄로 읽혀 뺐다(감성 검수). 그 값이 남은 발표는 그리지 않고 값은 둔다
-  { id: 'diffuse', name: '확산', description: '한 점에 모인 짙음이 장 너머까지 번져 나가요.', fits: '표지, 출시와 도입, 커지는 숫자, 넓혀 가는 계획', focal: true, showOn: 'cover' },
-  { id: 'gather', name: '모여 시작', description: '여러 곳에서 온 가는 선이 한 줄기로 모여 장의 답으로 건너가요.', fits: '표지, 착수와 출범, 결론 한 줄, 통합과 합계', focal: true, showOn: 'statement' },
-  { id: 'flow', name: '흐름', description: '가는 결이 왼쪽에서 오른쪽으로 깔리며 본문 위아래로 나란히 흘러요.', fits: '과정, 일정, 추이, 변화', focal: false, showOn: 'process' },
-  { id: 'link', name: '연결', description: '양쪽 점이 먼저 맺히고, 낮고 넓은 선이 건너가 하나씩 이어요.', fits: '연결도, 관계, 사람과 팀, 협업', focal: false, showOn: 'compare' },
+  // 깊이, 구조, 여운, 연결은 지형도, 모눈 템플릿, 장식 괘선, 뜻이 서지 않는 아치로 읽혀 뺐다(감성 검수). 그 값이 남은 발표는 그리지
+  // 않고 값은 둔다. 쓰임새 낱말은 셋이 겹치지 않게(표지는 확산에만)
+  { id: 'diffuse', name: '확산', description: '가운데에서 입자의 물결이 장 끝까지 크게 번지고 걷혀요.', fits: '표지, 도입, 퍼짐', showOn: 'cover' },
+  { id: 'gather', name: '모여들기', description: '장 밖 여러 곳에서 온 선이 강처럼 합쳐져 장의 답 가까이로 건너가요.', fits: '결론, 통합, 출범', showOn: 'statement' },
+  { id: 'flow', name: '흐름', description: '긴 선 한두 가닥이 단계의 박자로 왼쪽에서 오른쪽으로 건너가요.', fits: '과정, 단계, 변화', showOn: 'process' },
 ]
 
 export const BACKDROP_IDS: readonly BackdropId[] = BACKDROPS.map((b) => b.id)
@@ -82,31 +82,21 @@ export function backdropOf(slide: Pick<Slide, 'backdrop'>): Required<Backdrop> |
 export const placeOfArea = (at: BlockAt) => BACKDROP_PLACES.find((p) => sameArea(p.at, at))?.id ?? null
 
 /**
- * 표지와 단락 장은 제목이 왼쪽 아래에 있어서 위쪽이 비고, 한 문장 장은 글이 위에서 장 너비를 다 써서 오른쪽 아래가 빈다.
- * 다른 장은 글이 왼쪽부터 놓인다.
- * 한곳에 모이는 배경(확산, 모여 시작)은 그 빈 쪽에 놓아 그림의 가운데가 글 뒤에 오지 않게 한다
- */
-const FOCAL_PLACE: Partial<Record<LayoutId, string>> = { cover: 'top', section: 'top', closing: 'top', statement: 'bottom-right' }
-
-/**
  * 글이 적은 장(표지, 섹션, 맺음, 한 문장): 처음 고를 때 또렷하게. 보통 짙기는 글이 많은 장에 맞춘 것이라 큰 화면에서 표지가 비어
- * 보였고, 한 문장 장의 오른쪽 아래 모여 시작은 검은 테마에서 거의 보이지 않았다(필름). 글 둘레는 배경이 비키므로 또렷하게도 글을 다투지 않는다
+ * 보였다(필름). 글 둘레는 배경이 비키므로 또렷하게도 글을 다투지 않는다
  */
 const BOLD_PLACES: readonly LayoutId[] = ['cover', 'section', 'closing', 'statement']
 
-/** 배경을 처음 고를 때의 값: 장 전체에 고르게 깔리는 그림은 전체, 한 점이 있는 그림은 글이 적은 쪽. 글이 적은 장은 또렷하게 */
+/**
+ * 배경을 처음 고를 때의 값: 장 전체(배경이 크게 지나가고, 글과 데이터 뒤는 알아서 비킨다). 옆 면이 있는 표지만 옆 면 밖의 판 전체:
+ * 옆 면은 배경을 가리므로 그 아래로 퍼지면 몸짓의 가운데가 어긋난다. 구석에 작게 깔던 때는 하프톤 템플릿처럼 읽혔다(검수).
+ * 글이 적은 장은 또렷하게
+ */
 export function baseBackdrop(slide: Pick<Slide, 'layout' | 'variant' | 'options'>, kind: BackdropId): Backdrop {
   const strong = BOLD_PLACES.includes(slide.layout) ? { strength: 'strong' as const } : {}
-  return { ...placeOf(slide, kind), ...strong }
-}
-
-function placeOf(slide: Pick<Slide, 'layout' | 'variant' | 'options'>, kind: BackdropId): Backdrop {
-  if (!backdropSpec(kind).focal) return { kind }
-  // 옆 면이 있는 표지: 옆 면 밖(제목이 있는 판)의 위쪽. 옆 면이 씨앗을 가리지 않게
   const side = slide.layout === 'cover' ? sideOf(slide) : null
-  if (side !== null) return { kind, at: { x: slide.options.flip ? side : 0, y: 0, w: BOARD_COLS - side, h: 8 } }
-  const place = BACKDROP_PLACES.find((p) => p.id === (FOCAL_PLACE[slide.layout] ?? 'right'))!
-  return { kind, at: place.at }
+  const at = side !== null ? { at: { x: slide.options.flip ? side : 0, y: 0, w: BOARD_COLS - side, h: BOARD_ROWS } } : {}
+  return { kind, ...at, ...strong }
 }
 
 /** 배경을 바꿀 때: 자리와 짙기는 그대로 두고 종류만. 자리를 고른 적 없으면 그 배경의 처음 자리 */

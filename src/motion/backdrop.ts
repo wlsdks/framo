@@ -1,22 +1,22 @@
-// 배경: 장의 글과 컴포넌트 뒤에 까는 잔잔한 그래픽과 그 움직임. 앱의 발표 화면과 내보낸 HTML의 뷰어가 똑같이 쓴다.
-// 기준은 docs/MOTION.md의 '9. 바탕 움직임'이다: 분위기 일곱 가운데 넷(확산, 모여 시작, 흐름, 연결)이 배경이다. 깊이, 구조, 여운은
-// 지형도, 모눈 템플릿, 장식 괘선 두 줄로 읽혀 뺐다(감성 검수. 그때의 그림은 git의 8461f809에 있다: 모션 그래픽 프리셋으로 다시 만들 때)
+// 배경: 장의 글과 컴포넌트 뒤에서 한 번 크게 지나가는 몸짓. 앱의 발표 화면과 내보낸 HTML의 뷰어가 똑같이 쓴다.
+// 기준은 docs/MOTION.md의 '9. 바탕 움직임'이다: 셋(확산, 모여들기, 흐름)이 배경이다. 깊이, 구조, 여운은 지형도, 모눈 템플릿, 장식 괘선
+// 두 줄로(8461f809), 연결은 뜻이 서지 않아(2f08a60a) 뺐다(감성 검수. 그때의 그림은 git의 그 커밋에 있다: 모션 그래픽 프리셋으로 다시 만들 때)
 //
-// - 배경마다 '때 e의 모습'을 그리는 그림 하나(Scene)다. 끝 모습(들어오기가 끝나고 머무는 모습)은 이 그림으로 SVG를 만들어 장에 넣고
-//   (편집 화면, 목록 그림, PDF, PPT, 내보낸 HTML의 처음 모습), 발표할 때는 같은 그림을 캔버스에 프레임마다 그린다.
-//   그래서 움직임이 끝난 모습과 멈춘 그림이 같다. 숫자 하나, 글 한 줄 없이 그린다.
+// - 배경은 '깔아 두는 무늬'가 아니라 '크게 지나가고 거의 남지 않는 몸짓'이다(결정). 들어오는 동안 크게(회의실 3~5m에서 보이게) 움직이고,
+//   지나간 자리는 걷혀 끝 모습에는 가장자리의 아주 옅은 흔적만 남거나 아무것도 남지 않는다. 뜻은 움직이는 동안에만 서서, 멈춘 끝 모습을
+//   무늬로 남기던 때는 넷 모두 망점 템플릿, 철망, 금 간 유리, 줄 공책, 아치 장식으로 읽혔다(2차 감성 검수). 그래서 PDF와 PPT에는 배경을
+//   넣지 않는다(Backdrop.tsx).
+// - 배경마다 '때 e의 모습'을 그리는 그림 하나(Scene)다. 끝 모습은 이 그림으로 SVG를 만들어 장에 넣고(편집 화면, 내보낸 HTML의 처음
+//   모습), 발표할 때는 같은 그림을 캔버스에 프레임마다 그린다. 숫자 하나, 글 한 줄 없이 그린다.
 //   그리는 도구(시간의 순수 함수, SVG와 캔버스 그리기, 캔버스 재생기)는 motion/draw.ts에 있고 인자(kit)로 받는다.
-// - 장에 맞춘다(fit): 그린 뒤에 장의 내용이 놓인 자리를 재서(clear) 세 가지를 안다. 비울 구멍(글 묶음, 그림, 차트), 본문 띠(흐름은 그
-//   위아래로 나란히, 연결은 그 아래에), 장의 답(결정 요청, 한 문장 장의 문장, 맺음의 요청: 모여 시작의 줄기가 건너가 닿는 곳).
-//   재고 나면 끝 모습을 그 값으로 다시 그린다. 구멍과 가장자리의 옅어짐은 SVG 안의 마스크라 PDF와 PPT 그림에도 그대로 들어간다
-//   (PPT 그림은 장을 SVG 그림으로 옮겨 그리는데, 그 안에서는 CSS 마스크가 먹지 않아 배경이 화면의 두 배로 진했다)
-// - 움직임: 장이 나올 때 한 번 들어오고(엔진이 mo-backdrop으로 알린다, motion/engine.ts) 2초 남짓에 가라앉는다(장의 글보다 늦게 끝나
-//   마지막 박자를 가져가지 않게). 차분하게는 그 한 번뿐이고, 생동감만 그 뒤로 아주 느린 흐름이 이어진다(확산은 14초마다 한 번의 물결,
-//   흐름은 결 전체가 미끄러짐. 모여 시작과 연결은 다 모이고 이어진 뒤의 고요가 말이라 흐름이 없다). 종류마다 같은 되풀이(선 위를 지나는
-//   조각)를 두던 때는 실선이 점선처럼 흘러 자동으로 만든 느낌이었다(검수). 장에 되풀이하는 컴포넌트가 있으면 생동감도 들어오기 한 번
-//   뒤로 멈춘다(계속 움직이는 것은 한 장에 하나). 움직임 없음과 '동작 줄이기'에서는 끝 모습 그대로다.
-// - 색은 장의 글자색(currentColor) 하나다. 강조색은 장의 답에만 쓴다(AGENTS.md). 존재감은 선을 짙게가 아니라 몸짓의 크기와 요소의
-//   양으로 낸다: 프로젝터 3~5m에서 검은 바탕의 배경이 사실상 보이지 않았다(검수). 검은 바탕은 한 단계 짙게 그린다(Backdrop.tsx)
+// - 장에 맞춘다(fit): 그린 뒤에 장의 내용이 놓인 자리를 재서(clear) 세 가지를 안다. 비울 구멍(글 묶음, 그림, 차트: 움직이는 동안에도 그
+//   뒤에는 아무것도 남지 않는다), 본문 띠(흐름은 데이터 선 높이에서 먼 빈 띠로), 장의 답(결정 요청, 한 문장 장의 문장, 맺음의 요청:
+//   모여들기의 줄기가 데이터가 없는 높이로 건너가 그 가까이에서 멈추며 사라진다). 재고 나면 끝 모습을 그 값으로 다시 그린다.
+// - 움직임: 장이 나올 때 한 번(엔진이 mo-backdrop으로 알린다, motion/engine.ts) 2초 남짓. 차분하게는 그 한 번뿐이고, 생동감만 그 뒤로
+//   드문 되풀이가 있다(확산은 16초마다 옅은 물결 하나, 흐름은 18초마다 옅은 한 가닥이 지나감. 모여들기는 다 모인 뒤의 고요가 말이라
+//   없다). 장에 되풀이하는 컴포넌트가 있으면 생동감도 들어오기 한 번 뒤로 멈춘다. 움직임 없음과 '동작 줄이기'에서는 끝 모습 그대로다.
+// - 색은 장의 글자색(currentColor) 하나다. 강조색은 장의 답에만 쓴다(AGENTS.md). 존재감은 선을 짙게가 아니라 몸짓의 크기로 낸다.
+//   검은 바탕은 한 단계 짙게 그린다(Backdrop.tsx). 밝기의 정점은 장의 제목보다 낮다.
 // - 움직임은 처음부터 직접 만들었다. 이징은 엔진의 쓰임새 표(EASE)와 같은 곡선이다.
 //
 // 뷰어에는 이 함수와 drawKit의 소스(toString)가 그대로 들어간다. 그래서 바깥의 아무것도 참조하지 않고(받는 것은 kit뿐), 필요한 것은
@@ -26,7 +26,7 @@ import type { DrawKit, Paint, Scene } from './draw'
 
 /** 장에 맞춘 값(자리 px). 재기 전이나 모르면 빈 값이고, 그림은 그때의 기본 모양으로 그린다 */
 interface Fit {
-  /** 장의 답이 놓인 자리의 가운데(자리 밖일 수 있다) */
+  /** 장의 답이 놓인 상자 [x, y, w, h] (자리 밖일 수 있다) */
   aim?: number[]
   /** 본문 띠의 위와 아래 */
   band?: number[]
@@ -69,73 +69,82 @@ interface BackdropRuntime {
 }
 
 export function backdropMotion(kit: DrawKit): BackdropRuntime {
-  const { TAU, clamp, lerp, clock, span, every, rng, svgPaint } = kit
+  const { TAU, clamp, lerp, span, every, rng, svgPaint } = kit
   const { out, reveal } = kit.ease
 
   // ======================================================================
-  // 배경 넷. 저마다 '들어올 때 한 번'의 몸짓이 그 분위기의 말이다(docs/MOTION.md 9절의 표)
+  // 배경 셋. 저마다 '들어올 때 한 번'의 큰 몸짓이 그 분위기의 말이고, 지나간 자리는 걷힌다(docs/MOTION.md 9절의 표)
   // ======================================================================
 
+  const smooth = (a: number, b: number, x: number) => {
+    const t = clamp((x - a) / (b - a))
+    return t * t * (3 - 2 * t)
+  }
+
   /**
-   * 확산(한 점에서 바깥으로 번진다): 한 점에 모인 짙음이 장 절반 넘게 퍼져 나가며 옅어진다. 인쇄의 망점처럼 고른 판의 점 크기가 그
-   * 자리의 짙기다. 넓이가 드러내기 곡선을 따라 한 점에서 넓어지고(처음 한순간은 작은 덩어리로 머물다 번지고 끝에서 느리게 멈춘다),
-   * 퍼진 만큼 가운데가 옅어진다(양이 그대로라서). 퍼지는 동안 가운데가 시작한 점에서 조금 비켜 간다(흐르는 물에 떨어진 먹처럼).
-   * 망점을 작게 두고 자리의 5분의 1만 퍼지던 때는 3~5m에서 옅은 얼룩이었다(검수): 퍼지는 거리를 키우고 점은 조금 크게, 판은 성기게.
-   * 생동감의 느린 흐름: 14초마다 옅은 물결이 가운데에서 바깥으로 6초에 걸쳐 지나가며 망점이 조금 커졌다 돌아온다
+   * 확산(한 점에서 바깥으로 번진다): 자리 가운데에서 부드러운 입자의 물결 하나가 장 끝까지 크게 퍼져 나가고, 지나간 안쪽부터 걷힌다.
+   * 끝 모습에는 가장자리에 아주 옅은 흔적만 남는다. 물결이 지나는 입자는 조금 부풀고 바깥으로 밀린다. 입자는 고르지 않은 자리(흔든
+   * 격자)와 크기라서 판처럼 읽히지 않는다: 규칙적인 망점 판은 검은 바탕에서 철망으로, 구석에 깔린 망점은 하프톤 템플릿으로
+   * 읽혔다(검수). 제목이 맺힌 뒤(0.45초)에 출발하고, 밝기의 정점은 제목보다 낮다: 첫 칸에서 배경이 제목보다 앞서지 않게.
+   * 생동감의 되풀이: 16초마다 옅은 물결 하나가 다시 지나간다
    */
   function diffuse(w: number, h: number): Scene {
+    const R = rng(5)
     const cx = w / 2
     const cy = h / 2
-    const s = 0.3 * Math.sqrt(w * h)
-    const q = Math.pow(w / h, 0.2)
-    const sx = s * q
-    const sy = s / q
-    // 퍼지는 동안 가운데가 비켜 가는 거리(끝 모습에서)
-    const SG0 = Math.sqrt(0.03)
-    const DX = 0.16 * sx
-    const DY = -0.07 * sy
-    // 육각 판: 줄마다 반 칸씩 엇갈린다(망점). 가장 큰 점에서도 이웃과 닿지 않는다
-    const pitch = Math.max(22, Math.min(32, Math.sqrt(w * h) / 44))
-    const rmax = pitch * 0.33
-    const rowH = pitch * 0.866
+    const far = Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy))
+    const pitch = Math.max(20, Math.min(32, Math.sqrt(w * h) / 50))
     const X: number[] = []
     const Y: number[] = []
-    for (let r = 0, y = rowH / 2; y < h; r++, y += rowH)
-      for (let x = r % 2 ? pitch * 0.75 : pitch * 0.25; x < w; x += pitch) {
-        // 끝 모습에서 보이지 않는 먼 점은 처음부터 빼 둔다(들어오는 동안은 끝보다 좁게 퍼져 있다)
-        const u = ((x - cx - DX * (1 - SG0)) / sx) ** 2 + ((y - cy - DY * (1 - SG0)) / sy) ** 2
-        if (Math.exp(-0.5 * u) < 0.02) continue
-        X.push(x)
-        Y.push(y)
+    const D: number[] = []
+    const RAD: number[] = []
+    const A: number[] = []
+    const UX: number[] = []
+    const UY: number[] = []
+    for (let y = pitch / 2; y < h; y += pitch)
+      for (let x = pitch / 2; x < w; x += pitch) {
+        if (R() < 0.18) continue
+        const px = x + (R() - 0.5) * pitch * 0.9
+        const py = y + (R() - 0.5) * pitch * 0.9
+        const dx = px - cx
+        const dy = py - cy
+        const dl = Math.hypot(dx, dy) || 1
+        X.push(px)
+        Y.push(py)
+        D.push(dl / far)
+        UX.push(dx / dl)
+        UY.push(dy / dl)
+        // 작은 입자가 많고 큰 입자는 드물게
+        RAD.push(1.5 + 2.8 * R() * R())
+        A.push(0.55 + 0.45 * R())
       }
     const n = X.length
-    const T = 1700
-    const end = T + 100
-    const spread = (e: number) => Math.sqrt(0.03 + 0.97 * reveal(clamp(e / T)))
+    const T0 = 450
+    const TR = 1600
+    const end = T0 + TR + 100
+    /** 물결의 앞(가운데에서의 거리, 장 끝을 1로): 처음 빠르고 끝에서 느리게, 장 밖까지 나가 다 걷힌다 */
+    const front = (p: number) => 1.45 * (1 - Math.pow(1 - p, 1.35))
     return {
       end,
       draw(P, e, tau) {
-        const sg = spread(e)
-        // 양이 그대로라 넓어질수록 가운데가 옅어진다. 처음의 짙은 덩어리는 1.6배까지만
-        const peak = Math.min(1.6, 1 / (sg * sg))
-        const wave = every(tau, 4000, 14000, 6000)
-        const wr = wave ? 3.2 * Math.pow(wave[1], 0.7) : -9
-        const inv = 1 / (sg * sg)
-        const mx = DX * (sg - SG0)
-        const my = DY * (sg - SG0)
-        const show = span(e, 0, 200)
+        const p = span(e, T0, TR)
+        const f = front(p)
+        const start = clamp((e - T0) / 140)
+        // 생동감: 16초마다 옅은 물결 하나
+        const wave = every(tau, 5000, 16000, 3200)
+        const f2 = wave ? 1.7 * out(wave[1]) : -9
+        const bw = 0.15 + 0.1 * Math.min(1, f)
+        const amp = 1 / (1 + 1.1 * f)
         for (let i = 0; i < n; i++) {
-          const ux = (X[i] - cx - mx) / sx
-          const uy = (Y[i] - cy - my) / sy
-          const u = (ux * ux + uy * uy) * inv
-          if (u > 18) continue
-          let c = peak * Math.exp(-0.5 * u)
-          if (wave) {
-            const d = (Math.sqrt(u) - wr) / 0.3
-            c *= 1 + 0.3 * Math.sin(Math.PI * wave[1]) * Math.exp(-d * d)
-          }
-          const r = rmax * Math.pow(Math.min(1.25, c), 0.55)
-          if (r >= 0.75) P.dot(X[i], Y[i], r, 0, 0.13 * show)
+          const d = D[i]
+          let band = start > 0 ? Math.exp(-(((d - f) / bw) ** 2)) * amp * start : 0
+          if (wave) band += 0.4 * Math.sin(Math.PI * wave[1]) * Math.exp(-(((d - f2) / 0.13) ** 2))
+          // 물결이 지나간 가장자리에는 아주 옅은 흔적
+          const trace = 0.05 * smooth(0.9, 1.05, d) * smooth(0, 0.35, f - d)
+          const a = (0.34 * band + trace) * A[i]
+          if (a < 0.004) continue
+          const push = 18 * band
+          P.dot(X[i] + UX[i] * push, Y[i] + UY[i] * push, RAD[i] * (0.75 + 0.6 * band), 0, a)
         }
       },
     }
@@ -148,7 +157,7 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     for (let i = 2; i < pts.length; i += 2) len.push(len[len.length - 1] + Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1]))
     return { pts, len, total: len[len.length - 1] }
   }
-  /** 선의 처음부터 u0~u1(0~1)까지를 짚는다(긋기는 부르는 쪽이) */
+  /** 선의 u0~u1(0~1)을 짚는다(긋기는 부르는 쪽이) */
   const trace = (P: Paint, ln: Line, u0: number, u1: number) => {
     const a = u0 * ln.total
     const b = u1 * ln.total
@@ -171,6 +180,25 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
       P.to(ln.pts[i * 2], ln.pts[i * 2 + 1])
     }
   }
+  /**
+   * 지나가는 선: 머리(head)와 꼬리(tail) 사이(0~1)만 긋고, 두 끝 쪽은 옅게 사라진다. fade는 선 위의 자리 u에서의 짙기 배율.
+   * 마디마다 짙기가 달라 끝을 평평하게(flat) 긋는다: 둥근 끝끼리 이음에서 겹치면 짙은 점이 생겨 실선이 점선처럼 보였다(검수)
+   */
+  const pass = (P: Paint, ln: Line, tail: number, head: number, width: number, a: number, fade?: (u: number) => number) => {
+    const len = head - tail
+    if (len <= 0.002) return
+    const PIECES = Math.max(4, Math.min(16, Math.ceil(len * 16)))
+    const soft = Math.min(0.12, len * 0.4)
+    for (let k = 0; k < PIECES; k++) {
+      const u0 = tail + (len * k) / PIECES
+      const u1 = tail + (len * (k + 1)) / PIECES
+      const u = (u0 + u1) / 2
+      const al = a * smooth(tail, tail + soft, u) * (1 - smooth(head - soft * 0.6, head, u)) * (fade ? fade(u) : 1)
+      if (al < 0.004) continue
+      trace(P, ln, u0, u1)
+      P.stroke(width, 0, al, false, true)
+    }
+  }
   /** 세 번째 곡선(베지어)의 점 N+1개 */
   const bezier = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, N: number) => {
     const pts: number[] = []
@@ -181,220 +209,145 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     }
     return pts
   }
+  /** 가는 곳의 방향(ex, ey)으로 끝나는 곡선: 강줄기가 합쳐지듯 끝에서 그 방향을 본다 */
+  const into = (sx: number, sy: number, x: number, y: number, ex: number, ey: number, wob: number) => {
+    const L = Math.hypot(x - sx, y - sy)
+    const c2x = x - ex * L * 0.38
+    const c2y = y - ey * L * 0.38
+    const nx = -(y - sy) / (L || 1)
+    const ny = (x - sx) / (L || 1)
+    return lineOf(bezier(sx, sy, sx + (c2x - sx) * 0.35 + nx * wob, sy + (c2y - sy) * 0.35 + ny * wob, c2x, c2y, x, y, 40))
+  }
 
   /**
-   * 모여 시작(바깥에서 가운데로 모였다가 고요해진다): 일곱 갈래의 가는 선이 자리 가장자리에서 휘어 들어와 한 점에서 만나 하나의
-   * 줄기가 되고, 그 줄기가 장을 건너 장의 답(결정 요청, 한 문장 장의 문장, 맺음의 요청) 쪽으로 가서 닿으며 옅어진다(여럿이 모여 하나로
-   * 시작해 답에 이른다). 답을 모르면 오른쪽 끝으로. 그림 전체가 답 쪽을 향하도록 돌아가고, 갈래는 그 반대쪽에서 온다. 갈래가 다 닿기
-   * 조금 전에 줄기가 떠나 넘겨주기가 된다. 빈 원으로 모이던 때는 불러오는 중 표시나 로고 자리처럼 읽혔고(검수), 줄기가 자리 안에서
-   * 짧게 끝나던 때는 3~5m에서 잔금처럼 보였다(검수).
+   * 모여들기(바깥 여러 곳에서 강처럼 합쳐진다): 장 밖 서로 다른 곳(옆, 위, 아래 가장자리 너머)에서 온 갈래가 먼저 둘이 합쳐지고, 다시
+   * 매듭에서 나머지와 합쳐져 한 줄기가 된다. 줄기는 데이터가 없는 높이(빈 띠)로 장을 옆으로 건너, 장의 답(결정 요청, 한 문장 장의 문장,
+   * 맺음의 요청, 강조 항목) 바로 곁에서 멈추며 사라진다. 갈래와 줄기는 지나가는 선이라 지나간 자리가 걷히고, 끝 모습에는 아무것도 남지
+   * 않는다. 매듭은 구석과 아래 표시에서 멀다. 한 점에서 갈래가 사방으로 뻗던 때는 금 간 유리로, 줄기가 막대와 숫자에 붙던 때는 데이터
+   * 선으로 읽혔다(검수)
    */
   function gather(w: number, h: number, fit: Fit): Scene {
     const R = rng(3)
-    const cx = w / 2
-    const cy = h / 2
-    // 향하는 쪽: 답이 있으면 자리 가운데에서 답으로, 없으면 오른쪽(살짝 위)
-    const aim = fit.aim
-    let dx = 1
-    let dy = -0.08
-    if (aim && Math.hypot(aim[0] - cx, aim[1] - cy) > 40) {
-      dx = aim[0] - cx
-      dy = aim[1] - cy
+    const holes = fit.holes || []
+    const hit = (x: number, y: number, pad: number) => holes.some((r) => x > r[0] - pad && x < r[0] + r[2] + pad && y > r[1] - pad && y < r[1] + r[3] + pad)
+    // 닿을 곳: 장의 답. 모르면 오른쪽 가운데 조금 위
+    const tb = fit.aim || [w * 0.8, h * 0.38, w * 0.12, h * 0.12]
+    const acx = tb[0] + tb[2] / 2
+    const acy = tb[1] + tb[3] / 2
+    // 흐르는 쪽: 답이 오른쪽에 있으면 왼쪽에서 오른쪽으로
+    const dir = acx >= w / 2 ? 1 : -1
+    const kx = dir > 0 ? 0.3 * w : 0.7 * w
+    // 줄기의 끝: 답의 가까운 쪽 끝 조금 안. 답이 넓어 매듭 가까이까지 오면 장 너비의 절반쯤 건너간 곳(답의 곁)
+    const near = dir > 0 ? tb[0] + Math.min(120, tb[2] / 2) : tb[0] + tb[2] - Math.min(120, tb[2] / 2)
+    const ex = Math.max(48, Math.min(w - 48, dir * (near - kx) >= 0.25 * w ? near : kx + dir * 0.45 * w))
+    // 빈 띠: 매듭에서 답 곁까지 옆으로 건너는 높이 가운데 데이터를 덜 지나고 답의 높이에 가까운 것. 아래 표시와 위 끝은 피한다
+    let lane = acy
+    let bestS = Infinity
+    for (let y = 0.16 * h; y <= 0.82 * h; y += 0.02 * h) {
+      let crossed = 0
+      for (let s = 0; s <= 30; s++) if (hit(lerp(kx, ex, s / 30), y, 14)) crossed++
+      if (hit(kx, y, 40)) crossed += 6
+      const score = crossed * 10 + Math.abs(y - acy) / h
+      if (score < bestS) {
+        bestS = score
+        lane = y
+      }
     }
-    const dl = Math.hypot(dx, dy)
-    dx /= dl
-    dy /= dl
-    /** 점 (x, y)에서 (ux, uy) 쪽으로 자리 가장자리 바로 밖까지의 거리 */
-    const toEdge = (x: number, y: number, ux: number, uy: number) => {
-      const tx = ux < -1e-6 ? -x / ux : ux > 1e-6 ? (w - x) / ux : Infinity
-      const ty = uy < -1e-6 ? -y / uy : uy > 1e-6 ? (h - y) / uy : Infinity
-      return Math.min(tx, ty) + 30
-    }
-    // 만나는 점: 가운데에서 향하는 쪽의 반대로(줄기가 길게 건너가게)
-    const reach = Math.abs(dx) * w + Math.abs(dy) * h
-    const mx = cx - dx * 0.22 * reach
-    const my = cy - dy * 0.22 * reach
-    // 줄기의 끝: 답이 자리 안이면 답까지, 아니면 그쪽 가장자리 밖까지
-    const inside = !!aim && aim[0] > -20 && aim[0] < w + 20 && aim[1] > -20 && aim[1] < h + 20
-    const far = toEdge(mx, my, dx, dy)
-    const ex = aim && inside ? aim[0] : mx + dx * far
-    const ey = aim && inside ? aim[1] : my + dy * far
-    const tl = Math.hypot(ex - mx, ey - my)
-    const S = 7
-    const ORDER = [3, 0, 5, 2, 6, 1, 4]
-    const D = 1000
-    const GAP = 70
-    const back = Math.atan2(-dy, -dx)
-    const strands = Array.from({ length: S }, (_, s) => {
-      // 만나는 점에서 향하는 쪽의 반대로 부채꼴(±70°)
-      const th = back + ((-70 + (140 * s) / (S - 1) + (R() - 0.5) * 10) * Math.PI) / 180
-      const ux = Math.cos(th)
-      const uy = Math.sin(th)
-      const L = toEdge(mx, my, ux, uy)
-      const sx = mx + ux * L
-      const sy = my + uy * L
-      // 만나는 점에서 줄기와 같은 쪽을 보며 들어간다: 부드럽게 합쳐진다
-      const bend = (R() - 0.5) * 0.25 * L
-      const pts = bezier(sx, sy, sx + (mx - sx) * 0.4 - uy * bend, sy + (my - sy) * 0.4 + ux * bend, mx - dx * L * 0.35, my - dy * L * 0.35, mx, my, 40)
-      return { ...lineOf(pts), t0: 80 + ORDER[s] * GAP }
-    })
-    // 줄기: 만나는 점에서 끝까지, 아주 조금 휘며(향하는 쪽의 왼편으로)
-    const sag = Math.min(0.06 * tl, 40)
-    const trunk = lineOf(bezier(mx, my, mx + (ex - mx) * 0.33 + dy * sag, my + (ey - my) * 0.33 - dx * sag, mx + (ex - mx) * 0.66 + dy * sag, my + (ey - my) * 0.66 - dx * sag, ex, ey, 48))
-    // 줄기는 갈래 넷째가 닿을 즈음 떠난다(넘겨주기). 길게 건너가는 만큼 조금 오래
-    const TRUNK = 80 + 3 * GAP + D * 0.8
-    const TD = 900
-    const end = Math.max(TRUNK + TD, 80 + (S - 1) * GAP + D) + 100
-    const PIECES = 8
+    const ky = lane
+    const ey = lane
+    const trunk = lineOf(bezier(kx, ky, lerp(kx, ex, 0.33), ky - 10, lerp(kx, ex, 0.66), ey + 8, ex, ey, 48))
+    // 갈래가 오는 곳: 흐름의 위쪽(옆 가장자리 너머 두 곳, 위와 아래 가장자리 너머 한 곳씩)
+    const sideX = dir > 0 ? -60 : w + 60
+    const src = [
+      [sideX, ky - 0.32 * h + (R() - 0.5) * 40],
+      [lerp(sideX, kx, 0.45) + (R() - 0.5) * 60, -60],
+      [sideX, ky + 0.3 * h + (R() - 0.5) * 40],
+      [lerp(sideX, kx, 0.55) + (R() - 0.5) * 60, h + 60],
+    ]
+    // 첫 합류: 옆과 위에서 온 둘이 매듭 앞에서 먼저 만난다
+    const m1x = lerp(kx, sideX, 0.42)
+    const m1y = lerp(ky, Math.min(src[0][1], ky), 0.35)
+    const ml = Math.hypot(kx - m1x, ky - m1y) || 1
+    const wob = () => (R() - 0.5) * 140
+    const lines = [
+      { ln: into(src[0][0], src[0][1], m1x, m1y, (kx - m1x) / ml, (ky - m1y) / ml, wob()), t0: 0, D: 700, lag: 380, wd: 2.4, a: 0.2 },
+      { ln: into(src[1][0], src[1][1], m1x, m1y, (kx - m1x) / ml, (ky - m1y) / ml, wob()), t0: 90, D: 640, lag: 380, wd: 2.4, a: 0.2 },
+      { ln: into(m1x, m1y, kx, ky, dir, 0, 0), t0: 640, D: 380, lag: 300, wd: 3, a: 0.24 },
+      { ln: into(src[2][0], src[2][1], kx, ky, dir, 0, wob()), t0: 160, D: 880, lag: 400, wd: 2.4, a: 0.2 },
+      { ln: into(src[3][0], src[3][1], kx, ky, dir, 0, wob()), t0: 260, D: 800, lag: 400, wd: 2.2, a: 0.18 },
+    ]
+    const TT = 960
+    const TD = 650
+    const TL = 420
+    const end = TT + TL + TD + 100
     return {
       end,
       draw(P, e) {
-        for (const st of strands) {
-          const p = reveal(span(e, st.t0, D))
-          if (p <= 0) continue
-          trace(P, st, 0, p)
-          P.stroke(1.1, 0, 0.16)
-        }
-        const t = reveal(span(e, TRUNK, TD))
-        // 줄기는 답에 가까워질수록 옅어진다(닿으며 사라진다)
-        for (let k = 0; k < PIECES; k++) {
-          const u0 = k / PIECES
-          if (u0 >= t) break
-          trace(P, trunk, u0, Math.min(t, (k + 1) / PIECES))
-          P.stroke(1.6, 0, 0.3 * (1 - 0.8 * Math.pow((k + 0.5) / PIECES, 1.6)))
-        }
+        for (const l of lines) pass(P, l.ln, reveal(span(e, l.t0 + l.lag, l.D)), reveal(span(e, l.t0, l.D)), l.wd, l.a)
+        // 줄기: 머리는 답 곁에서 멈추고(out), 꼬리가 따라와 걷힌다. 답에 가까울수록 옅어진다
+        pass(P, trunk, reveal(span(e, TT + TL, TD)), out(span(e, TT, TD)), 3.6, 0.28, (u) => 1 - 0.75 * smooth(0.6, 1, u))
       },
     }
   }
 
   /**
-   * 흐름(한쪽으로 느리게 흐르는 결): 가는 선 여러 가닥이 나란히 왼쪽에서 오른쪽으로 그어지듯 깔린다. 본문 띠를 알면 선은 그 위와 아래로
-   * 나란히 갈라 지나간다(본문 뒤는 비운다). 가운데에 가까운 한 가닥만 조금 짙다(우리가 가는 길). 선 사이는 44px 넘게(겹선이 되지 않게).
-   * 한 곳(목)으로 오므라들었다 퍼지던 때는 본문을 비키며 결이 구겨져 보였다(검수).
-   * 생동감의 느린 흐름: 결 전체가 아주 느리게(30초에 한 물결) 옆으로 미끄러진다. 선 위로 조각이 지나가던 때는 실선이 점선처럼 흘렀다
+   * 흐름(한쪽으로 느리게 흐르는 결): 한두 가닥의 긴 선이 왼쪽에서 오른쪽으로 단계의 박자(넷)에 맞춰 건너가고, 지나간 뒤 꼬리가 따라와
+   * 걷힌다. 선은 데이터 선(단계의 축, 표의 줄)의 높이에서 먼 빈 띠(본문 위아래 가운데 더 넓은 쪽)의 가운데로 지나간다. 결 여러 가닥을
+   * 깔아 두던 때는 끝 모습이 줄 공책으로 읽혔다(검수).
+   * 생동감의 되풀이: 18초마다 옅은 한 가닥이 다시 지나간다
    */
   function flow(w: number, h: number, fit: Fit): Scene {
-    const N = Math.max(24, Math.round(w / 16))
-    const GAP = 48
-    // 선을 놓을 띠: 본문 띠가 있으면 그 위와 아래, 없으면 자리 전체
-    // 위 끝은 장 머리(제목) 아래에서: 제목 뒤를 지나는 선은 비워져 토막으로 보인다
-    const regions: number[][] = []
+    const top = Math.max(0.08 * h, fit.head !== undefined ? fit.head + 40 : 0)
+    const bottom = 0.92 * h
+    let lane = [top, bottom]
     const band = fit.band
-    const top = Math.max(0.06 * h, fit.head !== undefined ? fit.head + 40 : 0)
     if (band) {
-      // 본문과는 64px 넘게 떨어진다: 물결(16px)이 와도 본문의 줄 선과 40px 안의 겹선이 되지 않게
-      if (band[0] - 64 - top > GAP) regions.push([top, band[0] - 64])
-      if (h - band[1] - 64 > 30 + GAP) regions.push([band[1] + 64, Math.min(h - 24, 0.94 * h)])
+      const above = [top, band[0] - 64]
+      const below = [band[1] + 64, bottom]
+      lane = above[1] - above[0] >= below[1] - below[0] ? above : below
+      if (lane[1] - lane[0] < 40) lane = [top, bottom]
     }
-    if (!regions.length) regions.push([top < 0.5 * h ? top : 0.06 * h, 0.94 * h])
-    const ys: number[] = []
-    for (const [a, b] of regions) {
-      const n = Math.max(1, Math.min(14, Math.floor((b - a) / GAP) + 1))
-      for (let i = 0; i < n; i++) ys.push(n === 1 ? (a + b) / 2 : a + ((b - a) * i) / (n - 1))
+    const y0 = (lane[0] + lane[1]) / 2
+    const two = lane[1] - lane[0] >= 150
+    const amp1 = Math.min(18, h * 0.02)
+    const N = Math.max(24, Math.round(w / 20))
+    const lineAt = (y: number, ph: number) => {
+      const pts: number[] = []
+      for (let k = 0; k <= N; k++) {
+        const x = -40 + ((w + 80) * k) / N
+        pts.push(x, y + amp1 * Math.sin(TAU * (k / N) * 0.9 + ph) + amp1 * 0.3 * Math.sin(TAU * (k / N) * 2.3 - ph))
+      }
+      return lineOf(pts)
     }
-    const L = ys.length
-    const mid = h / 2
-    let main = 0
-    ys.forEach((y, i) => {
-      if (Math.abs(y - mid) < Math.abs(ys[main] - mid)) main = i
-    })
-    const amp1 = Math.min(16, h * 0.016)
-    const lines = ys.map((y0, i) => ({ y0, a: 0.1 + 0.05 * (((i * 7) % 3) / 2), delay: 60 + i * (520 / Math.max(1, L - 1)) }))
-    const yAt = (i: number, k: number, ph: number) => {
-      const x = k / N
-      return lines[i].y0 + amp1 * Math.sin(TAU * x * 1.1 + i * 0.35 + ph) + amp1 * 0.35 * Math.sin(TAU * x * 2.6 - i * 0.25 + ph * 1.6)
+    const strands = [{ ln: lineAt(y0 - (two ? 32 : 0), 0.4), delay: 0, wd: 3.2, a: 0.26 }]
+    if (two) strands.push({ ln: lineAt(y0 + 32, 2.1), delay: 140, wd: 2.2, a: 0.16 })
+    // 머리는 넷의 박자로 건너간다: 한 박자(0.3초)마다 4분의 1을 내닫고 머문다
+    const BEAT = 300
+    const T0 = 200
+    const headAt = (t: number) => {
+      const k = Math.floor(t / BEAT)
+      if (k >= 4) return 1
+      if (t <= 0) return 0
+      return (k + out((t - k * BEAT) / BEAT)) / 4
     }
-    const DRAW = 1100
-    const end = 60 + 520 + DRAW + 100
+    const TAIL = 850
+    const TD = 850
+    const end = T0 + 140 + TAIL + TD + 100
+    const ghost = lineAt((lane[0] + lane[1]) / 2, 1.2)
     return {
       end,
       draw(P, e, tau) {
-        const ph = (clock(tau) * TAU) / 30000
-        for (let i = 0; i < L; i++) {
-          const p = reveal(span(e, lines[i].delay, DRAW))
-          if (p <= 0) continue
-          const kmax = p * N
-          const kf = Math.floor(kmax)
-          for (let k = 0; k <= kf; k++) P.to((k / N) * w, yAt(i, k, ph))
-          if (kf < N) P.to((kmax / N) * w, lerp(yAt(i, kf, ph), yAt(i, kf + 1, ph), kmax - kf))
-          if (i === main) P.stroke(1.3, 0, 0.2)
-          else P.stroke(1, 0, lines[i].a)
+        for (const s of strands) {
+          const t = e - T0 - s.delay
+          pass(P, s.ln, reveal(span(t, TAIL, TD)), headAt(t), s.wd, s.a)
         }
+        const g = every(tau, 6000, 18000, 3200)
+        if (g) pass(P, ghost, reveal(clamp((g[1] - 0.25) / 0.75)), reveal(clamp(g[1] / 0.75)), 2.2, 0.12)
       },
     }
   }
 
-  /**
-   * 연결(점과 점 사이에 선이 이어진다): 양쪽 무리의 점이 먼저 맺히고, 낮고 넓은 활이 한 가닥씩 왼쪽 점에서 건너가 오른쪽 점에 닿는다.
-   * 닿을 때 그 점이 한 번 또렷해진다. 활은 본문 띠 아래에(자리가 모자라면 위에) 두어 표의 줄 선과 떨어지고, 바닥선은 자리 아래 끝에서
-   * 떼어 활의 발이 잘린 듯 끝나지 않는다. 활을 높이 솟게 두던 때는 표의 줄 선과 글을 가로질러 데이터처럼 읽혔고, 바닥선을 자리 끝에
-   * 붙이던 때는 아래가 잘려 보였다(검수).
-   */
-  function link(w: number, h: number, fit: Fit): Scene {
-    const n = 6
-    const band = fit.band
-    // 바닥선과 활의 높이: 본문 아래의 빈 띠에, 모자라면 본문 위의 빈 띠에
-    let base = h * 0.86
-    let lift = Math.min(0.2 * h, 220)
-    if (band) {
-      const below = h - band[1]
-      const above = band[0]
-      if (below >= 150) {
-        base = h - Math.max(40, 0.22 * below)
-        lift = Math.min(lift, base - band[1] - 44)
-      } else if (above >= 190) {
-        base = band[0] - 44
-        lift = Math.min(lift, base - Math.max(0.2 * h, 150))
-      }
-    }
-    lift = Math.max(40, lift)
-    const left = Array.from({ length: n }, (_, k) => w * (0.08 + (0.3 * k) / (n - 1)))
-    const right = Array.from({ length: n }, (_, k) => w * (0.62 + (0.3 * k) / (n - 1)))
-    // 짝: 왼쪽의 점마다 오른쪽의 점 하나(차례를 섞어서). 너비가 엇갈려 겹겹의 무지개가 되지 않는다
-    const PAIR = [3, 0, 4, 1, 5, 2]
-    const arcs = Array.from({ length: n }, (_, k) => ({ a: left[k], b: right[PAIR[k]], t0: 0, to: PAIR[k] }))
-    arcs.sort((x, y) => x.b - x.a - (y.b - y.a))
-    // 활은 안쪽 점들이 맺힌 뒤에 떠나고(가까운 짝부터), 닿으면 그 점이 0.3초 또렷해진다
-    const START = 520
-    const DRAW = 900
-    const GAP = 70
-    const TOUCH = 300
-    arcs.forEach((a, k) => (a.t0 = START + k * GAP))
-    const end = START + (n - 1) * GAP + DRAW * 0.92 + TOUCH + 20
-    const widest = arcs[n - 1].b - arcs[n - 1].a
-    /** 활 위 u(0~1)의 자리: 넓을수록 높되 lift를 넘지 않는 낮은 반타원 */
-    const pt = (a: (typeof arcs)[number], u: number): [number, number] => {
-      const r = (a.b - a.a) / 2
-      const t = Math.PI * (1 - u)
-      return [(a.a + a.b) / 2 + Math.cos(t) * r, base - Math.sin(t) * lift * (0.55 + 0.45 * ((a.b - a.a) / widest))]
-    }
-    return {
-      end,
-      draw(P, e) {
-        // 점이 먼저 맺힌다(안쪽부터)
-        for (let k = 0; k < n; k++) {
-          P.dot(left[k], base, 2.2 * out(span(e, 40 + (n - 1 - k) * 60, 360)), 0, 0.3)
-          // 오른쪽 점은 활이 닿을 때 한 번 또렷해진다
-          const hit = arcs.find((a) => a.to === k)
-          const touch = hit ? span(e, hit.t0 + DRAW * 0.92, TOUCH) : 0
-          const glow = touch > 0 && touch < 1 ? Math.sin(Math.PI * touch) : 0
-          P.dot(right[k], base, 2.2 * out(span(e, 40 + k * 60, 360)) * (1 + 0.5 * glow), 0, 0.3 + 0.25 * glow)
-        }
-        for (const a of arcs) {
-          const p = reveal(span(e, a.t0, DRAW))
-          if (p <= 0) continue
-          const steps = Math.max(2, Math.ceil(56 * p))
-          for (let k = 0; k <= steps; k++) {
-            const [x, y] = pt(a, (p * k) / steps)
-            P.to(x, y)
-          }
-          P.stroke(1, 0, 0.14 + 0.06 * ((a.b - a.a) / w))
-        }
-      },
-    }
-  }
-
-  const KINDS: Record<string, (w: number, h: number, fit: Fit) => Scene> = { diffuse, gather, flow, link }
+  const KINDS: Record<string, (w: number, h: number, fit: Fit) => Scene> = { diffuse, gather, flow }
   /** 짙기: 옅게, 보통, 또렷하게. vivid는 검은 바탕의 또렷하게(한 단계 위, Backdrop.tsx). 그림의 짙기에 곱한다 */
   const STRENGTH: Record<string, number> = { soft: 0.6, base: 1, strong: 1.45, vivid: 1.9 }
 
@@ -421,7 +374,7 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
   // ---------- 마스크: 구멍과 가장자리의 옅어짐 ----------
   /**
    * 마스크 정의(SVG defs). 장 가장자리에 닿지 않는 쪽은 서서히 옅어지고(자리의 네모 끝이 선처럼 보이지 않게. 닿는 쪽은 장 밖까지
-   * 이어진 것처럼 그대로), 구멍은 흐린 네모로 0.2만 남긴다. 둘 다 없으면 ''
+   * 이어진 것처럼 그대로), 구멍은 흐린 네모로 다 비운다(글과 데이터 뒤에는 움직이는 동안에도 남는 것 없이). 둘 다 없으면 ''
    */
   function maskDefs(id: string, w: number, h: number, cells?: number[], holes?: number[][]): string {
     const fade = (on: boolean, len: number) => (on ? len : 0)
@@ -463,7 +416,7 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     let hole = ''
     if (holes && holes.length) {
       defs += `<filter id="${id}b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>`
-      hole = `<g filter="url(#${id}b)" fill="#000" fill-opacity="0.8">${holes.map((r) => `<rect x="${Math.round(r[0])}" y="${Math.round(r[1])}" width="${Math.round(r[2])}" height="${Math.round(r[3])}" rx="16"/>`).join('')}</g>`
+      hole = `<g filter="url(#${id}b)" fill="#000">${holes.map((r) => `<rect x="${Math.round(r[0])}" y="${Math.round(r[1])}" width="${Math.round(r[2])}" height="${Math.round(r[3])}" rx="16"/>`).join('')}</g>`
     }
     return `${defs}<mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="${fill}"${inner}/>${hole}</mask>`
   }
@@ -635,7 +588,7 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
       if (!t) continue
       const [x0, y0, w0, h0] = box(t)
       if (w0 && h0) {
-        fit.aim = [x0 + Math.min(w0, 480) / 2, y0 + h0 / 2]
+        fit.aim = [x0, y0, w0, h0]
         break
       }
     }

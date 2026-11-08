@@ -100,7 +100,7 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
             <span className="ins-opt-l">
               진하기
               <Info label="진하기 도움말" align="start">
-                프로젝터나 큰 회의실에서는 ‘또렷하게’를 골라요. 검은 바탕은 한 단계 짙게 그려지고, PDF와 PPT에는 한 단계 옅게 들어가요.
+                프로젝터나 큰 회의실에서는 ‘또렷하게’를 골라요. 검은 바탕은 한 단계 짙게 그려져요. PDF와 PPT에는 배경이 들어가지 않아요.
               </Info>
             </span>
             <Segmented

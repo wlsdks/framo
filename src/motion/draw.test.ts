@@ -55,6 +55,12 @@ describe('모션 그래픽을 그리는 도구', () => {
     expect(svg).toContain('M10 10h0M20 10h0')
     expect(svg.match(/class="mo-a"/g)).toHaveLength(1)
     // 짙기 배율을 곱하되 0.95를 넘지 않는다. 강조색의 class는 쓰는 쪽이 정할 수 있다
+    // 평평한 끝(flat)은 따로 모이고 강조색 class는 그대로
+    const F = kit.svgPaint(1)
+    F.to(0, 0)
+    F.to(10, 0)
+    F.stroke(1, 1, 0.5, false, true)
+    expect(F.markup()).toMatch(/class="mo-a"[^>]*stroke-linecap="butt"/)
     const Q = kit.svgPaint(2, 'cine-a')
     Q.dot(0, 0, 1, 1, 0.6)
     expect(Q.markup()).toMatch(/class="cine-a"[^>]*stroke-opacity="0.95"/)
