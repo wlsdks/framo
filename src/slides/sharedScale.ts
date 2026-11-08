@@ -10,6 +10,8 @@
 // 문턱: 값이 크게 뛰어(1에서 10) 한 잣대로 그리면 어느 장의 가장 높은 값이 잣대의 40%에도 닿지 못하는 짝은 묶지 않는다(그 장이 너무
 // 휑해진다). 재는 법은 막대와 추이가 같다: 그려지는 잣대의 바닥에서 가장 높은 값까지(막대는 0부터, 추이는 Trend.tsx와 같은 축의 바닥부터).
 // 오르내림 폭으로 재던 때는 131에서 183으로 오르는 추이가 묶이지 않아, 같은 발표의 막대와 말투가 달랐다(4차 감성 검수).
+// 막대의 잣대는 0부터, 추이의 잣대는 두 장의 값 범위에 여유만 둔다(0으로 내리지 않는다, numbers.ts의 lineAxis). 추이를 0부터 그리던 때는
+// 값이 낮은 장의 선이 높이의 16%만 쓰며 가운데 떠 납작했다(5차 감성 검수).
 // 묶지 않은 짝은 장마다 제 잣대로 그리고, 넘길 때 엔진이 새 값으로 처음 나올 때처럼 다시 자라게 한다(motion/engine.ts의 carry).
 // 셋 넘게 이어지면 읽는 차례로 묶어 가다가, 다음 장을 더하면 묶음의 어느 장이 문턱 밑이 될 때 그 장부터 새 묶음을 시작한다
 // (가운데 장은 앞 장과 먼저 묶인다).
@@ -83,9 +85,9 @@ function chartsOf(s: Slide): Chart[] {
     .filter((c): c is Chart => !!c)
 }
 
-/** 묶음의 잣대로 그렸을 때 차트의 가장 높은 값이 닿는 높이(잣대의 바닥부터, 0~1). 막대는 0부터, 추이는 그려질 축(lineAxis)의 바닥부터 */
+/** 묶음의 잣대로 그렸을 때 차트의 가장 높은 값이 닿는 높이(잣대의 바닥부터, 0~1). 막대는 0부터, 추이는 그려질 같은 잣대(lineAxis의 shared)의 바닥부터 */
 function reach(c: Chart, lo: number, hi: number): number {
-  const { floor, ceil } = c.kind === 'trend' ? lineAxis([lo, hi], c.n) : { floor: 0, ceil: hi }
+  const { floor, ceil } = c.kind === 'trend' ? lineAxis([lo, hi], c.n, true) : { floor: 0, ceil: hi }
   return ceil > floor ? (c.hi - floor) / (ceil - floor) : 1
 }
 

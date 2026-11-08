@@ -37,7 +37,8 @@ export function Trend() {
   const known = values.filter((v): v is number => v !== null)
   // 이어 움직이기로 이어지는 이웃 장과는 한 잣대로(sharedScale.ts): 넘길 때 점이 숫자와 같은 쪽으로 움직이게. 예시로 그릴 때는 제 값으로
   const own = target === null ? known : [...known, target]
-  const { floor, y, x } = lineAxis(scale && !demo && known.length ? [...own, scale.lo, scale.hi] : own, items.length)
+  const shared = !!scale && !demo && known.length > 0
+  const { floor, y, x } = lineAxis(shared && scale ? [...own, scale.lo, scale.hi] : own, items.length, shared)
   const pts = values.map((v, i) => (v === null ? null : { x: x(i), y: y(v) }))
   // 값이 없는 시기를 건너뛰어 선을 이으면 그 사이에도 측정값이 있는 것처럼 보인다.
   // 이어진 값만 각각 선과 면으로 만들고, 하나뿐인 값은 점으로만 남긴다.

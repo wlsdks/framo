@@ -119,10 +119,16 @@ describe('이어 움직이는 이웃 장의 막대 잣대', () => {
       items: values.map((value, i) => ({ ...emptyItem(), id: `${id}-${i}`, title: `${i + 1}월`, value })),
       options: morph ? { transition: 'morph' } : {},
     })
-    // 96~131에서 86~183으로: 폭으로 재면 36%라 묶이지 않았지만, 두 장을 담는 축(0부터)에서 131은 70% 높이라 묶는다
+    // 96~131에서 86~183으로: 폭으로 재면 36%라 묶이지 않았지만, 두 장을 담는 잣대의 바닥(74)부터 재면 131은 49% 높이라 묶는다
     const a = trend('a', ['96', '101', '99', '108', '117', '131'])
     const b = trend('b', ['125', '86', '119', '119', '88', '183'], true)
-    expect(sharedScales(pageInfo([a, b], deck)).get('a')?.get('')?.hi).toBe(183)
+    const info = pageInfo([a, b], deck)
+    expect(sharedScales(info).get('a')?.get('')?.hi).toBe(183)
+    // 같은 잣대는 0이 아니라 두 장의 값 범위에서 시작한다: 값이 낮은 장의 선도 높이의 30% 넘게 쓴다(0부터 그리던 때는 18%로 납작했다)
+    const html = renderToStaticMarkup(createElement(SlideCanvas, { deck, slide: a, mode: 'final', ...pageProps(info, a.id) }))
+    const ys = [...html.matchAll(/class="tn-pt[^"]*"[^>]*style="--x:[\d.]+;--y:([\d.]+)"/g)].map((m) => Number(m[1]))
+    expect(ys).toHaveLength(6)
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(28)
     // 1에서 10처럼 크게 뛰면 묶지 않는다(목표 없이)
     const c = trend('c', ['1', '1.2', '1.1', '1.3', '1', '1.2'], false, '')
     const d = trend('d', ['10', '12', '11', '13', '10', '12'], true, '')
