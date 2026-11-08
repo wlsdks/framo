@@ -100,9 +100,9 @@ describe('움직임 엔진', () => {
     // 고리: 구간마다 선이 그어지고(stroke-dasharray) 조각이 그 구간을 탄다. 마지막 구간도 첫 점까지 다른 구간과 같이
     expect(cycle).toMatch(/strokeDasharray/)
     expect(cycle).toMatch(/packet\(stage, legs\[n\]/)
-    // 가로: 윗길(::before)을 오른쪽에서 왼쪽으로 열고, 가운데의 머리(::after)가 그 자리를 지날 때 맺힌다
+    // 가로: 윗길(::before)을 오른쪽에서 왼쪽으로 연다. 윗길 가운데의 머리는 걷었다(세모 머리는 흔한 순서도처럼 보였다, cycle.css)
     expect(cycle).toMatch(/inset\(-12px 0 -12px 100%\)["'],\s*per\(lens\[2\]\),\s*["']::before["']/)
-    expect(cycle).toMatch(/pop\(list,[^;\n]*["']::after["']\)/)
+    expect(cycle).not.toMatch(/pop\(list,[^;\n]*["']::after["']\)/)
     // 한 바퀴를 받으며 부푸는 것은 transform으로: 나타날 때 쓴 scale과 같은 속성이면 늦게 만든 것이 나타나기를 덮는다
     expect(cycle).toMatch(/transform: ["']scale\(1\.6\)["']/)
     expect(cycle).not.toMatch(/scale: ["']1\.6["']/)

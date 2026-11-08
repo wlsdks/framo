@@ -1903,8 +1903,7 @@ export function motionEngine(): MotionEngine {
           const hop = Math.min(levelName === 'lively' ? 480 : 420, 1800 / steps.length)
           fade(one('.bk-cy-c'), 100, 600)
           const line = parseFloat(getComputedStyle(root).getPropertyValue('--cy-line')) || 1.5
-          const head = parseFloat(getComputedStyle(root).getPropertyValue('--cy-head')) || 16
-          // 첫 단계 점(고리)이나 첫 번호(가로, 세로)가 한 바퀴를 받으며 부풀었다 돌아온다. 나타날 때 쓴 scale과 겹치지 않게 transform으로
+          // 첫 단계 눈금(고리)이나 첫 번호(가로, 세로)가 한 바퀴를 받으며 부풀었다 돌아온다. 나타날 때 쓴 scale과 겹치지 않게 transform으로
           const land = (el: Element | null, at: number) => {
             if (el) run(anims, el, [{ transform: 'scale(1)' }, { transform: 'scale(1.6)' }, { transform: 'scale(1)' }], s(at), { easing: 'ease-in-out', duration: d(460) })
           }
@@ -1981,7 +1980,8 @@ export function motionEngine(): MotionEngine {
               [u.r - line / 2, top],
               [xLeft, top],
               [xLeft, yIn],
-              [w.r + head / 2, yIn],
+              // 끝 눈금(cycle.css)이 처음 단계 앞에 선다: 조각은 그 눈금에서 멈춘다
+              [w.r, yIn],
             ]
             const lens = path.slice(1).map((q, i) => Math.hypot(q[0] - path[i][0], q[1] - path[i][1]))
             const total = lens.reduce((x, y) => x + y, 0) || 1
@@ -1997,8 +1997,6 @@ export function motionEngine(): MotionEngine {
             linear(up, 'inset(100% -12px 0 -12px)', per(lens[1]))
             at += per(lens[1])
             linear(list, 'inset(-12px 0 -12px 100%)', per(lens[2]), '::before')
-            // 윗길 가운데의 머리는 선이 그 자리를 지날 때 맺힌다
-            pop(list, at + per(lens[2]) / 2, '::after')
             at += per(lens[2])
             bend(down, at, per(lens[3] + lens[4]), 'top', 'left', line + 4, 'linear')
             at += per(lens[3] + lens[4])

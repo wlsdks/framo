@@ -2,13 +2,17 @@
    단계를 차례로 거쳐 처음으로 돌아오는 고리. 칸에 따라 짜임을 바꾼다(docs/DESIGN.md의 '짜임 바꾸기'):
    넓고 높은 칸은 고리 둘레에 12시부터 시계 방향으로(고리), 넓고 낮은 칸은 왼쪽에서 오른쪽으로 놓고 위로 돌아가는 선(가로),
    좁은 칸은 위에서 아래로 놓고 왼쪽의 괄호 선(⊏)으로 처음 단계에 돌아간다(세로).
-   잇는 선은 흐름, 연결도와 같다: 옅은 글자색, 줄 선의 1.5배 굵기, 꽉 찬 머리와 점(flow.css). 선은 단계끼리의 관계라 답이 아니어서
-   강조색을 쓰지 않는다 */
+   잇는 선은 옅은 글자색, 줄 선의 1.5배 굵기. 단계 자리와 구간 끝은 점과 꽉 찬 세모 머리가 아니라 눈금이다: 점·선·머리를 붙인
+   흔한 순서도처럼 보였다(사용자). 고리에서는 단계마다 고리를 가로지르는 짧은 눈금(계기판, 모이고 퍼지기와 같은 말투), 가로·세로에서는
+   선 끝의 세로 눈금(잇는 표시 —|, slides/arrow.tsx). 차례는 번호와 발표할 때 흐르는 조각이 보인다.
+   선은 단계끼리의 관계라 답이 아니어서 강조색을 쓰지 않는다 */
 .bk-cy {
   --cy-c: var(--ink-3);
   --cy-line: calc(var(--rule-hair) * 1.5);
-  --cy-head: 16px;
-  --cy-port: 12px;
+  /* 끝 눈금의 길이와 굵기, 고리 위 단계 눈금의 길이 */
+  --cy-head: 18px;
+  --cy-tick: 3px;
+  --cy-port: 22px;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -140,15 +144,14 @@
   display: none;
 }
 
-/* 처음 단계로 들어가는 꽉 찬 머리 */
+/* 처음 단계로 들어가는 끝 눈금(—|) */
 .bk-cy-step:first-child .bk-cy-rail::after {
   position: absolute;
   top: calc(var(--cy-line) / -2);
-  right: calc(var(--cy-head) / -2);
-  width: var(--cy-head);
+  right: calc(var(--cy-tick) / -2);
+  width: var(--cy-tick);
   height: var(--cy-head);
   background: var(--cy-c);
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
   content: '';
   translate: 0 -50%;
 }
@@ -185,7 +188,7 @@
     translate: -50% -50%;
   }
 
-  /* 단계 점과 구간 끝의 머리: 크기가 고리를 따라 늘고 줄지 않게(흐름과 같은 크기) 고리 그림 밖에 따로 둔다 */
+  /* 단계 눈금: 크기가 고리를 따라 늘고 줄지 않게 고리 그림 밖에 따로 둔다 */
   .bk-cy-marks {
     position: absolute;
     inset: 0;
@@ -201,21 +204,19 @@
     background: var(--cy-c);
   }
 
+  /* 단계 자리: 고리를 가로지르는 짧은 눈금(반지름 방향). 글자색이라 옅은 고리 선보다 또렷하다 */
   .bk-cy-port {
-    width: var(--cy-port);
+    width: var(--cy-tick);
     height: var(--cy-port);
-    border-radius: 50%;
+    background: var(--ink-2);
     translate: -50% -50%;
+    rotate: var(--a);
   }
 
-  /* 머리 끝이 고리 위의 자리에 오고, 그 자리의 시계 방향(접선)을 가리킨다 */
+  /* 구간 끝의 머리는 그리지 않는다: 구간은 다음 단계의 눈금 앞에서 끝나 그 눈금이 끝을 맺는다(—|). 자리(--a)는 움직임이 조각의 길을
+     재는 데 쓴다(engine.ts) */
   .bk-cy-tip {
-    width: var(--cy-head);
-    height: var(--cy-head);
-    margin: calc(var(--cy-head) / -2) 0 0 calc(-1 * var(--cy-head));
-    clip-path: polygon(0 0, 100% 50%, 0 100%);
-    transform-origin: 100% 50%;
-    rotate: var(--a);
+    display: none;
   }
 
   .bk-cy-mid {
@@ -329,19 +330,7 @@
     content: '';
   }
 
-  /* 윗부분 가운데의 왼쪽을 가리키는 머리: 번호 줄은 오른쪽으로 가고 윗길은 거꾸로 돌아온다는 것. 머리가 없으면 윗길이 번호 줄 위에
-     놓인 빈 납작한 상자로 읽혔다 */
-  .bk-cy-list::after {
-    position: absolute;
-    top: calc(var(--cy-line) / 2);
-    left: 50%;
-    width: var(--cy-head);
-    height: var(--cy-head);
-    background: var(--cy-c);
-    clip-path: polygon(100% 0, 0 50%, 100% 100%);
-    content: '';
-    translate: -50% -50%;
-  }
+  /* 윗길의 가운데 머리는 걷었다(세모 머리는 흔한 순서도처럼 보였다). 돌아가는 길은 처음 단계 앞의 끝 눈금과 흐르는 조각이 보인다 */
 
   .bk-cy-step {
     display: block;
@@ -357,7 +346,7 @@
     flex: none;
   }
 
-  /* 다음 단계로 가는 선: 번호 뒤에서 다음 칸의 번호 앞까지, 끝에 꽉 찬 머리 */
+  /* 다음 단계로 가는 선: 번호 뒤에서 다음 칸의 번호 앞까지, 끝에 세로 눈금(—|) */
   .bk-cy-to {
     position: relative;
     display: block;
@@ -370,10 +359,9 @@
     position: absolute;
     top: calc(var(--cy-line) / -2);
     right: 0;
-    width: var(--cy-head);
+    width: var(--cy-tick);
     height: var(--cy-head);
     background: var(--cy-c);
-    clip-path: polygon(0 0, 100% 50%, 0 100%);
     content: '';
     translate: 0 -50%;
   }
