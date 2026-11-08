@@ -837,7 +837,10 @@ export function motionEngine(): MotionEngine {
         if (i >= 0) instant.splice(i, 1)
       }
       if (still) return keep()
-      type Tick = { v: number; at: (group: string, u: number) => number | null }
+      /**
+       * v: 값의 진행(곡선을 입힌), at: 눈금 위의 값 → 길이. side: 점 숫자가 새 쪽으로 옮겨 가는 진행(처음 0.1초 남짓에 다 간다)
+       */
+      type Tick = { v: number; raw: number; side: number; at: (group: string, u: number) => number | null }
       const sets: ((t: Tick) => void)[] = []
       const undo: (() => void)[] = []
       const NUM = /^(\D*)(\d[\d,]*)(\.\d+)?(\D*)$/
@@ -857,7 +860,9 @@ export function motionEngine(): MotionEngine {
         if (on !== !!(w && w.on)) flips.push({ el: n, to: on })
         if (!w) return
         const side = sideOf(n)
-        if (side !== (w.side || '')) sides.push({ el: n, before: (w.side || '').split(' '), after: side.split(' ') })
+        // 쪽이 바뀐 점 숫자, 그리고 추이의 작은 점 숫자는 모두(쪽이 그대로여도 움직이는 동안 선과 겹칠 수 있다).
+        // 강조한 점의 큰 숫자는 답이라 자리를 지킨다: 잠깐 비켰다 돌아오면 답이 두 번 뛴다
+        if (side !== (w.side || '') || (n.classList.contains('tn-pt') && !n.classList.contains('is-hl'))) sides.push({ el: n, before: (w.side || '').split(' '), after: side.split(' ') })
         let k = 0
         for (const c of Array.prototype.slice.call(n.childNodes) as Node[]) {
           if (c.nodeType !== 3) continue
@@ -981,52 +986,147 @@ export function motionEngine(): MotionEngine {
           sets.push((t) => f.el.classList.toggle('is-on', t.v >= at ? f.to : !f.to))
           undo.push(() => f.el.classList.toggle('is-on', f.to))
         })
-      // 점 숫자가 서는 쪽이 바뀌었으면(점이 오르내려 선과 부딪히는 쪽이 달라졌다) 새 쪽에 두되, 앞 장의 쪽에서 새 쪽으로 점을 따라
-      // 미끄러져 간다. 숫자는 내내 진하다: 가운데에서 잠깐 옅어졌다가 새 쪽에 서던 때는 셈하는 도중 답 숫자가 한 프레임 거의 투명해져
-      // 깜빡임으로 보였고, 다른 점 숫자도 잠깐 옅어졌다(3차 감성 검수). 그대로 두면 짝을 바꿔 끼우는 처음에 숫자가 반대쪽으로 건너뛰었다.
-      // 두 쪽의 자리는 점에서 숫자까지로 잰다(장을 줄여 그려도 장의 px로). 모두 앞 쪽으로 바꿔 한 번, 새 쪽으로 돌려 한 번만 잰다
+      // 점 숫자가 서는 쪽이 바뀌었으면(점이 오르내려 선과 부딪히는 쪽이 달라졌다) 앞 장의 쪽에서 시작해 새 쪽에서 끝난다. 숫자는 내내 진하다:
+      // 가운데에서 잠깐 옅어졌다가 새 쪽에 서던 때는 셈하는 도중 답 숫자가 한 프레임 거의 투명해져 깜빡임으로 보였다(3차 감성 검수).
+      // 추이는 프레임마다 숫자가 선이나 목표 점선과 겹치는지 보고 자리를 옮긴다. 옮길 때는 미끄러지지 않고 한 번에 옮긴다: 위아래를 바꾸는
+      // 숫자는 어떤 길로 가도 점을 지나는 선을 가로지른다(값과 같은 진행으로 미끄러지던 때는 0.16~0.32초에, 짧게 미끄러져도 끝 무렵에 선을
+      // 뚫고 지나갔다. 4·5차 감성 검수). 새 쪽이 비면 값이 움직이는 동안 바로 새 쪽으로 가고, 지금 자리가 겹치면 새 쪽, 앞 쪽, 위아래를 바꾼
+      // 자리 가운데 비어 있는 곳으로 간다. 한 번 옮기면 잠깐(시계의 12%) 그 자리를 지킨다(두 자리 사이를 오가며 깜빡이지 않게).
+      // 끝 무렵(시계의 90%)에는 새 쪽으로 간다(끝 모습과 같게). 쪽마다의 자리는 점에서 글자 상자까지로 처음에 한 번 잰다(장을 줄여 그려도 장의 px로)
       if (sides.length) {
         const box = el.getBoundingClientRect()
         const zoom = el.offsetWidth ? box.width / el.offsetWidth : 1
         const labelsOf = (n: Element) => (Array.prototype.slice.call(n.children) as HTMLElement[]).filter((c) => (c.textContent || '').trim())
+        // 추이의 숫자 글자. 숫자 칸(.tn-val)은 목표선을 비키는 여백까지 품어 글자보다 훨씬 크다
+        const numOf = (c: HTMLElement) => c.querySelector('.tn-num') as HTMLElement | null
+        // 목표선 비키기(trend.css의 .tn-num 여백)는 움직이는 동안 css 대신 아래 lift로 센다: css는 지금 쪽의 것만 알려 줘서, 옮겨 갈 다른 쪽에서
+        // 비켜 설 자리를 알 수 없었다(처음에 잰 자리로 보면 앞 장에서 목표선 위로 비켜 있던 숫자가 넘기자마자 점선 위에 내려앉았다)
+        const nums = sides.map((sd) => labelsOf(sd.el).map(numOf))
+        const numStyles = nums.map((list) => list.map((n) => (n ? n.getAttribute('style') : null)))
+        nums.forEach((list) => list.forEach((n) => n && (n.style.margin = '0px')))
         const offsets = () =>
           sides.map((sd) => {
             const p = sd.el.getBoundingClientRect()
             return labelsOf(sd.el).map((c) => {
-              const r = c.getBoundingClientRect()
-              return [(r.left - p.left) / zoom, (r.top - p.top) / zoom]
+              const r = (numOf(c) || c).getBoundingClientRect()
+              return [(r.left - p.left) / zoom, (r.top - p.top) / zoom, r.width / zoom, r.height / zoom]
             })
           })
         const toSide = (sd: (typeof sides)[number], list: string[]) => {
           for (const c of SIDES) sd.el.classList.toggle(c, list.indexOf(c) >= 0)
         }
+        // 비켜설 자리: 새 쪽에서 위아래만 바꾼 자리(쪽이 그대로인 숫자도 겹치면 잠깐 이리로)
+        const flip = (sd: (typeof sides)[number]) => (sd.after.indexOf('is-below') >= 0 ? sd.after.filter((c) => c !== 'is-below') : [...sd.after, 'is-below'])
         const now = offsets()
         sides.forEach((sd) => toSide(sd, sd.before))
         const then = offsets()
+        sides.forEach((sd) => toSide(sd, flip(sd)))
+        const away = offsets()
         sides.forEach((sd) => toSide(sd, sd.after))
+        // 자리 0: 앞 장의 쪽, 1: 새 쪽, 2: 새 쪽에서 위아래를 바꾼 자리
+        const spots = [then, now, away]
+        /** 숫자가 목표선에 걸칠 때 비켜 서는 만큼(px, 위로는 음수). trend.css의 .tn-num 여백과 같은 셈: 점에서 목표선까지(d)가 숫자 자리
+            (점에서 up 위, 글 높이 em) 둘레 10px 안이면 숫자 끝을 목표선에서 10px 띄운다. 그림이 낮으면(200px 이하) 골짜기 숫자도 위에 선다 */
+        const lift = (list: string[], hl: boolean, y: number, ty: number, h: number, em: number) => {
+          if (!Number.isFinite(ty) || !Number.isFinite(y) || list.indexOf('is-mid') >= 0) return 0
+          const below = list.indexOf('is-below') >= 0 && h > 200
+          const d = ((below ? y - ty : ty - y) * h) / 100
+          const up = hl ? 40 : 24
+          const by = d - up + 10 > 0 && d - up - em - 10 <= 0 ? d + 10 - up : 0
+          return below ? by : -by
+        }
         sides.forEach((sd, k) => {
           const labels = labelsOf(sd.el)
           const styles = labels.map((c) => c.getAttribute('style'))
+          const lists = [sd.before, sd.after, flip(sd)]
+          const hl = sd.el.classList.contains('is-hl')
+          const em = nums[k].map((n) => (n ? parseFloat(getComputedStyle(n).fontSize) * 1.1 : 0))
+          // 추이의 그림 상자와 선: 숫자가 겹치는지 볼 곳
+          const canvas = sd.el.closest('.tn-canvas') as HTMLElement | null
+          const polys = canvas ? (Array.prototype.slice.call(canvas.querySelectorAll('.tn-line')) as SVGPolylineElement[]) : []
+          // 숫자마다 지금 자리와 그 자리로 옮긴 때(처음에는 앞 장의 쪽)
+          const state = labels.map(() => ({ side: 0, at: -1 }))
+          const restore = () => {
+            labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
+            nums[k].forEach((n, i) => n && (numStyles[k][i] === null ? n.removeAttribute('style') : n.setAttribute('style', numStyles[k][i]!)))
+          }
           sets.push((t) => {
+            if (t.v >= 1) return restore()
+            const w = canvas ? canvas.offsetWidth : 0
+            const h = canvas ? canvas.offsetHeight : 0
+            const px = (parseFloat((sd.el as HTMLElement).style.getPropertyValue('--x')) * w) / 100
+            const y = parseFloat((sd.el as HTMLElement).style.getPropertyValue('--y'))
+            const ty = canvas ? parseFloat(canvas.style.getPropertyValue('--ty')) : NaN
+            const py = h - (y * h) / 100
+            const pts = polys.map((pl) => (pl.getAttribute('points') || '').trim().split(/[\s,]+/).map(Number))
+            /** 쪽(side)의 글자 자리: 점에서 글자 상자의 왼쪽 위까지(목표선 비키기 더함) */
+            const spot = (side: number, i: number) => {
+              const o = spots[side][k][i] || now[k][i]
+              return [o[0], o[1] + (nums[k][i] ? lift(lists[side], hl, y, ty, h, em[i]) : 0)]
+            }
+            /** 쪽(side)에 선 숫자가 선이나 목표 점선과 겹치는지(그림 상자의 px). 숫자의 잉크는 글자 상자(줄 높이 1.1em)의 가운데쯤이라
+                위아래를 조금 덜고, 둘레 3px 넉넉히 본다 */
+            const hits = (side: number, i: number) => {
+              const o = spots[side][k][i]
+              if (!canvas || !o || !Number.isFinite(px) || !Number.isFinite(py)) return false
+              const at = spot(side, i)
+              const l = px + at[0] - 3
+              const r = l + o[2] + 6
+              const top = py + at[1] + o[3] * 0.12 - 3
+              const b = top + o[3] * 0.76 + 6
+              if (Number.isFinite(ty) && top < (1 - ty / 100) * h && (1 - ty / 100) * h < b) return true
+              for (const list of pts)
+                for (let j = 0; j + 3 < list.length; j += 2) {
+                  const x0 = (list[j] / 100) * w
+                  const y0 = (list[j + 1] / 100) * h
+                  const x1 = (list[j + 2] / 100) * w
+                  const y1 = (list[j + 3] / 100) * h
+                  // 선분이 상자와 만나는지: 선분을 촘촘히 짚어 본다(숫자 상자보다 짧은 걸음)
+                  const steps = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 6) + 1
+                  for (let q = 0; q <= steps; q++) {
+                    const x = x0 + ((x1 - x0) * q) / steps
+                    const yy = y0 + ((y1 - y0) * q) / steps
+                    if (x > l && x < r && yy > top && yy < b) return true
+                  }
+                }
+              return false
+            }
             labels.forEach((c, i) => {
               const a = then[k][i]
               const b = now[k][i]
+              const st = state[i]
               if (!a || !b) return
-              const r = 1 - t.v
-              c.style.transform = r <= 0 ? '' : `translate(${(a[0] - b[0]) * r}px, ${(a[1] - b[1]) * r}px)`
+              let want = st.side
+              if (!canvas || t.raw >= 0.9) want = 1
+              // 지금 자리가 겹치면 새 쪽, 앞 쪽, 비켜설 자리 차례로 비어 있는 곳으로
+              else if (hits(st.side, i)) want = [1, 0, 2].find((x) => x !== st.side && !hits(x, i)) ?? st.side
+              // 값이 움직이기 시작했고 새 쪽이 비었으면 새 쪽으로
+              else if (st.side !== 1 && t.raw > 0 && (st.at < 0 || t.raw - st.at >= 0.12) && !hits(1, i)) want = 1
+              if (want !== st.side) {
+                st.side = want
+                st.at = t.raw
+              }
+              const at = canvas ? spot(st.side, i) : [a[0] + (b[0] - a[0]) * t.side, a[1] + (b[1] - a[1]) * t.side]
+              const dx = at[0] - b[0]
+              const dy = at[1] - b[1]
+              c.style.transform = Math.abs(dx) + Math.abs(dy) < 0.01 ? '' : `translate(${dx}px, ${dy}px)`
             })
           })
-          undo.push(() => labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!))))
+          undo.push(restore)
         })
       }
       if (!sets.length) return keep()
 
       // ---- 시계: 눈금과 값이 같은 진행으로 함께 간다(한 번의 모양 바뀜) ----
       const ease = curve(EASE.out)
+      const clamp = (x: number) => Math.max(0, Math.min(1, x))
       const tick = (raw: number): Tick => {
-        const v = raw >= 1 ? 1 : ease(Math.max(0, Math.min(1, raw)))
+        const v = raw >= 1 ? 1 : ease(clamp(raw))
         return {
           v,
+          raw,
+          // 추이가 아닌 점 숫자(겹침을 볼 선이 없다)는 선이 가장 빨리 움직이는 처음(시계의 12%)에 새 쪽으로 옮겨 간다
+          side: raw >= 1 ? 1 : ease(clamp(raw / 0.12)),
           at: (g, u) => {
             const ax = axes[g]
             if (!ax) return null
