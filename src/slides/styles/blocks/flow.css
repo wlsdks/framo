@@ -456,3 +456,49 @@
   top: calc(50% - var(--rule-hair) / 2);
   translate: none;
 }
+
+/* ---------- 판을 혼자 쓸 때(넓고 높은 칸) ----------
+   흐름 하나가 장을 혼자 쓰면 작은 번호와 이름이 본문 위쪽 띠에만 서고 아래 절반이 비었다(사용자, 세·네·다섯 단계 모두). 사이를 벌리지
+   않고 그림과 글의 단계를 올린다(VISUAL-RULES 6): 번호 줄이 흐름의 그림이라 번호를 큰 가는 숫자로(오가는 양이 없을 때. 양이 있으면
+   양이 답이라 번호는 그보다 작게), 설명은 이름 한 단계 아래로(이름과 같은 크기라 둘이 겨뤘다). 번호와 선 사이, 선과 다음 번호 사이,
+   단계 사이(--fw-lw)와 줄 사이도 글자를 따라 같은 비율로 커진다(위의 넓은 칸 규칙보다 앞서게 [data-n]을 붙인다). 남는 높이는 맞추기(fitBlocks)가 묶음 위아래에 둔다(눈높이 가운데) */
+@container bk (min-width: 1300px) and (min-height: 520px) {
+  .bk-fw[data-n] {
+    --fw-lw: calc(96px * var(--bk-fit, 1));
+    --fw-i-gap: calc(24px * var(--bk-fit, 1));
+  }
+
+  .bk-fw[data-n] .bk-fw-i {
+    --fs: var(--t-h);
+    gap: var(--fw-i-gap);
+    font-family: var(--font-head);
+    font-weight: var(--num-weight);
+    letter-spacing: -0.01em;
+  }
+
+  .bk-fw[data-n]:not(:has(.bk-fw-v)) .bk-fw-i {
+    --fs: 52px;
+  }
+
+  .bk-fw:is([data-n='2'], [data-n='3']):not(:has(.bk-fw-v)) .bk-fw-i {
+    --fs: 62px;
+  }
+
+  .bk-fw[data-n] .bk-fw-link .bk-fw-wire {
+    right: var(--fw-i-gap);
+  }
+
+  .bk-fw[data-n] .bk-fw-list {
+    row-gap: calc(20px * var(--bk-fit, 1));
+  }
+
+  .bk-fw[data-n] .bk-fw-m {
+    --fs: var(--t-small);
+    margin-top: calc(10px * var(--bk-fit, 1));
+    text-wrap: balance;
+  }
+
+  .bk-fw[data-n] .bk-fw-key {
+    margin-bottom: calc(var(--bk-h-gap) * var(--bk-fit, 1));
+  }
+}
