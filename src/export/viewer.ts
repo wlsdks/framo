@@ -11,9 +11,10 @@ export const VIEWER_TEXT = 'PDF로 저장 발표 시작 0123456789 /'
 
 // 처음 보이는 목록의 장 너비(.v-slide)는 창 높이에도 맞춘다: 받는 분 대부분이 쓰는 1280×600 노트북 창에서 1280 너비의 장은
 // 720 높이라 창보다 높아서, 장 하나를 다 보려면 스크롤해야 했고 어느 장도 한눈에 보이지 않았다. 112는 위 막대와 장 위아래 여백
+// 위 막대(.v-bar)는 칠한 흰 면이다: 반투명에 흐림을 걸면 아래로 지나가는 슬라이드가 비쳐 얼룩처럼 보였다(앱도 유리 효과를 쓰지 않는다)
 export const VIEWER_CSS = `
 html,body{margin:0;background:#eeeeee;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased}
-.v-bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:rgb(255 255 255/.94);border-bottom:1px solid #e1e1e1;backdrop-filter:blur(8px)}
+.v-bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:#fff;border-bottom:1px solid #e1e1e1}
 .v-title{min-width:0;overflow:hidden;color:#1a1a1a;font-size:15px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
 .v-actions{display:flex;flex:none;gap:8px}
 .v-btn{padding:10px 16px;border:1px solid #d0d0d0;border-radius:4px;background:#fff;color:#1a1a1a;font:600 14px/1 inherit;cursor:pointer}
