@@ -8,7 +8,7 @@ import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
 import { placeLabels } from '../fitBlocks'
 import { lineAxis, lineRuns, seriesIn } from '../numbers'
-import { Head, useItems, useUnitOpen } from './parts'
+import { Head, SharedScaleNote, useItems, useUnitOpen } from './parts'
 
 /**
  * 추이: 시기마다 점을 찍고 선으로 잇는다. 흐름을 보는 장이라 모두 0보다 크고 폭이 좁으면 0부터 그리지 않는다.
@@ -64,6 +64,7 @@ export function Trend() {
     <>
       <Head lead />
       <div className={cx('s-body tn', demo && 'is-demo')} style={{ '--n': items.length }}>
+        <SharedScaleNote />
         {/* 단위와 목표는 그래프 위 따로 둔 줄에. 선 끝에 이름표를 달면 최근 시기의 점(대개 강조한 점)과 부딪힌다 */}
         {(unitOpen || target !== null || invalidTarget || (mode === 'edit' && !dataSeries.ok)) && (
           <div className="tn-meta">

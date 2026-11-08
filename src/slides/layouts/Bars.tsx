@@ -7,7 +7,7 @@ import { cx } from '../../lib/cx'
 import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
 import { readNumber, seriesIn, unfitValues } from '../numbers'
-import { Head, useItems, useUnitOpen } from './parts'
+import { Head, SharedScaleNote, useItems, useUnitOpen } from './parts'
 
 /** 숫자를 넣기 전, 편집할 때 흐리게 보여 줄 예시 길이. 어떤 모양의 장인지 알아보게만 한다. */
 const DEMO_BARS = [64, 78, 100, 86, 72, 92]
@@ -45,6 +45,7 @@ export function Bars() {
     <>
       <Head lead />
       <div className="s-body br-wrap">
+        <SharedScaleNote />
         {mode === 'edit' && !comparable && <p className="br-unit ed-warn" role="status">같은 단위의 0 이상 숫자를 적어 주세요.</p>}
         {unitOpen && (
           <p className="br-top">
