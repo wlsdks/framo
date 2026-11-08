@@ -388,6 +388,8 @@
   position: relative;
   grid-row: 2 / -1;
   grid-column: 2;
+  /* 마지막 막대의 아래(줄의 아래 안쪽 여백 8px)에서 멈춘다: 줄 끝까지 그으면 칸이 꽉 찬 장에서 선이 칸 밖으로 2px 나갔다 */
+  margin-bottom: 8px;
   pointer-events: none;
 }
 
