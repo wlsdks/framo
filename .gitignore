@@ -10,3 +10,5 @@ AI 공유
 .cache
 .claude/worktrees
 새 버전
+*.deck
+.claude/settings.local.json

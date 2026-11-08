@@ -56,6 +56,7 @@ npm run build        # dist/(화면) + dist-node/(로컬 서버, MCP 서버)
 npm start            # http://127.0.0.1:41580
 npm run mcp          # MCP 서버를 직접 띄우기 (보통은 Claude Code, Codex가 띄움)
 npm run licenses     # 라이선스 확인
+npm run look -- shot|check|frame|film …  # 창 없는 크롬으로 화면 찍기, 조합·틀 검사, 모션 필름 띠(개발 서버가 떠 있을 때, scripts/look.mjs)
 npm run pack         # 나눠 줄 폴더와 zip (release/)
 # 릴리스: package.json의 version을 올려 커밋한 뒤 git tag vX.Y.Z && git push origin vX.Y.Z
 #   → .github/workflows/release.yml이 검수 후 zip 둘과 SHA256SUMS.txt를 GitHub 릴리스에 올린다
@@ -80,6 +81,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 | `server/` | 로컬 서버, AI 공유 창구, ‘AI에게 부탁’으로 Claude Code 띄우기(`agent.ts`), 새 버전 확인과 받기(`update.ts`가 바깥 연결, `updateRoutes.ts`가 창구), CSP |
 | `mcp/` | MCP 서버 |
 | `scripts/`, `launch/` | 묶기, `Framo.exe` 만들기(`exe.mjs`, 아이콘은 `icon.mjs`로 `launch/framo.ico`), 라이선스 확인, 바깥 주소 검사(`offline.mjs`), 더블클릭 실행 파일 |
+| `.claude/` | Claude Code 하네스. 자주 하는 일의 스킬(`skills/`: 검수 `framo-review`·`framo-verify`, 커밋, 새 컴포넌트, 릴리스, 서브 에이전트, 부탁받은 발표), 감성 검수 리뷰어(`agents/framo-reviewer.md`), 발표 자료가 커밋되지 않게 막는 훅(`hooks/guard-commit.mjs`), 설정(`settings.json`). 개인 설정은 `settings.local.json`(git에서 빠짐). 일하는 방식이 바뀌면 스킬도 같이 고칩니다 |
 | `site/` | 홍보 페이지(GitHub Pages, https://wlsdks.github.io/framo/). 바깥 주소에서 아무것도 불러오지 않는 정적 파일(글꼴도 안에 둠, CSP). 새 버전을 올리면 다운로드 구역의 버전, 날짜, 파일 크기도 고칩니다(`scripts/site.test.ts`가 버전을 확인). 고친 뒤 올리기: `git subtree push --prefix site origin gh-pages` |
 
 ## 디자인
@@ -149,6 +151,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 ## 끝내기 전에
 
 - `npm run typecheck && npm test`가 통과해야 합니다.
+- 검수는 둘입니다: 기능은 기계로(테스트, `npm run look -- check/frame`), 감성은 AI가 사람의 눈으로(실제 화면을 찍어 처음 쓰는 사람, 발표하는 사람, 듣는 분의 자리에서. `.claude/skills/framo-review`). 기계 검사가 깨끗해도 사람 눈에 나쁘면 끝난 것이 아닙니다.
 - 보안에 닿는 변경(저장, 내보내기, 서버, AI 공유, MCP)은 위 “꼭 지킬 것”을 다시 확인합니다.
 - 화면을 바꿨으면 스크린샷으로 직접 봅니다.
 - 이번 작업으로 쓰지 않게 된 코드, 내보내기, 파일, CSS, 패키지를 남기지 않았는지 봅니다.
