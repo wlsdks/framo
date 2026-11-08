@@ -1,6 +1,6 @@
 /* ---------- 층 ----------
-   층마다 한 줄: 이름(크게, 굵게)과 무엇이 있는지(--ink-2). 층 사이는 가는 줄 선(--line), 왼쪽에 층을 꿰는 세로 축(--line-strong)과
-   층마다 짧은 가로 눈금. 축과 눈금은 단계 표시·일정과 같은 말투 */
+   층마다 한 줄: 이름(크게, 굵게)과 무엇이 있는지(--ink-2). 층 사이는 가는 줄 선(--line) 하나뿐. 왼쪽에 세로 축과 층마다 눈금을
+   두던 때는 꾸밈 표시가 AI가 만든 서식처럼 보였다(사용자). 위아래 차례는 줄의 차례가 말한다 */
 .bk-ly {
   display: flex;
   flex-direction: column;
@@ -11,19 +11,8 @@
 .bk-ly-list {
   position: relative;
   margin: 0;
-  padding: 0 0 0 64px;
+  padding: 0;
   list-style: none;
-}
-
-.bk-ly-list::before {
-  position: absolute;
-  top: calc(var(--ly-pad) + 0.65em);
-  bottom: calc(var(--ly-pad) + 0.65em);
-  left: 14px;
-  width: var(--rule-hair);
-  background: var(--line-strong);
-  content: '';
-  font-size: var(--t-h);
 }
 
 .bk-ly-row {
@@ -42,18 +31,6 @@
 
 .bk-ly-row + .bk-ly-row {
   border-top: var(--rule-hair) solid var(--line);
-}
-
-/* 층의 눈금: 축에서 이름 쪽으로 */
-.bk-ly-row::before {
-  position: absolute;
-  top: calc(var(--ly-pad) + 0.65em - 2px);
-  left: -50px;
-  width: 28px;
-  height: 4px;
-  background: var(--ink-2);
-  content: '';
-  font-size: var(--t-h);
 }
 
 .bk-ly-t {

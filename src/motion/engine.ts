@@ -2423,39 +2423,25 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'layers': {
-          // 위가 아래에 기대어 선다: 축이 위에서 아래로 그어지는 동안 층이 위에서부터 차례로 내려앉고, 다 쌓이면 요청 조각이 축을 타고
-          // 맨 아래 층까지 내려갔다가(층을 지날 때마다 그 층 이름이 잠깐 강조색) 답으로 올라온다. 생동감에서는 그 뒤로도 오르내린다.
-          // 자리는 움직임을 걸기 전에 잰다
-          const list = one('.bk-ly-list')
+          // 위가 아래에 기대어 선다: 층이 위에서부터 차례로 내려앉고, 다 쌓이면 요청이 내려갔다 올라오는 것을 층 이름이 차례로 잠깐
+          // 강조색이 되는 것으로 보인다(위에서 아래로, 다시 아래에서 위로). 축과 그 위를 타는 조각은 꾸밈 표시라 뺐다(사용자)
           const rows = $('.bk-ly-row')
-          if (!list || !rows.length) break
+          if (!rows.length) break
           lines(one('.bk-h'), 60)
-          const axisX = 14
-          const ys = rows.map((row) => {
-            const r = spot(row, list)
-            const pad = parseFloat(getComputedStyle(row).paddingTop) || 0
-            const fs = parseFloat(getComputedStyle(row.querySelector('.bk-ly-t') ?? row).fontSize) || 36
-            return r.t + pad + fs * 0.65
-          })
-          draw(list, 100, 500 + rows.length * 120, 'top center', '::before')
           rows.forEach((row, k) => {
             run(anims, row, [{ opacity: 0, translate: `0 ${-L.y * 1.2}px` }], s(120 + k * 140), { easing: CARRY, duration: d(520) })
           })
           const built = 120 + rows.length * 140 + 420
-          if (ys.length > 1 && !still) {
-            const down: [number, number][] = ys.map((y) => [axisX, y])
-            const per = levelName === 'lively' ? 360 : 300
-            packet(list, down, built, per * (ys.length - 1))
-            packet(list, [...down].reverse(), built + per * (ys.length - 1) + 160, per * (ys.length - 1))
-            const accent = getComputedStyle(list).getPropertyValue('--accent').trim()
-            rows.forEach((row, k) => {
-              const t = row.querySelector<HTMLElement>('.bk-ly-t')
+          if (rows.length > 1 && !still) {
+            const per = levelName === 'lively' ? 340 : 280
+            const accent = getComputedStyle(rows[0]).getPropertyValue('--accent').trim()
+            const order = [...rows.keys(), ...[...rows.keys()].reverse().slice(1)]
+            order.forEach((k, n) => {
+              const t = rows[k].querySelector<HTMLElement>('.bk-ly-t')
               if (!t) return
               const ink = getComputedStyle(t).color
-              run(anims, t, [{ color: ink }, { color: accent, offset: 0.3 }, { color: ink }], s(built + per * k - 60), { easing: 'ease-out', duration: d(520) })
+              run(anims, t, [{ color: ink }, { color: accent, offset: 0.3 }, { color: ink }], s(built + per * n), { easing: 'ease-out', duration: d(560) })
             })
-            const loop = [...down, ...[...down].reverse().slice(1)]
-            stream(list, loop, built + per * (ys.length - 1) * 2 + 600, d(Math.max(2600, ys.length * 900)))
           }
           break
         }

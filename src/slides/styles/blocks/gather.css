@@ -1,6 +1,7 @@
 /* ---------- 흩어진 것 모으기 ----------
    위에 모이는 곳의 이름(크게, 글자색)과 짧은 설명, 그 아래 가는 선 하나(--line-strong), 선 아래에 모인 것들이 고른 단으로 줄 선다.
-   단은 셋까지(넷부터 둘씩 두 줄, 일곱부터 넷씩): 한 줄에 다 세우면 이름이 좁아 꺾였다. 모인 것마다 앞에 짧은 강조색 눈금 */
+   단은 셋까지(넷부터 둘씩 두 줄, 일곱부터 넷씩): 한 줄에 다 세우면 이름이 좁아 꺾였다. 모인 것 앞에 표시(강조색 막대, 점)는 두지 않는다:
+   항목마다 붙인 작은 표시는 AI가 만든 서식처럼 보였다(사용자). 줄은 단과 여백으로만 */
 .bk-gt2 {
   --gt2-cols: min(var(--n), 3);
   display: flex;
@@ -51,21 +52,7 @@
 }
 
 .bk-gt2-it {
-  position: relative;
   min-width: 0;
-  padding-left: 22px;
-}
-
-/* 모인 것 앞의 짧은 눈금: 줄 선 것들의 박자(단계 표시, 일정의 눈금과 같은 말투) */
-.bk-gt2-it::before {
-  position: absolute;
-  top: 0.3em;
-  left: 0;
-  width: 4px;
-  height: 1.1em;
-  background: var(--accent);
-  content: '';
-  font-size: var(--t-body);
 }
 
 .bk-gt2-t {

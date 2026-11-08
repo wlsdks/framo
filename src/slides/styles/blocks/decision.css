@@ -78,22 +78,10 @@
 
 .bk-dc-condition {
   --fs: var(--t-body);
-  display: flex;
-  align-items: center;
-  gap: 24px;
   font-weight: 700;
   line-height: 1.4;
 }
 
-/* 조건과 할 일을 잇는 가는 이음선(목차의 점선 자리): '있음'처럼 짧은 조건과 할 일 사이가 비어 둘이 따로 노는 두 단처럼
-   보였다(사용자). 조건 글 끝에서 할 일 앞까지 옅은 선(--line) 하나 */
-.bk-dc-condition::after {
-  flex: 1 1 24px;
-  min-width: 24px;
-  height: var(--rule-hair);
-  background: var(--line);
-  content: '';
-}
 
 .bk-dc-action {
   --fs: var(--t-body);

@@ -44,20 +44,15 @@
   translate: -50% -50%;
 }
 
-/* 끝점: 가는 세로 눈금 하나(가운데 계기판의 눈금과 같은 말투). 동그란 점은 흔한 연결도처럼 보였다(사용자).
-   데이터가 떠나거나 닿을 때만 강조색으로 밝아지며 길어진다(engine.ts) */
+/* 끝점은 그리지 않는다: 동그란 점도, 세로 눈금도 꾸밈 표시라 AI가 만든 서식처럼 보였다(사용자). 선은 이름 바로 옆에서 끝난다.
+   자리(.bk-hb-spot)는 움직임이 재는 데 쓴다 */
 .bk-hb-spot {
-  display: grid;
-  place-items: center;
-  width: 4px;
-  height: 28px;
+  width: 0;
+  height: 0;
 }
 
 .bk-hb-dot {
-  width: 4px;
-  height: 28px;
-  border-radius: 1px;
-  background: var(--ink-2);
+  display: none;
 }
 
 /* 가운데: 칠하지 않은 계기판. 바깥 눈금 고리, 안쪽 가는 테, 데이터가 닿을 때 밝아지는 테(길마다 하나) */

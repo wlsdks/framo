@@ -2,8 +2,8 @@
    줄마다 지금(--ink-3, 가는 취소선)과 바뀐 뒤(크고 굵게, 글자색)를 한 줄에. 머리의 '바뀐 뒤' 이름만 강조색.
    훑는 세로 선(.bk-wp-bar)은 발표할 때만 보인다(engine.ts). 줄 사이는 여백으로만 */
 .bk-wp {
-  /* 지금과 바뀐 뒤를 반반: 지금을 40%로 좁히면 바뀐 뒤가 짧을 때 한 줄을 다 쓰는 칸의 오른쪽 3분의 1이 비었다(checkAssembly) */
-  --wp-cut: calc(50% - 32px);
+  /* 두 단은 글 너비만큼, 묶음째 칸 가운데에: 반반으로 나누면 바뀐 뒤가 짧을 때 오른쪽만 크게 비었다(사용자: 좌우 여백이 비슷하게) */
+  --wp-cut: max-content;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -11,11 +11,18 @@
   height: 100%;
 }
 
+.bk-wp-frame {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, max-content);
+  justify-content: center;
+  column-gap: 120px;
+}
+
 .bk-wp-head,
 .bk-wp-row {
   display: grid;
-  grid-template-columns: var(--wp-cut) minmax(0, 1fr);
-  column-gap: 64px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
 }
 
 .bk-wp-head {
@@ -36,6 +43,8 @@
 
 .bk-wp-list {
   display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   row-gap: calc(40px * var(--bk-fit, 1));
   margin: 0;
   padding: 0;
@@ -85,10 +94,17 @@
 }
 
 @container bk (max-width: 720px) {
-  .bk-wp-head,
-  .bk-wp-row {
+  .bk-wp-frame {
     grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+  }
+
+  .bk-wp-row {
     row-gap: 6px;
+  }
+
+  .bk-wp-row > * {
+    grid-column: 1;
   }
 
   .bk-wp-head {
