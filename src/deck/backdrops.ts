@@ -81,12 +81,15 @@ export const placeOfArea = (at: BlockAt) => BACKDROP_PLACES.find((p) => sameArea
 /**
  * 표지와 단락 장은 제목이 왼쪽 아래에 있어서 위쪽이 비고, 한 문장 장은 글이 위에서 장 너비를 다 써서 오른쪽 아래가 빈다.
  * 다른 장은 글이 왼쪽부터 놓인다.
- * 한 점이 있는 배경은 그 빈 쪽에 놓아 글 뒤에 씨앗이나 원이 오지 않게 한다
+ * 한곳에 모이는 배경(확산, 모여 시작, 여운)은 그 빈 쪽에 놓아 그림의 가운데가 글 뒤에 오지 않게 한다
  */
 const FOCAL_PLACE: Partial<Record<LayoutId, string>> = { cover: 'top', section: 'top', closing: 'top', statement: 'corner' }
 
-/** 글이 적은 장(표지, 섹션, 맺음): 처음 고를 때 또렷하게. 보통 짙기는 글이 많은 장에 맞춘 것이라 큰 화면에서 표지가 비어 보였다 */
-const BOLD_PLACES: readonly LayoutId[] = ['cover', 'section', 'closing']
+/**
+ * 글이 적은 장(표지, 섹션, 맺음, 한 문장): 처음 고를 때 또렷하게. 보통 짙기는 글이 많은 장에 맞춘 것이라 큰 화면에서 표지가 비어
+ * 보였고, 한 문장 장의 오른쪽 아래 모여 시작은 검은 테마에서 거의 보이지 않았다(필름). 글 둘레는 배경이 비키므로 또렷하게도 글을 다투지 않는다
+ */
+const BOLD_PLACES: readonly LayoutId[] = ['cover', 'section', 'closing', 'statement']
 
 /** 배경을 처음 고를 때의 값: 장 전체에 고르게 깔리는 그림은 전체, 한 점이 있는 그림은 글이 적은 쪽. 글이 적은 장은 또렷하게 */
 export function baseBackdrop(slide: Pick<Slide, 'layout' | 'variant' | 'options'>, kind: BackdropId): Backdrop {
