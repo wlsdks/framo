@@ -1168,7 +1168,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
   rank: {
     name: '순위 바뀌기',
     description: '지난번과 지금의 순위를 나란히 두고 바뀐 자리를 선으로 이어요. 지금 순서대로 적고 항목마다 지난 순위만 적으면 돼요(새로 들어온 것은 비워 두세요)',
-    motion: '지난 순서로 서 있던 항목이 지금 순위로 자리를 옮기고, 옮긴 길이 선으로 남아요',
+    motion: '지난 순위에서 지금 순위로 선이 그어지고, 선이 닿으면 지금 순위가 제자리에 나타나요',
     fields: [
       { key: 'label', label: '무엇의 순위', hint: '예: 많이 찾은 사내 안내' },
       { key: 'from', label: '지난 때', hint: '예: 지난 분기' },
