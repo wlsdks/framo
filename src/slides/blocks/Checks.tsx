@@ -6,27 +6,24 @@ import { useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
 import { statusOf, type Status } from '../numbers'
 
+/**
+ * 상태 표시: 동그라미 안에 넣은 체크, 반쯤 찬 원, 빈 고리는 흔한 아이콘처럼 보였다(사용자). 원 없이 인쇄물의 기호처럼 획만 쓴다.
+ * 완료는 체크 한 획, 진행 중은 가는 선 위에 반만 칠한 띠(단계 표시의 지난 구간 띠와 같은 말), 예정은 가는 선만, 지연은 느낌표.
+ * 색이 아니라 꼴로 가른다(흑백 인쇄). 길이를 1로 맞춘 획(pathLength)이라 움직임이 획을 그어 나간다(engine.ts)
+ */
 function StatusMark({ status }: { status: Status | null }) {
   return (
     <span className="bk-ck-mark" aria-hidden="true">
       <svg viewBox="0 0 32 32">
         {status === 'done' ? (
-          <>
-            <circle className="bk-ck-fill" cx="16" cy="16" r="15" />
-            <path className="bk-ck-glyph" d="M9.5 16.5l4.2 4.2 8.8-9.2" />
-          </>
+          <path className="bk-ck-glyph" d="M6.5 16.5l6 6L26 9" pathLength={1} />
         ) : status === 'late' ? (
-          <>
-            <circle className="bk-ck-fill" cx="16" cy="16" r="15" />
-            <path className="bk-ck-glyph" d="M16 8.5v9M16 22.6v.4" />
-          </>
-        ) : status === 'doing' ? (
-          <>
-            <circle className="bk-ck-ring" cx="16" cy="16" r="13.5" />
-            <path className="bk-ck-fill" d="M16 6.5a9.5 9.5 0 0 1 0 19z" />
-          </>
+          <path className="bk-ck-glyph" d="M16 6.5v12.5M16 25v.5" pathLength={1} />
         ) : (
-          <circle className="bk-ck-ring" cx="16" cy="16" r="13.5" />
+          <>
+            <path className="bk-ck-track" d="M4 16h24" pathLength={1} />
+            {status === 'doing' && <path className="bk-ck-bar" d="M4 16h12" pathLength={1} />}
+          </>
         )}
       </svg>
     </span>

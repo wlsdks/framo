@@ -8,19 +8,21 @@ import { STATUS_NAMES, type Status as State } from '../numbers'
 const STATES: readonly State[] = ['doing', 'done', 'todo', 'late']
 
 /**
- * 상태 표시: 색이 아니라 꼴로 가른다(흑백 인쇄, 강조색을 바꿔도 읽히게). 완료는 꽉 찬 글자색 원, 진행 중은 반이 찬 글자색 원,
- * 예정은 빈 옅은 고리, 지연은 고리에 시계 바늘. 색(강조색)은 예외인 지연에만 쓰고, 빨강 같은 따로 정한 색은 쓰지 않는다
+ * 상태 표시: 색이 아니라 꼴로 가른다(흑백 인쇄, 강조색을 바꿔도 읽히게). 원(꽉 찬 원, 반 찬 원, 빈 고리, 시계 바늘)은 흔한
+ * 아이콘처럼 보여서(사용자) 준비 상황과 같은 획 기호로: 완료는 체크, 진행 중은 가는 선 위에 반만 칠한 띠, 예정은 가는 선만,
+ * 지연은 느낌표. 색(강조색)은 예외인 지연에만 쓰고, 빨강 같은 따로 정한 색은 쓰지 않는다
  */
 function StateMark({ state }: { state: State }) {
   return (
     <svg className="bk-ss-mark" viewBox="0 0 32 32" aria-hidden="true">
       {state === 'done' ? (
-        <circle className="bk-ss-fill" cx="16" cy="16" r="13.25" />
+        <path className="bk-ss-hand" d="M6.5 16.5l6 6L26 9" pathLength={1} />
+      ) : state === 'late' ? (
+        <path className="bk-ss-hand" d="M16 6.5v12.5M16 25v.5" pathLength={1} />
       ) : (
         <>
-          <circle className="bk-ss-ring" cx="16" cy="16" r="12" />
-          {state === 'doing' && <path className="bk-ss-fill" d="M16 4a12 12 0 0 1 0 24z" />}
-          {state === 'late' && <path className="bk-ss-hand" d="M16 9.5V16h5.5" />}
+          <path className="bk-ss-track" d="M4 16h24" pathLength={1} />
+          {state === 'doing' && <path className="bk-ss-bar" d="M4 16h12" pathLength={1} />}
         </>
       )}
     </svg>

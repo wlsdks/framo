@@ -55,7 +55,7 @@
 }
 
 /* 상태 색은 예외(늦음)에만: 완료를 초록 원, 늦음을 빨간 원으로 모두 칠하던 때는 장이 신호등처럼 시끄러웠다(사용자).
-   완료와 진행 중은 옅은 글자색, 표시는 칠한 원 대신 획만(체크, 느낌표), 진행 중은 반쯤 찬 고리 그대로 */
+   완료와 진행 중은 옅은 글자색, 표시는 원 없이 획만(체크, 반만 칠한 띠, 가는 선, 느낌표: Checks.tsx) */
 .bk-ck-row.is-done {
   --ck-c: var(--ink-3);
 }
@@ -74,18 +74,17 @@
   height: 40px;
 }
 
-.bk-ck-ring {
+/* 가는 선(예정의 전부, 진행 중의 바탕)과 반만 칠한 띠(진행 중) */
+.bk-ck-track {
   fill: none;
   stroke: var(--ck-c);
-  stroke-width: 2.5;
+  stroke-width: 1.5;
 }
 
-.bk-ck-fill {
-  fill: var(--ck-c);
-}
-
-.bk-ck-row:is(.is-done, .is-late) .bk-ck-fill {
+.bk-ck-bar {
   fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 6;
 }
 
 .bk-ck-glyph {

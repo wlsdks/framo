@@ -1,7 +1,7 @@
 /* ---------- 상태 ----------
    상태 표시와 이름 한 줄, 그 아래 할 일(본문 크기, 글자색)과 언제·누가(--ink-3). 상태는 색이 아니라 꼴로 가른다:
-   완료는 꽉 찬 글자색 원, 진행 중은 오른쪽 반이 찬 글자색 원, 예정은 빈 옅은 고리(--ink-3),
-   지연은 강조색 고리에 시계 바늘과 강조색 이름(예외만 색으로). 준비 상황처럼 좋음·나쁨 색(초록, 빨강)으로 가르지 않는다: 작은 칸 여럿이 각자 색을 띠면
+   완료는 체크 한 획, 진행 중은 가는 선 위에 반만 칠한 띠, 예정은 가는 선만(--ink-3), 지연은 강조색 느낌표와 강조색 이름
+   (예외만 색으로). 원 기호는 흔한 아이콘처럼 보여 쓰지 않는다(Status.tsx). 준비 상황처럼 좋음·나쁨 색(초록, 빨강)으로 가르지 않는다: 작은 칸 여럿이 각자 색을 띠면
    장이 신호등처럼 시끄럽고, 강조색을 바꾸면 진행 중과 완료가 같은 색이 되기도 했다. 상태 이름은 표시 옆에 늘 글로 적는다 */
 
 .bk-ss {
@@ -50,14 +50,16 @@
   height: 1.15em;
 }
 
-.bk-ss-ring {
+.bk-ss-track {
   fill: none;
   stroke: var(--ss-c);
-  stroke-width: 2.5;
+  stroke-width: 1.5;
 }
 
-.bk-ss-fill {
-  fill: var(--ss-c);
+.bk-ss-bar {
+  fill: none;
+  stroke: var(--ss-c);
+  stroke-width: 6;
 }
 
 .bk-ss-hand {
@@ -65,7 +67,7 @@
   stroke: var(--ss-c);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.5;
+  stroke-width: 3;
 }
 
 .bk-ss-w {

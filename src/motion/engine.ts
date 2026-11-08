@@ -1568,7 +1568,10 @@ export function motionEngine(): MotionEngine {
           items('.bk-ck-row', 200, (el, at) => {
             ruled(el, at)
             rise(el.querySelector('.bk-ck-text'), at, L.y * 0.4)
-            pop(el.querySelector('.bk-ck-mark'), at + 140)
+            // 표시는 획으로 그어 나간다(체크, 띠, 느낌표: Checks.tsx의 길이 1인 획)
+            el.querySelectorAll('.bk-ck-mark path').forEach((path, k) =>
+              run(anims, path, [{ strokeDasharray: '0 1' }, { strokeDasharray: '1 0' }], s(at + 140 + k * 120), { easing: OUT, duration: d(380) }),
+            )
             fade(el.querySelector('.bk-ck-s'), at + 220, 400)
           })
           break
@@ -2452,21 +2455,22 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'range': {
-          // 눈금이 먼저 깔리고, 범위 띠가 제 가운데에서 양쪽으로 열리며 양 끝 값이 따라 나온다. 표시 고리는 띠가 다 열릴 즈음 위에서 내려앉는다
+          // 눈금이 먼저 깔리고, 범위 띠가 제 가운데에서 양쪽으로 열리며 양 끝 값이 따라 나온다. 표시 눈금은 띠가 다 열릴 즈음 띠를 가로질러 선다
           fade(one('.bk-rn-l'), 60, 500)
           fade(one('.bk-rn-fig'), 100, 300)
           const band = one('.bk-rn-band')
           if (band) run(anims, band, [{ scale: '0 1', transformOrigin: 'center' }, { scale: '1 1', transformOrigin: 'center' }], s(160), L.grow)
           rise(one('.bk-rn-ends'), 220, L.y * 0.4)
           const mark = one('.bk-rn-mark')
-          if (mark) run(anims, mark, [{ opacity: 0, translate: `0 ${-L.y * 0.8}px` }], s(520), L.pop)
+          if (mark) run(anims, mark, [{ opacity: 0, scale: '1 0' }], s(520), { easing: OUT, duration: d(380) })
           fade(one('.bk-rn-mk'), 640, 400)
           fade(one('.bk-rn-n'), 700, 500)
           break
         }
         case 'status':
           // 상태 표시가 먼저 맺히고(상태가 이 컴포넌트의 답) 이름이 뒤따른다. 할 일은 그 아래에서 올라온다
-          pop(one('.bk-ss-mark'), 80)
+          for (const [k, path] of $('.bk-ss-mark path').entries())
+            run(anims, path, [{ strokeDasharray: '0 1' }, { strokeDasharray: '1 0' }], s(80 + k * 120), { easing: OUT, duration: d(380) })
           fade(one('.bk-ss-name'), 160, 400)
           rise(one('.bk-ss-w'), 220, L.y * 0.4)
           fade(one('.bk-ss-m'), 420, 500)

@@ -82,17 +82,18 @@
   background: var(--accent);
 }
 
-/* 표시: 바탕색으로 속을 채운 글자색 고리. 띠 위에 있어도 띠 밖에 있어도 같은 꼴로 읽힌다 */
+/* 표시: 띠를 가로지르는 글자색 세로 눈금(띠보다 위아래로 6px씩 길게). 바탕색 틈을 양옆에 둬 띠 위에서도 끊어져 읽힌다.
+   속을 채운 고리는 흔한 슬라이더 손잡이처럼 보였다(사용자). 단계 표시, 일정의 눈금과 같은 말투다 */
 .bk-rn-mark {
   position: absolute;
   top: 0;
-  left: calc(var(--m) * 1% - 12px);
-  box-sizing: border-box;
-  width: 24px;
+  left: calc(var(--m) * 1% - 2px);
+  width: 4px;
   height: 24px;
-  border: 4px solid var(--ink);
-  border-radius: 50%;
-  background: var(--bg);
+  background: var(--ink);
+  box-shadow:
+    -3px 0 0 var(--bg),
+    3px 0 0 var(--bg);
 }
 
 .bk-rn-mk {
