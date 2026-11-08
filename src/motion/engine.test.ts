@@ -218,7 +218,7 @@ describe('움직임 엔진', () => {
     // 앞 장이 사라지기 전에 값을 읽고, 짝에게 넘기고, play가 옮긴다
     expect(src.slice(src.indexOf('function nameFrom('), src.indexOf('function pairUp('))).toMatch(/readValues\(el\)/)
     expect(src.slice(src.indexOf('function pairUp('), src.indexOf('function swap('))).toMatch(/carried\.set\(/)
-    expect(src).toMatch(/carry\(el, was\)/)
+    expect(src).toMatch(/carry\(el, was, /)
     // 움직이지 않을 때(움직임 없음, 동작 줄이기)는 옮기지 않는다
     const at = src.indexOf('const carry = (')
     expect(at).toBeGreaterThan(0)
@@ -231,8 +231,11 @@ describe('움직임 엔진', () => {
     const carry = src.slice(at, src.indexOf('stops.push(end)', at))
     expect(carry).toMatch(/const fit = /)
     expect(carry).toMatch(/curve\(EASE\.out\)/)
-    // 누르고 곧 떠난다(0.3초 넘게 가만히 있지 않게)
-    expect(Number(/delay: (\d+),\s*easing: ["']linear["']/.exec(carry)?.[1])).toBeLessThanOrEqual(100)
+    // 누르고 곧 떠난다(0.3초 넘게 가만히 있지 않게). 차트가 둘이면 이끄는 차트 다음 것은 한 박자(0.1~0.15초) 뒤에
+    expect(Number(/delay: (\d+)(?: \+ lag)?,\s*easing: ["']linear["']/.exec(carry)?.[1])).toBeLessThanOrEqual(100)
+    const lag = Number(/\? d\((\d+)\) : 0\)/.exec(src)?.[1])
+    expect(lag * 0.8).toBeGreaterThanOrEqual(100)
+    expect(lag * 1.1).toBeLessThanOrEqual(150)
     // 크게 뛰어 다시 자라는 짝은 바닥(0)까지 내리지 않고 두 박자로: 잣대 먼저(늘 때) 또는 값 먼저(줄 때)
     expect(carry).toMatch(/const regrowAt = /)
     expect(carry).toMatch(/beats: \(wider\)/)

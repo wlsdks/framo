@@ -830,7 +830,7 @@ export function motionEngine(): MotionEngine {
      * 값이 옮겨 가는 짝은 앞 모습과 새 모습을 겹쳐 흐리지 않고 바로 바꿔 낀다(swap의 instant): 새 모습이 처음에 앞 값 그대로라 같은 그림이고,
      * 넘어가는 일은 값의 움직임이 맡는다. 겹쳐 흐리던 때는 생동감에서 넘긴 직후 옛 선과 옛 숫자가 옅게 남았다. 끝나면 글과 값을 원래 문자열 그대로 돌려 둔다
      */
-    const carry = (el: HTMLElement, was: Values) => {
+    const carry = (el: HTMLElement, was: Values, lag = 0) => {
       // 값을 옮기지 않으면 짝은 예전처럼 겹쳐 바꿔 낀다(바로 바꿔 끼울 까닭이 없다)
       const keep = () => {
         const i = instant.indexOf(el.style.getPropertyValue('view-transition-name'))
@@ -1186,7 +1186,7 @@ export function motionEngine(): MotionEngine {
           },
         }
       }
-      const clock = el.animate([], { duration: d(1100), delay: 60, easing: 'linear' })
+      const clock = el.animate([], { duration: d(1100), delay: 60 + lag, easing: 'linear' })
       anims.push(clock)
       const apply = (raw: number) => {
         const t = tick(raw)
@@ -4196,10 +4196,17 @@ export function motionEngine(): MotionEngine {
       // 장면은 모아 둔 쓰기를 한 뒤에 다시 짠다: 나눈 낱말이 장 안에 있어야 어느 묶음의 움직임인지 안다
       flushJobs()
       if (after) after()
-      // 이어 움직이기로 옮겨 온 짝: 값이 바뀌었으면 앞 장의 값에서 새 값으로
-      carried.forEach((was, el) => {
-        if (slide.contains(el)) carry(el, was)
-      })
+      // 이어 움직이기로 옮겨 온 짝: 값이 바뀌었으면 앞 장의 값에서 새 값으로. 값이 바뀌는 차트가 둘 넘으면 이끄는 차트(강조한 것이 있는 것,
+      // 없으면 읽는 차례로 첫 것)가 먼저 떠나고, 나머지는 한 박자(0.1~0.15초) 뒤에: 같이 떠나면 막대와 선이 같은 무게로 눈을 나눠 가졌다
+      // (5차 감성 검수, MOTION.md 기준 2 '초점은 한 번에 하나')
+      const mine = Array.from(carried).filter(([el]) => slide.contains(el))
+      const charts = mine
+        .filter(([, was]) => Array.from(was.values()).some((v) => Object.keys(v.vars).length > 0 || Object.keys(v.attrs).length > 0))
+        .map(([el]) => ({ el, r: el.getBoundingClientRect() }))
+        .sort((a, b) => Math.round(a.r.top / 40) - Math.round(b.r.top / 40) || a.r.left - b.r.left)
+        .map((c) => c.el)
+      const lead = charts.find((el) => el.querySelector('.is-hl')) ?? charts[0]
+      mine.forEach(([el, was]) => carry(el, was, charts.length > 1 && el !== lead && charts.indexOf(el) >= 0 ? d(135) : 0))
       carried.clear()
     })
 
