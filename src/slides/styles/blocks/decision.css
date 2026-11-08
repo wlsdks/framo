@@ -7,14 +7,17 @@
   gap: var(--bk-col-gap);
   align-content: start;
   align-items: center;
-  height: 100%;
+  /* 높이는 내용만큼: 칸 높이를 다 채우면(예전 height: 100%) 쌓기가 칸이 꽉 찼다고 보아, 판을 혼자 쓰는 갈림길이 글을 키우지도
+     눈높이로 내리지도 않고 장 위에 작게 붙은 채 아래가 통째로 비었다(사용자: 공백이 너무 크고 위에만 작게) */
 }
 
 .bk-dc-list {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-  column-gap: 32px;
+  /* 갈래 이름(있음, 없음처럼 짧다)은 제 너비만, 남는 너비는 할 일이: 몫(0.85fr)으로 나누면 짧은 갈래 이름 뒤가 길게 비어
+     할 일이 장 오른쪽 끝으로 밀려났다 */
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  column-gap: calc(48px * var(--bk-fit, 1));
 }
 
 .bk-dc-label {
