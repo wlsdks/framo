@@ -81,7 +81,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 | `server/` | 로컬 서버, AI 공유 창구, ‘AI에게 부탁’으로 Claude Code 띄우기(`agent.ts`), 새 버전 확인과 받기(`update.ts`가 바깥 연결, `updateRoutes.ts`가 창구), CSP |
 | `mcp/` | MCP 서버 |
 | `scripts/`, `launch/` | 묶기, `Framo.exe` 만들기(`exe.mjs`, 아이콘은 `icon.mjs`로 `launch/framo.ico`), 라이선스 확인, 바깥 주소 검사(`offline.mjs`), 쓰지 않는 것 찾기(`unused.mjs`, 소스 읽기는 `readSource.mjs`), 더블클릭 실행 파일 |
-| `.claude/` | Claude Code 하네스. 자주 하는 일의 스킬(`skills/`: 검수 `framo-review`·`framo-verify`, 커밋, 새 컴포넌트, 릴리스, 서브 에이전트, 부탁받은 발표), 감성 검수 리뷰어(`agents/framo-reviewer.md`), 발표 자료가 커밋되지 않게 막는 훅(`hooks/guard-commit.mjs`), 설정(`settings.json`). 개인 설정은 `settings.local.json`(git에서 빠짐). 일하는 방식이 바뀌면 스킬도 같이 고칩니다 |
+| `.claude/` | Claude Code 하네스. 자주 하는 일의 스킬(`skills/`: 검수 `framo-review`·`framo-verify`, 모션 `framo-motion`, 커밋, 새 컴포넌트, 릴리스, 서브 에이전트, 부탁받은 발표), 감성 검수 리뷰어(`agents/framo-reviewer.md`), 발표 자료가 커밋되지 않게 막는 훅(`hooks/guard-commit.mjs`), 설정(`settings.json`). 개인 설정은 `settings.local.json`(git에서 빠짐). 일하는 방식이 바뀌면 스킬도 같이 고칩니다 |
 | `site/` | 홍보 페이지(GitHub Pages, https://wlsdks.github.io/framo/). 바깥 주소에서 아무것도 불러오지 않는 정적 파일(글꼴도 안에 둠, CSP). 새 버전을 올리면 다운로드 구역의 버전, 날짜, 파일 크기도 고칩니다(`scripts/site.test.ts`가 버전을 확인). 고친 뒤 올리기: `git subtree push --prefix site origin gh-pages` |
 
 ## 디자인
@@ -98,7 +98,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 - 슬라이드를 고쳤으면 갤러리에서 세 테마를 직접 보고 확인합니다(`&variants=1`로 모든 모양, `&tone=invert|accent`로 바탕, `&hl=2`로 강조 항목, `&only=bridge,table`로 몇 장만). 화면을 고쳤으면 편집기를 직접 띄워 봅니다.
 - 색을 섞을 때는 `color-mix(in srgb, …)`를 씁니다. oklch로 섞으면 회녹색이 분홍빛으로, 색상이 먼 두 색 사이가 주황으로 틀어집니다.
 - **지향은 큰 무대의 발표입니다.** 회사 규모와 상관없이, 큰 회사가 공들여 하는 발표만큼 멋지게 보여야 합니다. 한 장에 한 메시지, 글보다 숫자와 그림이 말하고, 모션이 그 내용을 말합니다(데이터가 건너가고, 갈라지고, 모이고, 맞춰진다). 제목 아래 점 목록, 글로 채운 두 단 비교, 상자와 화살표 도형, 칸마다 선을 그은 표 같은 예전 보고서 모양은 기본으로 삼지 않습니다(필요하면 고를 수는 있게). 새 컴포넌트와 프레임 잡기의 구성도 이 기준으로 봅니다. 보고 자리라 결론부터(표지의 결정 요청, 한 장 요약), 숫자는 크게, 장식은 적게는 그대로입니다.
-- 발표할 때의 움직임은 `src/motion/engine.ts` 하나로 앱과 내보낸 HTML이 같이 씁니다. 새 레이아웃은 연출표에 넣습니다. 다른 사이트나 라이브러리의 모션 코드를 옮기지 않습니다([docs/MOTION.md](docs/MOTION.md)).
+- 발표할 때의 움직임은 `src/motion/engine.ts` 하나로 앱과 내보낸 HTML이 같이 씁니다. 새 레이아웃은 연출표에 넣습니다. 다른 사이트나 라이브러리의 모션 코드를 옮기지 않습니다([docs/MOTION.md](docs/MOTION.md)). 움직임을 짜거나 고치거나 검토할 때는 MOTION.md 맨 앞의 ‘기준’(움직임마다 뜻, 한 박자에 초점 하나, 장의 말에 맞는 움직임)을 따르고, 순서와 점검표는 `/framo-motion`입니다.
 - 발표자 화면은 창 두 개(발표 화면, 발표자 화면)를 BroadcastChannel로 잇습니다(`src/present/link.ts`). 어느 창에서 넘겨도 같이 움직여야 합니다.
 
 ## 윈도우

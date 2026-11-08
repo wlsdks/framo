@@ -24,7 +24,7 @@ npm run typecheck && npm test
 |---|---|---|
 | 부품(컴포넌트)이나 그 CSS, `fitBlocks.ts` | 조합 seed 1~4의 모든 장을 두 테마, 명조, 큰 글자로. 바꾼 부품은 혼자일 때와 옆에 다른 부품이 있을 때 | `npm run look -- check` (기본: seed 1~4 × white·navy·serif), `npm run look -- check --large`. 높이를 바꿨으면 `#/gallery?set=blocks`에서 다시 잰다(`src/screens/measureBlocks.ts` 맨 위) |
 | 레이아웃 | 모든 모양(`&variants=1`)을 두 테마와 명조로 | `npm run look -- frame --only <레이아웃 id>` |
-| 모션(`src/motion/`) | 바꾼 장의 필름 띠: `npm run look -- film "<갤러리 주소>" --slide N --level lively`, 차분하게도. 내보낸 HTML에서도 한 번 | `npx vitest run src/motion` |
+| 모션(`src/motion/`) | 바꾼 장의 필름 띠: `npm run look -- film "<갤러리 주소>" --slide N --level lively`, 차분하게도, 흰·검은 테마 둘 다. 찍는 법과 점검표는 `/framo-motion`, 감성은 `/framo-review`의 ‘모션 비평’. 장면, 장 넘기기, 내보낸 HTML은 필름으로 찍지 못하니 사람에게 확인을 부탁한다 | `npx vitest run src/motion` |
 | 화면(`src/screens/`, `src/styles/`) | 1280×600, 1366×650, 1536×730(`--scrollbars`), 1920×1080. 처음 쓰는 사람의 흐름을 끝까지 | 가로 스크롤 없음 |
 | 저장, 버전 | 만들다 탭을 닫고 다시 열기, 버전 되돌리기를 직접 | `npx vitest run src/store` |
 | AI 공유, 제안, MCP | AI가 보는 모양에 사람이 쓴 글이 없는지 | `npx vitest run src/ai mcp` (빌드 후 MCP 서버를 실제로 띄운다) |
