@@ -365,10 +365,13 @@ export function motionEngine(): MotionEngine {
   /**
    * 숫자를 자리마다 굴려서 맞춘다(주행 거리계처럼). 숫자가 하나만 있는 칸만, countUp과 같은 조건.
    * 제자리 숫자는 투명하게 남겨 줄과 폭을 그대로 지키고, 자리마다 그 글자 상자와 같은 크기의 창을 덮어
-   * 0부터 그 숫자까지(한 바퀴 더) 굴린다. 왼쪽 자리부터 차례로 멈춘다. 다 굴러가면 창을 걷고 원래 글자로.
+   * 0부터 그 숫자까지 곧장 굴린다. 모든 자리가 같은 시간, 같은 곡선으로 굴러 함께 멈춘다. 다 굴러가면 창을 걷고 원래 글자로.
+   * 자리마다 0에서 제 숫자까지만 가므로 보이는 값은 끝 값을 넘지 않고 늘기만 한다(자리마다 굴린 몫을 더하면 끝 값 × 곡선).
+   * 예전에는 자리마다 한 바퀴 더 돌고 왼쪽부터 차례로 멈춰서, 38%가 되기 전에 97%, 12,000이 되기 전에 22,222가 보였다(사용자).
+   * easing을 그 값의 그림(비율 고리, 목표 막대)과 같은 시간, 같은 곡선으로 주면 숫자와 그림이 같이 움직인다.
    * 글자 상자를 잴 수 없으면(안 보이는 칸) false를 돌려준다. 그때는 0부터 올리기로.
    */
-  function roll(el: Element, at: number, duration: number, anims: Animation[], restores: (() => void)[], nth = 0) {
+  function roll(el: Element, at: number, duration: number, anims: Animation[], restores: (() => void)[], nth = 0, easing: string = EASE.reveal) {
     // 숫자가 든 nth째 글 조각. 숫자가 둘인 값('3시간 30분')은 숫자마다 조각이 나뉘어 조각마다 굴린다(play의 count)
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
     let node = walker.nextNode() as Text | null
@@ -444,7 +447,6 @@ export function motionEngine(): MotionEngine {
         if (lost) return
         const was = pace
         pace = speed
-        const n = cells.length
         cells.forEach((c, i) => {
           const b = boxes[i]
           const h = heights[i]
@@ -452,9 +454,9 @@ export function motionEngine(): MotionEngine {
           const strip = document.createElement('span')
           strip.className = 'mo-odr'
           const seq: string[] = []
-          // 0부터 한 바퀴(0~9) 돈 뒤 그 숫자에서 멈춘다. 마지막 칸이 꼭 그 숫자여야 한다(9 + digit까지만 넣으면 하나 모자라
-          // 3.7에서 멈췄다가 원래 글자로 돌아올 때 4.8로 튄다)
-          for (let d = 0; d <= 10 + digit; d++) seq.push(String(d % 10))
+          // 0부터 그 숫자까지만. 마지막 칸이 꼭 그 숫자여야 한다(하나 모자라면 멈춘 숫자가 원래 글자로 돌아올 때 튄다).
+          // 한 바퀴 더 돌면 앞자리가 9를 지나 끝 값보다 큰 값이 보였다(맨 위 설명)
+          for (let d = 0; d <= digit; d++) seq.push(String(d))
           const stop = seq.length - 1
           strip.textContent = seq.join('\n')
           strip.style.lineHeight = h + 'px'
@@ -473,11 +475,10 @@ export function motionEngine(): MotionEngine {
           parent.appendChild(cover)
           covers.push(cover)
           c.className = 'mo-odc'
-          // 왼쪽 자리가 먼저 멈추고 오른쪽으로 갈수록 조금씩 늦게
-          const time = duration + (n > 1 ? (i / (n - 1)) * duration * 0.25 : 0)
+          // 모든 자리가 같은 시간, 같은 곡선으로: 자리마다 늦게 멈추면 보이는 값이 그림(고리, 막대)보다 처졌다.
           // 지나쳤다 돌아오지 않는다. 예전 생동감은 끝 숫자를 창 높이의 16%만큼 지나쳤다 돌아왔는데, 녹화해 보니 자리마다
           // 따로 지나쳐서 0.4초쯤 숫자가 들쭉날쭉 어긋나 보였다. 생동감도 같은 감속 곡선으로, 조금 더 길게 굴러 천천히 멈춘다
-          run(anims, strip, [{ translate: `0 ${stop * h}px` }], at, { easing: EASE.reveal, duration: time })
+          run(anims, strip, [{ translate: `0 ${stop * h}px` }], at, { easing, duration })
         })
         pace = was
       },
@@ -691,7 +692,8 @@ export function motionEngine(): MotionEngine {
       for (let node = walker.nextNode(); node; node = walker.nextNode()) if (/\d/.test(node.nodeValue || '')) n++
       return n
     }
-    const count = (el: Element | null, at: number) => {
+    /** match: 같은 값을 그리는 그림(비율 고리, 목표 막대)의 시간과 곡선. 주면 숫자가 그림과 같이 움직인다(roll) */
+    const count = (el: Element | null, at: number, match?: { easing: string; duration: number }) => {
       // 편집 중인 칸의 글자는 바꾸지 않는다 (쓰고 있는 글과 엇갈리지 않게). 옮겨 온 숫자는 다시 굴리지 않는다
       if (!el || still || el.closest('.m-edit, [data-mo-keep]')) return
       // 자리마다 굴린다. 생동감은 조금 더 길게 구른다. 굴릴 수 없는 칸은 0부터 올린다
@@ -702,7 +704,7 @@ export function motionEngine(): MotionEngine {
       // 틀린 수처럼 읽혔다(발표 녹화)
       const small = /^\D*\b([0-9]|1[0-9]|20)\b\D*$/.test(el.textContent || '')
       if (runs === 1 && small) {
-        countUp(el, s(at), (lively ? 900 : 700) * pace, stops, waits)
+        countUp(el, s(at), (match?.duration ?? (lively ? 900 : 700)) * pace, stops, waits)
         return
       }
       if (runs > 1) {
@@ -710,7 +712,7 @@ export function motionEngine(): MotionEngine {
         return
       }
       // 숫자는 장이 나오고 2초 안에 다 멈춘다(녹화해 보니 1.3초씩 굴리면 다음 장으로 넘길 때까지 굴러가고 있었다)
-      if (!roll(el, s(at), lively ? 900 : 800, anims, restores))
+      if (!roll(el, s(at), match?.duration ?? (lively ? 900 : 800), anims, restores, 0, match?.easing))
         countUp(el, s(at), (lively ? 1000 : 800) * pace, stops, waits)
     }
     /**
@@ -809,9 +811,9 @@ export function motionEngine(): MotionEngine {
       })
     }
     /** 감싼 줄이 따로 나타나지 않는 숫자: 올라가기 시작할 때 함께 나타난다. 아직 차례가 아닌 줄에 0이 미리 보이지 않게 */
-    const countIn = (el: Element | null, at: number) => {
+    const countIn = (el: Element | null, at: number, match?: { easing: string; duration: number }) => {
       fade(el, at, 240)
-      count(el, at)
+      count(el, at, match)
     }
     /**
      * 값 이어 움직이기: 이어 움직이기로 짝이 된 것(el) 안의 값을 앞 장의 값(was)에서 지금 값으로 옮긴다. 숫자가 든 글은 앞 값에서 새 값까지
@@ -2077,7 +2079,8 @@ export function motionEngine(): MotionEngine {
         case 'goal':
           fade(one('.bk-gl-l'), 80, 500)
           grow(one('.bk-gl-fill'), 200)
-          countIn(one('.bk-gl-pct'), 200)
+          // 비율 숫자는 막대와 같은 시간, 같은 곡선으로: 숫자가 막대보다 앞서 끝 값에 가 있지 않게
+          countIn(one('.bk-gl-pct'), 200, L.grow)
           fade(one('.bk-gl-of'), 380, 500)
           fade(one('.bk-gl-n'), 520, 500)
           break
@@ -2096,7 +2099,7 @@ export function motionEngine(): MotionEngine {
             run(anims, knob, [{ rotate: '0deg' }], s(160), fill)
             fade(knob, 120, 240)
           }
-          countIn(one('.bk-rg-v'), 160)
+          countIn(one('.bk-rg-v'), 160, fill)
           fade(one('.bk-rg-n'), 640, 500)
           break
         }
