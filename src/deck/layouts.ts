@@ -599,7 +599,6 @@ export const LAYOUTS: Record<LayoutId, LayoutSpec> = {
     variants: [
       { id: 'base', name: '가로 막대' },
       { id: 'columns', name: '세로 막대' },
-      { id: 'dots', name: '점과 선' },
     ],
     highlight: { label: '강조할 막대', fallback: 0 },
     // 단위는 막대마다 되풀이하지 않고 위에 한 번만

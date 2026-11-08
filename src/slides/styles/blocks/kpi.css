@@ -828,7 +828,7 @@
   }
 
   /* 막대 비교(가로): 이름 400px와 숫자 280px가 막대 자리를 없앤다 */
-  :is(.va-base, .va-dots) > .bk-in .br-row {
+  .va-base > .bk-in .br-row {
     grid-template-columns: minmax(0, 34%) minmax(0, 1fr) minmax(0, 24%);
     gap: 28px;
   }

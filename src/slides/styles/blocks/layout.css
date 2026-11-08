@@ -126,11 +126,11 @@
    면의 아래 여백에 그대로 더해져 위 52px, 아래 68px였다. 막대 줄이 가장 높은 높이(168px)에 닿아 남는 높이는 막대 줄 위아래가 아니라
    묶음 위아래로: 막대 줄 안에서 가운데에 두면 단위 줄은 위에 붙은 채 아래만 비었다. 점과 선 모양도 같은 줄이다.
    세로 막대는 막대가 칸 높이를 받아 커져서 그대로 */
-.bk-bars:is(.va-base, .va-dots):is(.bk-look-card, .bk-look-bold) .br-wrap {
+.bk-bars.va-base:is(.bk-look-card, .bk-look-bold) .br-wrap {
   justify-content: safe center;
 }
 
-.bk-bars:is(.va-base, .va-dots):is(.bk-look-card, .bk-look-bold) .br {
+.bk-bars.va-base:is(.bk-look-card, .bk-look-bold) .br {
   flex: 0 1 auto;
   padding-bottom: 0;
 }

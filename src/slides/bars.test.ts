@@ -19,7 +19,7 @@ describe('막대 비교의 값', () => {
   })
 
   it.each([['20건', '10%'], ['20건', '-2건'], ['20건', '미정']])('견줄 수 없는 입력은 글을 남기고 막대와 점을 그리지 않는다: %s', (...values) => {
-    for (const variant of ['base', 'columns', 'dots']) {
+    for (const variant of ['base', 'columns']) {
       const html = render(values, 'final', variant)
       expect(html).not.toContain('class="br-fill"')
       expect(html).not.toContain('class="br-dot"')
