@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { LAYOUTS, PANE_UNIT, panesOf, placeOf, sideOf, variantOf } from '../deck/layouts'
 import { fontOf, footerOf, isDarkLook, motionOf, themeStyle, toneOf, transitionOf } from '../deck/themes'
 import { presentable, type PageInfo } from '../deck/fields'
@@ -11,13 +11,14 @@ import { T } from './fields'
 import { SlideContext, type SlideActions, type SlideMode } from './context'
 import { useHalos } from './halos'
 import { BOLD_LAYOUTS, LAYOUT_VIEWS } from './layouts'
+import { liveAfter, liveBefore } from './liveMotion'
 import { PaneTools } from './panes'
 import { sharedScales, type Scale } from './sharedScale'
 
 export const SLIDE_W = 1920
 export const SLIDE_H = 1080
 
-export interface SlideCanvasProps {
+interface SlideCanvasProps {
   deck: Pick<Deck, 'meta' | 'theme' | 'title' | 'motion'>
   slide: Slide
   mode: SlideMode
@@ -105,6 +106,37 @@ export const SlideCanvas = memo(function SlideCanvas({
   const mark = !bold && page > 0 && footer !== 'none'
   const ref = useRef<HTMLDivElement>(null)
   useHalos(ref, mode === 'edit')
+  // 편집 화면에서 다시 맞춘 자리로 부드럽게 (liveMotion.ts): 레이아웃 장은 여기서, 부품 장의 판은 BlockArea(useFlip)가 한다.
+  // 그리기 전에(아직 옛 모습일 때) 보이는 자리를 재 둔다. 잰 장이 그린 장과 다르면(다른 장으로 넘어갔으면) 움직이지 않는다
+  const live = mode === 'edit' && !solo
+  const compose = given.layout === 'compose'
+  const shown = useRef(given.id)
+  if (live && !compose) liveBefore(ref.current, shown.current)
+  useEffect(() => {
+    const el = ref.current
+    if (!live || !el) return
+    // 글을 쓴 키는 그리기 전에 이미 글이 늘어 아래 항목이 밀려 있다(레이아웃 장은 흐름으로 놓인다). 그래서 키가 들어가기 직전에 잰다.
+    // 부품 장은 판(본문 상자)을 잰다: 장 제목이 두 줄이 되어 판이 낮아질 때도 칸이 옛 자리에서 미끄러진다
+    const before = () => liveBefore(el.querySelector(':scope > .bk-area') ?? el, shown.current)
+    el.addEventListener('beforeinput', before, true)
+    return () => el.removeEventListener('beforeinput', before, true)
+  }, [live])
+  // 쓰는 동안 붙잡아 둔 눈높이와 글자 단계(fitBlocks.ts의 typingIn)는 이 장의 글 칸을 떠나면 놓는다: 다시 맞추고, 바뀐 자리로는
+  // 미끄러진다. Enter나 Esc로 쓰기를 끝내면 바뀐 것이 없어 다시 그리지 않으니 여기서 부른다(부품 장은 BlockArea가 같은 일을 한다)
+  const [, release] = useReducer((n: number) => n + 1, 0)
+  useEffect(() => {
+    const el = ref.current
+    if (!live || compose || !el) return
+    const out = () =>
+      requestAnimationFrame(() => {
+        const a = document.activeElement
+        if (!ref.current || (a?.classList.contains('ed-input') && ref.current.contains(a))) return
+        if (watch.current) watch.current.changed = true
+        release()
+      })
+    el.addEventListener('focusout', out)
+    return () => el.removeEventListener('focusout', out)
+  }, [live, compose])
   // 레이아웃 장의 채움(fitBlocks.ts의 fitLayout): 내용이 본문의 60%에 못 미치면 글자를 단계로 키우고 줄 사이를 넓힌다.
   // 부품 장은 판(BlockArea)이 맞춘다. 글꼴이 늦게 오면 그 전에 잰 값은 대신 쓴 글꼴의 것이라 한 번 더
   // 그릴 때마다 맞추던 때는 쪽 번호만 바뀐 그림(장을 더하거나 빼면 목록의 모든 그림)도 장마다 다시 맞춰서, 느린 PC에서 장 하나를
@@ -148,6 +180,11 @@ export const SlideCanvas = memo(function SlideCanvas({
         if (now?.isConnected && !now.classList.contains('l-compose') && !now.classList.contains('is-solo')) fit(now)
       }),
     )
+  })
+  // 맞춘 뒤: 재 둔 옛 자리에서 새 자리로
+  useLayoutEffect(() => {
+    if (live && !compose) liveAfter(ref.current, given.id)
+    shown.current = given.id
   })
   useLayoutEffect(
     () => () => {

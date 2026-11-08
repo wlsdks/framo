@@ -16,7 +16,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.scripts.json",
     "mcp": "node dist-node/gyeol-mcp.mjs",
-    "licenses": "node scripts/licenses.mjs"
+    "licenses": "node scripts/licenses.mjs",
+    "look": "node scripts/look.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

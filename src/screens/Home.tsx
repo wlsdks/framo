@@ -13,12 +13,12 @@ import { decodeDeckFile, DECK_EXT } from '../store/deckFile'
 import { useDeck } from '../store/deckStore'
 import { listDecks } from '../store/library'
 import { importDeck, persistNow, removeDeck, syncWithFolder, useStorage } from '../store/persist'
-import { Brand, FOLDER_WHY, FolderIcon, Info, Modal, MoreIcon, noticeAfterGo, PlusIcon, Popover, SAVE_HELP, UploadIcon, useToast } from './ui'
+import { Brand, FOLDER_TIP, FOLDER_WHY, FolderIcon, Info, Modal, MoreIcon, noticeAfterGo, PlusIcon, Popover, SAVE_HELP, UploadIcon, useToast } from './ui'
 import { UpdateNote } from './UpdateNote'
 
 const SAMPLE_ID = 'sample'
 
-/** 빈 홈에 보이는 새 발표의 차례. 마법사의 세 단계와 이름을 맞춘다 */
+/** 빈 홈에 보이는 새 발표의 차례. 프레임 잡기의 세 단계와 이름을 맞춘다 */
 const EMPTY_STEPS: [string, string][] = [
   ['발표 종류', '사업 제안, 주간 업무 보고처럼 어떤 자리인지 골라요'],
   ['발표 상황', '듣는 사람과 시간에 맞춰 슬라이드 수가 정해져요'],
@@ -349,7 +349,7 @@ function StorageNote({ hasDecks, onSynced }: { hasDecks: boolean; onSynced: () =
         <span>
           지금은 이 브라우저 안에만 저장해요
           <Info label="보관 폴더 설명" align="start">
-            {FOLDER_WHY} 보관 폴더를 정하면 고칠 때마다 그 폴더에 파일로도 저장되고, 버전 기록도 함께 남아요.
+            {FOLDER_WHY} 보관 폴더를 정하면 고칠 때마다 그 폴더에 파일로도 저장되고, 버전 기록도 함께 남아요. {FOLDER_TIP}
           </Info>
         </span>
         <button type="button" className="btn-link" onClick={() => run(choose)}>

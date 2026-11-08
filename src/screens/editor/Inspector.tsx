@@ -213,7 +213,7 @@ function Optional({ deck, slide }: { deck: Deck; slide: Slide }) {
 function Blanks({ deck, slide, onFocusField, onGoSlide }: { deck: Deck; slide: Slide; onFocusField: (m: Missing) => void; onGoSlide: (slideId: string, m?: Missing) => void }) {
   const missing = missingFields(slide, deck.meta)
   // 이 장을 다 채웠으면 빈칸이 남은 다음 장으로 이어 간다. 예전에는 '모두 채웠어요'에서 멈춰, 처음 쓰는 분은 다음에 무엇을 하면
-  // 되는지 몰랐다(마법사를 마치면 이미 채운 표지가 열린다). 발표에서 뺀 장은 건너뛴다. 끝까지 없으면 앞에서부터 찾는다
+  // 되는지 몰랐다(프레임 잡기를 마치면 이미 채운 표지가 열린다). 발표에서 뺀 장은 건너뛴다. 끝까지 없으면 앞에서부터 찾는다
   const nextSlide = useMemo(() => {
     if (missing.length) return null
     const at = deck.slides.findIndex((s) => s.id === slide.id)

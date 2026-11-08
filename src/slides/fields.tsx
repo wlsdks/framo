@@ -9,6 +9,7 @@ import { keys } from '../lib/keys'
 import { frameRect } from './blockFrame'
 import { useSlide } from './context'
 import { startItemDrag } from './itemDrag'
+import { liveRewrap } from './liveMotion'
 
 /** [a, b]: 글자 수가 a를 넘으면 한 단계, b를 넘으면 두 단계 작게. 길이 기준이라 내보낸 파일에서도 같다. */
 type Fit = [number, number]
@@ -72,7 +73,7 @@ export function splitNumber(text: string): { pre?: string; num: string; unit: st
 }
 
 /** 숫자 하나와 그 뒤의 단위 */
-export interface NumberRun {
+interface NumberRun {
   num: string
   unit: string
 }
@@ -239,7 +240,7 @@ function sameNodes(el: HTMLElement, next: (Node | string)[]): boolean {
 interface FieldProps extends TextProps {
   value: string
   hint: string
-  /** 스크린 리더가 읽는 칸 이름 (labelFor). 없으면 빈칸일 때 안내 문구를 이름으로 */
+  /** 스크린 리더가 읽는 칸 이름 (labelIn). 없으면 빈칸일 때 안내 문구를 이름으로 */
   label?: string
   fieldId: string
   onChange?: (value: string) => void
@@ -389,6 +390,8 @@ function Editable({
           }
           // 쓰는 동안 단위 칸(span) 안팎으로 들어간 글자를 다시 나눈다
           paint(el, v, numeral)
+          // 쓰는 동안 고르게 나누지 않던 줄이 다시 나뉘는 한 번은 겹쳐 바뀌게 (edit.css의 .ed-input:focus)
+          liveRewrap(el)
           // 쓰기를 끝내면 칸 안의 커서와 고른 글을 놓는다. 그대로 두면 쓰지 않는 글 위에 파란 칠이 남고, 이어 친 글자가 초점 없는
           // 그 칸에 들어갔다(Esc나 Enter로 끝낸 뒤 한글로 친 글이 그 칸 끝에 붙어 저장됐다). 창을 떠날 때(다른 프로그램으로)는 두어야 돌아왔을 때 이어 쓴다
           const sel = getSelection()

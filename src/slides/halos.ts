@@ -1,4 +1,5 @@
 import { useLayoutEffect, type RefObject } from 'react'
+import { liveStill } from './liveMotion'
 
 /**
  * 편집할 때 칸마다 두르는 면과 점선(.ed-halo)의 넓이를 칸 사이 틈에 맞춘다.
@@ -38,8 +39,15 @@ interface Box {
   f: [number, number, number, number]
 }
 
-/** 이 안의 편집 칸(.ed)마다 --ed-t, --ed-r, --ed-b, --ed-l을 정한다. 다 정한 칸 상자를 돌려준다 (점검용) */
+/**
+ * 이 안의 편집 칸(.ed)마다 --ed-t, --ed-r, --ed-b, --ed-l을 정한다. 다 정한 칸 상자를 돌려준다 (점검용).
+ * 칸과 항목이 다시 맞춘 자리로 미끄러지는 중이면(liveMotion.ts) 끝자리로 잰다: 칸마다 옮겨 보이는 몫이 달라 틈을 잘못 잰다
+ */
 export function placeHalos(slide: HTMLElement): Box[] {
+  return liveStill(slide, () => placeHalosNow(slide))
+}
+
+function placeHalosNow(slide: HTMLElement): Box[] {
   const s = slide.getBoundingClientRect()
   // 편집 화면은 장을 줄여 그린다. 캔버스 px로 바꿔 잰다
   const k = slide.offsetWidth ? s.width / slide.offsetWidth : 1
@@ -192,7 +200,8 @@ function refitGlyph(ed: HTMLElement) {
     glyphRaf = 0
     const eds = [...glyphQueue].filter((e) => e.isConnected)
     glyphQueue.clear()
-    const vs = eds.map(readGlyph)
+    // 글 칸이 옛 크기에서 줄거나 커지는 중이면(liveMotion.ts) 끝 모습으로 잰다
+    const vs = eds.map((e) => liveStill(e.closest('.slide') ?? e, () => readGlyph(e)))
     eds.forEach((e, i) => writeGlyph(e, vs[i]))
   })
 }

@@ -10,7 +10,7 @@ export const decide: Blueprint = {
   storyline: ['배경', '안 비교', '평가', '결정'],
   showcase: ['지금의 불편', '안 비교', '기준별 평가', '결정 요청'],
   defaultTitle: '검토 보고',
-  // 마법사에서 먼저 골라 둘 값: 안을 고르는 윗분께 비교만 짧게
+  // 프레임 잡기에서 먼저 골라 둘 값: 안을 고르는 윗분께 비교만 짧게
   defaults: { audience: 'exec', minutes: 10 },
   examples: { title: '협업 도구 도입 검토', ask: '협업 도구 B안 도입 승인' },
   recipes: [

@@ -36,12 +36,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
-        node: ['22.13', '24']
+        # 지원하는 두 LTS의 최신 판(보안 수정판 포함)에서 검수한다. 예전 판(22.13)에 묶어 두면 알려진 취약점이 있는 Node로만 돌았다
+        node: ['22', '24']
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -62,8 +63,8 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
           cache: npm
@@ -196,7 +197,7 @@ jobs:
       # 켜 보기를 다 마친 zip만 릴리스에 붙인다. 따로 묶은 zip을 붙이면 켜 본 것과 올린 것이 다르다
       - name: 릴리스에 붙일 zip 남기기
         if: inputs.release
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gyeol-windows
           path: release/gyeol-windows.zip
@@ -205,7 +206,7 @@ jobs:
 
       - name: 윈도우에서 찍은 화면 남기기
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-screens
           path: ci-shots

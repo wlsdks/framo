@@ -3,7 +3,7 @@
 import { numberUnits } from './fields'
 import { type Amount, formatNumber, readAmount } from './numbers'
 
-export type CalcOp = '×' | '÷' | '+' | '−'
+type CalcOp = '×' | '÷' | '+' | '−'
 
 const OPS: [RegExp, CalcOp][] = [
   [/^(?:[x×X✕*＊]|곱하기)$/, '×'],

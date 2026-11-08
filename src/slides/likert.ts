@@ -1,8 +1,8 @@
 // 설문 결과(likert) 부품의 셈: 답의 단계, 질문마다의 몫(합 100), 모든 질문이 같이 쓰는 가운데 선. 그리기는 blocks/Likert.tsx
 
 /** 단계 수의 범위: 둘(아니다, 그렇다)부터 일곱까지. 그보다 많으면 칸이 좁아 몫을 읽을 수 없다 */
-export const LIKERT_MIN = 2
-export const LIKERT_MAX = 7
+const LIKERT_MIN = 2
+const LIKERT_MAX = 7
 
 /** 단계 이름을 비웠을 때의 흔한 이름 (부정에서 긍정 차례) */
 const DEFAULT_NAMES: Record<number, string[]> = {
@@ -70,7 +70,7 @@ export function likertSides(levels: number): LikertSide[] {
   return Array.from({ length: levels }, (_, i) => (i < half ? 'neg' : levels % 2 && i === half ? 'neu' : 'pos'))
 }
 
-export type LikertRow = { shares: number[]; neg: number; neu: number; pos: number }
+type LikertRow = { shares: number[]; neg: number; neu: number; pos: number }
 
 /**
  * 한 질문의 몫: 단계마다 적은 값을 합 100으로 맞춘 것(비율로 적어도, 응답 수로 적어도 된다)과 부정, 보통, 긍정의 합.

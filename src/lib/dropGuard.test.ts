@@ -17,7 +17,7 @@ const run = (e: ReturnType<typeof drag>) => guardFileDrop(e as unknown as DragEv
 
 describe('받는 곳이 없는 데 떨어뜨린 파일', () => {
   it('창이 그 파일로 넘어가지 않게 막고, 놓을 수 없다고 보인다', () => {
-    // 홈, 마법사, 발표 화면에 파일을 떨어뜨리면 앱 창이 그 파일(.deck, 이미지)로 넘어가 화면이 사라졌다
+    // 홈, 프레임 잡기, 발표 화면에 파일을 떨어뜨리면 앱 창이 그 파일(.deck, 이미지)로 넘어가 화면이 사라졌다
     const e = drag(['Files'])
     run(e)
     expect(e.defaultPrevented).toBe(true)

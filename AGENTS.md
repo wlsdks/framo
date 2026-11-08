@@ -8,7 +8,8 @@
 
 PPT로 하던 발표를 HTML로 만드는 도구입니다. 회사 발표에만 쓰는 것이 아니라서 화면과 홍보 페이지에서 ‘회사 발표’로 못 박지 않습니다. 팀장, 본부장께 결정을 받는 보고(사업 제안, 개선 제안, 계획)만이 아니라 주간 업무 보고, 결과·장애 보고, 프로젝트 착수, 지식 공유, 팀 소개처럼 동료나 다른 부서 앞에서 하는 발표도 다룹니다. 어느 한 직무(영업 같은)를 위한 도구가 아니라서, 설명과 안내 문구, 예시도 한 직무에 치우치지 않게 씁니다.
 
-- 쓰는 사람은 대부분 **비개발자**입니다. 설명 없이 쓸 수 있어야 합니다.
+- **가장 먼저 지킬 가치는 쓰기 쉬움입니다.** 아무리 잘 만들어도 쓰기 어려우면 쓰지 않습니다. 쓰는 사람은 대부분 **비개발자**라 설명 없이 쓸 수 있어야 하고, AI(Claude Code, Codex)가 MCP로 다룰 때도 쉬워야 합니다(도구 이름과 설명, 오류 문구, 카탈로그 크기). 만들다 그냥 창을 닫아도 잃는 것이 없어야 합니다: 고칠 때마다 자동 저장, 자동 버전(`src/store/autosave.ts`, `src/store/versions.ts`). 새 기능은 '처음 쓰는 사람이 누구에게 묻지 않고 해낼 수 있나'로 먼저 봅니다.
+- **유지보수하기 쉽게 둡니다.** 코드는 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)의 층(클린 아키텍처: 가운데의 발표 모델은 화면, 저장, 바깥을 모른다)을 따르고, 쓰지 않는 코드와 쓰지 않는 의존성은 0에 가깝게 유지합니다. 작업할 때마다 그 작업으로 쓰지 않게 된 것(함수, 내보내기, 파일, CSS, 주석, 패키지)까지 지웁니다.
 - 발표 종류와 듣는 사람, 시간을 고르면 구성(장 순서, 레이아웃, 칸마다 안내)이 잡히고, 사람은 내용만 채웁니다. 종류와 듣는 사람은 `src/deck/blueprints.ts`(`DECK_GROUPS`, `AUDIENCES`)에 있습니다.
 - **개인 PC에서 `127.0.0.1`로만** 띄웁니다. 크롬과 엣지만 지원합니다.
 - 쓰는 사람 대부분은 **윈도우**입니다. 개발과 기능 테스트는 맥에서 하므로, 맥에서 볼 때도 윈도우 조건을 떠올립니다(아래 ‘윈도우’).
@@ -42,6 +43,7 @@ PPT로 하던 발표를 HTML로 만드는 도구입니다. 회사 발표에만 �
 6. **의존성은 사내에서 써도 되는 오픈소스만.**
    - 넣기 전에 `npm run licenses`를 돌리고 [docs/OPEN-SOURCE.md](docs/OPEN-SOURCE.md)를 고칩니다.
    - 서버와 MCP 서버는 Node 내장 기능만 씁니다. 화면도 의존성을 늘리지 않는 쪽을 먼저 찾습니다.
+   - 바깥 자료(디자인, 모션, 데모, 영상)는 기법과 원리만 보고 처음부터 직접 만듭니다. 코드, 프롬프트, 그림, 영상, 값을 옮기거나 한 작품을 그대로 다시 만들지 않습니다. 허용하는 라이선스(MIT 등)의 코드도 조각째 가져오지 않고 모두 직접 짭니다([docs/OPEN-SOURCE.md](docs/OPEN-SOURCE.md)의 '공개 자료를 참고할 때의 원칙').
 
 ## 명령
 
@@ -54,6 +56,7 @@ npm run build        # dist/(화면) + dist-node/(로컬 서버, MCP 서버)
 npm start            # http://127.0.0.1:41580
 npm run mcp          # MCP 서버를 직접 띄우기 (보통은 Claude Code, Codex가 띄움)
 npm run licenses     # 라이선스 확인
+npm run look -- shot|check|frame|film …  # 창 없는 크롬으로 화면 찍기, 조합·틀 검사, 모션 필름 띠(개발 서버가 떠 있을 때, scripts/look.mjs)
 npm run pack         # 나눠 줄 폴더와 zip (release/)
 # 릴리스: package.json의 version을 올려 커밋한 뒤 git tag vX.Y.Z && git push origin vX.Y.Z
 #   → .github/workflows/release.yml이 검수 후 zip 둘과 SHA256SUMS.txt를 GitHub 릴리스에 올린다
@@ -71,13 +74,14 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 |---|---|
 | `src/deck/` | 데이터 모델(`types.ts`), 보고 종류별 구성(`blueprints.ts`, 종류 하나는 `blueprints/<id>.ts`), 레이아웃 정의와 묶음(`layouts.ts`), 부품과 자리 규칙(`blocks/`, 한 곳에서 내보내는 것은 `blocks.ts`), 구성 만들기(`generate.ts`), 편집기와 AI 제안이 같이 쓰는 항목 수·레이아웃 바꾸기(`edits.ts`), 예시 발표(`sample.ts`), 레이아웃별 예시 장(`showcase.ts`) |
 | `src/slides/` | 슬라이드 그리기(`layouts.tsx`가 `layouts/`의 레이아웃별 파일을 모은다), 부품 장(`blocks.tsx`, 부품 장만의 부품은 `blocks/`의 부품별 파일), 슬라이드 디자인(`slides.css`가 `styles/`의 레이아웃별 파일을, `blocks.css`가 `styles/blocks/`의 부품별 파일을 차례대로 묶는다), 편집 표시(`edit.css`) |
-| `src/screens/` | 홈, 마법사, 편집기(`editor/`), 발표 화면, 장 모음(`System.tsx`, 디자인 시스템) |
+| `src/screens/` | 홈, 프레임 잡기, 편집기(`editor/`), 발표 화면, 장 모음(`System.tsx`, 디자인 시스템) |
 | `src/store/` | 편집 상태(zustand), 저장(IndexedDB + 보관 폴더), 버전 |
 | `src/export/` | HTML 내보내기와 뷰어 |
 | `src/ai/` | 모양(`share.ts`), 제안(`ops.ts`), 고르는 부탁(`asks.ts`), 로컬 서버와 이야기하는 곳(`client.ts`, `useAiShare.ts`, `useAiAsk.ts`) |
 | `server/` | 로컬 서버, AI 공유 창구, ‘AI에게 부탁’으로 Claude Code 띄우기(`agent.ts`), 새 버전 확인과 받기(`update.ts`가 바깥 연결, `updateRoutes.ts`가 창구), CSP |
 | `mcp/` | MCP 서버 |
-| `scripts/`, `launch/` | 묶기, `Framo.exe` 만들기(`exe.mjs`, 아이콘은 `icon.mjs`로 `launch/framo.ico`), 라이선스 확인, 바깥 주소 검사(`offline.mjs`), 더블클릭 실행 파일 |
+| `scripts/`, `launch/` | 묶기, `Framo.exe` 만들기(`exe.mjs`, 아이콘은 `icon.mjs`로 `launch/framo.ico`), 라이선스 확인, 바깥 주소 검사(`offline.mjs`), 쓰지 않는 것 찾기(`unused.mjs`, 소스 읽기는 `readSource.mjs`), 더블클릭 실행 파일 |
+| `.claude/` | Claude Code 하네스. 자주 하는 일의 스킬(`skills/`: 검수 `framo-review`·`framo-verify`, 커밋, 새 컴포넌트, 릴리스, 서브 에이전트, 부탁받은 발표), 감성 검수 리뷰어(`agents/framo-reviewer.md`), 발표 자료가 커밋되지 않게 막는 훅(`hooks/guard-commit.mjs`), 설정(`settings.json`). 개인 설정은 `settings.local.json`(git에서 빠짐). 일하는 방식이 바뀌면 스킬도 같이 고칩니다 |
 | `site/` | 홍보 페이지(GitHub Pages, https://wlsdks.github.io/framo/). 바깥 주소에서 아무것도 불러오지 않는 정적 파일(글꼴도 안에 둠, CSP). 새 버전을 올리면 다운로드 구역의 버전, 날짜, 파일 크기도 고칩니다(`scripts/site.test.ts`가 버전을 확인). 고친 뒤 올리기: `git subtree push --prefix site origin gh-pages` |
 
 ## 디자인
@@ -93,7 +97,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 - 부품 장으로 바꾸기(`composeFrom`)는 글을 하나도 잃으면 안 됩니다(`blocks.test.ts`가 모든 레이아웃을 확인).
 - 슬라이드를 고쳤으면 갤러리에서 세 테마를 직접 보고 확인합니다(`&variants=1`로 모든 모양, `&tone=invert|accent`로 바탕, `&hl=2`로 강조 항목, `&only=bridge,table`로 몇 장만). 화면을 고쳤으면 편집기를 직접 띄워 봅니다.
 - 색을 섞을 때는 `color-mix(in srgb, …)`를 씁니다. oklch로 섞으면 회녹색이 분홍빛으로, 색상이 먼 두 색 사이가 주황으로 틀어집니다.
-- 보고용입니다. 결론부터(표지의 결정 요청, 한 장 요약), 숫자는 크게, 장식은 적게.
+- **지향은 큰 무대의 발표입니다.** 회사 규모와 상관없이, 큰 회사가 공들여 하는 발표만큼 멋지게 보여야 합니다. 한 장에 한 메시지, 글보다 숫자와 그림이 말하고, 모션이 그 내용을 말합니다(데이터가 건너가고, 갈라지고, 모이고, 맞춰진다). 제목 아래 점 목록, 글로 채운 두 단 비교, 상자와 화살표 도형, 칸마다 선을 그은 표 같은 예전 보고서 모양은 기본으로 삼지 않습니다(필요하면 고를 수는 있게). 새 컴포넌트와 프레임 잡기의 구성도 이 기준으로 봅니다. 보고 자리라 결론부터(표지의 결정 요청, 한 장 요약), 숫자는 크게, 장식은 적게는 그대로입니다.
 - 발표할 때의 움직임은 `src/motion/engine.ts` 하나로 앱과 내보낸 HTML이 같이 씁니다. 새 레이아웃은 연출표에 넣습니다. 다른 사이트나 라이브러리의 모션 코드를 옮기지 않습니다([docs/MOTION.md](docs/MOTION.md)).
 - 발표자 화면은 창 두 개(발표 화면, 발표자 화면)를 BroadcastChannel로 잇습니다(`src/present/link.ts`). 어느 창에서 넘겨도 같이 움직여야 합니다.
 
@@ -106,7 +110,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 - 배포본은 윈도우용과 맥용 두 가지입니다(`npm run pack`, `release/gyeol-windows.zip`, `release/gyeol-mac.zip`). 윈도우는 `Framo.exe`(Framo 아이콘)를 더블클릭해 켭니다. `Framo.exe`는 Node.js의 단일 실행 파일(SEA)로, 공식 node.exe에 시작 코드(`launch/framo-exe.cjs`)만 넣고 서버는 옆의 `dist-node/serve.mjs`를 그대로 씁니다(`scripts/exe.mjs`). 아이콘과 파일 정보는 resedit(순수 JavaScript)가 넣어 맥에서 묶어도 들어갑니다. 릴리스(`release.yml`)는 태그 커밋에서 검수(`ci.yml`)를 다시 다 돌리고, 검수가 윈도우에서 켜 보고 파일 정보까지 읽어 본 zip을 그대로 붙입니다. 쓰기 권한은 릴리스를 만드는 일 하나만 받습니다. 서명이 없어 처음에 ‘Windows의 PC 보호’가 뜨고(추가 정보 → 실행), 회사 백신이 exe를 막을 때를 위해 `Framo 시작.bat`도 한동안 같이 넣습니다. node.exe도 들어갑니다: .bat과, 권한 모델 안에서 도는 AI(MCP) 서버가 씁니다. MCP 서버를 `Framo.exe`로 띄우지 않습니다(‘꼭 지킬 것’ 4의 권한 모델 길을 바꾸지 않게). `.bat`은 CRLF(.gitattributes), 안내 `.txt`는 BOM이 있는 UTF-8입니다. 맥용에는 애플 실리콘과 인텔 맥의 node가 들어가고 `Framo 시작.command`가 맞는 쪽을 고릅니다. zip은 `scripts/zip.mjs`(UTF-8 이름 표시)로 만들고, 이름에 버전을 넣지 않습니다(홍보 페이지의 내려받기 주소가 늘 최신 판).
 - 서버 오류는 창이 바로 닫히지 않게 `fail()`로 보여 줍니다. `Framo.exe`는 콘솔 창을 숨기지 않습니다: 켜져 있다는 것, 닫으면 꺼진다는 것, 켜지 못한 이유를 보여 주는 곳입니다(.bat은 서버 창을 작게 내려 둔다).
 - 브라우저는 크롬(없으면 엣지)의 앱 창(`--app`)으로 엽니다(`server/browser.ts`). 브라우저 프로필은 바꾸지 않습니다. 발표가 든 저장소(127.0.0.1:41580)가 그 프로필에 있습니다.
-- GitHub Actions의 검수(`.github/workflows/ci.yml`)가 윈도우, 맥, 리눅스 × Node 22.13과 24에서 타입 검사, 테스트, 빌드, 라이선스를 돌리고, 윈도우에서는 배포본 zip을 한글과 띄어쓰기가 있는 폴더에 풀어 `Framo.exe`와 시작 .bat로 각각 켠 뒤 엣지와 크롬이 화면을 그리는지 봅니다. 올린 뒤 검수가 실패하면 그것부터 고칩니다(`gh run list`, `gh run view --log-failed`).
+- GitHub Actions의 검수(`.github/workflows/ci.yml`)가 윈도우, 맥, 리눅스 × Node 22와 24의 최신 판에서 타입 검사, 테스트, 빌드, 라이선스를 돌리고, 윈도우에서는 배포본 zip을 한글과 띄어쓰기가 있는 폴더에 풀어 `Framo.exe`와 시작 .bat로 각각 켠 뒤 엣지와 크롬이 화면을 그리는지 봅니다. 올린 뒤 검수가 실패하면 그것부터 고칩니다(`gh run list`, `gh run view --log-failed`).
 
 ## 화면 문구
 
@@ -122,7 +126,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 - 저장 형식(`.deck`, 모양 파일, 제안 파일, 결과 파일)을 바꾸면 `version`과 예전 파일 읽기를 챙깁니다. 발표의 예전 꼴(바꾼 역할 이름, 없앤 테마 id 같은)은 `src/deck/migrate.ts`의 `migrateDeck` 한 곳에서 지금 꼴로 바꿉니다.
 - 새 버전에서 만든 발표는 예전 버전이 열지 않고 알립니다(`src/deck/compat.ts`). 열어 고치면 모르는 부품과 그 안의 글을 빼고 저장하기 때문입니다. 부품, 레이아웃, 모양, 움직임을 더하는 것은 검사가 알아서 잡습니다. 그 밖에 예전 버전이 버리게 되는 것(새 칸 같은)을 더하면 `unknownParts`가 세게 합니다.
 - 글이 없는 고르는 값 하나(장면 같은)는 예전 버전이 막지 않습니다. 값을 그대로 둔 채 그 효과 없이 그리고, 새 버전에서 다시 열면 살아납니다. 새로 더하는 고르는 값도 되도록 이렇게(모르면 쉬고, 지우지 않게) 만듭니다.
-- 예전에 내놓은 버전이 저장한 발표는 지금 버전이 그대로 엽니다(`src/deck/oldDecks.test.ts`, 그 버전의 코드로 만든 `src/deck/fixtures/deck-v*.json`). 새 버전을 내놓으면 그 버전의 파일도 만들어 더합니다(그 태그를 받아 예시 발표, 장 모음, 컴포넌트마다 한 장, 발표 종류마다 마법사 발표를 JSON으로 저장하고 이미지는 1px로). 장 모음에 고를 수 있는 값(테마의 글꼴·글자 크기·아래 표시·전환, 장의 바탕·강조·모양·장면·차례, 컴포넌트의 바탕·움직임·이음표)을 모두 넣은 발표(`chosen`)도 그 버전의 코드로 만들어 같이 둡니다: 열 때 고른 값이 사라지지 않는지 봅니다.
+- 예전에 내놓은 버전이 저장한 발표는 지금 버전이 그대로 엽니다(`src/deck/oldDecks.test.ts`, 그 버전의 코드로 만든 `src/deck/fixtures/deck-v*.json`). 새 버전을 내놓으면 그 버전의 파일도 만들어 더합니다(그 태그를 받아 예시 발표, 장 모음, 컴포넌트마다 한 장, 발표 종류마다 프레임 잡기 발표를 JSON으로 저장하고 이미지는 1px로). 장 모음에 고를 수 있는 값(테마의 글꼴·글자 크기·아래 표시·전환, 장의 바탕·강조·모양·장면·차례, 컴포넌트의 바탕·움직임·이음표)을 모두 넣은 발표(`chosen`)도 그 버전의 코드로 만들어 같이 둡니다: 열 때 고른 값이 사라지지 않는지 봅니다.
 - 커밋은 아래 ‘커밋’을 따릅니다.
 
 ## 커밋
@@ -147,5 +151,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 ## 끝내기 전에
 
 - `npm run typecheck && npm test`가 통과해야 합니다.
+- 검수는 둘입니다: 기능은 기계로(테스트, `npm run look -- check/frame`), 감성은 AI가 사람의 눈으로(실제 화면을 찍어 처음 쓰는 사람, 발표하는 사람, 듣는 분의 자리에서. `.claude/skills/framo-review`). 기계 검사가 깨끗해도 사람 눈에 나쁘면 끝난 것이 아닙니다.
 - 보안에 닿는 변경(저장, 내보내기, 서버, AI 공유, MCP)은 위 “꼭 지킬 것”을 다시 확인합니다.
 - 화면을 바꿨으면 스크린샷으로 직접 봅니다.
+- 이번 작업으로 쓰지 않게 된 코드, 내보내기, 파일, CSS, 패키지를 남기지 않았는지 봅니다. `npm test`의 `scripts/unused.test.ts`가 쓰지 않는 파일, 내보내기, 패키지를 찾습니다(그것만 돌릴 때는 `npx vitest run scripts/unused.test.ts`). 걸리면 지우고, 바깥에서 쓰는 것이라 남겨야 하면 까닭과 함께 허락 목록에 넣습니다([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)의 '쓰지 않는 것 찾기').

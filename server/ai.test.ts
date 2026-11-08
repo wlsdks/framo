@@ -2,8 +2,7 @@ import { existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, r
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { REQUEST_FORMAT } from '../src/ai/ops'
-import { REQUEST_VERSION } from '../src/ai/protocol'
+import { REQUEST_FORMAT, REQUEST_VERSION } from '../src/ai/protocol'
 import { ensureShareDir, pendingRequests, pruneResults, writeResult, type ShareDirs } from './ai'
 import { readJson } from './shareFiles'
 

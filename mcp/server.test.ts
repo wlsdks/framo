@@ -5,7 +5,7 @@ import { dirname, join, parse, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import pkg from '../package.json'
-import { ASK_IDS, mcpPrompt } from '../src/ai/asks'
+import { ASKS, mcpPrompt } from '../src/ai/asks'
 import { OP_CODES, OP_KEYS } from '../src/ai/ops'
 import { MCP_TOOLS, RESULT_FORMAT } from '../src/ai/protocol'
 import { SECRET, secretDeck } from '../src/ai/secretDeck'
@@ -313,7 +313,7 @@ describe('MCP 서버', () => {
   it('앱의 부탁을 프롬프트로 고를 수 있고, 받은 값은 꼴이 맞을 때만 문장에 들어간다', async () => {
     const list = await rpc('prompts/list')
     const prompts = list.result!.prompts as { name: string; title: string; arguments: { name: string; required: boolean }[] }[]
-    expect(prompts.map((p) => p.name)).toEqual([...ASK_IDS])
+    expect(prompts.map((p) => p.name)).toEqual(ASKS.map((a) => a.id))
     // 장 부탁은 장 번호를 꼭 받는다. 사람이 장의 해시 id를 알 수는 없다
     for (const p of prompts) expect(p.arguments.find((a) => a.name === 'page')?.required ?? false, p.name).toBe(p.name.startsWith('slide_'))
 

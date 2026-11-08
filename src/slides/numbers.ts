@@ -280,7 +280,7 @@ export function changeOf(before: string, after: string, unit = ''): { value: num
 }
 
 /** 한 그림의 값들 */
-export interface Series {
+interface Series {
   /** 같은 자리로 맞춘 값: '58억, 4,200만'이면 58, 0.42. 비었거나 어느 숫자인지 모르는 칸은 null */
   values: (number | null)[]
   /** 서로 견줄 수 있는 값들인지. 아니면 values는 적은 숫자 그대로이고, 합이나 비율은 계산하지 않는다 */

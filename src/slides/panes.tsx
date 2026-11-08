@@ -17,7 +17,7 @@ import { useSlide } from './context'
  * 바뀌어 보인다(되돌리기는 끈 한 번이 한 단계). 글자 크기와 여백은 레이아웃이 알아서 맞춘다.
  */
 
-export type Zone = 'start' | 'end' | 'below'
+type Zone = 'start' | 'end' | 'below'
 
 interface Box {
   x: number

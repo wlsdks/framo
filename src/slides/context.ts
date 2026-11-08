@@ -35,7 +35,7 @@ export interface SlideActions {
   placeImage?(blockId: string, url: string): void
 }
 
-export interface SlideCtx {
+interface SlideCtx {
   slide: Slide
   meta: DeckMeta
   mode: SlideMode

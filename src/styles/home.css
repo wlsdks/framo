@@ -99,7 +99,7 @@
   padding: 24px 32px 80px;
 }
 
-/* 큰 화면(1920×1080): 마법사와 같은 너비로 넓혀 한 줄에 넷. 그대로 두면 좌우가 너무 비어 보인다 */
+/* 큰 화면(1920×1080): 프레임 잡기와 같은 너비로 넓혀 한 줄에 넷. 그대로 두면 좌우가 너무 비어 보인다 */
 @media (min-width: 1700px) {
   .home-main {
     max-width: 1480px;
@@ -147,8 +147,9 @@
   gap: 32px 28px;
 }
 
-/* 새 발표 자리: 카드와 같은 크기의 빈 장. 점선 대신 가는 실선으로, 올리면 먹색으로 짙어진다 */
+/* 발표 하나: 그림과 이름, 종류 줄 어디를 눌러도 연다 (아래 .card-link::after) */
 .card {
+  position: relative;
   min-width: 0;
 }
 
@@ -159,6 +160,27 @@
   border-radius: var(--r-sm);
   box-shadow: 0 0 0 1px var(--line);
   transition: box-shadow 0.18s;
+}
+
+/*
+ * 누르는 자리를 카드 전체로 넓힌다. 그림만 링크라서 발표 이름을 누르면 아무 일이 없었다(파일 이름을 눌러 여는 데 익숙하다).
+ * 이름에 링크를 하나 더 두면 Tab이 같은 발표에 두 번 서므로, 링크 하나의 누르는 자리만 넓힌다.
+ * 기준 상자가 .card라서 그림의 overflow: hidden에 잘리지 않는다. ⋯ 단추는 그 위에 둔다
+ */
+.card-link::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+}
+
+.card-info .pop-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+/* 연 메뉴는 이웃 카드의 ⋯ 단추보다 위에 */
+.card-info .pop-wrap:has(.pop) {
+  z-index: 2;
 }
 
 /* 올리면 테만 짙게. 예전에는 그림자와 함께 2px 떠올라, 흔한 서비스의 카드처럼 들떠 보였다 */

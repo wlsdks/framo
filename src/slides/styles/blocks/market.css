@@ -37,23 +37,11 @@
   aspect-ratio: 1;
 }
 
-/* 바깥 원부터 옅은 회색 둘, 마지막(목표)만 강조색. 목표가 답이라 강조색은 거기에만(docs/VISUAL-RULES.md 4). 바깥 원까지 옅은
-   강조색으로 칠하던 때는 커다란 파란 원이 장식처럼 쨍했다(사용자) */
-.bk-mk-c,
-.bk-mk-sw {
-  --c: color-mix(in srgb, var(--ink) 6%, var(--bg));
-}
-
-.bk-mk-c:nth-child(2),
-.bk-mk-row:nth-child(2) > .bk-mk-sw {
-  --c: color-mix(in srgb, var(--ink) 13%, var(--bg));
-}
-
-.bk-mk-c:last-child,
-.bk-mk-row:last-child > .bk-mk-sw {
-  --c: var(--accent);
-}
-
+/* 원은 규모를 그린 데이터 면이라 칠한다: 바깥 원부터 강조색의 옅은 농담 둘(나누기의 나머지 조각, 구성비와 같은 단계, tints.ts의
+   --ta-*: 검은 바탕에서는 더 진한 단계), 마지막(목표)만 강조색. 목표가 답이라 진한 강조색은 거기에만(docs/VISUAL-RULES.md 4).
+   바깥 원을 66% 농담으로 칠하던 때는 커다란 파란 원이 장식처럼 쨍했고(사용자), 회색으로 칠하면 장에서 가장 큰 회색 면이었고,
+   1px 옅은 테두리로 두면 3~5m 떨어진 회의실 화면에서 사라져(검은 테마는 아예) 데이터의 절반이 안 보였다.
+   원은 바닥이 맞닿아 안쪽 원이 바깥 원 안에 든 것이 그대로 보인다 */
 .bk-mk-c {
   position: absolute;
   bottom: 0;
@@ -61,8 +49,16 @@
   width: 100%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: var(--c);
+  background: color-mix(in srgb, var(--accent) var(--ta-4, 18%), var(--bg));
   translate: -50% 0;
+}
+
+.bk-mk[data-n='3'] .bk-mk-c:nth-child(2) {
+  background: color-mix(in srgb, var(--accent) var(--ta-2, 44%), var(--bg));
+}
+
+.bk-mk-c:last-child:not(:first-child) {
+  background: var(--accent);
 }
 
 .bk-mk[data-n='3'] .bk-mk-c:nth-child(2) {
@@ -89,9 +85,8 @@
 
 .bk-mk-row {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 22px;
   padding: calc(20px * var(--bk-fit, 1) + var(--bk-air, 0px)) 0;
   border-top: var(--rule-hair) solid var(--line);
 }
@@ -101,12 +96,11 @@
   border-bottom: var(--rule-hair) solid var(--line);
 }
 
-/* 원의 색 표시 */
+/* 원의 색 표시(범례 점)는 그리지 않는다: 목록은 바깥 원부터 안쪽 원의 차례이고, 답인 목표는 숫자와 원이 같은 강조색이라 이어진다.
+   점을 숫자 앞에 세우던 때는 항목 앞의 작은 꾸밈 표시로 보였고 숫자의 왼쪽 끝이 이름과 어긋났다(사용자: 강조색 점).
+   요소는 남긴다: 모션이 찾는다(engine.ts) */
 .bk-mk-sw {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--c);
+  display: none;
 }
 
 .bk-mk-text {

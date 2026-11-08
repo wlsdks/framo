@@ -127,7 +127,7 @@ const SETTABLE: Partial<Record<Op['op'], readonly string[]>> = {
 }
 
 /** check_changes의 op 하나의 결과. invalid는 꼴부터 틀려 propose_changes가 제안을 통째로 받지 않는 op */
-export interface OpCheck {
+interface OpCheck {
   op: Op['op'] | null
   ok: boolean
   code: OpCode | 'invalid'

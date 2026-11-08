@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { HEAD } from './frame'
 import type { Deck, DeckTheme, FontId, FooterMode, Motion, Place, Slide, TextSize, ThemeId, Tone, Transition } from './types'
 
-export interface Theme {
+interface Theme {
   id: ThemeId
   name: string
   description: string
@@ -215,7 +215,7 @@ function luminance(hex: string): number {
 }
 
 /** 강조색 위에 올릴 글자색. 대비가 더 큰 쪽을 고른다. */
-export function inkOn(hex: string): string {
+function inkOn(hex: string): string {
   const l = luminance(hex)
   const contrastWhite = 1.05 / (l + 0.05)
   const contrastDark = (l + 0.05) / 0.0568

@@ -8,7 +8,7 @@ import { lstatSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, sep } from 'node:path'
 
 /** 모양, 제안, 결과 파일은 이보다 훨씬 작다. 큰 파일을 통째로 읽어 서버가 멈추지 않게 */
-export const MAX_SHARE_FILE = 2 * 1024 * 1024
+const MAX_SHARE_FILE = 2 * 1024 * 1024
 
 /** 링크가 아닌 진짜 폴더인지 */
 export function realDir(dir: string): boolean {

@@ -10,7 +10,7 @@ export const research: Blueprint = {
   storyline: ['시장', '구성', '경쟁', '시사점'],
   showcase: ['시장 추이', '시장 구성', '경쟁사 위치', '시사점'],
   defaultTitle: '조사 보고',
-  // 마법사에서 먼저 골라 둘 값: 여러 분이 같이 듣는 자리
+  // 프레임 잡기에서 먼저 골라 둘 값: 여러 분이 같이 듣는 자리
   defaults: { audience: 'mixed', minutes: 20 },
   examples: { title: '중소 제조 품질 관리 시장 조사', ask: '시범 사업 검토 착수' },
   recipes: [

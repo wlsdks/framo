@@ -174,7 +174,7 @@ export interface SegmentOption<T> {
 /**
  * 몇 가지 가운데 하나를 고르는 단추 줄. 고른 단추에 is-on과 aria-pressed를 단다.
  * 보통은 붙어 있는 단추(.seg: 오른쪽 칸, 테마 메뉴, 장 모음)이고 label이 그 묶음의 이름이다.
- * chips면 떨어진 알약 단추(.chip: 마법사). 그때는 둘레의 fieldset과 legend가 이름을 맡아서 label 없이 쓴다
+ * chips면 떨어진 알약 단추(.chip: 프레임 잡기). 그때는 둘레의 fieldset과 legend가 이름을 맡아서 label 없이 쓴다
  */
 export function Segmented<T extends string | number | undefined>({
   label,
@@ -450,6 +450,13 @@ export function Modal({
  * 크롬과 엣지의 메뉴 이름 그대로 말한다 (‘인터넷 사용 기록 삭제’의 한 칸)
  */
 export const FOLDER_WHY = '브라우저에서 ‘쿠키 및 기타 사이트 데이터’를 지우면 발표도 함께 지워져요.'
+
+/**
+ * 보관 폴더로 무엇을 고르면 되는지. 고르는 창은 문서 폴더에서 열리는데, 그대로 '폴더 선택'을 누르면 크롬과 엣지가
+ * 문서·바탕 화면·다운로드 폴더 자체는 '시스템 파일이 있어 열 수 없다'며 막는다. 막히지 않는 폴더여도 Framo가 그 안에
+ * 작업 파일과 '버전 기록', '지운 발표' 폴더를 만들어서, 다른 파일과 섞이지 않게 새 폴더를 권한다
+ */
+export const FOLDER_TIP = '문서 폴더 안에 ‘Framo 발표’ 같은 새 폴더를 만들어 골라요.'
 
 export const SAVE_HELP = '브라우저 저장 공간이 모자라면 저장되지 않아요. 쓰지 않는 발표를 지우거나 큰 이미지를 줄인 뒤 다시 해 주세요.'
 

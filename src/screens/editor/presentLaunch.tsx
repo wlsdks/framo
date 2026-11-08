@@ -16,8 +16,9 @@ import type { PresentHow } from './DeckMenus'
  */
 export function usePresentLaunch(deck: Deck, markVersion: (reason: VersionReason) => void, toast: Toast) {
   // entering: 이 창을 전체 화면으로 바꾸는 중이면 그 약속. 발표 화면은 창이 다 커진 뒤에 첫 장을 움직인다 (Present.tsx)
-  const [presenting, setPresenting] = useState<{ startId?: string; entering?: Promise<boolean> } | null>(null)
-  const [confirm, setConfirm] = useState<{ startId?: string; how: PresentHow; check: PresentCheck } | null>(null)
+  // record: 내보내기의 '영상'으로 시작했으면 발표 화면이 열리자마자 녹화한다
+  const [presenting, setPresenting] = useState<{ startId?: string; entering?: Promise<boolean>; record?: boolean } | null>(null)
+  const [confirm, setConfirm] = useState<{ startId?: string; how: PresentHow; check: PresentCheck; record?: boolean } | null>(null)
   // 발표자 화면을 처음 쓸 때: 화면 두 개를 다뤄도 되는지 브라우저가 묻는다
   const [askScreens, setAskScreens] = useState<{ startId?: string; placement?: Placement } | null>(null)
 
@@ -54,7 +55,7 @@ export function usePresentLaunch(deck: Deck, markVersion: (reason: VersionReason
   )
 
   const start = useCallback(
-    async (startId?: string, force = false, how: PresentHow = 'auto') => {
+    async (startId?: string, force = false, how: PresentHow = 'auto', record = false) => {
       // 모든 장을 발표에서 빼 두었으면 빈 전체 화면만 뜬다
       if (!deck.slides.some((s) => !s.hidden)) {
         toast.show('모든 슬라이드가 발표에서 빠져 있어서 발표할 슬라이드가 없어요. 슬라이드를 골라 ‘발표에 다시 넣기’를 눌러 주세요.', undefined, 6000)
@@ -63,11 +64,16 @@ export function usePresentLaunch(deck: Deck, markVersion: (reason: VersionReason
       if (!force) {
         const check = presentCheck(deck)
         if (check.rows.length) {
-          setConfirm({ startId, how, check })
+          setConfirm({ startId, how, check, record })
           return
         }
       }
       setConfirm(null)
+      // 영상은 이 창 하나에서 첫 슬라이드부터 녹화한다 (발표자 화면을 띄우지 않는다)
+      if (record) {
+        setPresenting({ entering: enterFullscreen(), record: true })
+        return
+      }
       markVersion('present')
       const presenter = how === 'presenter' || (how === 'auto' && presenterAuto() && hasSecondScreen())
       if (presenter) {
@@ -263,9 +269,9 @@ export function PresentDialogs({ deck, launch, onGoTo }: { deck: Deck; launch: P
         <CheckDialog
           deck={deck}
           check={check}
-          what="발표 화면"
-          proceed="그대로 발표하기"
-          onProceed={() => void launch.start(confirm.startId, true, confirm.how)}
+          what={confirm.record ? '영상' : '발표 화면'}
+          proceed={confirm.record ? '그대로 녹화하기' : '그대로 발표하기'}
+          onProceed={() => void launch.start(confirm.startId, true, confirm.how, confirm.record)}
           onClose={launch.closeConfirm}
           onGoTo={onGoTo}
         />

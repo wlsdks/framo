@@ -34,7 +34,7 @@ export interface UpdateSetup {
 }
 
 /** 파일을 고른 채로 폴더를 연다. 경로는 앱 폴더로 만든 고정 경로다(네트워크에서 온 글자는 들어가지 않는다) */
-export function revealFile(file: string) {
+function revealFile(file: string) {
   if (process.env.GYEOL_NO_OPEN) return
   const [cmd, args, verbatim] =
     process.platform === 'win32'

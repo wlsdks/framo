@@ -9,7 +9,7 @@ export const improve: Blueprint = {
   storyline: ['문제', '원인', '개선안', '효과'],
   showcase: ['문제의 크기', '원인', '바뀌는 절차', '기대 효과'],
   defaultTitle: '개선 제안',
-  // 마법사에서 먼저 골라 둘 값: 바꿀 일을 맡은 팀장께 짧게
+  // 프레임 잡기에서 먼저 골라 둘 값: 바꿀 일을 맡은 팀장께 짧게
   defaults: { audience: 'practitioner', minutes: 10 },
   examples: { title: '구매 요청 처리 방식 개선 제안', ask: '한 팀 시범 운영 승인' },
   recipes: [

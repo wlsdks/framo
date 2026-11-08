@@ -110,7 +110,7 @@
   min-width: 0;
 }
 
-/* 화면의 큰 제목은 홈('내 발표'), 마법사의 묻는 말과 같은 명조(함렛) 목소리로 */
+/* 화면의 큰 제목은 홈('내 발표'), 프레임 잡기의 묻는 말과 같은 명조(함렛) 목소리로 */
 .sys-h1 {
   margin: 0;
   font-family: 'Hahmlet Variable', 'AppleMyungjo', 'Batang', serif;

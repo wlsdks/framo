@@ -7,7 +7,7 @@ import { safeFileName } from '../store/deckFile'
 import { deckToPptx, PPTX_TYPE } from './pptx'
 import { createSlideRasterizer } from './rasterize'
 
-export function pptxFileName(title: string): string {
+function pptxFileName(title: string): string {
   return `${safeFileName(title, '발표')}.pptx`
 }
 

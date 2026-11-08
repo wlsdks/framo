@@ -81,7 +81,7 @@ export function withDefaultOptions(layout: LayoutId, options: SlideOptions, item
   return options
 }
 
-export interface DeckInput {
+interface DeckInput {
   type: DeckType
   audience: Audience
   minutes: number
@@ -91,7 +91,7 @@ export interface DeckInput {
   presenter: string
   /** 표지에 적는 결정 요청 한 줄 */
   ask?: string
-  /** 표지의 부제. 결정을 받는 자리가 아닌 발표는 마법사에서 결정 요청 대신 이것을 묻는다 */
+  /** 표지의 부제. 결정을 받는 자리가 아닌 발표는 프레임 잡기에서 결정 요청 대신 이것을 묻는다 */
   lead?: string
   theme: ThemeId
 }

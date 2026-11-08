@@ -28,7 +28,7 @@ export interface AgentCommand {
   args?: string[]
 }
 
-export interface AgentOptions {
+interface AgentOptions {
   shareRoot: string
   mcpPath: string
   nodePath: string
@@ -56,7 +56,7 @@ const isFile = (f: string) => {
 }
 
 /** 이 PC의 Claude Code. 바탕 화면에서 켠 서버는 PATH가 짧을 수 있어서 설치 프로그램이 쓰는 자리도 본다 */
-export function findClaude(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): AgentCommand | null {
+function findClaude(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): AgentCommand | null {
   const win = platform === 'win32'
   const home = (win ? env.USERPROFILE : env.HOME) ?? ''
   const dirs = [
@@ -127,7 +127,7 @@ interface Running extends AskRun {
 const view = (r: Running): AskRun => ({ id: r.id, state: r.state, step: r.step, request: r.request, reason: r.reason, error: r.error })
 
 /** 바꿀 게 없다는 까닭. 마크다운 기호를 걷고 짧게 자른다 */
-export function reasonOf(text: string): string | undefined {
+function reasonOf(text: string): string | undefined {
   const plain = text
     .replace(/[*_`#>]+/g, '')
     .replace(/^\s*[-•]\s+/gm, '')
@@ -263,5 +263,3 @@ export function createAgent(opts: AgentOptions) {
     },
   }
 }
-
-export type Agent = ReturnType<typeof createAgent>

@@ -161,7 +161,7 @@ export function fontText(slides: string, title: string): string {
   return (slides.replace(/<[^>]+>/g, ' ') + title + VIEWER_TEXT + CSS_TEXT).replace(/&[a-z]+;/g, ' ')
 }
 
-export async function buildHtml(deck: Deck): Promise<string> {
+async function buildHtml(deck: Deck): Promise<string> {
   const { html: slides, pictures } = renderSlides(deck)
   const families = fontFamiliesOf(deck.theme)
   const fonts = await embedFonts(fontText(slides, deck.title), families)

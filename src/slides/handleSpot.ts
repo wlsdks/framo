@@ -6,7 +6,7 @@ import { frameRect } from './blockFrame'
  * 쓰는 사람의 글을 가리지 않는 첫 자리를 고르고, 어디에 두어도 글을 가리면 숨긴다(none): 그때는 컴포넌트를 눌러 고르고
  * 장 아래 도구 줄의 앞뒤로 단추로 옮긴다. 손을 올릴 때와 컴포넌트를 고를 때 정한다
  */
-export type HandleAt = 'tl' | 'tr' | 'bl' | 'br' | 'none'
+type HandleAt = 'tl' | 'tr' | 'bl' | 'br' | 'none'
 
 const ORDER: Exclude<HandleAt, 'none'>[] = ['tl', 'tr', 'bl', 'br']
 

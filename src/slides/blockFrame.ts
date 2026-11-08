@@ -9,8 +9,8 @@
 /** 테두리를 내용에서 띄우는 너비 (캔버스 px). 예전 outline-offset(14)과 비슷하게. 끄는 동안 손 아래를 잴 때도 쓴다(BlockEditor) */
 export const FRAME_PAD = 14
 
-/** 칸 안의 그린 것을 모을 때 건너뛰는 편집 표시 (칸 밖으로 나온 단추, 올렸을 때만 깔리는 빈칸의 면) */
-const SKIP = '.it-remove, .it-grip, .img-tools, .ed-halo, .bk-handle'
+/** 칸 안의 그린 것을 모을 때 건너뛰는 편집 표시 (칸 밖으로 나온 단추, 올렸을 때만 깔리는 빈칸의 면, 줄이 다시 나뉘는 동안 겹쳐 둔 사본) */
+const SKIP = '.it-remove, .it-grip, .img-tools, .ed-halo, .ed-ghost, .bk-handle'
 
 /** 보이는 색인지 (계산된 색 글: rgb(), rgba(), color(srgb … / a), transparent) */
 const seen = (c: string) => !!c && c !== 'transparent' && !/rgba\(.*,\s*0\)$/.test(c) && !/\/\s*0\)$/.test(c)
@@ -138,7 +138,7 @@ function flowRect(host: CSSStyleDeclaration, s: CSSStyleDeclaration, r: DOMRect,
 }
 
 /** 칸 안에 그려진 것(글자 줄, 그림, 면과 선)을 모두 덮는 네모 (화면 px). 그린 것이 없으면 null */
-export function inkBox(cell: HTMLElement): { left: number; top: number; right: number; bottom: number } | null {
+function inkBox(cell: HTMLElement): { left: number; top: number; right: number; bottom: number } | null {
   const inner = cell.querySelector<HTMLElement>(':scope > .bk-in')
   if (!inner) return null
   let left = Infinity

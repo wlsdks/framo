@@ -29,7 +29,7 @@ export const SAMPLE_LOGOS = [
   wordmark('가상 H', '<path d="M24 88h52V36z" fill="#1d2330"/>'),
 ]
 
-export const SAMPLE_DASHBOARD = svg(
+const SAMPLE_DASHBOARD = svg(
   `<rect width="1600" height="1000" fill="#eef1f6"/>
   <rect x="0" y="0" width="1600" height="72" fill="#ffffff"/>
   <rect x="40" y="24" width="140" height="24" rx="6" fill="#1d2330"/>

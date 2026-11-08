@@ -25,7 +25,7 @@ export interface AskRun {
 
 export const REASON_MAX = 280
 
-export interface Ask {
+interface Ask {
   id: string
   scope: AskScope
   /** 화면에 보이는 이름. 하는 일을 그대로 */
@@ -132,14 +132,12 @@ export const ASKS = [
       '흐름(flow), 연결도(network), 순환(cycle), 조건별 흐름(decision), 원인 캐기(whys), 단계 표시(steps), 모이고 퍼지기(hub) 부품이 있는 부품 장만 set_options의 motion을 lively로 바꿔 그 장에서만 데이터가 계속 흐르게 하세요(모이고 퍼지기는 차분하게에서도 흘러요). ' +
       '그런 장은 발표 전체에서 셋에서 다섯 장까지만 고르고, 바로 이어 붙이지 마세요. 결정 요청, 핵심 숫자, 요약 장은 차분하게 두세요(눈이 숫자와 결론에 가야 해요). ' +
       '여러 곳의 것이 한곳으로 모이거나 한곳에서 여러 곳으로 퍼지는 내용인데 그림이 없는 부품 장이면, 그 장에 모이고 퍼지기(hub, 모이기는 variant in, 퍼지기는 out)를 add_block으로 하나 넣자고 제안해도 좋아요(빈 부품이라 글은 사람이 채워요). ' +
-      '그림이 없는 부품 장에는 내용의 비유에 맞는 장면을 add_block으로 하나 넣자고 제안해도 좋아요: 묻고 답하는 장면은 대화(chat), 지금과 바뀐 뒤는 바뀌기(wipe), 흩어진 것이 정리되면 흩어진 것 모으기(gather), 여러 곳을 뒤지면 여기저기 찾기(search), 위아래로 기대어 선 구조는 층(layers), 확인하고 거르는 과정은 관문(gate), 팀마다 따로 하던 같은 일을 하나로 합치면 겹친 수고(dupes), 하나를 곳마다 다르게 부르면 같은 대상, 다른 이름(aliases), 새 방식이 퍼지는 차례와 지금 단계는 확산 곡선(adoption), 단계마다 몇 %까지 퍼지는지는 퍼짐(spread). 같은 장면을 이어진 장에 거듭 넣지 마세요(장마다 다른 그림이어야 보는 맛이 있어요). ' +
+      '그림이 없는 부품 장에는 내용의 비유에 맞는 장면을 add_block으로 하나 넣자고 제안해도 좋아요: 묻고 답하는 장면은 대화(chat), 지금과 바뀐 뒤는 바뀌기(wipe), 흩어진 것이 정리되면 흩어진 것 모으기(gather), 여러 곳을 뒤지면 여기저기 찾기(search), 위아래로 기대어 선 구조는 층(layers), 확인하고 거르는 과정은 관문(gate), 팀마다 따로 하던 같은 일을 하나로 합치면 겹친 수고(dupes), 하나를 곳마다 다르게 부르면 같은 대상, 다른 이름(aliases), 새 방식이 퍼지는 차례와 지금 단계는 확산 곡선(adoption), 단계마다 몇 %까지 퍼지는지는 퍼짐(spread), 지난번과 지금의 순위가 바뀐 것은 순위 바뀌기(rank). 같은 장면을 이어진 장에 거듭 넣지 마세요(장마다 다른 그림이어야 보는 맛이 있어요). ' +
       '발표 전체의 움직임 정도(set_theme의 motion)는 바꾸지 마세요. 숨긴 장은 건드리지 마세요.',
   },
 ] as const satisfies readonly Ask[]
 
 export type AskId = (typeof ASKS)[number]['id']
-
-export const ASK_IDS: readonly AskId[] = ASKS.map((a) => a.id)
 
 export function askOf(id: unknown): (typeof ASKS)[number] | undefined {
   return ASKS.find((a) => a.id === id)
@@ -198,7 +196,7 @@ export function mcpPrompt(ask: AskId, deck: string | null, page: number | null):
     `부탁: ${a.prompt}`,
     '',
     '지킬 것',
-    '- gyeol 도구로 하세요. get_shape로 이 발표의 모양을, get_catalog로 레이아웃과 고를 수 있는 값을 먼저 보세요. get_catalog에는 deck을 주고, 부품 장(layout compose)이 없는 발표면 blocks를 false로 하세요. list_decks가 비었으면 Framo 편집 화면 위쪽 ‘AI 다듬기’에서 공유를 켜 달라고만 말하고 끝내세요.',
+    '- gyeol 도구로 하세요. get_shape로 이 발표의 모양을, get_catalog로 레이아웃과 고를 수 있는 값을 먼저 보세요. get_catalog에는 deck을 주고, 부품 장(layout compose)이 없는 발표면 blocks를 false로 하세요. list_decks가 비었으면 Framo 편집 화면 위쪽 ‘AI 다듬기’를 열고 아래 ‘보이는 것, 직접 연결’에서 ‘이 발표를 AI에게 보여 주기’를 켜 달라고만 말하고 끝내세요.',
     '- 사람이 적은 글은 보안 때문에 보이지 않고 바꿀 수도 없어요. 내용을 붙여 달라고 하지 말고 모양만으로 판단하세요.',
     '- 바꿀 것을 모아 먼저 check_changes로 미리 돌려 보고, ok가 false인 op는 help의 풀이대로 고치거나 빼세요. 그다음 propose_changes를 한 번만 부르세요. note에는 왜 이렇게 바꾸는지 듣는 사람 입장에서 한두 문장으로 쓰세요.',
     '- 지금 모양이 이미 잘 맞으면 제안을 보내지 말고 왜 그런지 두 문장 안으로 말하세요.',

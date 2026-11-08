@@ -1,0 +1,194 @@
+/* ---------- 순위 바뀌기 ----------
+   왼쪽에 지난 순위(옅게), 오른쪽에 지금 순위, 사이의 너른 띠에 같은 항목을 잇는 가는 선(Rank.tsx). 선이 기울어진 만큼이 오르내린
+   만큼이다. 강조할 항목의 선만 강조색으로 굵게, 나머지 선은 옅은 선 색: 답 하나만 눈에 들어오고 나머지는 바탕이 된다.
+   두 목록은 같은 줄(1fr: 가장 높은 줄에 맞춘 같은 높이)에 서서 줄 가운데가 곧 선의 끝이다. 줄 사이는 선 없이 여백으로만.
+   두 목록은 글 너비만큼, 선의 띠가 남는 너비를 다 가져간다: 한 줄을 다 쓰는 칸에서 목록이 왼쪽에 몰리지 않고 선이 길게 눕는다.
+   좁은 칸(안쪽 760px 밑)에서는 지금 순위 목록 하나에 바뀐 만큼(▲3)만 둔다: 선의 띠가 좁으면 선이 가팔라 엉켰다 */
+.bk-ra {
+  display: flex;
+  flex-direction: column;
+  /* 칸이 내용보다 높으면 위에 붙이고 남는 높이는 아래로(VISUAL-RULES 5, 6) */
+  justify-content: flex-start;
+  height: 100%;
+}
+
+.bk-ra-l {
+  --fs: var(--t-label);
+  margin-bottom: calc(20px * var(--bk-fit, 1));
+  color: var(--ink-2);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.bk-ra-board {
+  /* 줄의 위아래 여백. 남는 높이로 줄 사이를 넓히지 않는다(--bk-air를 받지 않는다): 줄 사이가 글 높이의 두 배를 넘게 벌어져
+     순위 목록이 흩어져 보였다. 칸이 남으면 글자 단계가 커지거나 눈높이로 내린다(fitBlocks) */
+  --ra-pad: calc(14px * var(--bk-fit, 1));
+  display: grid;
+  grid-template-columns: fit-content(32%) minmax(120px, 1fr) fit-content(42%);
+  /* 첫 줄은 두 때의 이름, 그 아래는 항목 줄(모두 같은 높이) */
+  grid-template-rows: auto repeat(var(--n), 1fr);
+  column-gap: calc(28px * var(--bk-fit, 1));
+}
+
+.bk-ra-when {
+  --fs: var(--t-source);
+  margin-bottom: calc(8px * var(--bk-fit, 1));
+  color: var(--ink-3);
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.bk-ra-when.is-from {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bk-ra-when.is-to {
+  grid-column: 3;
+  grid-row: 1;
+  color: var(--ink-2);
+}
+
+/* 두 목록은 판의 줄을 그대로 쓴다(subgrid): 왼쪽과 오른쪽의 같은 줄이 같은 높이라 선이 줄 가운데에서 끝난다 */
+:is(.bk-ra-was, .bk-ra-now) {
+  display: grid;
+  grid-row: 2 / -1;
+  grid-template-rows: subgrid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bk-ra-was {
+  grid-column: 1;
+}
+
+.bk-ra-now {
+  grid-column: 3;
+}
+
+/* 줄 하나: 번호와 이름(오른쪽은 바뀐 만큼까지) 한 글자선 */
+:is(.bk-ra-wi, .bk-ra-it) {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55em;
+  min-width: 0;
+  padding: var(--ra-pad) 0;
+  align-self: center;
+}
+
+/* 지난 순위: 옅게. 지나간 것이라 읽을 거리가 아니라 출발점이다. 이름은 지금 쪽과 같은 크기에 색만 옅게: 한 단계 작게 두면
+   같은 줄 높이(지금 쪽의 큰 번호가 정한다)에 작은 글이 떠서 줄 사이가 글 높이의 두 배를 넘게 벌어져 보였다 */
+.bk-ra-wn,
+.bk-ra-wt {
+  color: var(--ink-3);
+  line-height: 1.3;
+}
+
+.bk-ra-wn {
+  --fs: var(--t-small);
+  flex: none;
+  min-width: 1.2em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.bk-ra-wt {
+  --fs: var(--t-body);
+  min-width: 0;
+}
+
+/* 지금 순위: 번호는 숫자 글꼴로 크게, 이름은 본문 굵게 */
+.bk-ra-no {
+  --fs: var(--t-h);
+  flex: none;
+  min-width: 1.1em;
+  color: var(--ink-3);
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight);
+  line-height: 1.1;
+}
+
+.bk-ra-t {
+  --fs: var(--t-body);
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* 바뀐 만큼: 이름 옆 작은 글자. 오른 것과 내린 것을 색으로 가르지 않는다(상태 색은 예외에만, VISUAL-RULES 4) */
+.bk-ra-mv {
+  --fs: var(--t-source);
+  flex: none;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.bk-ra-mv.is-input {
+  display: inline-flex;
+  gap: 0.35em;
+  font-weight: 600;
+}
+
+/* 강조할 항목: 이름과 바뀐 만큼, 번호까지 강조색(답 한 줄) */
+.bk-ra-it.is-hl :is(.bk-ra-t, .bk-ra-mv, .bk-ra-no) {
+  color: var(--accent);
+}
+
+/* 잇는 선: 판의 가운데 단, 항목 줄 전체 높이. 줄여 그려도 굵기는 그대로(non-scaling-stroke).
+   그림의 크기가 줄 높이를 정하지 않게(contain: size): 그대로 두면 viewBox의 비율로 단 너비에서 정한 높이(1000px 단에 600px)가
+   줄마다 나뉘어 줄이 글보다 두 배 넘게 높았다. 크기는 줄이 정한 자리를 그대로 채운다(stretch) */
+.bk-ra-links {
+  grid-column: 2;
+  grid-row: 2 / -1;
+  align-self: stretch;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  contain: size;
+}
+
+.bk-ra-ln {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 강조할 항목의 선은 다른 선 위에 강조색으로 굵게 (그리는 차례는 Rank.tsx에서 마지막이 아니어도 굵기와 색으로 앞에 선다) */
+.bk-ra-ln.is-hl {
+  stroke: var(--accent);
+  stroke-width: 4px;
+}
+
+/* 지난 순위가 하나도 없으면(모두 처음 든 항목) 지난 목록과 선이 비어 지금 목록만 */
+.bk-ra.is-fresh :is(.bk-ra-when.is-from, .bk-ra-was, .bk-ra-links) {
+  display: none;
+}
+
+/* ---------- 좁은 칸: 지금 순위 목록 하나 ----------
+   선의 띠를 둘 너비가 없으면 지난 목록과 선을 걷고 지금 목록에 바뀐 만큼만 둔다. 안쪽 너비로 견준다(면의 여백을 뺀 너비) */
+@container (max-width: 759px) {
+  .bk-ra-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :is(.bk-ra-when.is-from, .bk-ra-was, .bk-ra-links) {
+    display: none;
+  }
+
+  .bk-ra-when.is-to {
+    grid-column: 1;
+  }
+
+  .bk-ra-now {
+    grid-column: 1;
+  }
+}

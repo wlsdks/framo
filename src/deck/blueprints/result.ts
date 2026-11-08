@@ -10,7 +10,7 @@ export const result: Blueprint = {
   storyline: ['성과', '과정', '배운 점', '후속 과제'],
   showcase: ['목표 대비 결과', '진행 과정', '배운 점', '후속 과제'],
   defaultTitle: '결과 보고',
-  // 마법사에서 먼저 골라 둘 값: 끝난 일을 맡긴 팀장께
+  // 프레임 잡기에서 먼저 골라 둘 값: 끝난 일을 맡긴 팀장께
   defaults: { audience: 'practitioner', minutes: 20 },
   examples: { title: '신입 온보딩 개편 시범 운영 결과 보고', ask: '전사 확대 승인' },
   recipes: [

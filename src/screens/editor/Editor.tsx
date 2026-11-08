@@ -16,7 +16,8 @@ import { copyDeck } from '../../store/copy'
 import { useDeck, useSelectedSlide } from '../../store/deckStore'
 import { loadBestDeck, persistNow } from '../../store/persist'
 import { useEditLock } from '../../store/useEditLock'
-import { Present } from '../Present'
+import { canRecord } from '../../present/record'
+import { Present, type RecordResult } from '../Present'
 import { BackIcon, CloseIcon, HistoryIcon, Info, RedoIcon, SAVE_HELP, takeNotice, undoAction, UndoIcon, useToast } from '../ui'
 import { ASK_ERROR, AiInbox, AiMenu, AiReview, AskStatus } from './AiShare'
 import { useBlockEditing } from './BlockEditor'
@@ -34,6 +35,13 @@ import { SlideList } from './SlideList'
 import { SlideStage } from './SlideStage'
 import { useImageInput } from './useImageInput'
 import { VersionPanel } from './Versions'
+
+/** 내보내기의 '영상'이 끝난 뒤 편집기에 띄우는 말 */
+const RECORDED: Record<RecordResult, string> = {
+  saved: '영상을 저장했어요. 다운로드 폴더를 확인해 주세요.',
+  empty: '녹화된 장면이 없어요. 내보내기에서 ‘영상’을 다시 눌러 주세요.',
+  failed: '녹화를 시작하지 못했어요. 화면 공유를 묻는 창에서 ‘이 탭’을 고르면 돼요.',
+}
 
 export function Editor({ id }: { id: string }) {
   const deck = useDeck((s) => s.deck)
@@ -228,13 +236,24 @@ function EditorBody({ deck }: { deck: Deck }) {
     toast.show('슬라이드를 지웠어요', undoAction(toast))
   }
 
-  // 발표를 끝내면 마지막으로 보던 장을 고른다(발표를 시작한 장이 아니라)
+  // 발표를 끝내면 마지막으로 보던 장을 고른다(발표를 시작한 장이 아니라). 영상만 만들었으면 고치던 장 그대로
   const endPresent = (lastId?: string) => {
+    const recorded = launch.presenting?.record
     launch.exit()
-    if (lastId) store.select(lastId)
+    if (lastId && !recorded) store.select(lastId)
   }
 
-  if (launch.presenting) return <Present deck={deck} startId={launch.presenting.startId} entering={launch.presenting.entering} onExit={endPresent} />
+  if (launch.presenting)
+    return (
+      <Present
+        deck={deck}
+        startId={launch.presenting.startId}
+        entering={launch.presenting.entering}
+        onExit={endPresent}
+        record={launch.presenting.record}
+        onRecorded={(result) => toast.show(RECORDED[result], undefined, result === 'saved' ? 5000 : 8000)}
+      />
+    )
 
   return (
     <div className="ed-app">
@@ -274,7 +293,13 @@ function EditorBody({ deck }: { deck: Deck }) {
           <span className="ed-top-sep" aria-hidden="true" />
           <AiMenu deck={deck} ai={ai} ask={ask} />
           <ThemeMenu deck={deck} />
-          <ExportMenu onHtml={() => void exporting.exportHtml()} onPdf={() => exporting.printPdf()} onPpt={() => void exporting.exportPpt()} onDeckFile={exporting.saveDeckFile} />
+          <ExportMenu
+            onHtml={() => void exporting.exportHtml()}
+            onPdf={() => exporting.printPdf()}
+            onPpt={() => void exporting.exportPpt()}
+            onVideo={canRecord() ? () => void launch.start(undefined, false, 'single', true) : undefined}
+            onDeckFile={exporting.saveDeckFile}
+          />
           <PresentButton onStart={(how, here) => void launch.start(here ? slide?.id : undefined, false, how)} />
         </div>
       </header>

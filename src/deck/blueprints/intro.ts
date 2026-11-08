@@ -10,7 +10,7 @@ export const intro: Blueprint = {
   storyline: ['팀', '하는 일', '일하는 법', '연락'],
   showcase: ['숫자로 보는 팀', '하는 일', '일이 오가는 길', '이럴 때 찾아 주세요'],
   defaultTitle: '팀 소개',
-  // 마법사에서 먼저 골라 둘 값: 함께 일할 다른 부서에
+  // 프레임 잡기에서 먼저 골라 둘 값: 함께 일할 다른 부서에
   defaults: { audience: 'partners', minutes: 20 },
   examples: { title: '기획팀을 소개해요', lead: '새로 오신 분께' },
   recipes: [
