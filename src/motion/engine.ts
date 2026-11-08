@@ -4160,7 +4160,17 @@ export function motionEngine(): MotionEngine {
     const text = (el: Element) => (el.textContent || '').replace(/\s+/g, ' ').trim()
     const out: { el: HTMLElement; keys: string[] }[] = []
     const titles = Array.prototype.slice.call(slide.querySelectorAll(':scope > .s-head .s-title, .cv-title, .sc-title, .st-title')) as HTMLElement[]
-    for (const el of titles) if (text(el)) out.push({ el, keys: ['title:' + text(el)] })
+    // 장 머리의 제목은 글이 달라도 장 머리끼리 짝이 된다(두 번째 열쇠): 제자리에서 바꿔 끼우고, 사라졌다가 늦게 다시 나오지 않게(감성 검수)
+    for (const el of titles) if (text(el)) out.push({ el, keys: ['title:' + text(el), el.matches('.s-head .s-title') ? 'title*' : ''] })
+    // 장 머리의 부제와 아래 띠의 출처도: 글이 같으면 가만히 있고, 다르면 제자리에서 바뀐다. 짝이 없던 때는 두 장에 똑같은 부제와 출처가
+    // 앞 장과 함께 사라졌다가 다음 장의 움직임으로 다시 나와 깜빡였다(감성 검수)
+    for (const [sel, role] of [
+      [':scope > .s-head .s-lead', 'lead'],
+      [':scope > .s-foot .s-source', 'src'],
+    ]) {
+      const el = slide.querySelector(sel) as HTMLElement | null
+      if (el && text(el)) out.push({ el, keys: [role + ':' + text(el), role + '*'] })
+    }
     const cells = Array.prototype.slice.call(slide.querySelectorAll('.bk-area > .bk')) as HTMLElement[]
     const count: Record<string, number> = {}
     for (const el of cells) count[el.dataset.type || ''] = (count[el.dataset.type || ''] || 0) + 1

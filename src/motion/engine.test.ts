@@ -233,6 +233,8 @@ describe('움직임 엔진', () => {
     expect(carry).toMatch(/curve\(EASE\.out\)/)
     // 누르고 곧 떠난다(0.3초 넘게 가만히 있지 않게)
     expect(Number(/delay: (\d+),\s*easing: ["']linear["']/.exec(carry)?.[1])).toBeLessThanOrEqual(100)
+    // 장 머리와 아래 띠의 글은 같은 자리끼리 짝이 된다(사라졌다 돌아오며 깜빡이지 않게)
+    for (const k of ['title*', 'lead', 'src']) expect(keys, k).toMatch(new RegExp(`["']${k.replace('*', '\\*')}`))
     // 옮겨 온 숫자를 0부터 다시 쌓거나 나오는 조각을 다시 띄우지 않는다
     const tally = src.slice(src.indexOf('const tally = ('), src.indexOf('const tally = (') + 300)
     expect(tally).toMatch(/data-mo-keep/)
