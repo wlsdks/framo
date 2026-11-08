@@ -24,6 +24,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { buildExe } from './exe.mjs'
+import { nodeReleaseCheck } from './nodeRelease.mjs'
 import { externalUrls } from './offline.mjs'
 import { zipDir } from './zip.mjs'
 
@@ -39,6 +40,26 @@ if (only && only !== 'mac' && only !== 'windows') {
 
 /** 배포본에 넣는 Node.js. LTS 중에서 고르고, 바꿀 때는 docs/OPEN-SOURCE.md도 고친다. */
 const NODE_VERSION = 'v24.22.2'
+
+// 고른 판이 LTS이고, 같은 주 버전에 더 새 보안 수정판이 없는지 먼저 본다(scripts/nodeRelease.mjs)
+{
+  const res = await fetch('https://nodejs.org/dist/index.json')
+  if (!res.ok) {
+    console.error(`nodejs.org의 릴리스 목록을 받지 못했어요 (${res.status}). 인터넷 연결을 확인하고 다시 실행해 주세요.`)
+    process.exit(1)
+  }
+  const check = nodeReleaseCheck(await res.json(), NODE_VERSION)
+  if (!check.known || !check.lts || check.newerSecurity) {
+    console.error(
+      !check.known
+        ? `Node.js ${NODE_VERSION}이 nodejs.org 릴리스 목록에 없어요. scripts/pack.mjs의 NODE_VERSION을 확인해 주세요.`
+        : !check.lts
+          ? `Node.js ${NODE_VERSION}은 LTS가 아니에요. LTS 판으로 NODE_VERSION을 바꿔 주세요.`
+          : `Node.js ${NODE_VERSION}보다 새 보안 수정판(${check.newerSecurity})이 나왔어요. scripts/pack.mjs의 NODE_VERSION을 그 판 이상으로 올리고 docs/OPEN-SOURCE.md도 고쳐 주세요.`,
+    )
+    process.exit(1)
+  }
+}
 
 // 사내에서 써도 되는 라이선스가 아니면 여기서 멈춘다. 나눠 줄 파일에 넣을 라이선스 전문도 이때 같이 모은다.
 // 경로는 셸을 거치지 않고 인자로 넘긴다(빈칸과 한글이 든 경로에서도 그대로 간다)
