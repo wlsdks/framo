@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { BACKDROP_PLACES, BACKDROP_STRENGTHS, BACKDROPS, backdropOf, backdropSpec, placeOfArea, withBackdropKind } from '../../deck/backdrops'
 import { motionOf } from '../../deck/themes'
 import type { BackdropId, Deck, Slide } from '../../deck/types'
@@ -57,7 +57,7 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
       {open && (
         <>
           {level === 'none' && <p className="sp-quiet">모션이 ‘없음’이라 발표할 때 배경이 멈춘 그림으로 보여요.</p>}
-          <div className="sp-grid bdp-grid" role="group" aria-label="배경 고르기" style={{ '--mo-line': `${(SLIDE_W / THUMB_W) * 0.6}px` } as CSSProperties}>
+          <div className="sp-grid bdp-grid" role="group" aria-label="배경 고르기" style={{ '--mo-line': `${(SLIDE_W / THUMB_W) * 0.6}px`, '--mo-dot': `${(SLIDE_W / THUMB_W) * 1.1}px` } as CSSProperties}>
             <BackdropCard look={look} slide={slide} kind={null} on={!slide.backdrop} onPick={() => pick(null)} />
             {BACKDROPS.map((b) => (
               <BackdropCard key={b.id} look={look} slide={slide} kind={b.id} on={now?.kind === b.id} onPick={() => pick(b.id)} />
@@ -95,7 +95,7 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
               글 둘레는 배경이 알아서 비켜요. 슬라이드에서 옮길 때는 방향키로 한 칸씩 옮기고, Shift와 함께 누르면 크기를 바꿔요.
             </Info>
           </div>
-          {editing && <p className="bdp-help">슬라이드 위의 틀을 끌어 옮기고, 모서리로 크기를 바꿔요.</p>}
+          {editing && <p className="bdp-help">슬라이드 위의 틀을 끌어 옮기고, 모서리와 변을 끌어 크기를 바꿔요.</p>}
           <div className="ins-opt">
             <span className="ins-opt-l">
               진하기
@@ -127,6 +127,11 @@ const BackdropCard = memo(function BackdropCard({ look, slide, kind, on, onPick 
     return kind ? { ...rest, backdrop: withBackdropKind(slide, kind) } : rest
   }, [slide, kind])
   const spec = kind ? backdropSpec(kind) : null
+  // 끝 모습은 거의 비어 있어서(지나가고 걷힌다) 카드에는 움직임의 뜻이 보이는 들어오기 중간 한 칸(5분의 2쯤)을 그린다. 올리면 한 번 움직인다
+  useLayoutEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>('.s-bd')
+    if (el) backdrops.frame(el, backdrops.endOf(el.dataset.bd || '', Number(el.dataset.w), Number(el.dataset.h)) * 0.45)
+  })
   const play = () => {
     const el = ref.current?.querySelector<HTMLElement>('.s-bd')
     const t = performance.now()

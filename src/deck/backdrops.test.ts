@@ -41,6 +41,8 @@ describe('배경의 값', () => {
     expect(baseBackdrop({ ...cover, options: { flip: true } }, 'diffuse').at).toEqual({ x: 4, y: 0, w: 8, h: 12 })
     expect(baseBackdrop(makeSlide('points'), 'flow')).toEqual({ kind: 'flow' })
     expect(baseBackdrop(makeSlide('statement'), 'gather')).toEqual({ kind: 'gather', strength: 'strong' })
+    // 자주 쓰는 자리는 전체와 3×3
+    expect(BACKDROP_PLACES.map((p) => p.id)).toEqual(['full', 'top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right'])
     // 종류를 바꾸면 고른 자리와 짙기는 그대로
     const chosen = { ...cover, backdrop: { kind: 'diffuse', at: { x: 2, y: 2, w: 8, h: 8 }, strength: 'soft' } as Backdrop }
     expect(withBackdropKind(chosen, 'flow')).toEqual({ kind: 'flow', at: { x: 2, y: 2, w: 8, h: 8 }, strength: 'soft' })

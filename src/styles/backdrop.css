@@ -81,6 +81,11 @@
   stroke-width: var(--mo-line);
 }
 
+/* 점(이음이 없는 길이 0의 선)은 화면 1.1px 넘게(--mo-dot): 입자의 물결이 카드에서 사라지지 않게 */
+.bdp-grid .s-bd path:not([stroke-linejoin]) {
+  stroke-width: var(--mo-dot);
+}
+
 /* 카드 아래의 어울리는 슬라이드: 이름보다 한 단계 옅고 작게, 두 줄까지 */
 .bdp-fits {
   display: -webkit-box;
@@ -96,12 +101,16 @@
   -webkit-line-clamp: 2;
 }
 
-/* 자리 열하나는 한 줄에 넣으면 이름이 잘려서 네 칸씩 세 줄로 */
+/* 자리: 맨 위 '전체', 그 아래 3×3(장의 자리 그대로) */
 .seg.bdp-places {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
   box-sizing: border-box;
+}
+
+.bdp-places .seg-btn:first-child {
+  grid-column: 1 / -1;
 }
 
 .bdp-places .seg-btn {

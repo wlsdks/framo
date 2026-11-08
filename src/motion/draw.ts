@@ -80,8 +80,8 @@ export interface DrawKit {
   ellipse(P: Paint, cx: number, cy: number, rx: number, ry: number, from: number, to: number, width: number, tone: number, a: number): void
   /** 끝 모습의 SVG 안쪽(path들). m은 짙기 배율, accentClass는 강조색 path의 class(기본 mo-a) */
   svgPaint(m: number, accentClass?: string): Paint & { markup(): string }
-  /** 캔버스에 그리기. colors는 [글자색, 강조색], line은 선 굵기의 바닥(그림 px, 없으면 0) */
-  canvasPaint(ctx: CanvasRenderingContext2D, colors: string[], m: number, line?: number): Paint & { flush(): void }
+  /** 캔버스에 그리기. colors는 [글자색, 강조색], line과 dot은 선 굵기와 점 지름의 바닥(그림 px, 없으면 0) */
+  canvasPaint(ctx: CanvasRenderingContext2D, colors: string[], m: number, line?: number, dot?: number): Paint & { flush(): void }
   /**
    * 그림 하나를 el 안의 캔버스로 움직인다. el 안의 SVG(끝 모습)는 그동안 감춘다. 화면 밖이면 쉬고, el이 문서에서 빠지면 그친다.
    * 첫 프레임에는 SVG만 감추고 캔버스는 다음 프레임에 만든다(장을 넘기는 첫 프레임을 가볍게)
@@ -211,7 +211,7 @@ export function drawKit(): DrawKit {
     }
   }
 
-  function canvasPaint(ctx: CanvasRenderingContext2D, colors: string[], m: number, line = 0): Paint & { flush(): void } {
+  function canvasPaint(ctx: CanvasRenderingContext2D, colors: string[], m: number, line = 0, dot = 0): Paint & { flush(): void } {
     const fills = new Map<number, Path2D>()
     const strokes = new Map<number, Path2D>()
     const pts: number[] = []
@@ -221,7 +221,7 @@ export function drawKit(): DrawKit {
         const q = Math.round(Math.min(0.95, a * m) * Q)
         if (q <= 0 || r <= 0.05) return
         // 크기는 끝 모습(SVG)과 같은 0.25px 단계
-        const rr = Math.round(r * 4) / 4
+        const rr = Math.max(dot / 2, Math.round(r * 4) / 4)
         if (rr <= 0) return
         const p = bucket(fills, tone * 1000 + q)
         p.moveTo(x + rr, y)
@@ -301,9 +301,9 @@ export function drawKit(): DrawKit {
         probe.remove()
       }
       fitCanvas()
-      // 아주 작게 줄인 그림(배경 고르기 카드)은 --mo-line으로 선 굵기의 바닥을 준다: 끝 모습(SVG)의 선을 같은 값으로 굵게 그리므로
-      // 움직이는 동안에도 같은 굵기여야 카드가 옅어졌다 짙어지지 않는다
-      P = canvasPaint(ctx, colors, o.strength, parseFloat(cs.getPropertyValue('--mo-line')) || 0)
+      // 아주 작게 줄인 그림(배경 고르기 카드)은 --mo-line, --mo-dot으로 선 굵기와 점 지름의 바닥을 준다: 끝 모습(SVG)을 같은 값으로
+      // 그리므로 움직이는 동안에도 같은 굵기여야 카드가 옅어졌다 짙어지지 않는다
+      P = canvasPaint(ctx, colors, o.strength, parseFloat(cs.getPropertyValue('--mo-line')) || 0, parseFloat(cs.getPropertyValue('--mo-dot')) || 0)
       return true
     }
     const draw = (now: number) => {

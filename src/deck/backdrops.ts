@@ -39,20 +39,30 @@ export const BACKDROP_STRENGTHS: { id: BackdropStrength; name: string; descripti
   { id: 'strong', name: '또렷하게', description: '글이 적은 표지나 단락 슬라이드, 프로젝터와 큰 회의실에 써요.' },
 ]
 
-/** 자주 쓰는 자리. 장 전체를 12×12칸으로 나눈 칸 수다(세로 한 칸은 90px, 가로 한 칸은 160px) */
+/**
+ * 자주 쓰는 자리: 전체와 3×3(왼쪽·가운데·오른쪽 × 위·가운데·아래). 고르는 곳은 전체 아래에 3×3 칸으로 놓는다.
+ * 자리끼리 겹쳐서(가운데 8칸, 가장자리 7칸) 배경이 장 가장자리에서 잘린 듯 끝나지 않는다
+ */
+const COLS = [
+  { k: 'left', name: '왼쪽', x: 0, w: 7 },
+  { k: 'center', name: '가운데', x: 2, w: 8 },
+  { k: 'right', name: '오른쪽', x: 5, w: 7 },
+]
+const ROWS = [
+  { k: 'top', name: '위', y: 0, h: 7 },
+  { k: 'middle', name: '가운데', y: 2, h: 8 },
+  { k: 'bottom', name: '아래', y: 5, h: 7 },
+]
 export const BACKDROP_PLACES: { id: string; name: string; at: BlockAt }[] = [
-  // 고르는 단추의 차례: 짝(왼쪽과 오른쪽, 위와 아래)을 붙여 둔다. 뒤섞어 두던 때는 찾게 됐다(검수)
   { id: 'full', name: '전체', at: { x: 0, y: 0, w: BOARD_COLS, h: BOARD_ROWS } },
-  { id: 'center', name: '가운데', at: { x: 2, y: 2, w: 8, h: 8 } },
-  { id: 'left', name: '왼쪽', at: { x: 0, y: 0, w: 7, h: 12 } },
-  { id: 'right', name: '오른쪽', at: { x: 5, y: 0, w: 7, h: 12 } },
-  { id: 'top', name: '위', at: { x: 0, y: 0, w: 12, h: 7 } },
-  { id: 'bottom', name: '아래', at: { x: 0, y: 5, w: 12, h: 7 } },
-  // 모서리 넷
-  { id: 'top-left', name: '왼쪽 위', at: { x: 0, y: 0, w: 6, h: 7 } },
-  { id: 'top-right', name: '오른쪽 위', at: { x: 6, y: 0, w: 6, h: 7 } },
-  { id: 'bottom-left', name: '왼쪽 아래', at: { x: 0, y: 5, w: 6, h: 7 } },
-  { id: 'bottom-right', name: '오른쪽 아래', at: { x: 6, y: 5, w: 6, h: 7 } },
+  ...ROWS.flatMap((r) =>
+    COLS.map((c) => ({
+      id: r.k === 'middle' ? c.k : c.k === 'center' ? r.k : `${r.k}-${c.k}`,
+      // 가운데 줄은 '왼쪽', '가운데', '오른쪽', 가운데 칸은 '위', '아래'
+      name: r.k === 'middle' ? c.name : c.k === 'center' ? r.name : `${c.name} ${r.name}`,
+      at: { x: c.x, y: r.y, w: c.w, h: r.h },
+    })),
+  ),
 ]
 
 export const WHOLE_SLIDE: BlockAt = BACKDROP_PLACES[0].at
