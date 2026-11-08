@@ -9,7 +9,7 @@ import { motionOf, transitionOf } from '../deck/themes'
 import { motionEngine, type MotionPlay } from '../motion/engine'
 import { presentChannel, type Blank, type PresentMessage } from '../present/link'
 import { recordSeconds, recordTime, slideHoldMs, START_MS, STEP_HOLD_MS, TURN_MS } from '../present/pace'
-import { canRecord, motionSettled, saveBlob, startRecording, type RecordMode, type Recording } from '../present/record'
+import { canRecord, motionSettled, saveBlob, sizeSettled, startRecording, type RecordMode, type Recording } from '../present/record'
 import { safeFileName } from '../store/deckFile'
 import { FitSlide, pageProps, SlideCanvas } from '../slides/SlideCanvas'
 import { Modal } from './ui'
@@ -359,10 +359,13 @@ export function Present({
       setRecording(false)
       return 'failed'
     }
+    // 고르는 창이 전체 화면을 풀었으면 다시 들어가 본다(누른 지 얼마 안 됐으면 된다). 안 되면 이 창 크기로 녹화한다.
+    // 창 크기가 다 바뀐 뒤에 담기 시작한다: 담는 도중에 장면 크기가 바뀌면 MP4가 깨졌다 (record.ts의 begin)
+    if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.().catch(() => {})
+    await sizeSettled()
+    rec.begin()
     recStarting.current = false
     recSince.current = Date.now()
-    // 고르는 창이 전체 화면을 풀었으면 다시 들어가 본다(누른 지 얼마 안 됐으면 된다). 안 되면 이 창 크기로 녹화한다
-    if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.().catch(() => {})
     setRecLive(rec.mode)
     // 멈추면(Esc, 브라우저의 '공유 중지') 기다리던 것을 바로 끝낸다: 장마다 글을 읽을 만큼(15초까지) 머무는데, 머무는 동안 누른
     // Esc가 그 시간이 다 지나서야 먹어 영상에 원치 않는 장면이 남았다

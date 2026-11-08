@@ -39,7 +39,13 @@ export type Recording = {
   ext: string
   /** 탭 전체를 녹화하면(tab) 화면의 어떤 표시도 영상에 담긴다 */
   mode: RecordMode
-  /** 녹화를 멈추고 파일을 돌려준다. 이미 멈췄으면 그때의 파일 */
+  /**
+   * 파일에 담기 시작한다. 창 크기가 다 바뀐 뒤에 부른다(sizeSettled): 공유를 시작하면 브라우저가 전체 화면을 풀거나 '공유 중' 막대를
+   * 띄워 창이, 그래서 잘라 내는 슬라이드 상자가 커지거나 작아진다. 담는 도중에 장면 크기가 바뀌면 MP4는 그 뒤가 깨졌다
+   * (영상 프로그램에서 엉뚱한 색 줄로 보였다)
+   */
+  begin: () => void
+  /** 녹화를 멈추고 파일을 돌려준다. 이미 멈췄으면 그때의 파일. 담기 시작하기 전이면 없음 */
   stop: () => Promise<Blob | null>
   /** 사람이 브라우저의 '공유 중지'를 눌렀을 때 */
   ended: Promise<void>
@@ -97,17 +103,45 @@ export async function startRecording(el: HTMLElement): Promise<Recording> {
   void ended.then(() => {
     if (recorder.state !== 'inactive') recorder.stop()
   })
-  // 1초마다 조각을 받아 둔다: 녹화가 길어도 마지막에 한 번에 받느라 멈추지 않게
-  recorder.start(1000)
+  let began = false
   return {
     ext: type.ext,
     mode,
     ended,
+    begin: () => {
+      if (began || track.readyState === 'ended') return
+      began = true
+      // 1초마다 조각을 받아 둔다: 녹화가 길어도 마지막에 한 번에 받느라 멈추지 않게
+      recorder.start(1000)
+    },
     stop: () => {
+      if (!began) {
+        stream.getTracks().forEach((t) => t.stop())
+        return Promise.resolve(null)
+      }
       if (recorder.state !== 'inactive') recorder.stop()
       return file ? Promise.resolve(file) : finished
     },
   }
+}
+
+/**
+ * 창 크기가 그대로 있을 때까지 기다린다: quiet 동안 바뀌지 않으면 끝(limit을 넘으면 그만), 그다음 바뀐 크기로 다시 그린 프레임까지.
+ * 녹화를 시작한 직후에 전체 화면으로 다시 들어가거나 '공유 중' 막대가 뜨는 것을 기다린다(Recording.begin)
+ */
+export async function sizeSettled(quiet = 300, limit = 2500): Promise<void> {
+  const t0 = performance.now()
+  let size = `${window.innerWidth}×${window.innerHeight}`
+  let since = t0
+  while (performance.now() - t0 < limit) {
+    await new Promise((r) => window.setTimeout(r, 50))
+    const now = `${window.innerWidth}×${window.innerHeight}`
+    if (now !== size) {
+      size = now
+      since = performance.now()
+    } else if (performance.now() - since >= quiet) break
+  }
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 }
 
 /** 파일을 내려받게 한다 */
