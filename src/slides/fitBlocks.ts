@@ -103,6 +103,23 @@ export function blockFitter() {
   }
 
   /**
+   * 편집 화면에서 다시 맞춘 자리로 미끄러지는 중인 것(slides/liveMotion.ts, 움직임 이름 'ed-live': 이 함수는 내보낸 HTML에 소스째
+   * 들어가 그 파일을 가져오지 못한다)을 끝 시각으로 옮겨 둔다. 움직이는 중의 자리(translate, scale)로 재면 넘침과 쌓기가 엉뚱하게 나온다.
+   * 맞춘 뒤에 돌려놓을 시각을 준다(보이는 움직임은 그대로 이어진다)
+   */
+  function settled(root: Element): { a: Animation; t: CSSNumberish | null }[] {
+    const out: { a: Animation; t: CSSNumberish | null }[] = []
+    if (typeof root.getAnimations !== 'function') return out
+    for (const a of root.getAnimations({ subtree: true })) {
+      const end = a.effect?.getComputedTiming().endTime
+      if (a.id !== 'ed-live' || a.playState !== 'running' || typeof end !== 'number') continue
+      out.push({ a, t: a.currentTime })
+      a.currentTime = end
+    }
+    return out
+  }
+
+  /**
    * 움직임이 끝나면 다시 맞춘다. 장을 넘겨서 끝난 움직임이면 그 장은 곧 빠지므로, 끝난 차례에 바로 재지 않고 한 박자 뒤에
    * (빠진 장은 크기가 없어 건너뛴다)
    */
@@ -1756,8 +1773,9 @@ export function blockFitter() {
       area.classList.add('is-fitting')
       // 편집 화면에서 자리를 옮기는 중인 칸(blocks.tsx의 useFlip이 translate로 미끄러뜨린다)은 끝자리로 잰다. 움직이는 중의 자리로 재면
       // 쌓기(pack)가 칸을 엉뚱하게 옮겼다: 컴포넌트 장을 새로 만들며 점 목록을 넣으면 칸이 본문 위로 571px 올라가 화면에서 사라졌고,
-      // 움직임이 끝난 뒤에는 다시 맞출 까닭이 없어 그대로 남았다. 움직임을 끝 시각으로 잠깐 옮겨 재고 되돌린다(보이는 움직임은 그대로)
-      const flips: { a: Animation; t: CSSNumberish | null }[] = []
+      // 움직임이 끝난 뒤에는 다시 맞출 까닭이 없어 그대로 남았다. 움직임을 끝 시각으로 잠깐 옮겨 재고 되돌린다(보이는 움직임은 그대로).
+      // 칸 안의 글 칸, 항목, 이음표가 다시 맞춘 자리로 미끄러지는 중(settled)인 것도 같다
+      const flips = settled(area)
       for (const c of cells) {
         const list = typeof c.getAnimations === 'function' ? c.getAnimations() : []
         for (const a of list) {
@@ -2035,10 +2053,13 @@ export function blockFitter() {
   function fitLayout(slide: HTMLElement): void {
     // 한 모습에서 채움, 넘침, 제목과 다툼을 볼 때마다 같은 글 줄을 다섯 번씩 다시 쟀다. 값을 적기 전까지는 잰 것을 같이 쓴다(memo)
     memo = new Map()
+    // 편집 화면에서 다시 맞춘 자리로 미끄러지는 중이면 끝자리로 잰다(settled). 부품 장은 판의 맞추기(fit)가 한다
+    const flips = slide.classList.contains('l-compose') ? [] : settled(slide)
     try {
       fitLayoutNow(slide)
     } finally {
       memo = null
+      for (const f of flips) f.a.currentTime = f.t
     }
   }
 
