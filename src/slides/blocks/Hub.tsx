@@ -38,12 +38,12 @@ function lineEm(text: string): number {
 }
 
 /**
- * 가운데 원 안의 글(이름과 메모)이 들어가는 지름(캔버스 px, 키우기 전). 이름(36)과 메모(22)가 두 줄까지 꺾여도 원 안쪽 글 자리
+ * 가운데 원 안의 글(이름과 메모)이 들어가는 지름(캔버스 px, 키우기 전). 이름(36)과 메모(26)가 두 줄까지 꺾여도 원 안쪽 글 자리
  * (지름의 0.6쯤)에 들게 어림한다. 재지 않고 어림하는 것은 원 크기에 따라 글이 꺾이고 꺾인 글에 따라 원이 커져 서로를 따라 움직이기 때문
  */
 function hubCoreNeed(center: string, note: string): number {
   const line = (t: string, px: number) => (lineEm(t) * px) / (lineEm(t) > 6 ? 2 : 1)
-  return Math.round(Math.max(line(center, 36), line(note, 22)) / 0.6)
+  return Math.round(Math.max(line(center, 36), line(note, 26)) / 0.6)
 }
 
 export function hubSpots(n: number, out: boolean): { center: { x: number; y: number }; spots: HubSpot[] } {

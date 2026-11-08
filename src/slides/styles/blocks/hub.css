@@ -86,7 +86,8 @@
 .bk-hb-rim {
   fill: var(--bg);
   stroke: var(--ink);
-  stroke-width: 1.2;
+  /* 한 단계 가늘게(1.2 → 1): 커진 원에서 테가 그림보다 먼저 보였다(검수) */
+  stroke-width: 1;
 }
 
 .bk-hb-hit {
@@ -136,10 +137,13 @@
 }
 
 .bk-hb-n {
-  --fs: var(--t-source);
+  /* 메모는 이름표 바닥(22)보다 한 단계 위: 커진 원 안에서 22면 멀리서 읽히지 않았다(검수). 줄 길이는 고르게, 낱말 사이에서만 꺾는다 */
+  --fs: var(--t-small);
   margin-top: 6px;
   color: var(--ink-3);
   line-height: 1.3;
+  text-wrap: balance;
+  word-break: keep-all;
 }
 
 /* 곳의 이름: 점 옆, 글이 선을 향한다(모이기는 점 왼쪽에 오른쪽 끝을 맞추고, 퍼지기는 점 오른쪽에) */
