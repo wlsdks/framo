@@ -12,6 +12,7 @@ import { SlideContext, type SlideActions, type SlideMode } from './context'
 import { useHalos } from './halos'
 import { BOLD_LAYOUTS, LAYOUT_VIEWS } from './layouts'
 import { PaneTools } from './panes'
+import { sharedScales } from './sharedScale'
 
 export const SLIDE_W = 1920
 export const SLIDE_H = 1080
@@ -29,6 +30,8 @@ export interface SlideCanvasProps {
   sectionIndex?: number
   /** 부품 하나만 이 크기(캔버스 px)로: 부품 고르기 카드, 끌고 있는 부품 */
   solo?: { w: number; h: number }
+  /** 이어 움직이는 이웃 장과 같이 쓰는 막대의 잣대(차트 자리 → 끝 값, sharedScale.ts). pageProps가 넘긴다 */
+  scales?: ReadonlyMap<string, number>
 }
 
 const NO_SECTIONS: readonly string[] = []
@@ -40,6 +43,7 @@ export function pageProps(info: PageInfo, slideId: string) {
     total: info.total,
     sections: info.sections,
     sectionIndex: info.sectionOf.get(slideId) ?? -1,
+    scales: sharedScales(info).get(slideId),
   }
 }
 
@@ -82,6 +86,7 @@ export const SlideCanvas = memo(function SlideCanvas({
   sections = NO_SECTIONS,
   sectionIndex = -1,
   solo,
+  scales,
 }: SlideCanvasProps) {
   // 발표 모습(발표, 미리 보기, 내보낸 파일)에서는 하나도 채우지 않은 항목을 그리지 않는다
   const slide = useMemo(() => (mode === 'final' ? presentable(given) : given), [given, mode])
@@ -160,7 +165,7 @@ export const SlideCanvas = memo(function SlideCanvas({
   const style: CSSProperties = side !== null ? { ...themed, '--side-w': `${side * PANE_UNIT}px` } : themed
 
   return (
-    <SlideContext.Provider value={{ slide, meta: deck.meta, mode, actions, canRemoveItem, sections, sectionIndex }}>
+    <SlideContext.Provider value={{ slide, meta: deck.meta, mode, actions, canRemoveItem, sections, sectionIndex, scale: scales?.get(''), scales }}>
       <div
         ref={ref}
         className={cx(

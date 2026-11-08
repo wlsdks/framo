@@ -67,6 +67,7 @@
 | 부품이 잘리지 않는 높이 | `src/deck/blockHeights.ts`(갤러리에서 잰 값, 손으로 고치지 않는다) |
 | 칸의 글에서 숫자 읽기, 선 그래프의 축 | `src/slides/numbers.ts`(`seriesIn`, `amountPair`, `lineAxis`) |
 | 조각 색의 단계(구성비, 쌓은 막대) | `src/slides/tints.ts` |
+| 이어 움직이는 이웃 장이 같이 쓰는 막대의 잣대 | `src/slides/sharedScale.ts`의 `sharedScales`. 장 차례 정보(`pageInfo`)에서 한 번 셈하고 `pageProps`가 넘겨, 편집 화면, 발표, 내보낸 HTML, PDF와 PPT, 목록 그림이 같이 쓴다 |
 | 빈 차트를 예시 값으로 옅게 그릴지 | `src/slides/context.ts`의 `demoOf` |
 | 발표할 때의 움직임 | `src/motion/engine.ts` |
 | 단축키 표기 | `src/lib/keys.ts` |

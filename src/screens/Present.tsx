@@ -52,7 +52,7 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
   const slides = useMemo(() => deck.slides.filter((s) => !s.hidden), [deck.slides])
   // 장마다 넘기는 쪽 번호와 단락. 그릴 때마다 새로 만들면 단락 목록이 새 배열이라, 마우스를 움직이거나 멈출 때마다(아래 표시를
   // 보이고 숨긴다) 지금 장을 통째로 다시 그렸다
-  const info = useMemo(() => pageInfo(deck.slides), [deck.slides])
+  const info = useMemo(() => pageInfo(deck.slides, deck), [deck.slides, deck.theme, deck.motion])
   const engine = useMemo(() => motionEngine(), [])
   // play: 이 장을 움직일지 (앞으로 넘겨 온 장). 움직임이 없는 장도 엔진에 맡긴다: '누르면' 나오는 컴포넌트는 누를 때까지 감춘다
   const [view, setView] = useState(() => ({ index: startIndex(deck, slides, startId), play: true }))

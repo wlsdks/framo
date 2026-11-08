@@ -101,7 +101,7 @@ export function Presenter({ id }: { id: string }) {
   const slides = useMemo(() => (deck ? deck.slides.filter((s) => !s.hidden) : []), [deck])
   // 쪽 번호와 단락은 발표가 바뀔 때만 새로 만든다. 그릴 때마다 만들면 단락 목록이 새 배열이라, 시계가 0.5초마다 다시 그릴 때
   // 지금 장, 다음 장, 아래 줄의 모든 장을 통째로 다시 그렸다(0.5초마다 55ms, CPU가 느리면 160ms 넘게 멈췄다)
-  const info = useMemo(() => pageInfo(deck?.slides ?? []), [deck])
+  const info = useMemo(() => pageInfo(deck?.slides ?? [], deck ?? undefined), [deck])
 
   const go = useCallback(
     (n: number) => {

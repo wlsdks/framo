@@ -148,7 +148,7 @@ export interface PresentCheck {
  * 따로 그려 재면 시간이 걸려 전체 화면을 여는 클릭의 효력이 끝날 수 있다. 그림이 없으면(목록을 접은 화면) 넘침은 건너뛴다
  */
 export function presentCheck(deck: Deck): PresentCheck {
-  const info = pageInfo(deck.slides)
+  const info = pageInfo(deck.slides, deck)
   const blanks = new Map(deckBlanks(deck).map((b) => [b.slide.id, b.missing]))
   const rows = deck.slides
     .filter((s) => !s.hidden)
@@ -191,7 +191,7 @@ export function CheckDialog({
   onGoTo: (slideId: string, m?: Missing) => void
 }) {
   const first = check.rows[0]
-  const info = useMemo(() => pageInfo(deck.slides), [deck.slides])
+  const info = useMemo(() => pageInfo(deck.slides, deck), [deck.slides, deck.theme, deck.motion])
   const byId = useMemo(() => new Map(deck.slides.map((s) => [s.id, s])), [deck.slides])
   if (!first) return null
   return (

@@ -54,6 +54,13 @@ export interface SlideCtx {
   labels?: Pick<LayoutSpec, 'fields' | 'items'>
   /** 부품 장의 부품 안: 칸 너비 (12 기준). 자리를 어림해야 하는 그림(위치 비교의 이름표)이 쓴다 */
   span?: number
+  /**
+   * 이 차트가 이어 움직이는 이웃 장과 같이 쓰는 막대의 잣대(끝 값, 차트의 값과 같은 단위). 없으면 제 가장 큰 값으로 그린다(sharedScale.ts).
+   * 부품 장에서는 장의 scales에서 부품마다 꺼낸다(blocks.tsx)
+   */
+  scale?: number
+  /** 장 하나의 잣대들(차트 자리 → 끝 값). 레이아웃 장은 '', 부품 장은 부품 id */
+  scales?: ReadonlyMap<string, number>
 }
 
 export const SlideContext = createContext<SlideCtx | null>(null)
