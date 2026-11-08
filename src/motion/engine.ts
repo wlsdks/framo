@@ -69,11 +69,31 @@ export function motionEngine(): MotionEngine {
     settle: spring(120, 22),
     firm: spring(220, 30),
   }
-  const OUT = 'cubic-bezier(0.16, 1, 0.3, 1)'
+  // 이징은 하는 일마다 하나씩, 이 표에서만 고른다(Carbon과 Material 3의 모션 토큰처럼 이름이 곧 쓰임새).
+  // 예전에는 움직임마다 비슷하지만 조금씩 다른 곡선을 따로 적어 16가지였다: 같은 '드러나기'인데 장마다 끝맺음이 달랐다
+  const EASE = {
+    /** 들어와 자리 잡기: 빠르게 다가와 길게 멈춘다 */
+    out: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    /** 걷히며 드러나기: 선 긋기, 가림 걷기, 숫자 굴리기 */
+    reveal: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
+    /** 자리에서 자리로 옮기기: 천천히 떠나 빠르게 건너고 천천히 닿는다(데이터 조각, 판 옮기기) */
+    carry: 'cubic-bezier(0.45, 0, 0.25, 1)',
+    /** 쓸고 지나가기: 힘을 모았다가 끝까지 쓴다(닦기, 지우기, 막대가 열리기) */
+    sweep: 'cubic-bezier(0.55, 0, 0.3, 1)',
+    /** 카메라: 천천히 떠나 길게 멈춘다. 먹이 가라앉듯 끝에서 오래 머물러서 언제 멈췄는지 눈에 띄지 않는다 */
+    camera: 'cubic-bezier(0.33, 0, 0.12, 1)',
+    /** 사진 위로 천천히 흐르기(장면의 밀어 들어가기) */
+    drift: 'cubic-bezier(0.25, 0.1, 0.2, 1)',
+    /** 끝없이 오가는 숨쉬기 */
+    breathe: 'cubic-bezier(0.45, 0, 0.55, 1)',
+    /** 딸깍 맞춰지기: 조금 넘었다가 제자리. 결이 맞춰지는 눈금처럼 '맞았다'를 보일 때만 */
+    snap: 'cubic-bezier(0.34, 1.45, 0.64, 1)',
+  } as const
+  const OUT = EASE.out
 
   const LEVELS = {
-    calm: { y: 20, step: 60, word: 30, ink: 0, scale: 0.98, move: SPRINGS.quick, grow: SPRINGS.glide, pop: SPRINGS.quick, speed: 0.8 },
-    lively: { y: 44, step: 100, word: 50, ink: 5, scale: 0.96, move: SPRINGS.settle, grow: SPRINGS.settle, pop: SPRINGS.firm, speed: 1.1 },
+    calm: { span: 480, y: 20, step: 60, word: 30, ink: 0, scale: 0.98, move: SPRINGS.quick, grow: SPRINGS.glide, pop: SPRINGS.quick, speed: 0.8 },
+    lively: { span: 720, y: 44, step: 100, word: 50, ink: 5, scale: 0.96, move: SPRINGS.settle, grow: SPRINGS.settle, pop: SPRINGS.firm, speed: 1.1 },
   }
 
   type Level = (typeof LEVELS)['calm']
@@ -325,7 +345,7 @@ export function motionEngine(): MotionEngine {
    * 0부터 그 숫자까지(한 바퀴 더) 굴린다. 왼쪽 자리부터 차례로 멈춘다. 다 굴러가면 창을 걷고 원래 글자로.
    * 글자 상자를 잴 수 없으면(안 보이는 칸) false를 돌려준다. 그때는 0부터 올리기로.
    */
-  function roll(el: Element, at: number, duration: number, lively: boolean, anims: Animation[], restores: (() => void)[], nth = 0) {
+  function roll(el: Element, at: number, duration: number, anims: Animation[], restores: (() => void)[], nth = 0) {
     // 숫자가 든 nth째 글 조각. 숫자가 둘인 값('3시간 30분')은 숫자마다 조각이 나뉘어 조각마다 굴린다(play의 count)
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
     let node = walker.nextNode() as Text | null
@@ -434,7 +454,7 @@ export function motionEngine(): MotionEngine {
           const time = duration + (n > 1 ? (i / (n - 1)) * duration * 0.25 : 0)
           // 지나쳤다 돌아오지 않는다. 예전 생동감은 끝 숫자를 창 높이의 16%만큼 지나쳤다 돌아왔는데, 녹화해 보니 자리마다
           // 따로 지나쳐서 0.4초쯤 숫자가 들쭉날쭉 어긋나 보였다. 생동감도 같은 감속 곡선으로, 조금 더 길게 굴러 천천히 멈춘다
-          run(anims, strip, [{ translate: `0 ${stop * h}px` }], at, { easing: lively ? 'cubic-bezier(0.2, 0.75, 0.1, 1)' : 'cubic-bezier(0.25, 0.8, 0.15, 1)', duration: time })
+          run(anims, strip, [{ translate: `0 ${stop * h}px` }], at, { easing: EASE.reveal, duration: time })
         })
         pace = was
       },
@@ -531,7 +551,7 @@ export function motionEngine(): MotionEngine {
     const sweep = (el: Element | null, at: number) => {
       if (!el) return
       run(anims, el, [{ clipPath: 'inset(-40px 100% -40px 0)' }, { clipPath: 'inset(-40px 0 -40px 0)' }], s(at), {
-        easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
+        easing: EASE.reveal,
         duration: d(levelName === 'lively' ? 760 : 600),
       })
     }
@@ -555,7 +575,7 @@ export function motionEngine(): MotionEngine {
       const inset = { left: 'inset(0 100% 0 0)', right: 'inset(0 0 0 100%)', bottom: 'inset(100% 0 0 0)', top: 'inset(0 0 100% 0)' }[from]
       // 걷히는 곡선은 감속만: 천천히 떠나 빨라졌다 멈추는(ease-in-out) 곡선은 흔한 프레젠테이션의 '닦아내기'처럼 기계적으로 보였다.
       // 먹이 번지듯 처음에 빨리 열리고 끝에서 천천히 멈춘다
-      run(anims, el, [{ clipPath: inset }, { clipPath: 'inset(0 0 0 0)' }], s(at), { easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)', duration: d(duration) })
+      run(anims, el, [{ clipPath: inset }, { clipPath: 'inset(0 0 0 0)' }], s(at), { easing: EASE.reveal, duration: d(duration) })
     }
     /**
      * 이미지 당기기: 가림막이 걷히는 동안 그림이 조금 크게, 걷히는 쪽으로 조금 비켜 있다가 제자리로 다가앉는다(걷히는 가림막에 끌려
@@ -569,7 +589,7 @@ export function motionEngine(): MotionEngine {
       const grow = (big - 1) * k
       const dx = (from === 'left' ? -25 : 25) * grow
       run(anims, img, [{ scale: String(1 + grow), translate: `${dx}% 0` }, { scale: '1', translate: '0 0' }], s(0), {
-        easing: 'cubic-bezier(0.2, 0.6, 0.2, 1)',
+        easing: EASE.reveal,
         duration: k === 1 ? duration : duration * 1.4,
       })
     }
@@ -620,7 +640,7 @@ export function motionEngine(): MotionEngine {
       let t = at
       split.words.forEach((w, i) => {
         if (i > 0 && !split.marks[i]) t += step
-        run(anims, w, [from, to], s(t), { easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', duration: d(lively ? 620 : 520) })
+        run(anims, w, [from, to], s(t), { easing: EASE.reveal, duration: d(lively ? 620 : 520) })
       })
       return t + 120
     }
@@ -663,11 +683,11 @@ export function motionEngine(): MotionEngine {
         return
       }
       if (runs > 1) {
-        for (let i = 0; i < runs; i++) roll(el, s(at), lively ? 900 : 800, lively, anims, restores, i)
+        for (let i = 0; i < runs; i++) roll(el, s(at), lively ? 900 : 800, anims, restores, i)
         return
       }
       // 숫자는 장이 나오고 2초 안에 다 멈춘다(녹화해 보니 1.3초씩 굴리면 다음 장으로 넘길 때까지 굴러가고 있었다)
-      if (!roll(el, s(at), lively ? 900 : 800, lively, anims, restores))
+      if (!roll(el, s(at), lively ? 900 : 800, anims, restores))
         countUp(el, s(at), (lively ? 1000 : 800) * pace, stops, waits)
     }
     /**
@@ -694,7 +714,7 @@ export function motionEngine(): MotionEngine {
             { opacity: 0, scale: '2.6', offset: 1 },
           ],
           s(at) + k * d(650),
-          { easing: 'cubic-bezier(0.2, 0.6, 0.35, 1)', duration: d(1100) },
+          { easing: EASE.reveal, duration: d(1100) },
         )
       }
     }
@@ -770,9 +790,17 @@ export function motionEngine(): MotionEngine {
       fade(el, at, 240)
       count(el, at)
     }
+    /**
+     * 차례로 나오는 n개의 사이(Motion Canvas의 sequence, anime.js의 stagger와 같은 생각을 우리 말로).
+     * 기본 사이로 늘어놓되, 첫 것부터 마지막 것이 나오기 시작할 때까지가 span을 넘지 않게 좁힌다: 항목이 열둘인 목록도
+     * 넷인 목록과 거의 같은 때에 다 나와서, 듣는 사람이 마지막 줄을 기다리지 않는다
+     */
+    const stagger = (n: number, step: number, span = L.span) => (n > 1 ? Math.min(step, span / (n - 1)) : step)
     const items = (sel: string, at: number, each: (el: HTMLElement, at: number, i: number) => void, step = L.step) => {
-      $(sel).forEach((el, i) => each(el, at + i * step, i))
-      return at + $(sel).length * step
+      const list = $(sel)
+      const gap = stagger(list.length, step)
+      list.forEach((el, i) => each(el, at + i * gap, i))
+      return at + list.length * gap
     }
 
     // 머리: 제목 낱말 → 부제. 본문은 제목이 거의 다 올라왔을 때부터. 부품 안에서는 머리가 없다.
@@ -1284,7 +1312,7 @@ export function motionEngine(): MotionEngine {
             el,
             [{ scale: '0 1', transformOrigin: 'left center' }, { scale: '1 1', transformOrigin: 'left center' }],
             s(at),
-            { easing: 'cubic-bezier(0.45, 0, 0.25, 1)', duration: d(step) },
+            { easing: EASE.carry, duration: d(step) },
             '::before',
           )
           fade(el.querySelector('.pc-n'), at + 60, 600)
@@ -1350,7 +1378,7 @@ export function motionEngine(): MotionEngine {
         // 축은 처음에 빨리 열리고(감속 곡선) 점은 축이 열리기 시작하면 바로: 축이 다 펼쳐진 뒤(0.42초)에 점을 들이던 때는
         // 빈 축만 0.4초 남짓 서 있었다(녹화, '빈 틀 먼저 보이지 않기')
         const plot = one('.pm-plot')
-        if (plot) run(anims, plot, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(-40px -40px -40px -40px)' }], s(t), { easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)', duration: d(700) })
+        if (plot) run(anims, plot, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(-40px -40px -40px -40px)' }], s(t), { easing: EASE.reveal, duration: d(700) })
         fade(one('.pm-y'), t, 500)
         fade(one('.pm-x'), t, 500)
         const pts = $('.pm-pt')
@@ -1386,7 +1414,7 @@ export function motionEngine(): MotionEngine {
     }
 
     /** 데이터 조각이 오가는 길의 이징: 천천히 떠나 빠르게 건너고 천천히 닿는다. 선 긋기와 같은 이징이라 조각이 선 끝을 타고 간다 */
-    const CARRY = 'cubic-bezier(0.45, 0, 0.25, 1)'
+    const CARRY = EASE.carry
     /**
      * 데이터 조각: 길(path, host 안의 캔버스 px 점들)을 따라 건너가는 작은 네모(motion.css의 .mo-pk). 꺾이는 길은 길이대로 나눠
      * 같은 빠르기로 지난다. 떠날 때와 닿을 때 흐려져서 앞 상자에서 나와 다음 상자로 들어가는 것처럼 보인다.
@@ -1630,7 +1658,7 @@ export function motionEngine(): MotionEngine {
           count(one('.bk-rt-v'), 180)
           // 세기 막대가 많아도 1초 안에 다 그어지게. 해당하는 막대는 손으로 세며 긋듯 아래에서 위로 그어지고, 나머지는 옅게 놓인다
           const dots = $('.bk-rt-d')
-          const step = Math.min(L.step, 900 / Math.max(1, dots.length))
+          const step = stagger(dots.length, L.step, 900)
           dots.forEach((el, i) =>
             el.classList.contains('is-on') && !el.querySelector('svg')
               ? run(anims, el, [{ scale: '1 0', transformOrigin: '50% 100%' }], s(240 + i * step), { easing: OUT, duration: d(360) })
@@ -1874,7 +1902,7 @@ export function motionEngine(): MotionEngine {
               const w = parseFloat(bar.style.getPropertyValue('--w')) || 100
               const c = Math.min(100, Math.max(0, ((x - o) / w) * 100))
               run(anims, bar, [{ clipPath: `inset(-2px ${100 - c}% -2px ${c}%)` }, { clipPath: 'inset(-2px 0 -2px 0)' }], s(at + 80), {
-                easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
+                easing: EASE.reveal,
                 duration: d(open),
               })
             }
@@ -2005,7 +2033,7 @@ export function motionEngine(): MotionEngine {
               // 계단: 앞 단의 이름표 아래에서 단 끝까지 내려가는 조각을 먼저 긋고, 이 단의 갈고리가 이어서 세로를 연 다음 가로로 연다
               draw(steps[n - 1], at - hop * 0.35, hop * 0.35, 'center top', '::after')
               const frames: Keyframe[] = [{ clipPath: 'inset(0 100% 100% 0)' }, { clipPath: 'inset(0 calc(100% - 3px) 0 0)', offset: 0.5 }, { clipPath: 'inset(0 0 0 0)' }]
-              run(anims, link, frames, s(at), { easing: 'cubic-bezier(0.25, 0.8, 0.25, 1)', duration: d(seg) })
+              run(anims, link, frames, s(at), { easing: EASE.reveal, duration: d(seg) })
             } else {
               // 가로(넓은 칸): 갈고리는 숨고 앞 이름표에서 이 이름표까지 이름표 줄의 곧은 선(앞 이름표의 ::after)이 왼쪽에서 그어진다
               draw(steps[n - 1].querySelector('.bk-wy-k'), at - hop * 0.2, seg, 'left center', '::after')
@@ -2498,7 +2526,7 @@ export function motionEngine(): MotionEngine {
                     { backgroundColor: m.to, rotate: '0deg', offset: 1 },
                   ],
                   s(at + j * per),
-                  { easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', duration: d(760) },
+                  { easing: EASE.snap, duration: d(760) },
                 ),
               )
             at += 120 + Math.max(320, per * g.length) + 380
@@ -2661,7 +2689,7 @@ export function motionEngine(): MotionEngine {
           const hubText = one('.bk-hb-hub')
           const hits = $('.bk-hb-hit')
           const n = Math.max(1, lines.length)
-          const step = Math.min(levelName === 'lively' ? 170 : 150, 800 / n)
+          const step = stagger(n + 1, levelName === 'lively' ? 170 : 150, 800)
           const lineDur = d(levelName === 'lively' ? 700 : 620)
           const grow = (el: Element | null, at: number) => {
             if (el) run(anims, el, [{ opacity: 0, scale: '0.4' }], s(at), L.pop)
@@ -2698,7 +2726,7 @@ export function motionEngine(): MotionEngine {
             const way = Math.floor(k / 2)
             const period = (1700 + (way % 3) * 260) * fast
             const delay = start + ((way * 380) % 1300) + (k % 2) * (period / 2)
-            const timing = { duration: period, delay, iterations: Infinity, easing: 'cubic-bezier(0.45, 0, 0.55, 1)' }
+            const timing = { duration: period, delay, iterations: Infinity, easing: EASE.breathe }
             const fadeIn = [{ opacity: 0, offset: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.84 }, { opacity: 0, offset: 1 }]
             loops.push(head.animate(fadeIn.map((f, i) => ({ ...f, strokeDashoffset: [0.4, -9.6, -84, -99.6][i] })), timing))
             const tail = tails[k]
@@ -2761,7 +2789,7 @@ export function motionEngine(): MotionEngine {
           // 양옆에 둘 때는 왼쪽과 오른쪽을 번갈아(위에서부터), 쌓을 때는 위에서부터
           const order = tree ? nodes : [...nodes].sort((a, b) => spot(a, map).t - spot(b, map).t || (a.classList.contains('is-l') ? -1 : 1))
           const reach = tree ? 360 : 420
-          const step = Math.min(levelName === 'lively' ? 170 : 140, 700 / order.length)
+          const step = stagger(order.length + 1, levelName === 'lively' ? 170 : 140, 700)
           let last = 0
           order.forEach((node, k) => {
             const at = (tree ? 260 : 400) + k * step
@@ -2814,8 +2842,8 @@ export function motionEngine(): MotionEngine {
           // 처음 색은 이 칸의 강조색 그대로(진한 면이면 면 위의 강조색)
           const accent = segs.length ? getComputedStyle(segs[0]).getPropertyValue('--accent').trim() : ''
           if (bar) {
-            run(anims, bar, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], s(60), { easing: 'cubic-bezier(0.65, 0, 0.25, 1)', duration: d(720) })
-            run(anims, bar, [{ columnGap: '0px' }], s(open), { easing: 'cubic-bezier(0.3, 0, 0.2, 1)', duration: d(460) })
+            run(anims, bar, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], s(60), { easing: EASE.sweep, duration: d(720) })
+            run(anims, bar, [{ columnGap: '0px' }], s(open), { easing: EASE.carry, duration: d(460) })
             // 붙어 있는 동안 조각 사이의 이음매(반 픽셀의 틈)가 가는 선으로 비쳐 한 덩어리로 보이지 않았다. 막대 바탕을 같은 색으로 깔아 두고 갈라질 때 걷는다
             if (accent) run(anims, bar, [{ backgroundColor: accent }], s(open), { easing: OUT, duration: d(180) })
           }
@@ -2849,7 +2877,7 @@ export function motionEngine(): MotionEngine {
             return a ? `translate(${a.l - b.l}px, ${a.t - b.t}px) scale(${(a.r - a.l) / w}, ${(a.b - a.t) / h})` : ''
           })
           const lively = levelName === 'lively'
-          const step = Math.min(lively ? 130 : 110, 560 / Math.max(1, parts.length))
+          const step = stagger(parts.length + 1, lively ? 130 : 110, 560)
           parts.forEach((part, i) => {
             const at = i * step
             rise(part.querySelector('.bk-mg-name'), at, L.y * 0.4)
@@ -3145,8 +3173,7 @@ export function motionEngine(): MotionEngine {
 
     /** 장면이 얹은 움직임에 붙이는 이름. 움직임 편집의 시간표가 '장면' 줄로 따로 그린다 */
     const SCENE = 'mo-scene'
-    /** 카메라: 천천히 떠나 길게 멈춘다. 먹이 가라앉듯 끝에서 오래 머물러서 언제 멈췄는지 눈에 띄지 않는다 */
-    const CAMERA = 'cubic-bezier(0.33, 0, 0.12, 1)'
+    const CAMERA = EASE.camera
 
     /**
      * 장면 하나를 준비한다. 움직임을 걸기 전에 자리를 잰다(연출표가 움직임을 걸면 시작 모습으로 옮겨진 자리가 잡힌다).
@@ -3427,7 +3454,7 @@ export function motionEngine(): MotionEngine {
             [
               { clipPath: 'inset(0 100% 0 0)', offset: 0, easing: CARRY },
               { clipPath: 'inset(0 0% 0 0%)', offset: 0.32, easing: 'linear' },
-              { clipPath: 'inset(0 0% 0 0%)', offset: 0.7, easing: 'cubic-bezier(0.55, 0, 0.3, 1)' },
+              { clipPath: 'inset(0 0% 0 0%)', offset: 0.7, easing: EASE.sweep },
               { clipPath: 'inset(0 0% 0 100%)', offset: 1 },
             ],
             at,
@@ -3502,7 +3529,7 @@ export function motionEngine(): MotionEngine {
               easing: CARRY,
             }))
             frames.push({ clipPath: cut(100), offset: (reach - T0) / total, easing: 'linear' })
-            frames.push({ clipPath: cut(100), offset: (tail - T0) / total, easing: 'cubic-bezier(0.55, 0, 0.3, 1)' })
+            frames.push({ clipPath: cut(100), offset: (tail - T0) / total, easing: EASE.sweep })
             frames.push({ clipPath: vertical ? 'inset(100% 0 0 0)' : 'inset(0 0 0 100%)', offset: 1 })
             layer(ln, frames, T0, { easing: 'linear', duration: total })
           }
@@ -3531,7 +3558,7 @@ export function motionEngine(): MotionEngine {
                 a.cancel()
                 anims.splice(anims.indexOf(a), 1)
               }
-              layer(picture, [{ scale: '1.14', translate: '-1.6% 0.8%' }, { scale: '1', translate: '0 0' }], begin, { easing: 'cubic-bezier(0.25, 0.1, 0.2, 1)', duration: d(5200) })
+              layer(picture, [{ scale: '1.14', translate: '-1.6% 0.8%' }, { scale: '1', translate: '0 0' }], begin, { easing: EASE.drift, duration: d(5200) })
             }
             if (name === 'closing') thread(guide, guideAt)
             if (cam) camera(cam.kind, begin, d(cam.dur), center)
@@ -3595,7 +3622,7 @@ export function motionEngine(): MotionEngine {
                 { opacity: 1, translate: `${W - h.split + 8}px 0`, borderLeftColor: seam },
               ],
               open,
-              { easing: 'cubic-bezier(0.55, 0, 0.18, 1)', duration: d(1300) },
+              { easing: EASE.sweep, duration: d(1300) },
             )
             camera('drift', begin, open - begin + d(1300), center, 36, 0)
             break
