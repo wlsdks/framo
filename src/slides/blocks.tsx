@@ -5,7 +5,7 @@
 // 부품 장만의 부품 하나의 그리기는 blocks/<이름>.tsx, 여러 부품이 같이 쓰는 조각은 blocks/parts.tsx
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type ReactNode } from 'react'
-import { behind, BLOCK_LINKS, BLOCKS, blockFieldPrefix, boardInfo, byReading, foldableFields, blockItems, blockSlide, effectOf, fromOf, guttersOf, isAlone, knownBlocks, linkAt, playOrder, revealOf, sameLinkTarget, shownBlocks, shownLook, speedOf, variantOfBlock, whenOf, withLink, type Gutter, type LinkTarget } from '../deck/blocks'
+import { behind, BLOCK_LINKS, BLOCKS, blockFieldPrefix, boardInfo, byReading, foldableFields, blockItems, blockSlide, effectOf, fromOf, guttersOf, isAlone, isStretchy, knownBlocks, linkAt, playOrder, revealOf, sameLinkTarget, shownBlocks, shownLook, speedOf, variantOfBlock, whenOf, withLink, type Gutter, type LinkTarget } from '../deck/blocks'
 import { dropIndex, followIndex, moveIn, presentable } from '../deck/fields'
 import type { Block, BlockLink, BlockType, NativeBlockType } from '../deck/types'
 import { cx } from '../lib/cx'
@@ -308,6 +308,8 @@ function BlockCell({ block: b, blocks, live, seq, band, linked }: { block: Block
         `fx-${effectOf(b)}`,
         spec.layout && 'bk-layout',
         `va-${variantOfBlock(b)}`,
+        // 높이를 받으면 커지는 부품(차트, 표): 쌓기가 첫 글줄을 맞추려 칸을 내릴 때 아래 끝은 두고 높이를 줄인다(fitBlocks.ts)
+        isStretchy(b.type) && 'is-stretchy',
         !!band && band.size > 1 && 'is-shared',
         selected && 'is-selected',
         slot && 'is-slot',

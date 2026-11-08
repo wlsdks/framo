@@ -1043,15 +1043,67 @@ export function blockFitter() {
           const move = Math.round((goal - tops[i]) / k) * k
           return move > 0 ? [{ x, move }] : []
         })
+        // 아래 끝이 본문에 닿은 칸은 내리는 만큼 높이를 줄여 아래 끝을 그대로 둔다. 그냥 내리면 칸을 다 쓰는 차트와 숫자 칸의 아래가
+        // 본문 밖으로 나가 맞추기를 통째로 거뒀고, 숫자 옆 차트 소제목의 첫 글줄이 7px 어긋난 채 남았다
+        // 줄일 칸과 줄일 몫(캔버스 px로 잰 몫, k를 곱한 값)
+        const trims = new Map<HTMLElement, number>()
+        // 아래에 쌓인 칸(같은 단의 다음 줄)은 같이 내린다: 위 칸만 내리면 둘 사이가 묶음 사이보다 좁아져 맞추기를 거뒀다(숫자 한 줄 둘을
+        // 쌓은 단 옆의 차트). 같이 내린 칸도 바탕이 없고 본문 안에 남아야 한다
+        const carried = new Map<HTMLElement, number>()
         const safe = changes.every(({ x, move }) => {
-          if (!x.c.classList.contains('bk-look-plain') || x.ink!.b + dy.get(x.c)! + move > a.bottom + k) return false
-          return items.every((below) => !below.above.includes(x.c) || below.ink!.t + dy.get(below.c)! - (x.ink!.b + dy.get(x.c)! + move) >= gap0 - k)
+          // 면이 없는 칸(바탕 없음, 들여 쓰기)만 옮긴다. 강조(칠한 면)는 면째 옮기면 옆 칸과 면의 윗선이 어긋난다
+          const bare = !x.c.classList.contains('bk-look-bold')
+          if (bare && x.ink!.b + dy.get(x.c)! + move <= a.bottom + k) {
+            const under = items.filter((y) => y.above.includes(x.c))
+            const tight = under.filter((y) => y.ink!.t + dy.get(y.c)! - (x.ink!.b + dy.get(x.c)! + move) < gap0 - k)
+            return tight.every((y) => {
+              if (y.c.classList.contains('bk-look-bold')) return false
+              // 같이 내린 칸의 아래 끝이 본문 밖으로 나가면 그 칸도 그만큼 줄인다(그 아래에 또 칸이 없을 때만)
+              if (y.ink!.b + dy.get(y.c)! + move > a.bottom + k) {
+                if (items.some((z) => z.above.includes(y.c))) return false
+                trims.set(y.c, move)
+              }
+              carried.set(y.c, Math.max(carried.get(y.c) ?? 0, move))
+              return true
+            })
+          }
+          // 아래 끝이 본문 밖으로 나가면 내리는 만큼 칸 높이를 줄인다(아래 끝은 그대로). 차트와 표(is-stretchy)는 그림이 줄고, 다른 칸은
+          // 안에 남는 높이가 있을 때만(줄인 뒤 글이 넘치면 아래에서 되돌린다)
+          if (!bare || move > 32 * k) return false
+          trims.set(x.c, move)
+          return items.every((y) => !y.above.includes(x.c))
         })
         if (!safe) continue
+        const was = new Map([...trims.keys()].map((c) => [c, c.style.getPropertyValue('--bk-trim')] as const))
+        for (const [c, move] of trims) {
+          c.style.setProperty('--bk-trim', (parseFloat(was.get(c)!) || 0) + Math.round(move / k) + 'px')
+          const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
+          if (inner) place(inner)
+        }
+        // 줄인 칸의 글이 넘치면 되돌린다
+        const fits = [...trims.keys()].every((c) => {
+          const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
+          return !!inner && !over(inner)
+        })
+        if (!fits) {
+          for (const [c, v] of was) {
+            if (v) c.style.setProperty('--bk-trim', v)
+            else c.style.removeProperty('--bk-trim')
+            const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
+            if (inner) place(inner)
+          }
+          continue
+        }
+        for (const x of items) {
+          if (!trims.has(x.c)) continue
+          x.r = x.c.getBoundingClientRect()
+          x.ink = drawn(x.c)
+        }
         for (const { x, move } of changes) {
           dy.set(x.c, dy.get(x.c)! + move)
           lineUp.set(x.c, move)
         }
+        for (const [c, move] of carried) if (!changes.some(({ x }) => x.c === c)) dy.set(c, dy.get(c)! + move)
       }
     }
     const head = area.parentElement?.querySelector<HTMLElement>(':scope > .s-head')
