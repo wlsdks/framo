@@ -19,6 +19,7 @@ import { pageProps, ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
 import { sideName } from '../../slides/panes'
 import { useDeck } from '../../store/deckStore'
 import { AskIcon, BackIcon, CheckIcon, ChevronIcon, CopyIcon, Info, Popover, Toggle, useDialog } from '../ui'
+import { SHORTCUT } from './shortcuts'
 
 const SKIP_REASON: Record<Exclude<OpCode, 'applied'>, string> = {
   no_slide: '그 슬라이드가 지금은 없어요',
@@ -329,7 +330,7 @@ export function AiMenu({ deck, ai, ask }: { deck: Deck; ai: AiShare; ask: AiAsk 
       button={({ toggle, open }) => (
         // 'AI' 한 낱말은 누르면 무엇이 되는지 말하지 않았다. 장 아래의 'AI 도움받기'와 같은 이름으로, 이쪽은 발표 전체를 맡긴다. 예전 이름 'AI 다듬기'는 무엇을 하는지 어색하게 들렸다.
         // 사용법, README, MCP 안내도 이 이름으로 부른다
-        <button type="button" className="btn btn-ghost ai-btn" title="AI에게 발표 전체의 구성과 모양을 제안받아요" aria-expanded={open} onClick={toggle}>
+        <button type="button" className="btn btn-ghost ai-btn" title={`AI에게 발표 전체의 구성과 모양을 제안받아요 (${keys(SHORTCUT.ai)})`} data-shortcut="ai" aria-expanded={open} onClick={toggle}>
           <AskIcon />
           AI 도움받기
           {deck.aiShare && ai.status && <span className="ai-dot" aria-label="AI에게 공유 중" />}

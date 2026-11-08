@@ -62,6 +62,8 @@ export const BlocksIcon = () => <Icon d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM16
 export const GripIcon = () => <Icon className="icon-fill" d="M9 5.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-6 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-6 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
 export const MotionIcon = () => <Icon d="M3.5 8h6M2.5 12h8M3.5 16h6M14 6.5l5.5 5.5-5.5 5.5" />
 const InfoIcon = () => <Icon d="M12 21a9 9 0 100-18 9 9 0 000 18zM12 11v5.5M12 7.6v.4" />
+/** 단축키 보기: 키보드 */
+export const KeyboardIcon = () => <Icon d="M3.5 7h17v10h-17zM7 10.5h.01M10.5 10.5h.01M14 10.5h.01M17.5 10.5h.01M8.5 14h7" />
 /** 발표 설정: 겹쳐 놓은 슬라이드 두 장 (발표 전체에 한 번 정하는 것) */
 export const DeckIcon = () => <Icon d="M3.5 6.5h13v9.5h-13zM7.5 19.5h13V10" />
 export const SlidersIcon = () => <Icon d="M4 7h16M4 17h16M9 4.5v5M15 14.5v5" />

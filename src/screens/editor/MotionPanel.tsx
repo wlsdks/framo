@@ -8,6 +8,8 @@ import { ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
 import { ChevronIcon, MotionIcon, PlayIcon } from '../ui'
 import { PREVIEW_MOTION } from './DeckMenus'
 import { useLook } from './look'
+import { SHORTCUT } from './shortcuts'
+import { keys } from '../../lib/keys'
 
 /**
  * 이 장만 바꾸지 않고 발표 전체 설정을 따르는 값의 이름. 예전에는 '기본'이라서, 기본이 무엇인지(차분하게? 없음?)
@@ -120,7 +122,7 @@ export function MotionPanel({ deck, slide, onOpenStudio }: { deck: Deck; slide: 
             </dd>
           </div>
         </dl>
-        <button type="button" className="btn btn-primary mp-open" onClick={onOpenStudio}>
+        <button type="button" className="btn btn-primary mp-open" title={`모션 편집 열기 (${keys(SHORTCUT.studio)})`} onClick={onOpenStudio}>
           <MotionIcon />
           모션 편집 열기
           <ChevronIcon />

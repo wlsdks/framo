@@ -11,6 +11,8 @@ import { slideOverflow } from '../../slides/overflow'
 import { ScaledSlide, SlideCanvas, useStableSections } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
 import { AlertIcon, EyeOffIcon, PlusIcon, Popover } from '../ui'
+import { keys } from '../../lib/keys'
+import { SHORTCUT } from './shortcuts'
 import { AddSlide } from './AddSlide'
 import { SlideContextMenu } from './SlideMenu'
 import { useDrawSoon } from '../drawSoon'
@@ -153,7 +155,7 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
         align="left"
         className="sl-add-pop"
         button={({ toggle, open }) => (
-          <button type="button" className="btn btn-ghost sl-add" aria-expanded={open} onClick={toggle}>
+          <button type="button" className="btn btn-ghost sl-add" aria-expanded={open} title={`새 슬라이드 넣기 (${keys(SHORTCUT.newSlide)})`} data-shortcut="newSlide" onClick={toggle}>
             <PlusIcon />
             슬라이드 추가
           </button>

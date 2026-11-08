@@ -11,6 +11,8 @@ import { cx } from '../../lib/cx'
 import { onMenuKeys } from '../../lib/menuKeys'
 import { useDeck } from '../../store/deckStore'
 import { AlertIcon, BlocksIcon, MoreIcon, PlayIcon, PlusIcon, Popover, ScreenIcon, SlidersIcon } from '../ui'
+import { keys } from '../../lib/keys'
+import { SHORTCUT } from './shortcuts'
 import { SlideAsk } from './AiShare'
 import { SlideMenuItems } from './SlideMenu'
 import { openLayoutPicker } from './Inspector'
@@ -251,7 +253,7 @@ export function StageTools({
             type="button"
             className={cx('btn btn-sm stage-blocks', blocks.libraryOpen ? 'is-on' : 'btn-ghost')}
             aria-pressed={blocks.libraryOpen}
-            title="컴포넌트를 골라 이 슬라이드에 넣어요"
+            title={`컴포넌트를 골라 이 슬라이드에 넣어요 (${keys(SHORTCUT.library)})`}
             onClick={side.toggleLibrary}
           >
             <BlocksIcon />

@@ -7,6 +7,8 @@ import { pageProps } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
 import { DeckIcon, Info, Popover } from '../ui'
 import { PREVIEW_MOTION } from './DeckMenus'
+import { SHORTCUT } from './shortcuts'
+import { keys } from '../../lib/keys'
 
 // 발표 설정: 발표 전체에 한 번 정하는 것(슬라이드 아래쪽, 모션, 화면 전환). 예전에는 테마 메뉴 아래에 '아래 표시', '모션 세기',
 // '화면 전환'이 이름만 있는 단추 줄로 붙어 있어서 무엇이 바뀌는지 몰랐고(“이거 뭔 말인지도 모르겠는데”), 생김새를 고르러 간
@@ -25,7 +27,7 @@ export function DeckSettings({ deck, slide }: { deck: Deck; slide?: Slide }) {
     <Popover
       className="pop-theme pop-deckset"
       button={({ toggle, open }) => (
-        <button type="button" className="btn btn-ghost" aria-expanded={open} title="발표 전체의 슬라이드 아래쪽, 모션, 화면 전환" onClick={toggle}>
+        <button type="button" className="btn btn-ghost" aria-expanded={open} title={`발표 전체의 슬라이드 아래쪽, 모션, 화면 전환 (${keys(SHORTCUT.deck)})`} data-shortcut="deck" onClick={toggle}>
           <DeckIcon />
           발표 설정
         </button>

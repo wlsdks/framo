@@ -38,6 +38,8 @@ import { SceneAll, SceneOverride, ScenePicker } from '../ScenePicker'
 import { usePlayer, useReducedMotion } from './player'
 import { MotionCopy } from './MotionCopy'
 import { Timeline } from './Timeline'
+import { SHORTCUT } from '../shortcuts'
+import { keys } from '../../../lib/keys'
 
 // 움직임 편집: 한 장의 움직임을 크게 보며 고치는 곳. 편집기 안에서 슬라이드 자리(가운데)와 오른쪽 칸을 바꿔 쓴다:
 // 가운데에 발표 화면과 똑같이 움직이는 장과 그 아래 컴포넌트마다 움직이는 동안을 그린 시간표, 오른쪽 칸에는 지금 고른 것의 값만.
@@ -194,7 +196,7 @@ export function MotionStudio({
     <>
       <main ref={mainRef} className="ms" aria-label="모션 편집" tabIndex={-1}>
         <header className="ms-top">
-          <button type="button" className="btn btn-ghost btn-sm ms-back" onClick={onClose} title="편집으로 돌아가기 (Esc)">
+          <button type="button" className="btn btn-ghost btn-sm ms-back" onClick={onClose} title={`편집으로 돌아가기 (Esc, ${keys(SHORTCUT.studio)})`}>
             <BackIcon />
             편집으로
           </button>

@@ -9,6 +9,7 @@ import { keys } from '../../lib/keys'
 import { presenterAuto, setPresenterAuto } from '../../present/link'
 import { CheckIcon, ChevronIcon, DownloadIcon, Info, PlayIcon, Popover, Segmented, Toggle } from '../ui'
 import { canListFonts, familyCss, LocalFontPicker } from './LocalFonts'
+import { SHORTCUT } from './shortcuts'
 
 /**
  * 지금 장의 움직임을 발표할 때처럼 한 번 보여 달라는 창(window) 이벤트. 내용 없이 신호만 보낸다 (new Event).
@@ -31,7 +32,7 @@ export function ThemeMenu({ deck }: { deck: Deck }) {
     <Popover
       className="pop-theme"
       button={({ toggle, open }) => (
-        <button type="button" className="btn btn-ghost" aria-expanded={open} onClick={toggle}>
+        <button type="button" className="btn btn-ghost" aria-expanded={open} title={`바탕, 강조색, 글꼴, 글자 크기 (${keys(SHORTCUT.theme)})`} data-shortcut="theme" onClick={toggle}>
           <span className="swatch-dot" style={{ background: accent }} aria-hidden="true" />
           테마
         </button>

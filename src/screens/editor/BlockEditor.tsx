@@ -53,6 +53,7 @@ import { SlideCanvas } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
 import { addSaved } from '../../store/saved'
 import { BlocksIcon, dialogOpen, GripIcon, isTyping, undoAction, type Toast } from '../ui'
+import { presentKey } from '../../lib/presentKeys'
 import { BlockTools } from './BlockTools'
 import { CANVAS, COL_W } from './canvas'
 import { useLinkEditing } from './LinkEditor'
@@ -926,6 +927,15 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
       // 대화 창이 떠 있으면 그 창의 키다: 창을 닫는 Esc로 고르기를 끝내거나, 창 뒤의 컴포넌트를 지우지 않는다
       if (e.defaultPrevented || dialogOpen()) return
       if (e.key === 'Escape') setSelected(null)
+      // Ctrl+D(맥은 ⌘D): 고른 컴포넌트를 복제한다 (PowerPoint와 같게. 고른 것이 없으면 편집기의 단축키가 슬라이드를 복제한다)
+      if ((e.ctrlKey || e.metaKey) && !e.getModifierState('Alt') && !e.shiftKey && presentKey(e).toLowerCase() === 'd') {
+        const b = (slideRef.current.blocks ?? []).find((x) => x.id === selected)
+        if (b) {
+          e.preventDefault()
+          duplicate(b)
+        }
+        return
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const b = (slideRef.current.blocks ?? []).find((x) => x.id === selected)
         if (b) {
