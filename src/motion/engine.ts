@@ -2473,26 +2473,18 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'layers': {
-          // 위가 아래에 기대어 선다: 층이 위에서부터 차례로 내려앉고, 다 쌓이면 요청이 내려갔다 올라오는 것을 층 이름이 차례로 잠깐
-          // 강조색이 되는 것으로 보인다(위에서 아래로, 다시 아래에서 위로). 축과 그 위를 타는 조각은 꾸밈 표시라 뺐다(사용자)
+          // 아래가 위를 받친다: 맨 아래 층의 지층 선이 먼저 왼쪽에서 그어지고, 선이 거의 닿을 즈음 그 층의 이름과 무엇이 있는지가
+          // 제자리에서 맺힌다. 그 위로 한 층씩 같은 차례로 쌓인다. 강조할 층은 처음부터 강조색으로 맺힌다: 다 쌓고 쉬었다가 색을 바꾸던
+          // 때는 멈춘 뒤에 꼼지락거렸다(검수). 첫 층과 끝 층 사이는 차례의 상한(0.48초) 안이다. 글은 날아오거나 떨어지지 않는다(사용자)
           const rows = $('.bk-ly-row')
           if (!rows.length) break
           lines(one('.bk-h'), 60)
+          const hop = Math.min(160, 480 / Math.max(1, rows.length - 1))
           rows.forEach((row, k) => {
-            run(anims, row, [{ opacity: 0, translate: `0 ${-L.y * 1.2}px` }], s(120 + k * 140), { easing: CARRY, duration: d(520) })
+            const at = 120 + (rows.length - 1 - k) * hop
+            draw(row.querySelector('.bk-ly-rule'), at, 480, 'left center')
+            fade(row.querySelector('.bk-ly-txt'), at + 200, 420)
           })
-          const built = 120 + rows.length * 140 + 420
-          if (rows.length > 1 && !still) {
-            const per = levelName === 'lively' ? 340 : 280
-            const accent = getComputedStyle(rows[0]).getPropertyValue('--accent').trim()
-            const order = [...rows.keys(), ...[...rows.keys()].reverse().slice(1)]
-            order.forEach((k, n) => {
-              const t = rows[k].querySelector<HTMLElement>('.bk-ly-t')
-              if (!t) return
-              const ink = getComputedStyle(t).color
-              run(anims, t, [{ color: ink }, { color: accent, offset: 0.3 }, { color: ink }], s(built + per * n), { easing: 'ease-out', duration: d(560) })
-            })
-          }
           break
         }
         case 'gate': {

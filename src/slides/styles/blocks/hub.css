@@ -9,7 +9,9 @@
 
 .bk-hb {
   /* 가운데 원의 지름: 무대 높이의 44%, 좁은 칸에서는 너비의 24%까지. 낮은 칸에서도 가운데 이름 두 줄이 들어가게 230px 아래로는 줄이지 않는다 */
-  --hb-core: max(230px, min(44cqh, 24cqw));
+  /* 가운데 글(이름과 두 줄 메모)이 길면 원이 그만큼 커진다(--hb-need, Hub.tsx가 어림한 지름에 키운 단계를 곱한다. 무대 높이의
+     70%까지, 230px 밑으로는 줄지 않는다): 원이 칸으로만 정해져 메모가 원 테두리에 닿을 듯 꽉 찼다(사용자) */
+  --hb-core: max(230px, min(44cqh, 24cqw), min(70cqh, calc(var(--hb-need, 0px) * var(--bk-fit, 1))));
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -84,7 +86,8 @@
 .bk-hb-rim {
   fill: var(--bg);
   stroke: var(--ink);
-  stroke-width: 1.2;
+  /* 한 단계 가늘게(1.2 → 1): 커진 원에서 테가 그림보다 먼저 보였다(검수) */
+  stroke-width: 1;
 }
 
 .bk-hb-hit {
@@ -134,10 +137,13 @@
 }
 
 .bk-hb-n {
-  --fs: var(--t-source);
+  /* 메모는 이름표 바닥(22)보다 한 단계 위: 커진 원 안에서 22면 멀리서 읽히지 않았다(검수). 줄 길이는 고르게, 낱말 사이에서만 꺾는다 */
+  --fs: var(--t-small);
   margin-top: 6px;
   color: var(--ink-3);
   line-height: 1.3;
+  text-wrap: balance;
+  word-break: keep-all;
 }
 
 /* 곳의 이름: 점 옆, 글이 선을 향한다(모이기는 점 왼쪽에 오른쪽 끝을 맞추고, 퍼지기는 점 오른쪽에) */
@@ -169,4 +175,9 @@
   :is(.bk-hb-pk, .bk-hb-tail) {
     display: none;
   }
+}
+
+/* 판을 혼자 쓰면 가운데 원도 무대에 비례해 크게(높이의 52%, 너비의 28%까지) */
+.bk-area:not(:has(> .bk ~ .bk)) .bk-hb {
+  --hb-core: max(230px, min(52cqh, 28cqw), min(70cqh, calc(var(--hb-need, 0px) * var(--bk-fit, 1))));
 }

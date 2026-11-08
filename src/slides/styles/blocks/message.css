@@ -53,3 +53,27 @@
   --msg-cap: calc(36px * var(--scale, 1));
 }
 
+
+/* 장 제목이 있으면 버금 문장은 핵심 한 줄보다 한 단계 아래에서 멈춘다: 핵심 한 줄은 44(짧지 않은 제목이면 36)에서 멈추는데 버금 문장(36)은
+   장이 빌 때 1.44배(52)까지 커져, 회색 버금 문장이 굵은 핵심보다 커 보이는 위계 뒤집힘이 났다(검수) */
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) .bk-msg-s {
+  font-size: min(calc(36px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1))));
+}
+
+.l-compose:has(.s-title:is(.fit-1, .fit-2):not(.is-hint, .is-empty)) .bk-msg-s {
+  font-size: min(calc(30px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1))));
+}
+
+/* 장 제목이 있는 장에 핵심 한 줄 하나뿐이면 제목보다 커져도 된다: 44에서 멈춘 한 줄이 장 왼쪽 가운데에 작게 떠 판을 혼자 쓰는 장 가운데
+   가장 휑했다(검수). 대신 굵기를 한 단계 낮춰(500) 제목과 다투지 않게 한다(굵은 제목과 보통 굵기의 큰 문장은 위계가 갈린다).
+   검사의 '제목과 다툼'도 이 경우는 보지 않는다(screens/assembly.ts, docs/VISUAL-RULES.md 4) */
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) .bk-area:not(:has(> .bk ~ .bk)) > .bk-message .bk-msg-t {
+  --fs: 62px;
+  font-weight: 500;
+  font-size: max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1)));
+}
+
+/* 혼자인 핵심 한 줄의 버금 문장은 한 단계 위(44)까지: 커진 핵심 아래에서 36에 머물면 각주처럼 작아 보였다 */
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) .bk-area:not(:has(> .bk ~ .bk)) > .bk-message .bk-msg-s {
+  font-size: min(calc(44px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1))));
+}

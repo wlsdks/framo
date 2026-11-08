@@ -44,6 +44,38 @@
   margin-top: calc(-1em * ((1.08 - var(--head-box, 1.19)) / 2 + var(--head-gap, 0.15)));
 }
 
+/* 큰 제목은 눈높이(위 1 : 아래 1.2)에, 발표자와 연락처는 그대로 아래 틀선에. 제목을 장 위에 붙이면 요청 목록이 없을 때 그 아래가
+   통째로 비었고(사용자: 제목만 위에 있고 나머지가 다 빈다), 요청이 있으면 제목은 왼쪽 위, 요청은 오른쪽 아래로 대각선에 찢어져
+   보였다(검수). 요청 목록도 같은 눈높이에 둔다(아래 .cl-steps). 요청이 없으면 제목을 한 단계 키운다 */
+.l-closing .cl-main::before {
+  flex: 1 1 0;
+  content: '';
+}
+
+.l-closing .cl-main > .cl-title {
+  flex: none;
+  margin-top: 0;
+}
+
+.l-closing .cl-contact {
+  flex: 1.2 1 0;
+  justify-content: flex-end;
+}
+
+.l-closing:not(:has(.cl-steps)) .cl-main > .cl-title {
+  --fs: 128px;
+}
+
+/* 요청이 있으면 요청이 답이라 '감사합니다'보다 크게: 큰 제목(108) 옆에 요청(44)이 작게 서서 인사가 답처럼 읽혔다(검수).
+   제목을 요청의 한 단계 아래(44)로 내리고 요청을 52로 */
+.l-closing:has(.cl-steps) .cl-main > .cl-title {
+  --fs: 44px;
+}
+
+.l-closing .cl-steps:is([data-n='1'], [data-n='2'], [data-n='3']) :is(.cl-step-t, .cl-n) {
+  --fs: 52px;
+}
+
 .cl-contact > .meta-row:last-child dd {
   margin-bottom: calc(-1em * ((1.3 - 1.19) / 2 + 0.155));
 }
@@ -54,13 +86,15 @@
   gap: 32px;
 }
 
-/* 줄 높이는 내용에 정해진 사이(위아래 --cl-pad)를 더한 만큼이다(docs/VISUAL-RULES.md 6). 목록은 단 아래에 붙여 마지막 줄을
-   왼쪽 단의 발표자, 연락처 끝에 맞춘다: 큰 제목은 왼쪽 위, 요청은 오른쪽 아래로 대각선에 놓인다.
+/* 줄 높이는 내용에 정해진 사이(위아래 --cl-pad)를 더한 만큼이다(docs/VISUAL-RULES.md 6).
    예전에는 셋이면 줄을 단 높이로 나눠(1fr) 늘려서 줄마다 위아래가 100px 넘게 비고 요청 사이가 크게 벌어져 흩어져 보였다 */
 .cl-steps {
   --cl-pad: 56px;
   display: grid;
-  align-content: end;
+  /* 제목과 같은 눈높이(위 1 : 아래 1.2): 아래 끝에 붙이던 때는 큰 제목(왼쪽 위)과 대각선으로 찢어졌다(검수) */
+  align-content: center;
+  /* 가운데보다 조금 위(눈높이): 아래에 본문 사이 하나만큼 더 비운다 */
+  padding-bottom: var(--body-gap);
   min-height: 0;
 }
 
@@ -145,4 +179,70 @@
 
 .l-closing:not(.va-bold) .meta-row dt {
   color: var(--ink-3);
+}
+
+/* 요청이 있는 장: 제목(감사합니다)을 첫 요청의 윗줄에 맞춘 왼쪽 머리말로 세운다. 제목만 왼쪽 눈높이에 두었더니 요청 목록과 높이가
+   어긋나 장 왼쪽 가운데에 작게 혼자 떠 지우다 만 이름표처럼 보였다(검수). 제목 묶음과 요청 목록을 같은 줄(가운데 줄, 위 1 : 아래 1.2)의
+   위 끝에 함께 세우고, 발표자와 연락처는 제목 아래에 둔다 */
+.l-closing:has(.cl-steps) {
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1.2fr);
+}
+
+.l-closing:has(.cl-steps) > :is(.cl-main, .cl-steps) {
+  grid-row: 2;
+  align-self: start;
+}
+
+.l-closing:has(.cl-steps) .cl-main {
+  justify-content: flex-start;
+}
+
+.l-closing:has(.cl-steps) .cl-main::before {
+  content: none;
+}
+
+.l-closing:has(.cl-steps) .cl-contact {
+  flex: none;
+  margin-top: 40px;
+}
+
+.l-closing:has(.cl-steps) .cl-steps {
+  align-content: start;
+  padding-bottom: 0;
+}
+
+/* 요청 사이의 선은 걷는다: 요청 사이의 여백이 이미 나누고, 옅은 선(흰 바탕 243, 검은 바탕 22)은 거의 보이지 않아 있으나 마나였다(검수) */
+.l-closing .cl-step + .cl-step {
+  border-top: 0;
+}
+
+/* 요청이 있고 발표자·연락처가 없으면 제목(감사합니다)을 요청 위에 한 단으로 쌓는다: 왼쪽 단에 제목만 남으면 제목과 요청 사이가 700px
+   비었다(검수). 제목은 마무리 문장이라 요청 제목과 같은 단계(52) */
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1.2fr);
+  /* 제목과 첫 요청 사이는 요청 사이보다 넓게: 붙어 있으면 '감사합니다 / 시범 운영 승인'이 한 문장으로 이어 읽혔다(검수) */
+  row-gap: 96px;
+}
+
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) > .cl-main {
+  grid-row: 2;
+}
+
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) > .cl-steps {
+  grid-row: 3;
+  order: 0;
+}
+
+/* 한 단으로 쌓은 묶음은 본문의 반도 채우지 못해서 제목과 요청 글자를 한 단계씩 키운다(VISUAL-RULES 6: 덜 차면 글자 단계를 올린다) */
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) .cl-main > .cl-title {
+  --fs: 62px;
+}
+
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) .cl-steps:is([data-n='1'], [data-n='2'], [data-n='3']) :is(.cl-step-t, .cl-n) {
+  --fs: 62px;
+}
+
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) .cl-steps:is([data-n='1'], [data-n='2'], [data-n='3']) .cl-step-b {
+  --fs: 36px;
 }

@@ -32,13 +32,14 @@ function solve(expr: string, env: { w: number; h: number; em: number; r?: number
 const count = (html: string, text: string) => html.split(text).length - 1
 
 describe('순환', () => {
-  it('단계를 차례로 번호를 붙여 늘어놓고, 12시부터 시계 방향으로 고리 위의 자리를 준다', () => {
+  it('단계를 차례로 번호를 붙여 늘어놓고, 시계 방향으로 고리 위의 자리를 준다 (짝수면 12시에서 반 칸 앞, 왼쪽 위부터)', () => {
     const html = render(['양식 보내기', '숫자 모으기', '빈 칸 점검', '늦은 이유 고치기'])
     expect(html.indexOf('양식 보내기')).toBeLessThan(html.indexOf('숫자 모으기'))
     expect(html.indexOf('숫자 모으기')).toBeLessThan(html.indexOf('빈 칸 점검'))
     expect(html.indexOf('빈 칸 점검')).toBeLessThan(html.indexOf('늦은 이유 고치기'))
     expect(html).toMatch(/>01<[\s\S]*>02<[\s\S]*>03<[\s\S]*>04</)
-    expect(html).toMatch(/is-t" style="--a:0deg[\s\S]*is-r" style="--a:90deg[\s\S]*is-b" style="--a:180deg[\s\S]*is-l" style="--a:270deg/)
+    // 넷이면 10시 반(왼쪽 위)부터: 12시와 6시에 이름표가 서면 위아래 이름표의 높이가 고리 지름에 더해져 고리가 작아진다
+    expect(html).toMatch(/is-l" style="--a:-45deg[\s\S]*is-r" style="--a:45deg[\s\S]*is-r" style="--a:135deg[\s\S]*is-l" style="--a:225deg/)
     expect(html).toContain('한 달 마감')
     // 구간마다 선 하나, 단계 점 하나, 머리 하나
     expect(count(html, 'bk-cy-line')).toBe(4)
@@ -51,7 +52,7 @@ describe('순환', () => {
     expect(html).toContain('data-steps="2"')
     expect(html).toMatch(/>01<[\s\S]*양식 보내기[\s\S]*>02<[\s\S]*빈 칸 점검/)
     expect(html).not.toContain('>03<')
-    expect(html).toMatch(/--a:180deg/)
+    expect(html).toMatch(/--a:-90deg[\s\S]*--a:90deg/)
   })
 
   it('편집할 때는 빈 단계도 안내와 함께 자리를 지킨다', () => {

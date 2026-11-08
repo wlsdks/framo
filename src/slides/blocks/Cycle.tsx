@@ -29,13 +29,13 @@ export type CycleSide = 't' | 'r' | 'b' | 'l'
 export type CycleSpot = { angle: number; side: CycleSide; fx: number; fy: number }
 
 /**
- * 고리 위 단계 n개의 자리와 구간: 12시에서 시작해 시계 방향으로 같은 간격. 구간은 단계 점(가운데)에서 시작해 다음 단계 점 조금 앞의
- * 화살촉(tip, 도)까지 그어진다. 마지막 구간은 첫 단계로 돌아온다
+ * 고리 위 단계 n개의 자리와 구간: 12시에서 from도 돈 곳에서 시작해 시계 방향으로 같은 간격. 구간은 단계 점(가운데)에서 시작해
+ * 다음 단계 점 조금 앞의 화살촉(tip, 도)까지 그어진다. 마지막 구간은 첫 단계로 돌아온다
  */
-export function cycleRing(n: number): { spots: CycleSpot[]; arcs: { d: string; from: number; tip: number }[] } {
+export function cycleRing(n: number, from = 0): { spots: CycleSpot[]; arcs: { d: string; from: number; tip: number }[] } {
   const step = 360 / Math.max(1, n)
   const spots = Array.from({ length: n }, (_, i): CycleSpot => {
-    const angle = round(i * step)
+    const angle = round(from + i * step)
     const sin = Math.sin(rad(angle))
     const cos = Math.cos(rad(angle))
     const side: CycleSide = Math.abs(sin) < 0.35 ? (cos > 0 ? 't' : 'b') : sin > 0 ? 'r' : 'l'
@@ -44,7 +44,7 @@ export function cycleRing(n: number): { spots: CycleSpot[]; arcs: { d: string; f
     return { angle, side, fx, fy }
   })
   const arcs = spots.map((p, i) => {
-    const tip = round((i + 1) * step - TIP_GAP)
+    const tip = round(from + (i + 1) * step - TIP_GAP)
     const to = tip - UNDER
     const [x1, y1] = at(p.angle)
     const [x2, y2] = at(to)
@@ -159,7 +159,11 @@ export function Cycle() {
     const typed = (slide.items[i]?.[k] ?? '').trim()
     return typed || mode === 'final' ? typed : hintFor(slide.layout, slide.hints, k, k, i)
   }
-  const { spots, arcs } = cycleRing(shown.length)
+  // 단계가 짝수면 12시가 아니라 반 칸 앞(넷이면 10시 반)에서 시작한다: 12시와 6시에 이름표가 서면 위아래 이름표의 높이가 고리 지름에
+  // 더해져, 판을 혼자 써도 고리가 높이에 묶여 본문 너비의 절반만 쓰고 작았다(사용자). 비스듬히 서면 이름표가 고리 옆으로 비켜서
+  // 같은 높이에 고리가 1.4배쯤 커진다. 첫 단계는 왼쪽 위: 반 칸 뒤(1시 반)에서 시작하면 01이 오른쪽 위, 04가 왼쪽 위라 04부터
+  // 읽혔다(검수). 홀수는 맨 위 하나가 아래 둘과 짝을 이뤄 그대로 12시에서
+  const { spots, arcs } = cycleRing(shown.length, shown.length % 2 === 0 ? -180 / shown.length : 0)
   const labels = shown.map(({ i }) => ({ title: seen('title', i), meta: opened || slide.items[i]?.meta.trim() ? seen('meta', i) : '' }))
   const fit = cycleFit(spots, cycleLabelBoxes(labels))
   const center = mode !== 'final' || !!readField(slide, meta, 'center').trim()

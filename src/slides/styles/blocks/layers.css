@@ -1,36 +1,41 @@
 /* ---------- 층 ----------
-   층마다 한 줄: 이름(크게, 굵게)과 무엇이 있는지(--ink-2). 층 사이는 가는 줄 선(--line) 하나뿐. 왼쪽에 세로 축과 층마다 눈금을
-   두던 때는 꾸밈 표시가 AI가 만든 서식처럼 보였다(사용자). 위아래 차례는 줄의 차례가 말한다 */
+   글자 위계와 여백으로 쌓은 지층. 층마다 이름(소제목 단계, 굵게)과 무엇이 있는지(본문 단계, --ink-2)를 한 줄에 두고, 위층일수록
+   왼쪽을 들여(--ly-step) 맨 아래가 가장 넓게 받치는 계단이 된다. 넓은 칸에서는 층마다 그 층 너비만큼의 옅은 1px 선(--line)을
+   글 아래에 깔아 아래로 갈수록 넓어지는 지층의 단면(피라미드의 반쪽)으로 읽힌다: 선은 층이라는 데이터의 짜임이다(VISUAL-RULES 2).
+   강조할 층 하나만 글자와 선이 강조색(답).
+   예전에는 이름 | 설명 두 단의 줄 선 표라 판을 혼자 쓰면 빽빽한 세 줄 표로만 보였고(사용자: 예전 PPT 규격 같다), 그다음의 비스듬한
+   입체 판은 PPT 도형 모음처럼 읽혔다(검수). 계단만 두면 '들여 쓴 목록'으로 읽혀 넓은 칸에서는 지층 선을 더한다 */
 .bk-ly {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  height: 100%;
+}
+
+.bk-ly > .bk-h {
+  margin-bottom: var(--bk-h-gap);
 }
 
 .bk-ly-list {
-  position: relative;
+  /* 층 하나를 들이는 너비: 칸 너비의 7%(넓은 칸에서 120px 남짓) */
+  --ly-step: 7cqw;
+  display: grid;
+  row-gap: calc(18px * var(--bk-fit, 1));
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .bk-ly-row {
-  --ly-pad: calc(18px * var(--bk-fit, 1));
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+  padding-left: calc((var(--n, 3) - 1 - var(--k, 0)) * var(--ly-step));
+}
+
+.bk-ly-txt {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  column-gap: 48px;
-  padding: var(--ly-pad) 0;
-}
-
-.bk-ly-list {
-  --ly-pad: calc(18px * var(--bk-fit, 1));
-}
-
-.bk-ly-row + .bk-ly-row {
-  border-top: var(--rule-hair) solid var(--line);
+  column-gap: 0.7em;
+  min-width: 0;
 }
 
 .bk-ly-t {
@@ -41,6 +46,10 @@
   line-height: 1.3;
 }
 
+.bk-ly-row.is-hl .bk-ly-t {
+  color: var(--accent);
+}
+
 .bk-ly-m {
   --fs: var(--t-body);
   color: var(--ink-2);
@@ -48,9 +57,56 @@
   text-wrap: pretty;
 }
 
-@container bk (max-width: 760px) {
-  .bk-ly-row {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 6px;
+/* 지층 선: 층의 글 아래에 그 층 너비만큼(들인 자리부터 칸 오른쪽 끝까지). 층으로 서게 하는 꼭 필요한 선이라 줄 선보다 한 단계
+   짙게(VISUAL-RULES 2-1): 옅은 선(--line)은 멈춘 그림, 편집 화면, PDF, 검은 테마에서 묻혀 '들여 쓴 목록'으로만 읽혔다(검수).
+   글은 제 선에 붙인다(--ly-pb, 위 층의 선과의 사이보다 확실히 가깝게): 선 위에 선 글로 읽힌다. 발표할 때 맨 아래 선부터 왼쪽에서
+   그어진다(engine.ts). 선끼리는 층 높이만큼 떨어져 40px 안의 겹선이 되지 않는다 */
+.bk-ly-list {
+  --ly-pb: calc(8px * var(--bk-fit, 1));
+}
+
+.bk-ly-row {
+  padding-bottom: var(--ly-pb);
+}
+
+.bk-ly-rule {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: calc((var(--n, 3) - 1 - var(--k, 0)) * var(--ly-step));
+  height: var(--rule-hair);
+  background: color-mix(in srgb, var(--ink-3) 70%, var(--bg));
+}
+
+/* 강조할 층은 글 아래의 짧은 구간(글 폭)만 강조색: 층 너비 전체(1,440px)가 파란 선이면 '고른 줄'처럼 보였다(검수) */
+.bk-ly-txt {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.bk-ly-row.is-hl .bk-ly-txt::after {
+  position: absolute;
+  right: 0;
+  bottom: calc(-1 * var(--ly-pb));
+  left: 0;
+  height: var(--rule-hair);
+  background: var(--accent);
+  content: '';
+}
+
+/* 넓고 높은 바탕 없는 칸: 층 사이를 넉넉히(글과 제 선 사이는 그대로 가깝게). 문턱(560)은 다섯 층이 넉넉한 사이로도 글자를 줄이지
+   않고 들어가는 높이라, 낮은 칸의 잘리지 않는 높이(blockHeights.ts)는 좁은 사이로 잰다. 들여 쓰기와 강조는 안쪽 위아래 여백(88)만큼
+   낮아 좁은 사이 그대로. 묶음은 장 제목 축(왼쪽 끝)에서 시작해 오른쪽으로 넓다 */
+@container bk (min-width: 1200px) and (min-height: 560px) {
+  .bk-look-plain .bk-ly-list {
+    row-gap: calc(32px * var(--bk-fit, 1));
+  }
+}
+
+/* 낮은 칸: 층 사이를 좁힌다(선은 그대로 둔다: 선이 없으면 들여 쓴 목록으로 읽힌다) */
+@container bk (max-height: 340px) {
+  .bk-ly-list {
+    row-gap: calc(12px * var(--bk-fit, 1));
   }
 }

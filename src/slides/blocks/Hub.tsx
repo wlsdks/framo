@@ -2,7 +2,8 @@
 
 import type { CSSProperties } from 'react'
 import { BLOCKS } from '../../deck/blocks'
-import { isBlankItem } from '../../deck/fields'
+import { isBlankItem, readField } from '../../deck/fields'
+import { hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
 import { useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
@@ -26,17 +27,35 @@ const r = (v: number) => Math.round(v * 10) / 10
 
 /**
  * 곳들의 자리와 길. 모이기는 곳들을 왼쪽 호에, 가운데를 오른쪽에 두고, 퍼지기는 거꾸로. 곳의 이름이 점 바깥쪽에 붙어 그림의
- * 무게가 그쪽으로 넓어서, 이름까지 셈해 가운데가 맞게 가운데 원은 3/4쯤, 곳들은 1/3쯤에 둔다. 호는 가운데 쪽으로 불룩하다.
+ * 무게가 그쪽으로 넓어서, 이름까지 셈해 가운데가 맞게 가운데 원은 0.69쯤, 곳들은 0.36쯤에 둔다. 호는 가운데 쪽으로 불룩하다.
  * 길은 곳에서 가로로 나와 가운데로 부드럽게 휘어 든다(2차 곡선). 끝은 가운데 원 밑으로 들어가 원이 덮는다
  */
+/** 글 한 줄의 너비 어림(글자 크기 em): 한글과 전각은 1, 그 밖은 0.58, 띄어쓰기 0.3 */
+function lineEm(text: string): number {
+  let w = 0
+  for (const ch of text) w += ch === ' ' ? 0.3 : /[ᄀ-ᇿ　-鿿가-힯＀-￯]/.test(ch) ? 1 : 0.58
+  return w
+}
+
+/**
+ * 가운데 원 안의 글(이름과 메모)이 들어가는 지름(캔버스 px, 키우기 전). 이름(36)과 메모(26)가 두 줄까지 꺾여도 원 안쪽 글 자리
+ * (지름의 0.6쯤)에 들게 어림한다. 재지 않고 어림하는 것은 원 크기에 따라 글이 꺾이고 꺾인 글에 따라 원이 커져 서로를 따라 움직이기 때문
+ */
+function hubCoreNeed(center: string, note: string): number {
+  const line = (t: string, px: number) => (lineEm(t) * px) / (lineEm(t) > 6 ? 2 : 1)
+  return Math.round(Math.max(line(center, 36), line(note, 26)) / 0.6)
+}
+
 export function hubSpots(n: number, out: boolean): { center: { x: number; y: number }; spots: HubSpot[] } {
-  const center = { x: out ? 240 : 760, y: HUB_H / 2 }
+  // 가운데 원은 무게가 커서, 곳들과 이름표까지 셈한 그림의 좌우 끝을 맞춰도 원 쪽으로 기울어 보였다(사용자: 퍼지기에서 원이 왼쪽으로
+  // 치우친다). 원을 안쪽으로 조금 들이고 곳들도 그만큼 원 쪽으로 당겨, 원과 이름 묶음이 본문 가운데를 사이에 두고 마주 선다
+  const center = { x: out ? 310 : 690, y: HUB_H / 2 }
   const top = 56
   const span = HUB_H - top * 2
   const spots = Array.from({ length: n }, (_, i) => {
     const f = n === 1 ? 0.5 : i / (n - 1)
     const bulge = Math.sin(Math.PI * f) * 70
-    const x = out ? 670 - bulge : 330 + bulge
+    const x = out ? 640 - bulge : 360 + bulge
     const y = top + span * f
     const mid = (x + center.x) / 2
     const from = out ? center : { x, y }
@@ -56,7 +75,9 @@ const pct = (v: number, of: number) => `${r((v / of) * 100)}%`
  * 멈춰 있는 그림(편집, PDF, PPT)에서는 조각을 감춘다
  */
 export function Hub() {
-  const { slide, mode } = useSlide()
+  const { slide, meta, mode } = useSlide()
+  // 가운데 글의 어림은 그려지는 글로: 발표할 때는 적은 글, 편집할 때는 비었으면 안내 문구
+  const core = (k: string) => readField(slide, meta, k).trim() || (mode === 'final' ? '' : hintFor(slide.layout, slide.hints, k))
   const out = slide.variant === 'out'
   const shown = slide.items
     .slice(0, BLOCKS.hub.items!.max)
@@ -65,7 +86,7 @@ export function Hub() {
   const { center, spots } = hubSpots(shown.length, out)
   const at = (p: { x: number; y: number }) => ({ left: pct(p.x, HUB_W), top: pct(p.y, HUB_H) })
   return (
-    <div className={cx('bk-hb', out ? 'is-out' : 'is-in')} data-n={shown.length}>
+    <div className={cx('bk-hb', out ? 'is-out' : 'is-in')} data-n={shown.length} style={{ '--hb-need': `${hubCoreNeed(core('center'), core('note'))}px` } as CSSProperties}>
       <div className="bk-hb-stage">
         <svg className="bk-hb-svg" viewBox={`0 0 ${HUB_W} ${HUB_H}`} preserveAspectRatio="none" aria-hidden="true">
           {spots.map((p, k) => (

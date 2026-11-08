@@ -207,3 +207,54 @@
   color: var(--ink-2);
   font-weight: 400;
 }
+
+/* 걸러지는 것은 하는 일과 갈라 읽히게: 하는 일 바로 아래에 같은 글자색으로 붙어 그 관문의 설명 한 줄처럼 읽혔다(사용자).
+   조금 띄우고 이름표(걸러지는 것)를 글 위에 단다. 이름표는 글과 한 상자(::before)라 발표할 때 같이 나타난다 */
+.bk-gw-x:not(:empty) {
+  margin-top: 0.7em;
+}
+
+/* 이름표는 제 줄에 따로: 글 앞에 같은 줄로 붙이면 이름표가 글의 첫 줄을 밀어 '빠진 / 서류는'처럼 낱말 사이가 엉뚱하게 꺾여
+   오타처럼 보였다(검수). 그만큼 잘리지 않는 높이가 높아진다 */
+.bk-gw-x:not(:empty)::before {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink-3);
+  /* 이름표 크기: 걸러지는 것의 글자(키운 단계까지)를 따르되 이름표 바닥(22px) 밑으로는 */
+  font-size: max(var(--t-label), 0.72em);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+  content: '걸러지는 것';
+}
+
+/* 관문의 이름, 하는 일, 들어오고 나가는 것은 낱말 사이에서만 꺾는다: 좁은 단에서 '사내 정보'가 '사내 정 / 보'처럼 낱말 가운데서
+   갈렸다. 줄 길이도 고르게 */
+.bk-gw :is(.bk-gw-in, .bk-gw-out, .bk-gw-t, .bk-gw-m, .bk-gw-x) {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+/* 옆에 다른 컴포넌트가 선 칸: 나가는 것을 칸 끝에 붙이지 않는다. 붙이면 나가는 것과 옆 글 사이(72px)가 관문 사이보다 좁아
+   한 줄로 읽혔다(검수: '처리된 신청 배포 시간을 줄여요') */
+.bk.is-shared > .bk-in > .bk-gw {
+  padding-right: var(--bk-col-gap);
+}
+
+/* 옆에 글이 선 칸에서는 관문 이름을 한 줄로: 좁은 단에서 '본인 / 확인'처럼 꺾인 이름과 한 줄 이름이 통로 위에서 서로 다른 높이에
+   서서 같은 줄의 이름이 한 축에 서지 않았다(검수). 옆 글과의 사이는 칸 사이 둘(칸 사이와 오른쪽 여백)이다. 바탕 없는 칸만:
+   들여 쓰기와 강조는 안쪽 옆 여백(52)만큼 좁아 관문 다섯이 한 줄 이름으로 들어가지 않았다 */
+.bk.is-shared.bk-look-plain > .bk-in > .bk-gw .bk-gw-t {
+  white-space: nowrap;
+}
+
+/* 강조색은 고른 관문(거르는 관문) 하나만: 나가는 것까지 강조색이면 답이 두 곳으로 갈렸다(검수). 나가는 것은 글자색 */
+.bk-gw-out {
+  color: var(--ink);
+}
+
+/* 검은 바탕에서는 통로가 바탕에 묻혀서 한 단계 짙게 */
+.is-dark .bk-gw::before {
+  background: color-mix(in srgb, var(--ink-3) 80%, var(--bg));
+}

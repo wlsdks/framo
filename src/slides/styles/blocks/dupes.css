@@ -85,10 +85,52 @@
   }
 }
 
-/* 장에 겹친 수고 하나뿐이면 묶음째 칸 가운데에: 팀 이름과 짧은 일이 왼쪽 절반에만 서서 오른쪽이 통째로 비었다(사용자: 오른쪽 공백).
-   묶음 안에서는 왼쪽 끝을 맞춘다(소제목, 목록, 아래의 하나가 한 줄로 선다) */
-.bk-area:not(:has(> .bk ~ .bk)) .bk-dp {
-  width: fit-content;
-  max-width: 100%;
-  margin-inline: auto;
+/* 판을 혼자 쓰는 넓은 칸: 팀마다 따로 하던 일(왼쪽)과 대신할 하나(오른쪽)를 나란히. 위아래로 쌓으면 판을 혼자 써도
+   본문 가운데에 좁은 단 하나(본문 너비의 3분의 1)만 서고 양옆이 통째로 비었다(사용자). 둘 사이는 여백으로 나누고(가로선은 걷는다),
+   대신할 하나는 목록의 위아래 가운데에 선다. 줄 사이도 넉넉히. 다른 컴포넌트와 같이 있으면 쌓은 그대로: 나란히 두면 묶음째
+   왼쪽 끝에 서서 본문 오른쪽이 38% 비었다(checkAssembly). 쌓으면 아래의 가는 선이 칸 너비를 잇는다.
+   묶음은 장 제목 축(왼쪽 끝)에서 시작해 오른쪽으로 넓힌다: 예전에는 묶음째 가운데에 두어 머리말이 제목 축에서 떨어졌다(검수).
+   머리말(지금은 팀마다 따로)은 이름표처럼 한 단계 작게 버금 글자색으로 두어 오른쪽의 답이 먼저 읽힌다: 둘이 같은 크기, 같은
+   굵기라 답이 앞서지 않았다(검수) */
+@container bk (min-width: 1200px) and (min-height: 420px) {
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp {
+    display: grid;
+    grid-template-columns: max-content minmax(0, max-content);
+    grid-template-rows: auto auto;
+    column-gap: max(160px, 20cqw);
+    align-content: start;
+  }
+
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp > .bk-h {
+    --fs: var(--t-small);
+    grid-column: 1;
+    grid-row: 1;
+    color: var(--ink-2);
+  }
+
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp-list {
+    grid-column: 1;
+    grid-row: 2;
+    row-gap: calc(36px * var(--bk-fit, 1));
+    margin-top: calc(32px * var(--bk-fit, 1));
+  }
+
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp-one {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    align-self: center;
+    max-width: 14em;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  /* 답은 지운 줄보다 한 단계 크게(52까지), 굵기는 중간(500)이라 장 제목과 다투지 않는다: 지운 줄과 같은 크기라 답이 앞서지
+     않았다(검수). 그림 이름표의 상한(44, blocks/base.css)보다 앞선다 */
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp-r {
+    --fs: var(--t-h);
+    margin-top: 14px;
+    font-size: min(calc(52px * var(--scale, 1)), max(var(--fs-min, 0px), calc(44px * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1))));
+    font-weight: 500;
+  }
 }

@@ -177,3 +177,17 @@
 .bk-rk-b {
   font-weight: 500;
 }
+
+/* 넓고 높은 칸(판을 혼자 쓸 때 같은): 선 그은 표가 아니라 여백과 글자 위계로. 14px 줄 사이에 머리줄 아래 선과 줄 선을 그어
+   판을 혼자 써도 세 줄이 빽빽한 표로 모였다(사용자: 표 규격 같다). 선을 걷고 줄 사이를 넉넉히 둔다(한 줄 내용의 두 배 안,
+   VISUAL-RULES 6). 걱정과 대책의 짝은 같은 줄과 글자 위계(대책이 굵다)가 묶는다 */
+@container bk (min-width: 1300px) and (min-height: 520px) {
+  .bk-rk-list[data-n] .bk-rk-row {
+    padding: calc(28px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
+    border-bottom: 0;
+  }
+
+  .bk-rk-head {
+    border-bottom: 0;
+  }
+}
