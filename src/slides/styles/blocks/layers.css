@@ -57,58 +57,56 @@
   text-wrap: pretty;
 }
 
-/* 지층 선: 층의 글 아래에 그 층 너비만큼(들인 자리부터 칸 오른쪽 끝까지). 발표할 때 맨 아래 선부터 왼쪽에서 그어진다(engine.ts).
-   선끼리는 층 높이(글 + 위아래 사이)만큼 떨어져 40px 안의 겹선이 되지 않는다 */
+/* 지층 선: 층의 글 아래에 그 층 너비만큼(들인 자리부터 칸 오른쪽 끝까지). 층으로 서게 하는 꼭 필요한 선이라 줄 선보다 한 단계
+   짙게(VISUAL-RULES 2-1): 옅은 선(--line)은 멈춘 그림, 편집 화면, PDF, 검은 테마에서 묻혀 '들여 쓴 목록'으로만 읽혔다(검수).
+   글은 제 선에 붙인다(--ly-pb, 위 층의 선과의 사이보다 확실히 가깝게): 선 위에 선 글로 읽힌다. 발표할 때 맨 아래 선부터 왼쪽에서
+   그어진다(engine.ts). 선끼리는 층 높이만큼 떨어져 40px 안의 겹선이 되지 않는다 */
+.bk-ly-list {
+  --ly-pb: calc(8px * var(--bk-fit, 1));
+}
+
+.bk-ly-row {
+  padding-bottom: var(--ly-pb);
+}
+
 .bk-ly-rule {
   position: absolute;
   right: 0;
   bottom: 0;
   left: calc((var(--n, 3) - 1 - var(--k, 0)) * var(--ly-step));
-  display: none;
   height: var(--rule-hair);
-  background: var(--line);
+  background: color-mix(in srgb, var(--ink-3) 70%, var(--bg));
+}
+
+/* 강조할 층은 글 아래의 짧은 구간(글 폭)만 강조색: 층 너비 전체(1,440px)가 파란 선이면 '고른 줄'처럼 보였다(검수) */
+.bk-ly-txt {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.bk-ly-row.is-hl .bk-ly-txt::after {
+  position: absolute;
+  right: 0;
+  bottom: calc(-1 * var(--ly-pb));
+  left: 0;
+  height: var(--rule-hair);
+  background: var(--accent);
   content: '';
 }
 
-.bk-ly-row.is-hl .bk-ly-rule {
-  background: var(--accent);
-}
-
-/* 넓은 칸(판을 혼자 쓸 때 같은): 지층 선을 깐다. 묶음은 장 제목 축(왼쪽 끝)에서 시작해 오른쪽으로 넓다.
-   좁은 칸이나 옆에 글이 선 칸은 계단만(선이 짧게 끊겨 표의 줄처럼 보이지 않게) */
-@container bk (min-width: 1200px) {
-  .bk-ly-row {
-    padding-bottom: calc(12px * var(--bk-fit, 1));
-  }
-
-  .bk-ly-rule {
-    display: block;
-  }
-}
-
-/* 넓고 높은 바탕 없는 칸: 층 사이를 넉넉히. 문턱(560)은 다섯 층이 넉넉한 사이로도 글자를 줄이지 않고 들어가는 높이라, 낮은 칸의
-   잘리지 않는 높이(blockHeights.ts)는 좁은 사이로 잰다. 들여 쓰기와 강조는 안쪽 위아래 여백(88)만큼 낮아 좁은 사이 그대로 */
+/* 넓고 높은 바탕 없는 칸: 층 사이를 넉넉히(글과 제 선 사이는 그대로 가깝게). 문턱(560)은 다섯 층이 넉넉한 사이로도 글자를 줄이지
+   않고 들어가는 높이라, 낮은 칸의 잘리지 않는 높이(blockHeights.ts)는 좁은 사이로 잰다. 들여 쓰기와 강조는 안쪽 위아래 여백(88)만큼
+   낮아 좁은 사이 그대로. 묶음은 장 제목 축(왼쪽 끝)에서 시작해 오른쪽으로 넓다 */
 @container bk (min-width: 1200px) and (min-height: 560px) {
   .bk-look-plain .bk-ly-list {
-    row-gap: calc(28px * var(--bk-fit, 1));
-  }
-
-  .bk-look-plain .bk-ly-row {
-    padding-bottom: calc(18px * var(--bk-fit, 1));
+    row-gap: calc(32px * var(--bk-fit, 1));
   }
 }
 
-/* 낮은 칸: 층 사이를 좁힌다 */
+/* 낮은 칸: 층 사이를 좁힌다(선은 그대로 둔다: 선이 없으면 들여 쓴 목록으로 읽힌다) */
 @container bk (max-height: 340px) {
   .bk-ly-list {
-    row-gap: calc(10px * var(--bk-fit, 1));
-  }
-
-  .bk-ly-row {
-    padding-bottom: 0;
-  }
-
-  .bk-ly-rule {
-    display: none;
+    row-gap: calc(12px * var(--bk-fit, 1));
   }
 }
