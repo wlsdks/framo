@@ -3769,8 +3769,9 @@ export function motionEngine(): MotionEngine {
 
     batch(() => {
       if (cellOnly) return block(cellOnly as HTMLElement, 0)
-      // 장의 배경(motion/backdrop.ts)은 엔진 밖에서 움직인다: 장이 나오는 때와 단계를 알리고, 장을 떠날 때 거둘 것(stops)을 받는다
-      slide.querySelector(':scope > .s-bd')?.dispatchEvent(new CustomEvent('mo-backdrop', { bubbles: true, detail: { level: quiet ? 'none' : levelName, at: lead, stops } }))
+      // 장의 배경(motion/backdrop.ts)은 엔진 밖에서 움직인다: 장이 나오는 때와 단계를 알리고, 장을 떠날 때 거둘 것(stops)과
+      // 들어오기가 끝나는 약속(waits: 이 묶음의 끝 mo-end가 배경이 가라앉을 때까지 기다린다)을 받는다
+      slide.querySelector(':scope > .s-bd')?.dispatchEvent(new CustomEvent('mo-backdrop', { bubbles: true, detail: { level: quiet ? 'none' : levelName, at: lead, stops, waits } }))
       // 장면: 움직이기 전에 자리를 재 두고(prepare), 레이아웃의 연출을 건 뒤 그 움직임을 다시 짜고 층을 얹는다
       const after = sceneName && !still ? scene(sceneName) : null
       choreo(layout, slideVariant)

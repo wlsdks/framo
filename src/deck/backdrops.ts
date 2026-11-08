@@ -13,7 +13,7 @@ interface BackdropSpec {
   description: string
   /** 어울리는 장. 고르는 곳과 AI 카탈로그에 그대로 보인다 */
   fits: string
-  /** 한 점(씨앗, 원)이 있는 그림: 처음 고를 때 글이 적은 쪽에 놓는다. 아니면 장 전체에 고르게 깔린다 */
+  /** 한곳에 모인 그림(씨앗, 원, 띠): 처음 고를 때 글이 적은 쪽에 놓는다. 아니면 장 전체에 고르게 깔린다 */
   focal: boolean
   /** 장 모음과 갤러리에서 이 배경을 깔아 보이는 장 (어울리는 장 하나) */
   showOn: LayoutId
@@ -29,7 +29,7 @@ export const BACKDROPS: readonly BackdropSpec[] = [
   { id: 'flow', name: '흐름', description: '가는 선들이 한쪽으로 흐르며 한 곳을 지나가요.', fits: '과정, 일정, 추이, 변화', focal: false, showOn: 'process' },
   { id: 'depth', name: '깊이', description: '등고선의 층이 어긋나 있다가 겹겹이 맞춰져요.', fits: '원인 캐기, 분석, 사례, 이미지', focal: false, showOn: 'case' },
   { id: 'structure', name: '구조', description: '고른 점의 판 위에 칸 묶음이 하나씩 맞춰져요.', fits: '표와 비교, 매트릭스, 구성, 시스템', focal: false, showOn: 'kpi' },
-  { id: 'linger', name: '여운', description: '선 띠가 펼쳐졌다가 아주 느리게 가라앉아요.', fits: '섹션, 인용, 맺음, 결정 요청', focal: false, showOn: 'section' },
+  { id: 'linger', name: '여운', description: '선 띠가 펼쳐졌다가 아주 느리게 가라앉아요.', fits: '섹션, 인용, 맺음, 결정 요청', focal: true, showOn: 'section' },
   { id: 'link', name: '연결', description: '양쪽의 점들이 활 모양의 선으로 하나씩 이어져요.', fits: '연결도, 관계, 사람과 팀, 협업', focal: false, showOn: 'compare' },
 ]
 

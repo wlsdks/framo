@@ -42,8 +42,11 @@ interface BackdropRuntime {
   kinds: string[]
   /** 끝 모습(at을 주면 그 순간)의 SVG 안쪽(path들). 자리 크기는 장 px, strength는 짙기(soft, base, strong) */
   still(kind: string, w: number, h: number, strength?: string, at?: Frame): string
-  /** 배경 하나(.s-bd)를 움직인다. level은 none, calm, lively, at은 시작을 늦출 ms. 돌려준 함수를 부르면 멈추고 끝 모습으로 */
-  play(el: HTMLElement, level: string, at: number): () => void
+  /**
+   * 배경 하나(.s-bd)를 움직인다. level은 none, calm, lively, at은 시작을 늦출 ms. 돌려준 함수를 부르면 멈추고 끝 모습으로.
+   * waits가 있으면 들어오기가 끝나는(또는 멈추는) 약속을 넣는다
+   */
+  play(el: HTMLElement, level: string, at: number, waits?: Promise<void>[]): () => void
   /** 엔진이 장을 움직이며 보내는 알림(mo-backdrop)을 받는다. 한 문서에 한 번 */
   listen(root: Document): void
   /** 들어오기가 끝나는 때(ms, 생동감 기준). 모르는 배경이면 0 */
@@ -343,7 +346,7 @@ export function backdropMotion(): BackdropRuntime {
         const lap = span(e, close, LAP)
         if (lap > 0 && lap < 1) {
           const c = -Math.PI / 2 + TAU * carry(lap)
-          ellipse(P, cx, cy, Rr, Rr, c - 0.6, c, 1.6, 1, 0.6 * Math.sin(Math.PI * lap))
+          ellipse(P, cx, cy, Rr, Rr, c - 0.9, c, 2, 1, 0.85 * Math.sin(Math.PI * lap))
         }
         P.dot(cx, cy - Rr, 4.5 * out(span(e, close + LAP * 0.75, 420)), 1, 0.9)
         // 생동감: 15초마다 조각 하나가 한 갈래를 따라 들어와 원에 닿는다
@@ -574,7 +577,7 @@ export function backdropMotion(): BackdropRuntime {
   }
 
   /**
-   * 구조(눈금과 격자가 맞춰진다): 옅고 성긴 점의 판이 비스듬히 깔리고, 그 위에 칸 묶음(모듈)이 하나씩 촘촘한 점으로 채워지며
+   * 구조(눈금과 격자가 맞춰진다): 옅고 성긴 점의 판이 비스듬히 깔리고, 그 위 오른쪽 위에 칸 묶음(모듈)이 하나씩 촘촘한 점으로 채워지며
    * 구조가 선다. 마지막 묶음은 강조색(핵심). 점만으로 짜서 상자나 선은 없다. 묶음은 위 줄부터 짜 올리듯 채워지고 점이 딸깍 맞춰진다.
    * 다 맞춰진 뒤에는 움직이지 않는다(맞춰졌다는 고요가 이 분위기의 말이다)
    */
@@ -584,13 +587,13 @@ export function backdropMotion(): BackdropRuntime {
     const rows = Math.max(3, Math.floor(h / p))
     const ox = (w - (cols - 1) * p) / 2
     const oy = (h - (rows - 1) * p) / 2
-    // 묶음: 판의 칸에 맞춘 네모 (오른쪽에 무게를 두어 왼쪽의 글자리를 비운다). 마지막이 강조색
+    // 묶음: 판의 칸에 맞춘 네모. 오른쪽 위에 모아 둔다: 장의 제목은 왼쪽 위, 본문은 가운데 띠에 놓이는 장이 많아서
+    // 그 둘을 비운다(가운데 오른쪽에 두던 때는 핵심 숫자 장의 숫자 뒤에 점 묶음이 깔려 글과 다투었다, 필름). 마지막이 강조색
     const MODS = [
-      [0.48, 0.16, 0.74, 0.46],
-      [0.48, 0.54, 0.6, 0.84],
-      [0.64, 0.54, 0.74, 0.84],
-      [0.79, 0.16, 0.9, 0.46],
-      [0.79, 0.54, 0.9, 0.66],
+      [0.62, 0.06, 0.8, 0.28],
+      [0.83, 0.06, 0.89, 0.28],
+      [0.62, 0.31, 0.89, 0.35],
+      [0.92, 0.06, 0.96, 0.16],
     ].map(([x0, y0, x1, y1]) => {
       const c0 = Math.round(x0 * (cols - 1))
       const r0 = Math.round(y0 * (rows - 1))
@@ -649,7 +652,7 @@ export function backdropMotion(): BackdropRuntime {
   /**
    * 여운(아주 느리게 옅어지며 가라앉는다): 가는 선 스무여 가닥이 한 띠를 이루어 장을 가로지르며 굽이친다. 띠가 비틀리는 자리에서는
    * 선들이 한 줄로 모였다가 다시 벌어져, 얇은 천이 뒤집히듯 깊이가 생긴다. 들어올 때 왼쪽에서부터 펼쳐지며 비틀림이 생기고,
-   * 다 펼쳐지면 조금 아래로 가라앉으며 옅어져 쉰다. 생동감의 느린 흐름: 비틀림이 40초에 한 번 꼴로 옆으로 흘러간다
+   * 다 펼쳐지면 조금 아래로 가라앉으며 옅어져 쉰다. 생동감의 느린 흐름: 비틀림이 32초에 한 번 조금 오간다(장 폭의 2% 안)
    */
   function linger(w: number, h: number): Scene {
     const M = 22
@@ -665,7 +668,9 @@ export function backdropMotion(): BackdropRuntime {
     return {
       end,
       draw(P, e, tau) {
-        const ph = (clock(tau) * TAU) / 40000
+        // 생동감의 흐름: 비틀림이 ±0.35rad 안에서 32초에 한 번 오간다(띠의 점이 장 폭의 2% 안에서 움직인다).
+        // 비틀림이 끝없이 돌게 두던 때는 띠가 너비만큼(장 폭의 5% 넘게) 오르내려 배경이 아니라 움직이는 그림이 되었다
+        const ph = 0.35 * Math.sin((clock(tau) * TAU) / 32000)
         // 들어올 때 비틀림이 납작한 띠에서 생기고, 다 펼쳐지면 띠 높이의 3%만큼 가라앉으며 3분의 1 옅어진다
         const twist = out(span(e, 250, 2000))
         const sink = out(span(e, settleAt, SINK))
@@ -893,7 +898,7 @@ export function backdropMotion(): BackdropRuntime {
   let last: { sig: string; tau: number; at: number } | null = null
   const running = new WeakMap<HTMLElement, () => void>()
 
-  function play(el: HTMLElement, level: string, at: number): () => void {
+  function play(el: HTMLElement, level: string, at: number, waits?: Promise<void>[]): () => void {
     running.get(el)?.()
     const kind = el.dataset.bd || ''
     const w = Number(el.dataset.w)
@@ -973,10 +978,13 @@ export function backdropMotion(): BackdropRuntime {
     }
     let raf = 0
     let visible = true
+    let settle = () => {}
+    waits?.push(new Promise<void>((r) => (settle = r)))
     const tick = (now: number) => {
       raf = 0
       if (!el.isConnected || (!cv && !setup())) return finish()
       const t = draw(now)
+      if (t >= endMs) settle()
       // 흐름이 없으면 들어오기가 끝나는 대로 끝 모습(SVG)으로 돌아가 쉰다
       if (!flows && t >= endMs) return finish()
       if (visible) raf = requestAnimationFrame(tick)
@@ -1001,6 +1009,7 @@ export function backdropMotion(): BackdropRuntime {
       cv?.remove()
       svg!.style.visibility = ''
       running.delete(el)
+      settle()
     }
     const stop = () => {
       finish()
@@ -1015,10 +1024,10 @@ export function backdropMotion(): BackdropRuntime {
     if (box.__bdListen) return
     box.__bdListen = true
     root.addEventListener('mo-backdrop', (ev) => {
-      const e = ev as CustomEvent<{ level?: string; at?: number; stops?: (() => void)[] }>
+      const e = ev as CustomEvent<{ level?: string; at?: number; stops?: (() => void)[]; waits?: Promise<void>[] }>
       const el = e.target as HTMLElement | null
       if (!el || !el.classList || !el.classList.contains('s-bd')) return
-      const stop = play(el, e.detail?.level || 'none', e.detail?.at || 0)
+      const stop = play(el, e.detail?.level || 'none', e.detail?.at || 0, e.detail?.waits)
       e.detail?.stops?.push(stop)
     })
   }
