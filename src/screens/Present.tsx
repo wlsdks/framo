@@ -3,11 +3,12 @@ import { flushSync } from 'react-dom'
 import { pageInfo } from '../deck/fields'
 import type { Deck } from '../deck/types'
 import { cx } from '../lib/cx'
+import { particle } from '../lib/josa'
 import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
 import { motionOf, transitionOf } from '../deck/themes'
 import { motionEngine, type MotionPlay } from '../motion/engine'
 import { presentChannel, type Blank, type PresentMessage } from '../present/link'
-import { canRecord, motionSettled, saveBlob, startRecording, type Recording } from '../present/record'
+import { canRecord, motionSettled, saveBlob, startRecording, type RecordMode, type Recording } from '../present/record'
 import { safeFileName } from '../store/deckFile'
 import { FitSlide, pageProps, SlideCanvas } from '../slides/SlideCanvas'
 import { Modal } from './ui'
@@ -45,10 +46,6 @@ export function barRoom(w: number, h: number): BarRoom {
   return side >= SIDE_ROOM ? 'side' : top >= TOP_ROOM ? 'top' : 'over'
 }
 
-/**
- * 전체 화면 발표. 클리커가 보내는 PageUp/PageDown도 받는다.
- * 발표자 화면(Presenter)이 열려 있으면 같이 움직인다. 어느 창에서 넘겨도 된다.
- */
 /** 녹화가 어떻게 끝났는지: 파일로 저장함, 담긴 장면이 없음, 시작하지 못함(화면 고르기를 거절했거나 막혔다) */
 export type RecordResult = 'saved' | 'empty' | 'failed'
 
@@ -61,12 +58,31 @@ export function recordTime(slides: number): string {
   return s < 55 ? `${Math.max(10, Math.round(s / 10) * 10)}초` : `${Math.max(1, Math.round(s / 60))}분`
 }
 
+/** 녹화를 묻는 창의 안심 한 줄. 브라우저 창과 녹화 중 띠에 '공유'라는 말이 나와도 놀라지 않게 */
+const RECORD_SAFE = '브라우저 창에 ‘공유’라고 나와도 아무 데도 보내지 않아요. 녹화는 이 PC 안에서만 하고 다운로드 폴더에 저장돼요.'
+
+/** 녹화하는 동안 장 위에 비워 두는 띠의 높이(화면 px). '녹화 중' 표시가 여기 있어 잘라 녹화하는 자리 밖이다 */
+const REC_BAND = 36
+
 /**
- * 요소 녹화(RestrictionTarget, 크롬·엣지 132+)가 되는지. 되면 슬라이드 상자와 그 안만 담기므로 상자 밖의 '녹화 중' 표시는
- * 장 위에 겹쳐도 영상에 들어가지 않는다. 안 되면(잘라 내기나 탭 전체로 녹화) 표시가 영상에 담기므로 띄우지 않는다:
- * 그때는 브라우저가 띄우는 '이 탭을 공유 중' 막대가 녹화 중임을 알린다
+ * 녹화하는 동안 슬라이드 상자의 자리(화면 px): 위 띠 아래에 16:9로, 크기는 기기 픽셀로 짝수, 자리는 기기 픽셀에 딱 맞게.
+ * 녹화는 이 상자의 자리만 잘라 낸다(record.ts). 그 자리에 겹친 것은 다 담기므로 '녹화 중' 표시는 위 띠에 두려고 장을 조금 줄인다
+ * (16:9 전체 화면은 장 밖에 여백이 없어 표시가 장 위에 겹쳤다). 자리가 기기 픽셀 사이에 걸치면 영상 가장자리에 1~2px 검은 줄이
+ * 들었고(1280×600 창의 장은 1066.67×600), 홀수 크기는 영상으로 만들 때 한 줄을 잘라 낸다
  */
-const elementCapture = typeof window !== 'undefined' && 'RestrictionTarget' in window
+export function recordBox(w: number, h: number, dpr: number, band = REC_BAND): { left: number; top: number; width: number; height: number } {
+  const even = (x: number) => Math.abs(x - Math.round(x)) < 1e-6 && Math.round(x) % 2 === 0
+  let width = Math.floor(Math.min(w, ((h - band) * 16) / 9) / 16) * 16
+  while (width > 320 && !(even(width * dpr) && even(((width * 9) / 16) * dpr))) width -= 16
+  const height = (width * 9) / 16
+  const snap = (x: number) => Math.round(x * dpr) / dpr
+  return { left: snap((w - width) / 2), top: snap(band + (h - band - height) / 2), width, height }
+}
+
+/**
+ * 전체 화면 발표. 클리커가 보내는 PageUp/PageDown도 받는다.
+ * 발표자 화면(Presenter)이 열려 있으면 같이 움직인다. 어느 창에서 넘겨도 된다.
+ */
 
 export function Present({
   deck,
@@ -82,8 +98,8 @@ export function Present({
   onExit: (lastId?: string) => void
   /** 열자마자 영상으로 저장할지 묻는다 (편집기 내보내기의 '영상'). 묻는 창에서 취소하면 발표를 닫는다 */
   record?: boolean
-  /** 녹화가 끝나 발표를 닫을 때 (편집기가 결과를 알린다) */
-  onRecorded?: (result: Exclude<RecordResult, 'failed'>) => void
+  /** 녹화가 끝나 발표를 닫을 때 (편집기가 결과를 알린다). file: 저장한 파일 이름 */
+  onRecorded?: (result: Exclude<RecordResult, 'failed'>, file: string) => void
 }) {
   const slides = useMemo(() => deck.slides.filter((s) => !s.hidden), [deck.slides])
   // 장마다 넘기는 쪽 번호와 단락. 그릴 때마다 새로 만들면 단락 목록이 새 배열이라, 마우스를 움직이거나 멈출 때마다(아래 표시를
@@ -131,8 +147,10 @@ export function Present({
    * 녹화하는 동안은 아래 막대와 커서를 감추고, Esc나 브라우저의 '공유 중지'로 멈추면 거기까지를 파일로 저장한다
    */
   const [recording, setRecording] = useState(false)
-  // 녹화가 실제로 시작됐는지 (화면 고르기를 마친 뒤). 이때부터 '녹화 중' 표시를 띄운다
-  const [recLive, setRecLive] = useState(false)
+  // 녹화가 실제로 시작됐는지 (화면 고르기를 마친 뒤)와 어떻게 잘라 녹화하는지. 이때부터 위 띠에 '녹화 중' 표시를 띄운다.
+  // 탭 전체를 녹화하면(잘라 내지 못하면) 띠의 표시도 담기므로 띄우지 않고, 브라우저의 '공유 중' 막대에 맡긴다
+  const [recLive, setRecLive] = useState<RecordMode | null>(null)
+  const recFile = useRef('')
   const recStop = useRef<(() => void) | null>(null)
   // 화면 고르기 창이 떠 있는 동안, 녹화가 시작된 때. 그 창이나 공유 시작이 전체 화면을 풀어도 발표를 끝내지 않는다
   const recStarting = useRef(false)
@@ -348,7 +366,7 @@ export function Present({
     recSince.current = Date.now()
     // 고르는 창이 전체 화면을 풀었으면 다시 들어가 본다(누른 지 얼마 안 됐으면 된다). 안 되면 이 창 크기로 녹화한다
     if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.().catch(() => {})
-    setRecLive(true)
+    setRecLive(rec.mode)
     let stopped = false
     recStop.current = () => {
       stopped = true
@@ -375,10 +393,11 @@ export function Present({
       await wait(left > 0 ? 120 : 500)
     }
     recStop.current = null
-    setRecLive(false)
+    setRecLive(null)
     const blob = await rec.stop()
     setRecording(false)
-    if (blob) saveBlob(blob, `${safeFileName(deck.title, '발표')}.${rec.ext}`)
+    recFile.current = `${safeFileName(deck.title, '발표')}.${rec.ext}`
+    if (blob) saveBlob(blob, recFile.current)
     return blob ? 'saved' : 'empty'
   }
 
@@ -394,7 +413,7 @@ export function Present({
       setRecIntro({ failed: true })
       return
     }
-    onRecorded?.(result)
+    onRecorded?.(result, recFile.current)
     exit()
   }
   /** 묻는 창을 닫으면: 내보내기에서 왔으면 편집기로, 발표하다 눌렀으면 발표를 이어 간다 */
@@ -415,10 +434,13 @@ export function Present({
   if (!slide) return null
   const after = slides[view.index + 1]
   const early = after && after.id === ahead ? after : null
+  // 녹화하는 동안 슬라이드 상자의 자리 (창 크기가 바뀌면 room과 함께 다시 그려진다)
+  const box = recording ? recordBox(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1) : null
 
   return (
     <div
       className={cx('present', idle && !recIntro && 'is-idle', !settled && 'is-entering', recording && 'is-recording')}
+      style={box ? { '--rec-left': `${box.left}px`, '--rec-top': `${box.top}px`, '--rec-width': `${box.width}px`, '--rec-height': `${box.height}px` } : undefined}
       onMouseMove={wake}
       onClick={(e) => (recIntro || recording ? undefined : blank ? setBlank(null) : e.clientX < window.innerWidth * 0.3 ? goTo(view.index - 1) : forward())}
     >
@@ -449,10 +471,9 @@ export function Present({
           발표 끝내기
         </button>
       </div>
-      {/* 녹화 중 표시는 슬라이드 상자(.slide-frame) 밖의 형제로 둔다: 요소 녹화는 그 상자와 안쪽만 담아서, 장 위에 겹쳐도
-          영상에는 들어가지 않는다 (위 elementCapture) */}
-      {recLive && elementCapture && (
-        <div className={cx('present-rec', `is-${room}`)} role="status">
+      {/* 녹화 중 표시는 장 위의 띠에 둔다: 녹화는 슬라이드 상자의 자리만 잘라 내서 띠는 영상에 담기지 않는다 (recordBox) */}
+      {recLive && recLive !== 'tab' && (
+        <div className="present-rec" role="status">
           <span className="present-rec-dot" aria-hidden="true" />
           <span>녹화 중</span>
           <span className="present-rec-sep" aria-hidden="true">
@@ -483,14 +504,28 @@ export function Present({
             </>
           }
         >
-          <p>
-            {recIntro.failed ? '화면 공유가 시작되지 않았어요. ‘다시 녹화하기’를' : '‘녹화 시작’을'} 누르면 브라우저가 공유할 화면을 물어요. <b>이 탭</b>을
-            고르고 공유를 눌러 주세요.
-          </p>
-          <p>
-            모션이 끝날 때마다 다음 슬라이드로 넘기며 녹화해요. 슬라이드 {slides.length}장이라 {recordTime(slides.length)}쯤 걸리고, Esc를 누르면 거기까지 저장해요.
-          </p>
-          <p className="rec-intro-local">영상은 이 PC의 다운로드 폴더에만 저장돼요.</p>
+          {/*
+            브라우저가 띄우는 창에 맞춘 말: 크롬은 이 탭만 녹화할 때 탭 목록 없이 '…에서 이 탭을 보도록 허용하시겠습니까?'와
+            '허용'을 띄운다(엣지도 같은 크로미움). 예전 '이 탭을 고르고 공유를 눌러 주세요'는 그 창에 없는 말이었다.
+            '공유'라는 말에 놀라지 않게 아무 데도 보내지 않는다는 것을 본문 크기로 둔다(녹화 중 브라우저 띠에도 '공유'가 나온다)
+          */}
+          {recIntro.failed ? (
+            <>
+              <p>{RECORD_SAFE}</p>
+              <p>‘다시 녹화하기’를 누르고, 브라우저가 이 탭을 보여 줘도 되는지 물으면 ‘허용’을 눌러 주세요.</p>
+            </>
+          ) : (
+            <>
+              <p>
+                ‘녹화 시작’을 누르면 브라우저가 이 탭을 보여 줘도 되는지 물어요. ‘허용’을 눌러 주세요. 창에 나오는 {location.hostname}
+                {particle(location.hostname, '은', '는')} 이 PC에서 켜진 Framo예요.
+              </p>
+              <p>{RECORD_SAFE}</p>
+              <p>
+                모션이 끝날 때마다 다음 슬라이드로 넘기며 녹화해요. 슬라이드 {slides.length}장이라 {recordTime(slides.length)}쯤 걸리고, Esc를 누르면 거기까지 저장해요.
+              </p>
+            </>
+          )}
         </Modal>
       )}
     </div>

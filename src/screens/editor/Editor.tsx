@@ -7,6 +7,7 @@ import { knownOnly, unknownParts } from '../../deck/compat'
 import type { Missing } from '../../deck/fields'
 import type { Deck, LayoutId, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
+import { particle } from '../../lib/josa'
 import { isMac, keys } from '../../lib/keys'
 import { go } from '../../lib/router'
 import { onTabListKeys } from '../../lib/tabList'
@@ -37,9 +38,10 @@ import { useImageInput } from './useImageInput'
 import { VersionPanel } from './Versions'
 
 /** 영상 녹화가 끝나 발표를 닫은 뒤 편집기에 띄우는 말 (시작하지 못한 것은 발표 화면의 묻는 창이 다시 묻는다) */
-const RECORDED: Record<Exclude<RecordResult, 'failed'>, string> = {
-  saved: '영상을 저장했어요. 다운로드 폴더를 확인해 주세요.',
-  empty: '녹화된 장면이 없어요. 내보내기에서 ‘영상 (MP4)’을 다시 눌러 주세요.',
+function recordedText(result: Exclude<RecordResult, 'failed'>, file: string): string {
+  // 파일 이름까지: 다운로드 폴더에서 무엇을 찾으면 되는지 바로 알게
+  if (result === 'saved') return `‘${file}’${particle(file, '을', '를')} 다운로드 폴더에 저장했어요.`
+  return '녹화된 장면이 없어요. 내보내기에서 ‘영상 (MP4)’을 다시 눌러 주세요.'
 }
 
 export function Editor({ id }: { id: string }) {
@@ -250,7 +252,7 @@ function EditorBody({ deck }: { deck: Deck }) {
         entering={launch.presenting.entering}
         onExit={endPresent}
         record={launch.presenting.record}
-        onRecorded={(result) => toast.show(RECORDED[result], undefined, result === 'saved' ? 5000 : 8000)}
+        onRecorded={(result, file) => toast.show(recordedText(result, file), undefined, result === 'saved' ? 6000 : 8000)}
       />
     )
 

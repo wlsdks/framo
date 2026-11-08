@@ -1,6 +1,9 @@
 // 발표를 영상으로 녹화하기. 브라우저에 든 기능만 쓴다(의존성 없음, 바깥 연결 없음):
 // - 화면 공유(getDisplayMedia): 사람이 '이 탭'을 골라야 시작한다(브라우저가 묻는다). 고른 화면은 이 PC 안에서만 쓴다.
-// - 요소 녹화(RestrictionTarget, Chrome 132+): 탭에서 슬라이드 상자만 잘라 녹화한다. 없으면 잘라 내기(CropTarget), 그것도 없으면 탭 전체.
+// - 잘라 내기(CropTarget): 탭에서 슬라이드 상자의 자리만 잘라 녹화한다. 없으면 요소 녹화(RestrictionTarget), 그것도 없으면 탭 전체.
+//   요소 녹화를 먼저 쓰던 때는 장을 넘길 때마다(View Transition 동안) 그 요소가 그려지지 않아 영상에 0.5초씩 검은 장면이 들어갔다.
+//   잘라 내기는 화면에 그려진 그대로 담아 장 넘기기 연출까지 들어간다. 대신 그 자리에 겹친 것도 담기므로, 녹화하는 동안 발표 화면은
+//   장 밖(위 띠)에만 표시를 둔다(Present.tsx의 recordBox).
 // - MediaRecorder: MP4(H.264)를 되면 MP4로, 아니면 WebM으로.
 // 실제 발표 화면을 그대로 녹화하므로 모든 모션(숫자 굴리기, 글자 써지기 포함)이 화면에서 보이는 그대로 담긴다.
 // 장을 그림으로 굽는 길(export/rasterize.tsx)은 움직이는 도중의 모습(WAAPI, 프레임마다 바꾸는 글자)을 담지 못한다.
@@ -29,8 +32,13 @@ type Restrictable = MediaStreamTrack & {
 }
 type TargetMaker = { fromElement: (el: Element) => Promise<unknown> }
 
+/** 어떻게 잘라 녹화하는지: 슬라이드 상자의 자리만(crop), 그 요소만(element), 탭 전체(tab) */
+export type RecordMode = 'crop' | 'element' | 'tab'
+
 export type Recording = {
   ext: string
+  /** 탭 전체를 녹화하면(tab) 화면의 어떤 표시도 영상에 담긴다 */
+  mode: RecordMode
   /** 녹화를 멈추고 파일을 돌려준다. 이미 멈췄으면 그때의 파일 */
   stop: () => Promise<Blob | null>
   /** 사람이 브라우저의 '공유 중지'를 눌렀을 때 */
@@ -39,13 +47,15 @@ export type Recording = {
 
 /**
  * el(슬라이드 상자)만 녹화하기 시작한다. 사람이 화면 고르기를 거절하면 오류를 던진다.
- * el은 쌓임 맥락(isolation)이 있어야 요소 녹화가 프레임을 보낸다(present.css의 .is-recording)
+ * el은 쌓임 맥락(isolation)이 있어야 요소 녹화가 프레임을 보낸다(present.css의 .is-recording).
+ * 잘라 내는 자리는 기기 픽셀에 딱 맞아야 가장자리에 검은 줄이 들지 않는다(Present.tsx의 recordBox가 맞춘다)
  */
 export async function startRecording(el: HTMLElement): Promise<Recording> {
   const type = recordType()
   if (!type) throw new Error('unsupported')
   const options = {
-    video: { frameRate: { ideal: 60 }, displaySurface: 'browser' },
+    // 마우스 화살표는 담지 않는다 (발표 화면도 녹화하는 동안 감춘다)
+    video: { frameRate: { ideal: 60 }, displaySurface: 'browser', cursor: 'never' },
     audio: false,
     // 크롬: 고르기 창에 이 탭을 먼저 보인다
     preferCurrentTab: true,
@@ -58,9 +68,15 @@ export async function startRecording(el: HTMLElement): Promise<Recording> {
     throw new Error('no-track')
   }
   const w = window as unknown as { RestrictionTarget?: TargetMaker; CropTarget?: TargetMaker }
+  let mode: RecordMode = 'tab'
   try {
-    if (w.RestrictionTarget && track.restrictTo) await track.restrictTo(await w.RestrictionTarget.fromElement(el))
-    else if (w.CropTarget && track.cropTo) await track.cropTo(await w.CropTarget.fromElement(el))
+    if (w.CropTarget && track.cropTo) {
+      await track.cropTo(await w.CropTarget.fromElement(el))
+      mode = 'crop'
+    } else if (w.RestrictionTarget && track.restrictTo) {
+      await track.restrictTo(await w.RestrictionTarget.fromElement(el))
+      mode = 'element'
+    }
   } catch {
     // 잘라 내지 못하면(다른 탭이나 창을 골랐을 때) 고른 화면 그대로 녹화한다
   }
@@ -85,6 +101,7 @@ export async function startRecording(el: HTMLElement): Promise<Recording> {
   recorder.start(1000)
   return {
     ext: type.ext,
+    mode,
     ended,
     stop: () => {
       if (recorder.state !== 'inactive') recorder.stop()
