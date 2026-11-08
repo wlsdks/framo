@@ -221,7 +221,8 @@
 .l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1.2fr);
-  row-gap: 56px;
+  /* 제목과 첫 요청 사이는 요청 사이보다 넓게: 붙어 있으면 '감사합니다 / 시범 운영 승인'이 한 문장으로 이어 읽혔다(검수) */
+  row-gap: 96px;
 }
 
 .l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) > .cl-main {
@@ -233,6 +234,15 @@
   order: 0;
 }
 
+/* 한 단으로 쌓은 묶음은 본문의 반도 채우지 못해서 제목과 요청 글자를 한 단계씩 키운다(VISUAL-RULES 6: 덜 차면 글자 단계를 올린다) */
 .l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) .cl-main > .cl-title {
-  --fs: 52px;
+  --fs: 62px;
+}
+
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) .cl-steps:is([data-n='1'], [data-n='2'], [data-n='3']) :is(.cl-step-t, .cl-n) {
+  --fs: 62px;
+}
+
+.l-closing:has(.cl-steps):not(:has(.cl-contact .meta-row)) .cl-steps:is([data-n='1'], [data-n='2'], [data-n='3']) .cl-step-b {
+  --fs: 36px;
 }
