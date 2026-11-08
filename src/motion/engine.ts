@@ -1306,7 +1306,7 @@ export function motionEngine(): MotionEngine {
      * 끝맺음 목록(anims)에 넣지 않고 따로 모아(stops) 장을 떠날 때 거두므로 '누르면' 차례를 붙잡지 않는다.
      * 차분하게, 움직임 없음, 동작 줄이기에서는 흐르지 않는다: 보고를 듣는 동안 장 한쪽이 계속 움직이면 눈을 빼앗는다
      */
-    const stream = (host: Element | null, path: [number, number][], at: number, period: number, phase = 0) => {
+    const stream = (host: Element | null, path: [number, number][], at: number, period: number, phase = 0, lit?: { el: Element | null; on: Keyframe; off: Keyframe }) => {
       if (!host || path.length < 2 || levelName !== 'lively' || quiet || still) return
       const p = document.createElement('span')
       p.className = 'mo-pk is-stream'
@@ -1322,9 +1322,14 @@ export function motionEngine(): MotionEngine {
       const timing = { duration: period, delay: s(at) + phase, iterations: Infinity, easing: CARRY, fill: 'backwards' as FillMode }
       const a = p.animate(frames, timing)
       const b = p.animate([{ opacity: 0, scale: '0.5' }, { opacity: 1, scale: '1', offset: 0.14 }, { opacity: 1, scale: '1', offset: 0.86 }, { opacity: 0, scale: '0.5' }], { ...timing, easing: 'linear' })
+      // 닿는 순간: 받는 것(lit)이 잠깐 강조색이 된다(모이고 퍼지기와 같은 문법). 조각은 주기의 0.86쯤에 사라진다
+      const c = lit?.el
+        ? lit.el.animate([{ ...lit.off, offset: 0 }, { ...lit.off, offset: 0.8 }, { ...lit.on, offset: 0.86 }, { ...lit.off, offset: 0.97 }, { ...lit.off, offset: 1 }], { ...timing, easing: 'linear' })
+        : null
       stops.push(() => {
         a.cancel()
         b.cancel()
+        c?.cancel()
         p.remove()
       })
     }
@@ -2012,7 +2017,15 @@ export function motionEngine(): MotionEngine {
             again += fast
           }
           // 생동감: 그 뒤로는 조각이 단계 사이를 쉬지 않고 건너간다(선마다 엇갈려). 데이터가 계속 오가는 흐름으로 보인다
-          links.forEach((link, i) => stream(link, ends(link), again + 300, d(1400), (i * 1400) / Math.max(2, links.length)))
+          const accent = getComputedStyle(scope).getPropertyValue('--accent').trim()
+          const rim = (el: Element | undefined) => (el ? getComputedStyle(el).boxShadow : 'none')
+          links.forEach((link, i) =>
+            stream(link, ends(link), again + 300, d(1400), (i * 1400) / Math.max(2, links.length), {
+              el: nodes[i + 1] ?? null,
+              off: { boxShadow: rim(nodes[i + 1]) },
+              on: { boxShadow: `inset 0 0 0 2px ${accent}` },
+            }),
+          )
           const hl = one('.bk-fw-node.is-hl')
           // 부풀기는 transform으로: 나타날 때 쓴 scale과 같은 속성이면 늦게 만든 이것이 시작 전(fill backwards)부터 scale을 덮어 나타나기가 사라진다
           if (hl && links.length) run(anims, hl, [{ transform: 'scale(1)' }, { transform: 'scale(1.03)' }, { transform: 'scale(1)' }], s(again - 60), { easing: 'ease-in-out', duration: d(480) })
@@ -2170,7 +2183,12 @@ export function motionEngine(): MotionEngine {
           // transform으로 (흐름의 끝 단계와 같은 까닭)
           run(anims, hub, [{ transform: 'scale(1)' }, { transform: 'scale(1.025)' }, { transform: 'scale(1)' }], s(arrive - 120), { easing: 'ease-in-out', duration: d(420) })
           // 생동감: 그 뒤로는 상자마다 조각이 쉬지 않고 가운데로 모여든다(상자마다 엇갈려)
-          nodes.forEach((_, k) => stream(map, paths[k], arrive + 200, d(1600), (k * 1600) / Math.max(2, nodes.length)))
+          const hubText = hub.querySelector('.bk-nw-c')
+          const ink = hubText ? getComputedStyle(hubText).color : ''
+          const accent = getComputedStyle(scope).getPropertyValue('--accent').trim()
+          nodes.forEach((_, k) =>
+            stream(map, paths[k], arrive + 200, d(1600), (k * 1600) / Math.max(2, nodes.length), k === 0 && hubText ? { el: hubText, off: { color: ink }, on: { color: accent } } : undefined),
+          )
           break
         }
         case 'split': {
