@@ -1,7 +1,7 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent, type UniqueIdentifier } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { slideName } from '../../deck/blocks'
 import { missingFields, pageInfo } from '../../deck/fields'
 import type { Deck, Slide } from '../../deck/types'
@@ -12,6 +12,7 @@ import { ScaledSlide, SlideCanvas, useStableSections } from '../../slides/SlideC
 import { useDeck } from '../../store/deckStore'
 import { AlertIcon, EyeOffIcon, PlusIcon, Popover } from '../ui'
 import { AddSlide } from './AddSlide'
+import { SlideContextMenu } from './SlideMenu'
 import { useDrawSoon } from '../drawSoon'
 import { useAfterPaint, useLook } from './look'
 
@@ -33,6 +34,18 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
   const drag = useListDrag()
   // 화면 읽기 프로그램에 들려줄 말. dnd-kit의 기본 안내는 영어라 한국어로 바꾼다
   const [said, setSaid] = useState('')
+  // 오른쪽 클릭한 슬라이드와 누른 자리 (SlideContextMenu)
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  const menuSlide = menu ? deck.slides.find((s) => s.id === menu.id) : undefined
+  const closeMenu = useCallback(() => setMenu(null), [])
+  const openMenu = useCallback(
+    (id: string, x: number, y: number) => {
+      // PowerPoint처럼 오른쪽 클릭한 슬라이드를 고른다: 메뉴가 무엇에 대한 것인지 가운데 큰 슬라이드로도 보이게
+      select(id)
+      setMenu({ id, x, y })
+    },
+    [select],
+  )
   // 고른 장이 목록 밖에 있으면 보이는 곳으로 (장을 더하거나 장 위에서 넘겼을 때. 목록 안에서 고르면 이미 보인다)
   useEffect(() => {
     if (selectedId) document.getElementById(`thumb-${selectedId}`)?.scrollIntoView({ block: 'nearest' })
@@ -53,6 +66,14 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
     moveSlide(from, to)
   }
 
+  /** 지우고 나면 초점을 이웃 슬라이드로 (Delete 키로 지울 때와 같게) */
+  const removeAndFocus = (cur: Slide) => {
+    const i = deck.slides.indexOf(cur)
+    const next = deck.slides[i + 1] ?? deck.slides[i - 1]
+    onRemove(cur)
+    if (next) requestAnimationFrame(() => document.getElementById(`thumb-${next.id}`)?.focus())
+  }
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     // PowerPoint처럼 목록에서 고른 장을 Delete(맥은 Backspace도)로 지우고 Ctrl+D(맥은 ⌘D)로 복제한다. 목록에 초점이 있을 때만:
     // 슬라이드 위에서 컴포넌트를 고른 채 누른 Delete는 컴포넌트를 지우려는 것이다. 지우면 '되돌리기'가 붙은 알림이 뜬다(Editor의 removeSlide)
@@ -60,10 +81,7 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
     if (cur && (e.key === 'Delete' || e.key === 'Backspace') && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault()
       if (deck.slides.length <= 1) return
-      const i = deck.slides.indexOf(cur)
-      const next = deck.slides[i + 1] ?? deck.slides[i - 1]
-      onRemove(cur)
-      requestAnimationFrame(() => document.getElementById(`thumb-${next.id}`)?.focus())
+      removeAndFocus(cur)
       return
     }
     if (cur && (e.key === 'd' || e.key === 'D') && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
@@ -123,12 +141,14 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
                 selected={slide.id === selectedId}
                 missing={missingFields(slide, deck.meta).length}
                 onSelect={select}
+                onMenu={openMenu}
                 later={later}
               />
             ))}
           </SortableContext>
         </DndContext>
       </div>
+      {menu && menuSlide && <SlideContextMenu deck={deck} slide={menuSlide} at={menu} onClose={closeMenu} onRemove={removeAndFocus} />}
       <Popover
         align="left"
         className="sl-add-pop"
@@ -165,12 +185,14 @@ interface ThumbProps {
   selected: boolean
   missing: number
   onSelect: (id: string) => void
+  /** 오른쪽 클릭(또는 메뉴 키, Shift+F10): 그 슬라이드의 메뉴를 그 자리에 연다 */
+  onMenu: (id: string, x: number, y: number) => void
   /** 목록을 처음 그린 뒤인지 (늘 같은 상자라 바뀌어도 다시 그리지 않는다) */
   later: { readonly current: boolean }
 }
 
 const Thumb = memo(function Thumb(props: ThumbProps) {
-  const { meta, theme, title, slide, page, total, sections, sectionIndex, selected, missing, onSelect, later } = props
+  const { meta, theme, title, slide, page, total, sections, sectionIndex, selected, missing, onSelect, onMenu, later } = props
   const look = useMemo(() => ({ meta, theme, title }), [meta, theme, title])
   // 장 그림은 고친 것이 화면에 그려진 다음에 고친다 (look.ts의 useAfterPaint)
   const shown = useAfterPaint(slide)
@@ -206,6 +228,13 @@ const Thumb = memo(function Thumb(props: ThumbProps) {
         // 이름은 짧게: 몇 번 장, 장 이름, 빈칸 수. 장 그림과 아래 이름은 이 이름과 겹치니 읽지 않는다
         aria-label={`${page ? `슬라이드 ${page}` : '숨긴 슬라이드'}, ${slideName(slide)}${missing ? `, 빈칸 ${missing}곳` : ''}`}
         onClick={() => onSelect(slide.id)}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          // 키보드로 연 메뉴(메뉴 키, Shift+F10)는 누른 자리가 없어 슬라이드 그림 아래 왼쪽에 연다
+          const keyboard = e.clientX === 0 && e.clientY === 0
+          const box = e.currentTarget.getBoundingClientRect()
+          onMenu(slide.id, keyboard ? box.left + 12 : e.clientX, keyboard ? box.bottom - 8 : e.clientY)
+        }}
         {...attributes}
         {...listeners}
         role="button"

@@ -12,6 +12,7 @@ import { onMenuKeys } from '../../lib/menuKeys'
 import { useDeck } from '../../store/deckStore'
 import { AlertIcon, BlocksIcon, MoreIcon, PlayIcon, PlusIcon, Popover, ScreenIcon, SlidersIcon } from '../ui'
 import { SlideAsk } from './AiShare'
+import { SlideMenuItems } from './SlideMenu'
 import { openLayoutPicker } from './Inspector'
 import type { Overflow } from './SlideStage'
 import type { BlockEditing } from './BlockEditor'
@@ -317,46 +318,7 @@ export function StageTools({
         >
           {(close) => (
             <div className="menu stage-menu" role="menu" onKeyDown={onMenuKeys}>
-              <button
-                type="button"
-                role="menuitem"
-                className="menu-item"
-                onClick={() => {
-                  close()
-                  store.duplicateSlide(slide.id)
-                }}
-              >
-                복제
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="menu-item"
-                onClick={() => {
-                  close()
-                  store.setHidden(slide.id, !slide.hidden)
-                }}
-              >
-                <span className="menu-item-t">
-                  {slide.hidden ? '발표에 다시 넣기' : '발표에서 빼기'}
-                  <span className="menu-item-desc">{slide.hidden ? '발표할 때 이 슬라이드를 다시 보여요' : '지우지 않고 발표할 때만 건너뛰어요'}</span>
-                </span>
-              </button>
-              <div className="menu-sep" role="separator" />
-              <button
-                type="button"
-                role="menuitem"
-                className="menu-item is-danger"
-                // 막아 둔 일은 왜 안 되는지를 말한다
-                title={deck.slides.length <= 1 ? '슬라이드가 하나뿐이라 지울 수 없어요' : undefined}
-                disabled={deck.slides.length <= 1}
-                onClick={() => {
-                  close()
-                  onRemove(slide)
-                }}
-              >
-                이 슬라이드 지우기
-              </button>
+              <SlideMenuItems deck={deck} slide={slide} close={close} onRemove={onRemove} />
             </div>
           )}
         </Popover>
