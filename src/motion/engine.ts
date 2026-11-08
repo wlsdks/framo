@@ -691,6 +691,13 @@ export function motionEngine(): MotionEngine {
       const lively = levelName === 'lively'
       // 숫자가 둘인 값은 숫자 조각마다 굴린다(digitTexts). 0부터 올리기는 숫자 하나만 다뤄서, 굴릴 수 없으면 그대로 둔다
       const runs = digitTexts(el)
+      // 20 이하의 정수 하나(4곳, 7명)는 굴리지 않고 0부터 하나씩 센다: 자리마다 한 바퀴 더 굴리면 4가 되기 전에 5, 3이 보여
+      // 틀린 수처럼 읽혔다(발표 녹화)
+      const small = /^\D*\b([0-9]|1[0-9]|20)\b\D*$/.test(el.textContent || '')
+      if (runs === 1 && small) {
+        countUp(el, s(at), (lively ? 900 : 700) * pace, stops, waits)
+        return
+      }
       if (runs > 1) {
         for (let i = 0; i < runs; i++) roll(el, s(at), lively ? 900 : 800, lively, anims, restores, i)
         return
