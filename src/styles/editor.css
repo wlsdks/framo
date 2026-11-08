@@ -213,6 +213,14 @@
   font-size: 13px;
 }
 
+/* 고르기 단추 바로 아래의 작은 한 줄: 단추를 누르면 열리는 창에서 할 일 (ui.tsx의 FOLDER_TIP) */
+.save-pop-tip {
+  margin: 8px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .save-pop-foot {
   display: grid;
   gap: 3px;
