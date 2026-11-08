@@ -4,11 +4,12 @@
 
 import { useLayoutEffect, useRef } from 'react'
 import { BACKDROP_PLACES, BACKDROPS, baseBackdrop, isBackdropKind, isBackdropStrength } from '../deck/backdrops'
+import { pageInfo, type PageInfo } from '../deck/fields'
 import { createSampleDeck } from '../deck/sample'
 import { extraSlides } from '../deck/showcase'
 import type { Deck, Slide } from '../deck/types'
 import { backdrops } from '../slides/Backdrop'
-import { ScaledSlide, SlideCanvas } from '../slides/SlideCanvas'
+import { pageProps, ScaledSlide, SlideCanvas } from '../slides/SlideCanvas'
 
 /** 장에 배경을 깐다. 자리(place id)와 짙기를 주면 그것으로 */
 export function withBackdrop(slide: Slide, kind: string | null, place?: string | null, strength?: string | null): Slide {
@@ -27,7 +28,7 @@ export function backdropSlides(params: URLSearchParams): Slide[] {
 }
 
 /** 한 장을 정한 때의 배경으로: 그린 뒤 배경 SVG만 그 순간의 그림으로 바꾼다 */
-function Moment({ deck, slide, t, width }: { deck: Deck; slide: Slide; t: number; width: number }) {
+function Moment({ deck, info, slide, t, width }: { deck: Deck; info: PageInfo; slide: Slide; t: number; width: number }) {
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const el = ref.current?.querySelector<HTMLElement>('.s-bd')
@@ -36,7 +37,8 @@ function Moment({ deck, slide, t, width }: { deck: Deck; slide: Slide; t: number
   return (
     <figure ref={ref} style={{ margin: 0 }}>
       <ScaledSlide width={width}>
-        <SlideCanvas deck={deck} slide={slide} mode="final" />
+        {/* 쪽과 단락 정보도 넘긴다: 빠뜨리면 섹션 장의 큰 번호가 그려지지 않는다(되풀이 띠에서 번호가 사라진 것은 이 때문이었다) */}
+        <SlideCanvas deck={deck} slide={slide} mode="final" {...pageProps(info, slide.id)} />
       </ScaledSlide>
       <figcaption style={{ font: '13px sans-serif', color: '#fff', padding: '4px 0' }}>{(t / 1000).toFixed(2)}s</figcaption>
     </figure>
@@ -46,9 +48,10 @@ function Moment({ deck, slide, t, width }: { deck: Deck; slide: Slide; t: number
 export function BackdropSheet({ deck, params }: { deck: Deck; params: URLSearchParams }) {
   const times = (params.get('t') ?? '0,250,500,750,1000,1500,2000,2500,3000,3500,8000,14000').split(',').map(Number)
   const width = Number(params.get('w')) || 480
+  const info = pageInfo(deck.slides, deck)
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Number(params.get('cols')) || 4}, ${width}px)`, gap: 8, padding: 8, background: '#777' }}>
-      {deck.slides.flatMap((slide) => times.map((t) => <Moment key={`${slide.id}-${t}`} deck={deck} slide={slide} t={t} width={width} />))}
+      {deck.slides.flatMap((slide) => times.map((t) => <Moment key={`${slide.id}-${t}`} deck={deck} info={info} slide={slide} t={t} width={width} />))}
     </div>
   )
 }
