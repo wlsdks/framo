@@ -317,7 +317,7 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
   })
   // 어느 부품도 들어가지 않으면(개수가 찼거나 높이가 모자라) 위에 한 번 더 알린다. 카드마다의 잠금 표시는 그대로 둔다
   const full = counted || (slide.layout === 'compose' && TYPES.every((t) => issues.get(t)))
-  // 넣기 전부터 장 높이를 넘은 장: '하나를 빼면 더 넣을 수 있어요'라고 했는데 작은 것을 빼면 그대로 잠겨 있었다
+  // 넣기 전부터 장 높이를 넘은 장: '하나를 지우면 더 넣을 수 있어요'라고 했는데 작은 것을 빼면 그대로 잠겨 있었다
   const over = TYPES.some((t) => {
     const why = issues.get(t)
     return why?.kind === 'height' && why.already
@@ -332,12 +332,12 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
     : slide.layout === 'compose'
       ? full
         ? counted
-          ? `슬라이드 하나에는 ${MAX_BLOCKS}개까지 넣어요. 하나를 빼면 더 넣을 수 있어요`
+          ? `슬라이드 하나에는 ${MAX_BLOCKS}개까지 넣어요. 하나를 지우면 더 넣을 수 있어요`
           : noBody
             ? '본문을 넣을 높이가 없어요. 제목이나 부제를 줄여 주세요'
           : over
             ? '이 슬라이드는 이미 넘쳤어요. 항목이나 컴포넌트를 줄이면 더 넣을 수 있어요'
-            : '이 슬라이드는 자리가 다 찼어요. 하나를 빼면 더 넣을 수 있어요'
+            : '이 슬라이드는 자리가 다 찼어요. 하나를 지우면 더 넣을 수 있어요'
         : null
       : '넣으면 컴포넌트 슬라이드가 돼요'
   const groups = searching ? [] : group ? BLOCK_GROUPS.filter((g) => g.name === group) : BLOCK_GROUPS

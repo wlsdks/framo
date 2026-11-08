@@ -272,7 +272,7 @@ function Links({ blocks, live }: { blocks: Block[]; live: BlockEdit | null }) {
             data-link={`${m.t.dir}${m.t.id}`}
             data-after={m.t.id}
             {...(live && !preview
-              ? { role: 'button', 'aria-label': `연결 기호: ${name}`, title: `${name} (눌러서 바꾸거나 빼기)`, onPointerDown: (e: React.PointerEvent<HTMLElement>) => live.onLinkPointerDown(e, m.t) }
+              ? { role: 'button', 'aria-label': `연결 기호: ${name}`, title: `${name} (눌러서 바꾸거나 지우기)`, onPointerDown: (e: React.PointerEvent<HTMLElement>) => live.onLinkPointerDown(e, m.t) }
               : { 'aria-hidden': true })}
           >
             <span className="bk-link-g">

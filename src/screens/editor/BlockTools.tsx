@@ -8,7 +8,7 @@ import { Icon, MotionIcon, PlusIcon, ShapesIcon, TrashIcon } from '../ui'
 import { noRoomText } from './noRoom'
 import { SceneOverride } from './ScenePicker'
 
-// 고른 컴포넌트의 도구 (바탕, 움직임, 모양, 항목 더하기, 빼기, 그리고 이름을 누르면 복제, 앞뒤로, 칸 더하기, 저장). 레이아웃 슬라이드의 항목 도구처럼 슬라이드 아래 도구 줄에
+// 고른 컴포넌트의 도구 (바탕, 움직임, 모양, 항목 더하기, 지우기, 그리고 이름을 누르면 복제, 앞뒤로, 칸 더하기, 저장). 레이아웃 슬라이드의 항목 도구처럼 슬라이드 아래 도구 줄에
 // 그린다(SlideStage가 .stage-sel에 넣는다). 슬라이드 위에는 고른 테와 끌어 옮기는 이름표(.bk-handle)만 남는다
 
 /** 내 컴포넌트로 저장하는 것의 이름 */
@@ -352,9 +352,9 @@ export function BlockTools({
           <span className="btn-t">{spec.items.label}</span>
         </button>
       )}
-      <button type="button" className={B} title="빼기 (Delete)" onClick={onRemove}>
+      <button type="button" className={B} title="지우기 (Delete)" onClick={onRemove}>
         <TrashIcon />
-        <span className="btn-t">빼기</span>
+        <span className="btn-t">지우기</span>
       </button>
     </div>
   )

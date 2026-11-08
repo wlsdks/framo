@@ -6,7 +6,8 @@ import { useDeck } from '../../store/deckStore'
 import { useEscape } from '../ui'
 
 /**
- * 슬라이드 하나의 메뉴: 복제, 발표에서 빼기, 지우기. 슬라이드 아래 '더 보기'(⋯)와 왼쪽 목록의 오른쪽 클릭이 같이 쓴다.
+ * 슬라이드 하나의 메뉴: 복제, 발표에서 숨기기, 지우기. ('빼기'는 무언가를 잃는 말처럼 들려 쓰지 않는다)
+ * 슬라이드 아래 '더 보기'(⋯)와 왼쪽 목록의 오른쪽 클릭이 같이 쓴다.
  * 두 곳의 글과 막는 규칙(하나뿐인 슬라이드는 지우지 않는다)이 따로 놀지 않게 한 곳에 둔다
  */
 export function SlideMenuItems({ deck, slide, close, onRemove }: { deck: Deck; slide: Slide; close: () => void; onRemove: (s: Slide) => void }) {
@@ -34,7 +35,7 @@ export function SlideMenuItems({ deck, slide, close, onRemove }: { deck: Deck; s
         }}
       >
         <span className="menu-item-t">
-          {slide.hidden ? '발표에 다시 넣기' : '발표에서 빼기'}
+          {slide.hidden ? '발표에 다시 보이기' : '발표에서 숨기기'}
           <span className="menu-item-desc">{slide.hidden ? '발표할 때 이 슬라이드를 다시 보여요' : '지우지 않고 발표할 때만 건너뛰어요'}</span>
         </span>
       </button>

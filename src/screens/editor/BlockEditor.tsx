@@ -814,7 +814,7 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
     if (!next) {
       const reason = placeIssue(s.blocks ?? [], copy, area?.size.h)
       const text = reason && noRoomText(reason, copy.type, 'slide')
-      toast.show(text ? `${text.why} ${text.fix}` : '이 슬라이드에는 더 넣을 자리가 없어요. 컴포넌트를 빼거나 다음 슬라이드에 넣어 주세요.')
+      toast.show(text ? `${text.why} ${text.fix}` : '이 슬라이드에는 더 넣을 자리가 없어요. 컴포넌트를 지우거나 다음 슬라이드에 넣어 주세요.')
       return
     }
     store.setBlocks(s.id, next, undefined, auto)
