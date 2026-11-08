@@ -69,11 +69,16 @@
   text-wrap: pretty;
 }
 
+/* 몫과 이름의 두 단은 모든 줄이 같이 쓴다(subgrid): 몫의 단은 4.2em에서 가장 긴 몫만큼까지 넓어진다. 줄마다 4.2em으로 고정하던 때는
+   '1,234,567,890'처럼 긴 몫이 제 단을 넘어 옆 이름 위에 겹쳐 그려졌다 */
 .bk-spr-list {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: calc(22px * var(--bk-fit, 1));
+  display: grid;
+  grid-template-columns: minmax(4.2em, max-content) minmax(0, 1fr);
+  /* 몫은 목록 너비의 반 남짓까지만 쓰고 더 길면 줄인다(.bk-spr-v의 --line-room): 좁은 칸에서 긴 몫이 단을 다 가져가 이름이
+     한 글자씩 세로로 섰다 */
+  container-type: inline-size;
+  align-content: center;
+  gap: calc(22px * var(--bk-fit, 1)) 24px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -81,13 +86,14 @@
 
 .bk-spr-it {
   display: grid;
-  grid-template-columns: 4.2em minmax(0, 1fr);
-  column-gap: 24px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: baseline;
 }
 
 .bk-spr-v {
   --fs: var(--t-h);
+  --line-room: 55cqi;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
   font-weight: var(--num-weight, 400);
@@ -130,7 +136,7 @@
   }
 
   .bk-spr-list {
-    justify-content: flex-start;
-    gap: calc(14px * var(--bk-fit, 1));
+    align-content: start;
+    row-gap: calc(14px * var(--bk-fit, 1));
   }
 }
