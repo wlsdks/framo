@@ -76,7 +76,7 @@
   left: var(--pad-x);
 }
 
-/* 단락 지도는 좁은 칸에 다 들어가지 않으니 지금 단락만 */
-:is(.l-imageText, .l-case) .s-map li:not(.is-on) {
+/* 단락 지도는 좁은 칸에 다 들어가지 않으니 지금 단락만. 사례는 아래 표시가 장 너비를 다 쓰므로(case.css) 다른 장처럼 다 보인다 */
+.l-imageText .s-map li:not(.is-on) {
   display: none;
 }
