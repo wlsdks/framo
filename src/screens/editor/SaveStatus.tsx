@@ -5,7 +5,7 @@ import { keys } from '../../lib/keys'
 import { downloadDeckFile } from '../../store/deckFile'
 import { useDeck } from '../../store/deckStore'
 import { saveToBrowser, saveToFolder, useStorage } from '../../store/persist'
-import { AlertIcon, CheckIcon, FOLDER_WHY, FolderIcon, Popover, dialogOpen, useEscape } from '../ui'
+import { AlertIcon, CheckIcon, FOLDER_TIP, FOLDER_WHY, FolderIcon, Popover, dialogOpen, useEscape } from '../ui'
 
 /** local: 이 브라우저에만 저장했다. 잘못된 것이 아니라 칠하지 않는다 (폴더를 정하는 단추를 옆에 둔다) */
 type Tone = 'ok' | 'local' | 'bad' | 'busy'
@@ -156,7 +156,9 @@ export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersion
             <FolderIcon />
             PC 폴더에도 저장해 둘까요?
           </p>
-          <p className="save-pop-p">지금은 이 브라우저 안에만 저장돼요. {FOLDER_WHY} 폴더를 정하면 고칠 때마다 그 폴더에 파일로도 저장돼요.</p>
+          <p className="save-pop-p">
+            지금은 이 브라우저 안에만 저장돼요. {FOLDER_WHY} 폴더를 정하면 고칠 때마다 그 폴더에 파일로도 저장돼요. {FOLDER_TIP}
+          </p>
           <div className="save-pop-actions">
             <button type="button" className="btn btn-primary btn-sm" onClick={() => void pick()}>
               <FolderIcon />
@@ -287,7 +289,7 @@ function SaveDetails({ deck, close, onOpenVersions }: { deck: Deck; close: () =>
         <>
           <p className="save-pop-h">지금은 이 브라우저 안에만 저장돼요</p>
           <p className="save-pop-p">
-            {FOLDER_WHY} 다른 PC에서도 열 수 없어요. PC나 팀 공유 드라이브의 폴더를 골라 두면 고칠 때마다 그 폴더에도 자동으로 저장돼요.
+            {FOLDER_WHY} 다른 PC에서도 열 수 없어요. PC나 팀 공유 드라이브의 폴더를 골라 두면 고칠 때마다 그 폴더에도 자동으로 저장돼요. {FOLDER_TIP}
           </p>
           <div className="save-pop-actions">
             <button type="button" className="btn btn-primary btn-sm" onClick={() => choose()}>

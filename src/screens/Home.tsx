@@ -13,7 +13,7 @@ import { decodeDeckFile, DECK_EXT } from '../store/deckFile'
 import { useDeck } from '../store/deckStore'
 import { listDecks } from '../store/library'
 import { importDeck, persistNow, removeDeck, syncWithFolder, useStorage } from '../store/persist'
-import { Brand, FOLDER_WHY, FolderIcon, Info, Modal, MoreIcon, noticeAfterGo, PlusIcon, Popover, SAVE_HELP, UploadIcon, useToast } from './ui'
+import { Brand, FOLDER_TIP, FOLDER_WHY, FolderIcon, Info, Modal, MoreIcon, noticeAfterGo, PlusIcon, Popover, SAVE_HELP, UploadIcon, useToast } from './ui'
 import { UpdateNote } from './UpdateNote'
 
 const SAMPLE_ID = 'sample'
@@ -349,7 +349,7 @@ function StorageNote({ hasDecks, onSynced }: { hasDecks: boolean; onSynced: () =
         <span>
           지금은 이 브라우저 안에만 저장해요
           <Info label="보관 폴더 설명" align="start">
-            {FOLDER_WHY} 보관 폴더를 정하면 고칠 때마다 그 폴더에 파일로도 저장되고, 버전 기록도 함께 남아요.
+            {FOLDER_WHY} 보관 폴더를 정하면 고칠 때마다 그 폴더에 파일로도 저장되고, 버전 기록도 함께 남아요. {FOLDER_TIP}
           </Info>
         </span>
         <button type="button" className="btn-link" onClick={() => run(choose)}>
