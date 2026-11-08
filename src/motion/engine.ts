@@ -804,8 +804,12 @@ export function motionEngine(): MotionEngine {
       const NUM = /^(\D*)(\d[\d,]*)(\.\d+)?(\D*)$/
       const plain = /^\s*-?(?:\d+\.?\d*|\.\d+)\s*$/
       const NUMS = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi
+      /** 켜짐이 바뀐 몫 표시(칸 조립의 칸, 비율의 막대) */
+      const flips: { el: Element; to: boolean }[] = []
       walkPaths(el, (n, path) => {
         const w = was.get(path)
+        const on = n.classList.contains('is-on')
+        if (on !== !!(w && w.on)) flips.push({ el: n, to: on })
         if (!w) return
         let k = 0
         for (const c of Array.prototype.slice.call(n.childNodes) as Node[]) {
@@ -854,6 +858,16 @@ export function motionEngine(): MotionEngine {
           undo.push(() => n.setAttribute(name, now))
         }
       })
+      // 몫을 칸마다 칠한 표시는 숫자가 세는 대로 하나씩 켜지고(늘 때는 앞에서부터) 꺼진다(줄 때는 뒤에서부터). 그대로 두면 새 몫의 칸이
+      // 처음 0.26초에 한꺼번에 바뀌고 숫자만 혼자 세었다
+      const ups = flips.filter((f) => f.to)
+      const downs = flips.filter((f) => !f.to).reverse()
+      for (const list of [ups, downs])
+        list.forEach((f, k) => {
+          const at = (k + 1) / (list.length + 1)
+          sets.push((p) => f.el.classList.toggle('is-on', p >= at ? f.to : !f.to))
+          undo.push(() => f.el.classList.toggle('is-on', f.to))
+        })
       if (!sets.length) return
       // 앞 장이 다 옅어지고(SWAP_LEAD) 짝을 바꿔 끼운 뒤에 옮기기 시작한다. 곡선은 자리에서 자리로 옮기기(carry): 앞 값도 새 값도 머문 값이다
       const clock = el.animate([], { duration: d(1000), delay: s(60), easing: EASE.carry })
@@ -3918,7 +3932,8 @@ export function motionEngine(): MotionEngine {
   const SVG_VALUES = ['d', 'points', 'cx', 'cy', 'r', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height']
   /** 날짜는 세는 수가 아니라서 옮기지 않는다(11월 28일에서 12월 3일로 가며 날을 거꾸로 센다) */
   const NOT_VALUES = '[data-type="date"]'
-  type Values = Map<string, { texts: (string | null)[]; vars: Record<string, string>; attrs: Record<string, string> }>
+  /** on: 센 몫을 칸마다 칠해 보이는 표시(칸 조립의 칸, 비율의 막대)가 켜져 있었는지(is-on) */
+  type Values = Map<string, { texts: (string | null)[]; vars: Record<string, string>; attrs: Record<string, string>; on?: boolean }>
 
   /** 숫자를 지운 글: 숫자만 바뀐 것끼리 짝을 맞추는 열쇠 */
   const numless = (t: string) => t.replace(/\d[\d,]*(\.\d+)?/g, '#')
@@ -3973,7 +3988,8 @@ export function motionEngine(): MotionEngine {
             any = true
           }
         }
-      if (any) out.set(path, { texts, vars, attrs })
+      const on = el.classList.contains('is-on')
+      if (any || on) out.set(path, { texts, vars, attrs, on })
     })
     return out
   }
