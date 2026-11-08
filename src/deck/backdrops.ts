@@ -37,7 +37,7 @@ export const BACKDROP_IDS: readonly BackdropId[] = BACKDROPS.map((b) => b.id)
 
 export const BACKDROP_STRENGTHS: { id: BackdropStrength; name: string; description: string }[] = [
   { id: 'soft', name: '옅게', description: '글이 많은 슬라이드에 써요. 배경이 더 뒤로 물러나요.' },
-  { id: 'base', name: '보통', description: '글이 그 위에서 편하게 읽히는 짙기예요.' },
+  { id: 'base', name: '보통', description: '글이 그 위에서 편하게 읽히는 진하기예요.' },
   { id: 'strong', name: '또렷하게', description: '글이 적은 표지나 단락 슬라이드에 써요.' },
 ]
 

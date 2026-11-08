@@ -72,8 +72,9 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
             <span className="ins-opt-l">
               자리
               <Info label="자리 도움말" align="start">
-                슬라이드를 가로 12칸, 세로 12칸으로 나눈 자리예요. 글이 적은 쪽에 두면 글이 더 잘 읽혀요.
+                배경이 깔리는 곳이에요. 글이 적은 쪽에 두면 좋아요. 글 바로 뒤에서는 배경이 알아서 옅어져요.
               </Info>
+              {!placeOfArea(now.at) && <span className="bdp-own">직접 옮긴 자리</span>}
             </span>
             <Segmented
               className="bdp-places"
@@ -89,10 +90,11 @@ export function BackdropSection({ deck, slide }: { deck: Deck; slide: Slide }) {
           <button type="button" className={cx('btn btn-ghost btn-sm bdp-move', editing && 'is-on')} aria-pressed={editing} onClick={() => setBackdropEditing(editing ? null : slide.id)}>
             {editing ? '옮기기 끝내기' : '슬라이드에서 끌어 옮기기'}
           </button>
+          {editing && <p className="bdp-help">슬라이드 위의 틀 안을 끌어 옮기고, 모서리를 끌어 크기를 바꿔요. 방향키로도 한 칸씩 옮겨요(Shift와 함께면 크기). Esc로 끝내요.</p>}
           <div className="ins-opt">
-            <span className="ins-opt-l">짙기</span>
+            <span className="ins-opt-l">진하기</span>
             <Segmented
-              label="배경 짙기"
+              label="배경 진하기"
               options={BACKDROP_STRENGTHS.map((s) => ({ id: s.id, name: s.name, description: s.description }))}
               value={now.strength}
               onPick={(strength) => setBackdrop(slide.id, { ...slide.backdrop!, strength })}
@@ -110,7 +112,8 @@ const BackdropCard = memo(function BackdropCard({ look, slide, kind, on, onPick 
   const last = useRef(-1e9)
   const shown = useMemo(() => {
     const { backdrop: _, ...rest } = slide
-    return kind ? { ...rest, backdrop: withBackdropKind(slide, kind) } : rest
+    // 작은 그림이라 또렷하게로 그린다: 보통 진하기로는 '없음'과 구분되지 않았다(검수). 고르면 원래 진하기로 들어간다
+    return kind ? { ...rest, backdrop: { ...withBackdropKind(slide, kind), strength: 'strong' as const } } : rest
   }, [slide, kind])
   const spec = kind ? backdropSpec(kind) : null
   const play = () => {

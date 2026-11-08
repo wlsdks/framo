@@ -673,7 +673,7 @@ function describe(deck: Deck, op: Op, named: Map<string, string>, applied: Appli
     case 'set_backdrop': {
       if (!op.backdrop) return { text: `${name(op.slide)} 배경 지우기` }
       const at = op.x !== undefined ? { x: op.x, y: op.y!, w: op.w!, h: op.h! } : null
-      const parts = [at && `자리: ${BACKDROP_PLACES.find((p) => sameArea(p.at, at))?.name ?? '직접 고른 자리'}`, op.strength && `짙기: ${BACKDROP_STRENGTHS.find((x) => x.id === op.strength)?.name}`]
+      const parts = [at && `자리: ${BACKDROP_PLACES.find((p) => sameArea(p.at, at))?.name ?? '직접 고른 자리'}`, op.strength && `진하기: ${BACKDROP_STRENGTHS.find((x) => x.id === op.strength)?.name}`]
       return { text: `${name(op.slide)} 배경: ${backdropSpec(op.backdrop).name}`, detail: parts.filter(Boolean).join(', ') || undefined }
     }
     case 'set_theme': {

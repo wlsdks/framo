@@ -102,6 +102,20 @@
   color: var(--sel);
 }
 
+.bdp-help {
+  margin: -2px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 자리 이름 옆: 자주 쓰는 자리가 아니면 '직접 옮긴 자리' */
+.bdp-own {
+  margin-left: 6px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
 /* ---------- 무대 위 자리 틀: 장(1920×1080)의 좌표로 그리고, 선과 손잡이는 장을 줄인 만큼 키운다(--vs) ---------- */
 
 .bdf {
@@ -111,22 +125,27 @@
   --k: calc(1px / var(--vs, 1));
 }
 
-/* 칸에 맞춰 붙는다는 것을 보이는 옅은 12×12 눈금 (장 위에만, 끄는 동안) */
+/* 칸에 맞춰 붙는다는 것을 보이는 옅은 12×12 눈금: 끄는 동안만 */
 .bdf-grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(to right, rgb(43 79 192 / 0.16) var(--k), transparent var(--k)),
-    linear-gradient(to bottom, rgb(43 79 192 / 0.16) var(--k), transparent var(--k));
+    linear-gradient(to right, rgb(43 79 192 / 0.14) var(--k), transparent var(--k)),
+    linear-gradient(to bottom, rgb(43 79 192 / 0.14) var(--k), transparent var(--k));
   background-size: 160px 90px;
+  opacity: 0;
   pointer-events: none;
+  transition: opacity var(--t) var(--ease-out);
+}
+
+.bdf.is-dragging .bdf-grid {
+  opacity: 1;
 }
 
 .bdf-box {
   position: absolute;
   box-sizing: border-box;
   border: calc(2 * var(--k)) solid var(--sel);
-  background: rgb(43 79 192 / 0.04);
   cursor: grab;
   touch-action: none;
 }
@@ -206,27 +225,4 @@
   top: 50%;
   left: 0;
   cursor: ew-resize;
-}
-
-/* 도움말과 끝내기: 장 아래쪽 가운데에 뜬 작은 막대 */
-.bdf-bar {
-  position: absolute;
-  bottom: calc(16 * var(--k));
-  left: 50%;
-  display: flex;
-  align-items: center;
-  gap: calc(12 * var(--k));
-  padding: calc(8 * var(--k)) calc(8 * var(--k)) calc(8 * var(--k)) calc(14 * var(--k));
-  border-radius: calc(8 * var(--k));
-  background: var(--panel);
-  box-shadow: var(--shadow-pop);
-  color: var(--ink-2);
-  font: 500 calc(13 * var(--k)) / 1.4 'Pretendard Variable', Pretendard, sans-serif;
-  white-space: nowrap;
-  transform: translateX(-50%);
-}
-
-.bdf-bar .btn {
-  font-size: calc(13 * var(--k));
-  padding: calc(6 * var(--k)) calc(12 * var(--k));
 }
