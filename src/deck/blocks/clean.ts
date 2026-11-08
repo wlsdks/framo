@@ -1,9 +1,9 @@
 // 파일에서 읽은 부품 장 바로잡기: 정해진 꼴로 맞추고, 모르는 부품은 빼되 글은 지우지 않는다
 
 import { uid } from '../generate'
-import type { Block, BlockEffect, BlockFrom, BlockLook, BlockSpeed, BlockType, BlockWhen, Item, Slide } from '../types'
+import type { Block, BlockEffect, BlockFrom, BlockLook, BlockSpeed, BlockType, BlockWhen, Item, Slide, BlockReveal } from '../types'
 import { type Fit, isArea, LOOSE, normalize, removeFromBoard } from './board'
-import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LOOK_IDS, BLOCK_SPEED_IDS, BLOCK_TYPES, BLOCK_WHEN_IDS, BLOCKS } from './catalog'
+import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LOOK_IDS, BLOCK_REVEAL_IDS, BLOCK_SPEED_IDS, BLOCK_TYPES, BLOCK_WHEN_IDS, BLOCKS } from './catalog'
 import { isLink, tidyLinks } from './links'
 import { isSmall, MAX_BLOCKS, MAX_LARGE } from './rules'
 
@@ -13,7 +13,7 @@ const strings = (v: unknown): Record<string, string> =>
   isRecord(v) ? Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === 'string')) : {}
 
 /** 이 버전이 아는 부품의 값. 이 밖의 값은 새 버전에서 더한 것이라, 예전 버전이 고치면 빠진다 */
-const BLOCK_KEYS = ['id', 'type', 'fields', 'items', 'hints', 'look', 'effect', 'when', 'speed', 'from', 'variant', 'highlight', 'link', 'linkBelow', 'at']
+const BLOCK_KEYS = ['id', 'type', 'fields', 'items', 'hints', 'look', 'effect', 'when', 'speed', 'reveal', 'from', 'variant', 'highlight', 'link', 'linkBelow', 'at']
 
 /**
  * 부품 하나를 정해진 꼴로. 모르는 부품이거나 개수(count: 남은 수와 남은 큰 부품 수)가 넘치면 null.
@@ -44,6 +44,8 @@ export function cleanBlock(b: Record<string, unknown>, count: { left: number; la
   else if (b.when !== undefined) drop()
   if ((BLOCK_SPEED_IDS as unknown[]).includes(b.speed)) block.speed = b.speed as BlockSpeed
   else if (b.speed !== undefined) drop()
+  if ((BLOCK_REVEAL_IDS as unknown[]).includes(b.reveal)) block.reveal = b.reveal as BlockReveal
+  else if (b.reveal !== undefined) drop()
   if ((BLOCK_FROM_IDS as unknown[]).includes(b.from)) block.from = b.from as BlockFrom
   else if (b.from !== undefined) drop()
   if (typeof b.variant === 'string' && BLOCKS[type].variants?.some((v) => v.id === b.variant)) block.variant = b.variant

@@ -52,7 +52,7 @@ import {
   withLook,
   type DropTarget,
   type LinkTarget,
-  type Spot,
+  type Spot, revealOf, BLOCK_REVEAL_IDS
 } from '../deck/blocks'
 import { BLUEPRINTS } from '../deck/blueprints'
 import { relayout, withVisibleCount } from '../deck/edits'
@@ -60,7 +60,7 @@ import { makeSlide } from '../deck/generate'
 import { BOLD_LAYOUTS, LAYOUTS, LAYOUT_ORDER, panesOf, variantIds, variantOf } from '../deck/layouts'
 import { isScene, sceneFits } from '../deck/scenes'
 import { FONTS, FOOTERS, MOTIONS, PLACES, TEXT_SIZES, THEME_ORDER, TONES, TRANSITIONS } from '../deck/themes'
-import type { Block, BlockEffect, BlockFrom, BlockLink, BlockLook, BlockSpeed, BlockType, BlockWhen, Deck, FontId, FooterMode, Item, ItemKey, LayoutId, Motion, Place as TitlePlace, SceneId, Slide, TextSize, ThemeId, Tone, Transition } from '../deck/types'
+import type { Block, BlockEffect, BlockFrom, BlockLink, BlockLook, BlockSpeed, BlockType, BlockWhen, Deck, FontId, FooterMode, Item, ItemKey, LayoutId, Motion, Place as TitlePlace, SceneId, Slide, TextSize, ThemeId, Tone, Transition, BlockReveal } from '../deck/types'
 import { HEX, isInt, isObj, isOneOf, onlyKeys } from './guards'
 import { DECK_ID, HIGHLIGHT_MAX, HIGHLIGHT_MIN, MAX_ITEMS, REQUEST_FORMAT, REQUEST_ID, REQUEST_VERSION } from './protocol'
 import { shapeBlockId, shapeDeckId, shapeSlideId } from './share'
@@ -133,7 +133,7 @@ export type Op =
   /** 자리(beside나 edge) 또는 swap(그 부품과 자리를 맞바꾸기) 가운데 하나. 자리는 옮기는 부품을 뺀 판에서 센다 */
   | ({ op: 'move_block'; slide: SlideRef; block: BlockRef; swap?: BlockRef } & Place)
   /** count는 항목 수(줄일 때는 끝의 빈 항목만), highlight는 강조할 항목(-1은 없음) */
-  /** when, speed, from: 언제 나오는지, 빠르기, 들어오는 쪽(쪽이 있는 움직임만) */
+  /** when, speed, reveal, from: 언제 나오는지, 빠르기, 항목이 나오는 때(항목이 있는 부품만), 들어오는 쪽(쪽이 있는 움직임만) */
   | {
       op: 'set_block'
       slide: SlideRef
@@ -143,6 +143,7 @@ export type Op =
       effect?: BlockEffect
       when?: BlockWhen
       speed?: BlockSpeed
+      reveal?: BlockReveal
       from?: BlockFrom
       count?: number
       highlight?: number
@@ -278,7 +279,7 @@ export const OP_KEYS = {
   add_block: ['op', 'slide', 'type', 'variant', 'look', 'effect', 'as', 'beside', 'side', 'edge'],
   remove_block: ['op', 'slide', 'block'],
   move_block: ['op', 'slide', 'block', 'beside', 'side', 'edge', 'swap'],
-  set_block: ['op', 'slide', 'block', 'variant', 'look', 'effect', 'when', 'speed', 'from', 'count', 'highlight'],
+  set_block: ['op', 'slide', 'block', 'variant', 'look', 'effect', 'when', 'speed', 'reveal', 'from', 'count', 'highlight'],
   set_size: ['op', 'slide', 'block', 'w', 'h'],
   set_link: ['op', 'slide', 'block', 'side', 'link'],
   set_order: ['op', 'slide', 'order'],
@@ -306,6 +307,7 @@ function parseLooks(v: Record<string, unknown>): boolean {
 function parseTiming(v: Record<string, unknown>): boolean {
   if (v.when !== undefined && !BLOCK_WHEN_IDS.includes(v.when as BlockWhen)) return false
   if (v.speed !== undefined && !BLOCK_SPEED_IDS.includes(v.speed as BlockSpeed)) return false
+  if (v.reveal !== undefined && !BLOCK_REVEAL_IDS.includes(v.reveal as BlockReveal)) return false
   if (v.from !== undefined && !BLOCK_FROM_IDS.includes(v.from as BlockFrom)) return false
   return true
 }
@@ -353,7 +355,7 @@ function parseBlockOp(v: Record<string, unknown>): Op | null {
       if (!onlyKeys(v, OP_KEYS.set_block) || !block || !parseLooks(v) || !parseTiming(v)) return null
       if (v.count !== undefined && !isInt(v.count, 0, MAX_ITEMS)) return null
       if (v.highlight !== undefined && !isInt(v.highlight, HIGHLIGHT_MIN, HIGHLIGHT_MAX)) return null
-      if ([v.variant, v.look, v.effect, v.when, v.speed, v.from, v.count, v.highlight].every((x) => x === undefined)) return null
+      if ([v.variant, v.look, v.effect, v.when, v.speed, v.reveal, v.from, v.count, v.highlight].every((x) => x === undefined)) return null
       return {
         op: 'set_block',
         slide,
@@ -363,6 +365,7 @@ function parseBlockOp(v: Record<string, unknown>): Op | null {
         effect: v.effect as BlockEffect | undefined,
         when: v.when as BlockWhen | undefined,
         speed: v.speed as BlockSpeed | undefined,
+        reveal: v.reveal as BlockReveal | undefined,
         from: v.from as BlockFrom | undefined,
         count: v.count as number | undefined,
         highlight: v.highlight as number | undefined,
@@ -861,6 +864,10 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
         if (op.effect) next.effect = op.effect
         if (op.when) next.when = op.when === 'after' ? undefined : op.when
         if (op.speed) next.speed = op.speed === 'normal' ? undefined : op.speed
+        if (op.reveal) {
+          if (!bs.items) return fail('not_for_layout')
+          next.reveal = op.reveal === 'all' ? undefined : op.reveal
+        }
         if (op.from) {
           // 들어오는 쪽은 쪽이 있는 움직임(올라오기, 밀려오기, 펼치기)에만
           if (!fromOf({ ...next, from: op.from })) return fail('not_for_layout')
@@ -884,6 +891,7 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
           effectOf(next) === effectOf(b) &&
           whenOf(next) === whenOf(b) &&
           speedOf(next) === speedOf(b) &&
+          revealOf(next) === revealOf(b) &&
           fromOf(next) === fromOf(b) &&
           next.items.length === b.items.length &&
           next.highlight === b.highlight

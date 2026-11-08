@@ -37,7 +37,7 @@ import {
   type ShareSubdir,
 } from '../src/ai/protocol'
 import { catalog, checkShape, onlyKnownStrings, SHAPE_FORMAT, type ShapeDeck } from '../src/ai/share'
-import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LINK_IDS, BLOCK_LOOK_IDS, BLOCK_SPEED_IDS, BLOCK_TYPES, BLOCK_WHEN_IDS, BOARD_COLS, BOARD_ROWS, MAX_BLOCKS } from '../src/deck/blocks'
+import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LINK_IDS, BLOCK_LOOK_IDS, BLOCK_REVEAL_IDS, BLOCK_SPEED_IDS, BLOCK_TYPES, BLOCK_WHEN_IDS, BOARD_COLS, BOARD_ROWS, MAX_BLOCKS } from '../src/deck/blocks'
 import { LAYOUT_ORDER } from '../src/deck/layouts'
 import { SCENE_IDS } from '../src/deck/scenes'
 import { FONTS, FOOTERS, MOTIONS, PLACES, TEXT_SIZES, THEME_ORDER, TONES, TRANSITIONS } from '../src/deck/themes'
@@ -99,7 +99,7 @@ const PROTOCOL_WORDS = [
   // 장면 (장의 options.scene). id는 카탈로그에도 있지만 모양의 값이라 여기에도 적어 둔다
   'scene', ...SCENE_IDS,
   // 부품 장
-  'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow',
+  'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'reveal', 'each', 'all', 'from', 'order', 'link', 'linkBelow',
   // 목록과 결과
   'decks', 'slideCount', 'visibleSlides', 'request', 'status', 'results', 'ok', 'code', 'message', 'pending', 'applied', 'rejected', 'invalid', 'unknown',
   'no_slide', 'has_content', 'out_of_range', 'not_for_layout', 'last_slide', 'unknown_role', 'no_change', 'not_reviewed', 'no_block', 'no_room', 'look_clash', 'link_clash', 'scene_unfit',
@@ -198,6 +198,7 @@ const CHANGES_SCHEMA = {
           effect: { type: 'string', enum: BLOCK_EFFECT_IDS },
           when: { type: 'string', enum: BLOCK_WHEN_IDS },
           speed: { type: 'string', enum: BLOCK_SPEED_IDS },
+          reveal: { type: 'string', enum: BLOCK_REVEAL_IDS },
           from: { type: 'string', enum: BLOCK_FROM_IDS },
           order: { type: 'array', maxItems: MAX_BLOCKS, items: blockRefSchema },
           beside: blockRefSchema,
@@ -237,7 +238,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         deck: { type: 'string', description: '이 발표(list_decks의 deck)의 종류에 맞는 역할만 받기' },
-        blocks: { type: 'boolean', description: 'false면 부품 장의 부품과 그 고르는 값(blocks, blockRules, blockLooks, blockEffects, blockWhens, blockSpeeds, blockFroms, blockLinks)을 뺀다. 기본 true' },
+        blocks: { type: 'boolean', description: 'false면 부품 장의 부품과 그 고르는 값(blocks, blockRules, blockLooks, blockEffects, blockWhens, blockSpeeds, blockReveals, blockFroms, blockLinks)을 뺀다. 기본 true' },
       },
       additionalProperties: false,
     },
@@ -248,7 +249,7 @@ const TOOLS = [
     description:
       '발표 하나의 모양: 장 순서, 장마다 레이아웃과 역할, 숨김 여부, 칸마다 비었는지(empty)/채웠는지(filled)/길어서 넘칠 수 있는지(long), 항목 수, 옵션, 테마. ' +
       '부품 장(layout compose)은 가로 12칸, 세로 12칸의 판을 부품들이 빈틈없이 나눠 덮은 장으로, blocks에 부품마다 id(b로 시작), 종류, 자리(x, y는 왼쪽 위 칸, w, h는 너비와 높이의 칸 수), 모양, 바탕, 움직임, 이음표(link는 오른쪽 선, linkBelow는 아래 선), 칸 상태가 읽는 차례로 나온다. ' +
-        '부품의 when/speed/from은 기본값이 아닐 때만 나오고, 장의 options.order는 부품이 나오는 차례를 정했을 때만 나온다. ' +
+        '부품의 when/speed/reveal/from은 기본값이 아닐 때만 나오고, 장의 options.order는 부품이 나오는 차례를 정했을 때만 나온다. ' +
         '장의 options.scene은 골라 둔 장면(카탈로그 scenes)이고, 그 장에 맞을 때만 나온다. ' +
       '사람이 적은 글은 이 서버에 없다. 글의 내용을 추측하거나 사용자에게 붙여 달라고 하지 말고 모양만으로 판단한다.',
     inputSchema: {
@@ -298,7 +299,7 @@ const TOOLS = [
       '- add_block {slide, type, variant?, look?, effect?, as?: "p1", 자리} 빈 부품을 넣는다. 자리: beside(그 부품)와 side(before는 왼쪽, after는 오른쪽, above는 위, below는 아래; 기본 after. 그 부품이 자리를 나눠 준다) 또는 edge(top은 판 맨 위, bottom은 맨 아래에 장 너비로). 자리를 빼면 앱의 넣기처럼 알아서 놓는다.',
       '- remove_block {slide, block} 빈 부품만 뺀다. 내용이 있으면 has_content.',
       '- move_block {slide, block, 자리 또는 swap} 부품을 옮긴다. 글은 부품과 함께 간다. 자리는 옮기는 부품을 뺀 판에서 센다. swap(부품 id)이면 두 부품이 자리를 맞바꾼다(이음표는 자리에 남는다).',
-      '- set_block {slide, block, variant?: 카탈로그 blocks[].variants, look?: blockLooks, effect?: blockEffects, when?: 언제 나오는지(blockWhens), speed?: blockSpeeds, from?: 들어오는 쪽(blockFroms; effect가 rise, slide, wipe일 때만), count?: 항목 수(줄일 때는 끝의 빈 항목만), highlight?: 강조할 항목(blocks[].highlight가 있는 부품만, -1은 없음)}',
+      '- set_block {slide, block, variant?: 카탈로그 blocks[].variants, look?: blockLooks, effect?: blockEffects, when?: 언제 나오는지(blockWhens), speed?: blockSpeeds, reveal?: 항목이 나오는 때(blockReveals; 항목이 있는 부품만. each면 발표할 때 누를 때마다 항목 하나씩), from?: 들어오는 쪽(blockFroms; effect가 rise, slide, wipe일 때만), count?: 항목 수(줄일 때는 끝의 빈 항목만), highlight?: 강조할 항목(blocks[].highlight가 있는 부품만, -1은 없음)}',
       '- set_order {slide, order} 부품 장의 부품이 나오는 차례. 먼저 나올 부품의 id부터 적고, 빠진 부품은 그 뒤에 놓인 차례대로 나온다. 빈 배열이면 놓인 차례(위에서 아래, 왼쪽에서 오른쪽)로. ' +
         'when이 click인 부품은 발표하는 사람이 누를 때 나오니, 짚어 가며 말할 부품에만 쓴다. 모든 부품을 click으로 하면 발표가 느려진다.',
       '- set_size {slide, block, w?, h?} 부품의 너비와 높이(칸 수, 1~12). 그 부품에 닿은 선을 옮겨 옆 부품과 크기를 주고받는다. 그 크기가 되지 않으면(어느 부품이 잘리면) no_room.',

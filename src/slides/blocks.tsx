@@ -5,7 +5,7 @@
 // 부품 장만의 부품 하나의 그리기는 blocks/<이름>.tsx, 여러 부품이 같이 쓰는 조각은 blocks/parts.tsx
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type ReactNode } from 'react'
-import { behind, BLOCK_LINKS, BLOCKS, blockFieldPrefix, boardInfo, byReading, foldableFields, blockItems, blockSlide, effectOf, fromOf, guttersOf, isAlone, knownBlocks, linkAt, playOrder, sameLinkTarget, shownBlocks, shownLook, speedOf, variantOfBlock, whenOf, withLink, type Gutter, type LinkTarget } from '../deck/blocks'
+import { behind, BLOCK_LINKS, BLOCKS, blockFieldPrefix, boardInfo, byReading, foldableFields, blockItems, blockSlide, effectOf, fromOf, guttersOf, isAlone, knownBlocks, linkAt, playOrder, revealOf, sameLinkTarget, shownBlocks, shownLook, speedOf, variantOfBlock, whenOf, withLink, type Gutter, type LinkTarget } from '../deck/blocks'
 import { dropIndex, followIndex, moveIn, presentable } from '../deck/fields'
 import type { Block, BlockLink, BlockType, NativeBlockType } from '../deck/types'
 import { cx } from '../lib/cx'
@@ -284,6 +284,7 @@ function BlockCell({ block: b, blocks, live, seq, band, linked }: { block: Block
   const spec = BLOCKS[b.type]
   const when = whenOf(b)
   const speed = speedOf(b)
+  const reveal = revealOf(b)
   const from = fromOf(b)
   const look = shownLook(b, isAlone(b))
   const slot = live?.dragId === b.id
@@ -313,6 +314,7 @@ function BlockCell({ block: b, blocks, live, seq, band, linked }: { block: Block
       data-seq={seq}
       data-when={when === 'after' ? undefined : when}
       data-speed={speed === 'normal' ? undefined : speed}
+      data-reveal={reveal === 'all' ? undefined : reveal}
       data-from={from ?? undefined}
       onPointerDown={live && !slot ? (e) => live.onCellPointerDown(e, b) : undefined}
       // 이름표가 이웃의 글을 덮지 않는 모서리에 뜨게, 보이기 전에 자리를 고른다

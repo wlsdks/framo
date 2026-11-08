@@ -35,14 +35,15 @@ import {
   speedOf,
   tiles,
   variantOfBlock,
-  whenOf,
+  whenOf, revealOf,
+  BLOCK_REVEALS,
 } from '../deck/blocks'
 import { AUDIENCES, BLUEPRINTS, DECK_TYPES, DURATIONS, METHODS } from '../deck/blueprints'
 import { readField, visibleItems } from '../deck/fields'
 import { LAYOUTS, LAYOUT_ORDER, placeOf, variantIds, variantOf } from '../deck/layouts'
 import { isScene, SCENES, sceneFits, sceneOf } from '../deck/scenes'
 import { ACCENT_COMBOS, FONTS, FOOTERS, footerOf, MOTIONS, PLACES, TEXT_SIZES, THEMES, THEME_ORDER, TONES, TRANSITIONS } from '../deck/themes'
-import type { Audience, Block, BlockEffect, BlockFrom, BlockLink, BlockLook, BlockSpeed, BlockType, BlockWhen, Deck, DeckType, FontId, FooterMode, LayoutId, Method, Motion, Place, SceneId, Slide, TextSize, ThemeId, Tone, Transition } from '../deck/types'
+import type { Audience, Block, BlockEffect, BlockFrom, BlockLink, BlockLook, BlockSpeed, BlockType, BlockWhen, Deck, DeckType, FontId, FooterMode, LayoutId, Method, Motion, Place, SceneId, Slide, TextSize, ThemeId, Tone, Transition, BlockReveal } from '../deck/types'
 import { hasKey, HEX, isInt, isObj, isOneOf, onlyKeys } from './guards'
 import { HIGHLIGHT_MAX, HIGHLIGHT_MIN, OPAQUE_ID, REQUEST_ID, SHAPE_FORMAT, SHAPE_VERSION } from './protocol'
 
@@ -89,6 +90,8 @@ export interface ShapeBlock {
   /** 아래 셋은 기본값이 아닐 때만: 언제 나오는지(blockWhens), 빠르기(blockSpeeds), 들어오는 쪽(blockFroms, 쪽이 있는 움직임만) */
   when?: BlockWhen
   speed?: BlockSpeed
+  /** 항목이 누를 때마다 하나씩 나오면 'each'(blockReveals). 기본(한꺼번에)이면 없다 */
+  reveal?: BlockReveal
   from?: BlockFrom
   /** 카탈로그 blocks[].variants 중 하나, 한 가지뿐이면 'base' */
   variant: string
@@ -230,6 +233,8 @@ export function catalog() {
     // 부품이 언제 나오는지(이어서, 함께, 누르면), 빠르기, 들어오는 쪽(올라오기, 밀려오기, 펼치기만)
     blockWhens: BLOCK_WHENS.map((m) => ({ id: m.id, name: m.name, description: m.description })),
     blockSpeeds: BLOCK_SPEEDS.map((m) => ({ id: m.id, name: m.name })),
+    // 항목이 있는 부품의 항목이 나오는 때: 한꺼번에, 하나씩(발표할 때 누를 때마다 다음 항목)
+    blockReveals: BLOCK_REVEALS.map((m) => ({ id: m.id, name: m.name, description: m.description })),
     blockFroms: BLOCK_FROMS.map((m) => ({ id: m.id, name: m.name })),
     // 부품 사이의 선에 끼우는 표시: 부품의 오른쪽 선(link) 또는 아래 선(linkBelow)
     blockLinks: BLOCK_LINKS.map((m) => ({ id: m.id, name: m.name, description: m.description })),
@@ -385,6 +390,7 @@ function shapeBlock(block: Block): ShapeBlock {
   if (isLink(block.linkBelow)) out.linkBelow = block.linkBelow
   if (whenOf(block) !== 'after') out.when = whenOf(block)
   if (speedOf(block) !== 'normal') out.speed = speedOf(block)
+  if (revealOf(block) !== 'all') out.reveal = revealOf(block)
   if (block.from && fromOf(block)) out.from = fromOf(block)!
   if (spec.layout && LAYOUTS[spec.layout].highlight && isInt(block.highlight, HIGHLIGHT_MIN, HIGHLIGHT_MAX)) out.highlight = block.highlight
   return out
@@ -399,13 +405,14 @@ function checkStates(v: unknown, keys: string[]): boolean {
 }
 
 function checkBlock(v: unknown): boolean {
-  if (!isObj(v) || !onlyKeys(v, ['id', 'type', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'variant', 'highlight', 'link', 'linkBelow', 'fields', 'items'])) return false
+  if (!isObj(v) || !onlyKeys(v, ['id', 'type', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'reveal', 'from', 'variant', 'highlight', 'link', 'linkBelow', 'fields', 'items'])) return false
   // 자리는 판 안의 칸이고, 이음표는 선 건너편에 부품이 있는 쪽에만 (판 끝에는 이을 부품이 없다)
   if (!isArea({ x: v.x, y: v.y, w: v.w, h: v.h })) return false
   if (v.link !== undefined && (!isLink(v.link) || (v.x as number) + (v.w as number) >= BOARD_COLS)) return false
   if (v.linkBelow !== undefined && (!isLink(v.linkBelow) || (v.y as number) + (v.h as number) >= BOARD_ROWS)) return false
   if (v.when !== undefined && !BLOCK_WHEN_IDS.includes(v.when as BlockWhen)) return false
   if (v.speed !== undefined && !BLOCK_SPEED_IDS.includes(v.speed as BlockSpeed)) return false
+  if (v.reveal !== undefined && v.reveal !== 'each') return false
   if (v.from !== undefined && !BLOCK_FROM_IDS.includes(v.from as BlockFrom)) return false
   if (v.id !== undefined && !(typeof v.id === 'string' && OPAQUE_ID.test(v.id) && v.id[0] === 'b')) return false
   if (v.highlight !== undefined && !isInt(v.highlight, HIGHLIGHT_MIN, HIGHLIGHT_MAX)) return false

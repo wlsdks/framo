@@ -2,10 +2,10 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS as DndCss } from '@dnd-kit/utilities'
 import { useMemo, useRef, useState } from 'react'
-import { BLOCK_EFFECTS, BLOCK_FROMS, BLOCK_SPEEDS, BLOCK_WHENS, blockNames, effectOf, fromOf, playOrder, speedOf, whenOf } from '../../deck/blocks'
+import { BLOCK_EFFECTS, BLOCK_FROMS, BLOCK_REVEALS, BLOCK_SPEEDS, BLOCK_WHENS, BLOCKS, blockNames, effectOf, fromOf, playOrder, revealOf, speedOf, whenOf } from '../../deck/blocks'
 import { sceneOf } from '../../deck/scenes'
 import { MOTIONS, motionOf, TRANSITIONS } from '../../deck/themes'
-import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockWhen, Deck, Motion, Slide, Transition } from '../../deck/types'
+import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockWhen, Deck, Motion, Slide, Transition, BlockReveal } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { keys } from '../../lib/keys'
 import { listAccessibility, movedSay, useListDrag } from '../../lib/listDrag'
@@ -255,6 +255,7 @@ function Row({
   const when = whenOf(block)
   const from = fromOf(block)
   const speed = speedOf(block)
+  const reveal = revealOf(block)
   // 장면을 고른 동안은 장면이 움직임, 들어오는 쪽, 빠르기를 정한다 (고른 값은 남아 장면을 끄면 돌아온다)
   const scened = !!sceneOf(slide)
   const set = (patch: Partial<Block>) => updateBlock(slide.id, block.id, (b) => ({ ...b, ...patch }), `motion.${block.id}`)
@@ -267,7 +268,7 @@ function Row({
     })
   const summary = scened
     ? ['장면대로', when === 'with' && '함께', when === 'click' && '누르면'].filter(Boolean).join(' · ')
-    : [BLOCK_EFFECTS.find((e) => e.id === effect)?.name, when === 'with' && '함께', speed !== 'normal' && BLOCK_SPEEDS.find((s) => s.id === speed)?.name].filter(Boolean).join(' · ')
+    : [BLOCK_EFFECTS.find((e) => e.id === effect)?.name, when === 'with' && '함께', reveal === 'each' && '하나씩', speed !== 'normal' && BLOCK_SPEEDS.find((s) => s.id === speed)?.name].filter(Boolean).join(' · ')
   return (
     <li ref={setNodeRef} className={cx('mp-row', open && 'is-open', isDragging && 'is-dragging', when === 'with' && 'is-with')} style={{ transform: DndCss.Translate.toString(transform), transition }}>
       {step > 0 && <p className="mp-step">{step}번 누르면</p>}
@@ -320,6 +321,12 @@ function Row({
             <Opt label="언제" wide>
               <Segmented<BlockWhen> className="seg-fill" label="언제 나오는지" options={BLOCK_WHENS} value={when} onPick={(w) => set({ when: w === 'after' ? undefined : w })} />
             </Opt>
+            {/* 항목이 있는 컴포넌트: 발표할 때 항목을 누를 때마다 하나씩 (단계를 짚어 가며 설명할 때) */}
+            {BLOCKS[block.type].items && (
+              <Opt label="항목" wide>
+                <Segmented<BlockReveal> className="seg-fill" label="항목이 나오는 때" options={BLOCK_REVEALS} value={reveal} onPick={(r) => set({ reveal: r === 'all' ? undefined : r })} />
+              </Opt>
+            )}
             {from && !scened && (
               <Opt label="들어오는 쪽" wide>
                 <Segmented<BlockFrom>

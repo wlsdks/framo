@@ -1,7 +1,7 @@
 // 부품 목록: 부품마다의 정의(BLOCKS), 부품 고르기의 묶음, 면과 움직임의 이름. 레이아웃 부품은 레이아웃 정의에서 만든다
 
 import { type FieldSpec, LAYOUTS, type LayoutSpec, type VariantSpec } from '../layouts'
-import type { BlockEffect, BlockFrom, BlockLook, BlockSpeed, BlockType, BlockWhen, Item, LayoutBlockType, NativeBlockType } from '../types'
+import type { BlockEffect, BlockFrom, BlockLook, BlockSpeed, BlockType, BlockWhen, Item, LayoutBlockType, NativeBlockType, BlockReveal } from '../types'
 import { NATIVE } from './native'
 
 export interface BlockSpec {
@@ -131,6 +131,12 @@ export const BLOCK_WHENS: { id: BlockWhen; name: string; description: string }[]
   { id: 'click', name: '누르면', description: '발표할 때 다음 키를 누르면 나와요. 하나씩 짚어 가며 말할 때 좋아요' },
 ]
 
+/** 부품 안의 항목이 나오는 때. 항목이 있는 부품만 고른다 */
+export const BLOCK_REVEALS: { id: BlockReveal; name: string; description: string }[] = [
+  { id: 'all', name: '한꺼번에', description: '항목이 짜 둔 차례대로 이어서 나와요' },
+  { id: 'each', name: '하나씩', description: '발표할 때 누를 때마다 다음 항목이 나와요. 단계를 짚어 가며 설명할 때 좋아요' },
+]
+
 export const BLOCK_SPEEDS: { id: BlockSpeed; name: string; description: string }[] = [
   { id: 'fast', name: '빠르게', description: '짧게 움직여요' },
   { id: 'normal', name: '보통', description: '모션 세기에 맞춘 빠르기예요' },
@@ -151,6 +157,7 @@ export const BLOCK_LOOK_IDS = BLOCK_LOOKS.map((l) => l.id)
 export const BLOCK_EFFECT_IDS = BLOCK_EFFECTS.map((e) => e.id)
 export const BLOCK_WHEN_IDS = BLOCK_WHENS.map((w) => w.id)
 export const BLOCK_SPEED_IDS = BLOCK_SPEEDS.map((w) => w.id)
+export const BLOCK_REVEAL_IDS = BLOCK_REVEALS.map((w) => w.id)
 export const BLOCK_FROM_IDS = BLOCK_FROMS.map((w) => w.id)
 
 // 두 컴포넌트가 어떻게 이어지는지를 칸 사이에 끼우는 표시. 칸을 차지하지 않고 칸 사이에 서서,

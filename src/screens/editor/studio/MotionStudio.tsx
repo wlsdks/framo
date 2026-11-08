@@ -18,11 +18,14 @@ import {
   whenOf,
   withPreset,
   type MotionPreset,
+  BLOCK_REVEALS,
+  BLOCKS,
+  revealOf,
 } from '../../../deck/blocks'
 import { pageInfo } from '../../../deck/fields'
 import { sceneOf } from '../../../deck/scenes'
 import { MOTIONS, motionOf, transitionOf } from '../../../deck/themes'
-import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockWhen, Deck, Motion, Slide } from '../../../deck/types'
+import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockWhen, Deck, Motion, Slide, BlockReveal } from '../../../deck/types'
 import { cx } from '../../../lib/cx'
 import { presentKey } from '../../../lib/presentKeys'
 import { FitSlide, pageProps, SlideCanvas, useStableSections } from '../../../slides/SlideCanvas'
@@ -463,6 +466,12 @@ function BlockMotion({
       <Opt label="언제" wide>
         <Segmented<BlockWhen> className="seg-fill" label="언제 나오는지" options={BLOCK_WHENS} value={when} onPick={(w) => onSet(block, { when: w === 'after' ? undefined : w }, false)} />
       </Opt>
+      {/* 항목이 있는 컴포넌트: 발표할 때 항목을 누를 때마다 하나씩 */}
+      {BLOCKS[block.type].items && (
+        <Opt label="항목" wide>
+          <Segmented<BlockReveal> className="seg-fill" label="항목이 나오는 때" options={BLOCK_REVEALS} value={revealOf(block)} onPick={(r) => onSet(block, { reveal: r === 'all' ? undefined : r }, false)} />
+        </Opt>
+      )}
       {scened ? (
         <SceneOverride slide={slide} />
       ) : (

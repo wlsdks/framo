@@ -732,6 +732,11 @@ export function motionEngine(): MotionEngine {
      * keep이면 다 쓴 뒤에도 커서가 남아 깜빡인다(생동감의 마지막 말: 장을 떠나면 걷힌다). 편집 중이거나 움직임을 줄인 화면에서는
      * 글을 바꾸지 않고 흐리게 들이기만 한다. 끝나면 원래 글 조각으로 되돌린다(play의 끝 표시)
      */
+    /** 프레임마다 직접 그리는 움직임의 시계: '하나씩'으로 멈춘 컴포넌트 안이면 멈춘 동안은 흐르지 않는다(위의 Stepper) */
+    const nowFor = (el: Element) => {
+      const st = steppers.find((x) => x.cell.contains(el))
+      return st ? (st.at ?? performance.now()) - st.held : performance.now()
+    }
     const typeOut = (el: Element | null, at: number, ms: number, keep = false) => {
       if (!(el instanceof HTMLElement)) return
       if (still || quiet || el.closest('.m-edit, [data-mo-keep]')) {
@@ -769,8 +774,8 @@ export function motionEngine(): MotionEngine {
         nodes.forEach((n, i) => (n.nodeValue = texts[i]))
         el.style.minHeight = minH
       }
-      const tick = (now: number) => {
-        const t = Math.min(1, Math.max(0, (now - start) / dur))
+      const tick = () => {
+        const t = Math.min(1, Math.max(0, (nowFor(el) - start) / dur))
         show(Math.round(total * t))
         if (t < 1) frame = requestAnimationFrame(tick)
         else {
@@ -838,6 +843,72 @@ export function motionEngine(): MotionEngine {
     }
     waiting.forEach((g) => hold(g, true))
 
+    /**
+     * '하나씩'(data-reveal="each"): 컴포넌트 안의 항목마다 첫 움직임이 시작하는 때(marks)를 재 두고, 그때가 되면 그 컴포넌트의
+     * 움직임을 모두 그 자리에서 멈춘다. 누르면 이어 간다(다음 항목까지). 아직 그때가 안 됐는데 누르면 그때로 건너뛰어 이어 간다.
+     * 컴포넌트의 움직임은 한 묶음 안에서 같은 때에 만들어져 같은 시계를 쓰므로, 멈춘 때의 어긋남만큼 되감아 정확히 그 자리에 세운다.
+     * 프레임마다 직접 그리는 것(한 글자씩 쓰기, 수 세기)은 nowFor로 같은 시계를 읽어 같이 멈춘다
+     */
+    type Stepper = { cell: HTMLElement; marks: number[]; i: number; born: number; held: number; at: number | null; raf: number }
+    const steppers: Stepper[] = []
+    const logical = (st: Stepper) => (st.at ?? performance.now()) - st.held - st.born
+    const cellAnims = (st: Stepper) => st.cell.getAnimations({ subtree: true })
+    const watch = (st: Stepper) => {
+      cancelAnimationFrame(st.raf)
+      const tick = () => {
+        if (st.i >= st.marks.length) return
+        const over = logical(st) - st.marks[st.i]
+        if (st.at === null && over >= 0) {
+          for (const a of cellAnims(st)) {
+            if (a.currentTime !== null) a.currentTime = Math.max(0, Number(a.currentTime) - over)
+            a.pause()
+          }
+          st.at = performance.now()
+          st.held = st.at - st.born - st.marks[st.i]
+          return
+        }
+        st.raf = requestAnimationFrame(tick)
+      }
+      st.raf = requestAnimationFrame(tick)
+    }
+    const stepIn = (cell: HTMLElement) => {
+      // 그 순간 컴포넌트에 걸린 움직임으로 잰다: 장면은 연출표의 움직임을 다시 짜므로(scene) 만들 때 모은 목록은 이미 바뀌어 있다
+      const mine = cell.getAnimations({ subtree: true })
+      const items = Array.prototype.slice.call(cell.querySelectorAll('.it')).filter((it: HTMLElement) => !it.parentElement?.closest('.it')) as HTMLElement[]
+      const startOf = (a: Animation) => Number((a.effect as KeyframeEffect | null)?.getTiming().delay) || 0
+      const first = (it: HTMLElement) => {
+        let m = Infinity
+        for (const a of mine) {
+          const t = (a.effect as KeyframeEffect | null)?.target
+          if (t && it.contains(t)) m = Math.min(m, startOf(a))
+        }
+        return m
+      }
+      const base = items.length ? first(items[0]) : 0
+      const marks = [...new Set(items.slice(1).map(first).filter((m) => Number.isFinite(m) && m > base + 1))].sort((a, b) => a - b)
+      if (!marks.length) return
+      const st: Stepper = { cell, marks, i: 0, born: performance.now(), held: 0, at: null, raf: 0 }
+      steppers.push(st)
+      watch(st)
+    }
+    /** 누르면: 멈춘 컴포넌트를 다음 항목까지 이어 간다. 아직 멈추기 전이면 다음 항목이 시작하는 때로 건너뛴다 */
+    const stepOn = (st: Stepper) => {
+      const t = st.marks[st.i]
+      if (st.at !== null) {
+        for (const a of cellAnims(st)) a.play()
+        st.held = performance.now() - st.born - t
+        st.at = null
+      } else {
+        const jump = t - logical(st)
+        if (jump > 0) {
+          for (const a of cellAnims(st)) if (a.currentTime !== null) a.currentTime = Number(a.currentTime) + jump
+          st.held -= jump
+        }
+      }
+      st.i++
+      watch(st)
+    }
+
     /** 부품 묶음 하나를 차례로. '함께'는 앞 부품과 같은 때에 나온다. 다음 묶음이 시작할 수 있는 때를 돌려준다 */
     const composeGroup = (group: HTMLElement[], at: number) => {
       const steps = group.filter((c, i) => i > 0 && c.dataset.when !== 'with').length
@@ -848,6 +919,10 @@ export function motionEngine(): MotionEngine {
       group.forEach((cell, i) => {
         if (i > 0 && cell.dataset.when !== 'with') begin += gap
         block(cell, begin)
+        if (cell.dataset.reveal === 'each' && !auto && !still) {
+          // 움직임은 다음 프레임에 시작하니(때가 정해지니) 그때 잰다
+          requestAnimationFrame(() => stepIn(cell))
+        }
         // 이음표는 앞의 부품이 나오고 다음 부품이 나오기 전에: 화살표는 가리키는 쪽으로 밀려 나오고, 나머지는 튀어나온다
         for (const lk of links) {
           if (lk.dataset.after !== cell.dataset.block) continue
@@ -2319,14 +2394,27 @@ export function motionEngine(): MotionEngine {
           if (num && !still && !quiet && !num.closest('.m-edit, [data-mo-keep]')) {
             const final = num.textContent || ''
             const width = final.length
-            const timers: number[] = []
+            const born = performance.now()
+            const hits = its.map((_, k) => s(t0 + k * hop + hop * 0.45))
+            const end = s(t0 + its.length * hop + 100)
             num.textContent = '00'.slice(0, width)
-            its.forEach((_, k) => timers.push(window.setTimeout(() => (num.textContent = String(k + 1).padStart(width, '0')), s(t0 + k * hop + hop * 0.45))))
             let done = () => {}
+            let frame = 0
             waits.push(new Promise<void>((r) => (done = r)))
-            timers.push(window.setTimeout(() => ((num.textContent = final), done()), s(t0 + its.length * hop + 100)))
+            // 시계는 nowFor: '하나씩'으로 멈춘 동안은 수도 멈춘다
+            const tick = () => {
+              const t = nowFor(num) - born
+              if (t >= end) {
+                num.textContent = final
+                done()
+                return
+              }
+              num.textContent = String(hits.filter((h) => h <= t).length).padStart(width, '0')
+              frame = requestAnimationFrame(tick)
+            }
+            frame = requestAnimationFrame(tick)
             stops.push(() => {
-              timers.forEach((t) => clearTimeout(t))
+              cancelAnimationFrame(frame)
               num.textContent = final
               done()
             })
@@ -3428,6 +3516,11 @@ export function motionEngine(): MotionEngine {
 
     /** 누르면: 다음 묶음을 보이고 그 자리에서 움직인다. 장 바꾸기의 기다림 없이 바로 */
     const next = () => {
+      const st = steppers.find((x) => x.i < x.marks.length && x.cell.isConnected)
+      if (st) {
+        stepOn(st)
+        return true
+      }
       const group = waiting.shift()
       if (!group) return false
       hold(group, false)
@@ -3440,6 +3533,10 @@ export function motionEngine(): MotionEngine {
       return true
     }
     const finish = () => {
+      for (const st of steppers.splice(0)) {
+        cancelAnimationFrame(st.raf)
+        for (const a of cellAnims(st)) a.play()
+      }
       waiting.splice(0).forEach((g) => hold(g, false))
       for (const b of batches) {
         b.anims.forEach((a) => a.finish())
@@ -3447,7 +3544,7 @@ export function motionEngine(): MotionEngine {
         b.restore()
       }
     }
-    return Object.assign(finish, { next, left: () => waiting.length })
+    return Object.assign(finish, { next, left: () => waiting.length + steppers.reduce((n, st) => n + st.marks.length - st.i, 0) })
   }
 
   // ---------- 이어 움직이기 ----------

@@ -223,6 +223,8 @@ export type BlockLook = 'plain' | 'card' | 'bold'
 export type BlockEffect = 'auto' | 'rise' | 'fade' | 'wipe' | 'slide' | 'pop' | 'zoom' | 'flip' | 'blur' | 'letters' | 'none'
 /** 부품이 언제 나오는지: 앞 부품에 이어서(기본), 앞 부품과 함께, 발표하는 사람이 누르면 */
 export type BlockWhen = 'after' | 'with' | 'click'
+/** 부품 안의 항목이 나오는 때: 한꺼번에(기본, 짜 둔 차례대로 이어서), 하나씩(발표하는 사람이 누를 때마다 다음 항목) */
+export type BlockReveal = 'all' | 'each'
 /** 부품이 움직이는 빠르기 */
 export type BlockSpeed = 'fast' | 'normal' | 'slow'
 /** 움직이며 들어오는 쪽 (올라오기, 밀려오기, 펼치기). 없으면 움직임마다 정한 쪽 */
@@ -253,6 +255,8 @@ export interface Block {
   when?: BlockWhen
   /** 없으면 normal */
   speed?: BlockSpeed
+  /** 없으면 all. each면 발표할 때 항목이 누를 때마다 하나씩 나온다 */
+  reveal?: BlockReveal
   /** 없으면 움직임마다 정한 쪽 */
   from?: BlockFrom
   /** 같은 부품 안의 모양 (레이아웃 부품은 그 레이아웃의 모양). 없으면 첫째 */

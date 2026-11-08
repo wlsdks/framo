@@ -2,12 +2,14 @@
 
 import { withOneMore } from '../edits'
 import { emptyItem, uid, withDefaultOptions } from '../generate'
-import type { Block, BlockEffect, BlockFrom, BlockSpeed, BlockType, BlockWhen, Item, Slide } from '../types'
+import type { Block, BlockEffect, BlockFrom, BlockReveal, BlockSpeed, BlockType, BlockWhen, Item, Slide } from '../types'
 import { byReading } from './board'
-import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_SPEED_IDS, BLOCK_WHEN_IDS, BLOCKS, EFFECT_FROM } from './catalog'
+import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_REVEAL_IDS, BLOCK_SPEED_IDS, BLOCK_WHEN_IDS, BLOCKS, EFFECT_FROM } from './catalog'
 
 export const effectOf = (b: Pick<Block, 'effect'>): BlockEffect => (b.effect && BLOCK_EFFECT_IDS.includes(b.effect) ? b.effect : 'auto')
 export const whenOf = (b: Pick<Block, 'when'>): BlockWhen => (b.when && BLOCK_WHEN_IDS.includes(b.when) ? b.when : 'after')
+/** 항목이 나오는 때. 항목이 없는 부품은 늘 한꺼번에 */
+export const revealOf = (b: Pick<Block, 'reveal' | 'type'>): BlockReveal => (b.reveal === 'each' && BLOCK_REVEAL_IDS.includes(b.reveal) && BLOCKS[b.type]?.items ? 'each' : 'all')
 export const speedOf = (b: Pick<Block, 'speed'>): BlockSpeed => (b.speed && BLOCK_SPEED_IDS.includes(b.speed) ? b.speed : 'normal')
 /** 들어오는 쪽. 쪽을 고를 수 없는 움직임이면 null */
 export function fromOf(b: Pick<Block, 'effect' | 'from'>): BlockFrom | null {
