@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createDeck } from '../deck/generate'
-import { barRoom, endSlideId, recordBox, recordTime, startIndex } from './Present'
+import { barRoom, endSlideId, recordBox, startIndex } from './Present'
 
 describe('발표를 시작할 장', () => {
   const deck = createDeck({ type: 'report', audience: 'mixed', minutes: 20, method: 'live', title: '', org: '', presenter: '', theme: 'white' })
@@ -83,13 +83,5 @@ describe('녹화하는 동안 슬라이드 상자의 자리 (recordBox)', () => 
     // 150% 배율의 1280×600 창은 1440×810 영상
     const b = recordBox(1280, 600, 1.5)
     expect([b.width * 1.5, b.height * 1.5]).toEqual([1440, 810])
-  })
-})
-
-describe('녹화를 묻는 창의 걸리는 시간 (recordTime)', () => {
-  it('1분 아래는 10초 단위, 넘으면 분', () => {
-    expect(recordTime(2)).toBe('10초')
-    expect(recordTime(10)).toBe('40초')
-    expect(recordTime(17)).toBe('1분')
   })
 })

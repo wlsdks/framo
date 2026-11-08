@@ -8,6 +8,7 @@ import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
 import { motionOf, transitionOf } from '../deck/themes'
 import { motionEngine, type MotionPlay } from '../motion/engine'
 import { presentChannel, type Blank, type PresentMessage } from '../present/link'
+import { recordSeconds, recordTime, slideHoldMs, START_MS, STEP_HOLD_MS, TURN_MS } from '../present/pace'
 import { canRecord, motionSettled, saveBlob, startRecording, type RecordMode, type Recording } from '../present/record'
 import { safeFileName } from '../store/deckFile'
 import { FitSlide, pageProps, SlideCanvas } from '../slides/SlideCanvas'
@@ -48,15 +49,6 @@ export function barRoom(w: number, h: number): BarRoom {
 
 /** 녹화가 어떻게 끝났는지: 파일로 저장함, 담긴 장면이 없음, 시작하지 못함(화면 고르기를 거절했거나 막혔다) */
 export type RecordResult = 'saved' | 'empty' | 'failed'
-
-/** 장 하나를 녹화하는 데 드는 어림 시간(초). 예시 발표 17장이 모션과 '누르면' 단계까지 1분 남짓 걸렸다 */
-const SECONDS_PER_SLIDE = 3.5
-
-/** 녹화에 걸리는 시간을 말로: 40초, 1분, 3분 */
-export function recordTime(slides: number): string {
-  const s = slides * SECONDS_PER_SLIDE
-  return s < 55 ? `${Math.max(10, Math.round(s / 10) * 10)}초` : `${Math.max(1, Math.round(s / 60))}분`
-}
 
 /** 녹화를 묻는 창의 안심 한 줄. 브라우저 창과 녹화 중 띠에 '공유'라는 말이 나와도 놀라지 않게 */
 const RECORD_SAFE = '브라우저 창에 ‘공유’라고 나와도 아무 데도 보내지 않아요. 녹화는 이 PC 안에서만 하고 다운로드 폴더에 저장돼요.'
@@ -143,7 +135,7 @@ export function Present({
     }
   }, [entering])
   /**
-   * 영상으로 저장하는 중인지. 녹화는 첫 장부터 실제 발표처럼 움직임이 끝나기를 기다렸다 넘기며 화면을 그대로 담는다(present/record.ts).
+   * 영상으로 저장하는 중인지. 녹화는 첫 장부터 실제 발표처럼 움직임이 끝나기를 기다렸다가, 장의 글을 읽을 만큼 머문 뒤 넘기며 화면을 그대로 담는다(present/record.ts, present/pace.ts).
    * 녹화하는 동안은 아래 막대와 커서를 감추고, Esc나 브라우저의 '공유 중지'로 멈추면 거기까지를 파일로 저장한다
    */
   const [recording, setRecording] = useState(false)
@@ -380,17 +372,17 @@ export function Present({
       setAhead(null)
       setView({ index: 0, play: true })
     })
-    await wait(400)
+    await wait(START_MS)
     while (!stopped) {
       await motionSettled(() => stageRef.current)
       if (stopped) break
       const left = playing.current?.left() ?? 0
-      // 다 보인 모습을 잠깐 보여 준다: 단계 사이는 짧게, 장 끝은 읽을 만큼
-      await wait(left > 0 ? 900 : 1800)
-      if (stopped) break
-      if (left <= 0 && now.current.index >= slides.length - 1) break
+      const last = left <= 0 && now.current.index >= slides.length - 1
+      // 다 보인 모습을 보여 준다: 단계 사이는 짧게, 장 끝은 그 장의 글을 읽을 만큼 (마지막 장은 더 길게, present/pace.ts)
+      await wait(left > 0 ? STEP_HOLD_MS : slideHoldMs(deck, slides[now.current.index], last))
+      if (stopped || last) break
       forward()
-      await wait(left > 0 ? 120 : 500)
+      await wait(left > 0 ? 120 : TURN_MS)
     }
     recStop.current = null
     setRecLive(null)
@@ -522,7 +514,7 @@ export function Present({
               </p>
               <p>{RECORD_SAFE}</p>
               <p>
-                모션이 끝날 때마다 다음 슬라이드로 넘기며 녹화해요. 슬라이드 {slides.length}장이라 {recordTime(slides.length)}쯤 걸리고, Esc를 누르면 거기까지 저장해요.
+                영상을 보는 분이 읽을 수 있게 슬라이드마다 글의 양만큼 머물렀다가 넘겨요. {slides.length}장이라 {recordTime(recordSeconds(deck, slides))}쯤 걸리고, Esc를 누르면 거기까지 저장해요.
               </p>
             </>
           )}
