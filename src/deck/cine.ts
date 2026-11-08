@@ -173,7 +173,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
     name: '모여 맺힘',
     description: '장 곳곳에 흩어진 입자가 가운데로 모여 한 문장의 글자가 되고, 그 글이 또렷하게 맺혀요.',
     fits: '결론, 통합, 하나로 모으기',
-    sample: { label: '결론', title: '한 곳에서 찾아요', sub: '흩어진 고객 정보를 하나로' },
+    sample: { label: '결론', title: '한곳에서 찾아요', sub: '흩어진 고객 정보를 하나로' },
     recipe: {
       frame: 'center',
       phases: phases(['seed', 550], ['gather', 1950, 250], ['resolve', 800, 420], ['write', 700, 300]),
@@ -418,7 +418,8 @@ export function cineScript(raw: unknown): CineScript | null {
     const start = span.start + (span.end - span.start) * lag
     // 글 하나가 들어오는 시간: 짧게 맺히고(0.5~0.7초), 써지기와 숫자는 구간 끝까지(0.6초 이상)
     const enter = oneOf(ENTERS, t.enter, 'settle')
-    const len = enter === 'settle' ? 620 * pace : Math.max(600 * pace, span.end - start)
+    // 숫자 굴리기는 1.6초까지: 끝자리가 1초 넘게 꼼지락거리면 기다리게 한다(검수, docs/MOTION.md 4절 '숫자는 2초 안')
+    const len = enter === 'settle' ? 620 * pace : enter === 'count' ? Math.min(1600 * pace, Math.max(600 * pace, span.end - start)) : Math.max(600 * pace, span.end - start)
     texts.push({ key: t.key as CineFieldKey, enter, start, end: start + len })
   }
   const kind = oneOf(CINE_SHAPES.map((s) => s.id), shape.kind, preset.shape.kind)

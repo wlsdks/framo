@@ -64,7 +64,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
   /** 생동감의 되풀이: 다 맺히고 처음까지, 주기, 한 번의 길이(ms). 주기는 12초보다 길다(오래 보면 어지럽지 않게) */
   const LOOP = { first: 5000, period: 14000, len: 2600 }
   /** 카메라: 물러나기는 이 배율에서, 다가가기는 이 배율에서 1로 */
-  const PULL = 1.2
+  const PULL = 1.1
   const PUSH = 0.93
   const smooth = (a: number, b: number, x: number) => {
     const t = clamp((x - a) / (b - a))
@@ -401,11 +401,14 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       ph[i * 2 + 1] = R() * TAU
       w[i * 2] = 0.5 + 0.9 * R()
       w[i * 2 + 1] = 0.5 + 0.9 * R()
-      // 흩어진 자리: 판 전체, 가운데는 조금 비워서 '흩어져 있다'로 읽히게
+      // 흩어진 자리: 판 전체, 모일 자리 가까이로 갈수록 성기게(둥글고 부드럽게). 네모를 비우던 때는 가운데에 빈 상자가 버그처럼 보였다(검수)
       let px = R() * host.w
       let py = R() * host.h
-      if (Math.abs(px - fx) < host.w * 0.18 && Math.abs(py - fy) < host.h * 0.18) {
-        px = px < fx ? px - host.w * 0.18 : px + host.w * 0.18
+      for (let t = 0; t < 4; t++) {
+        const d = Math.hypot((px - fx) / host.w, (py - fy) / host.h)
+        if (R() < smooth(0.04, 0.3, d)) break
+        px = R() * host.w
+        py = R() * host.h
       }
       sx[i] = px
       sy[i] = py
@@ -684,11 +687,19 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       const c = t.count
       if (c) {
         const v = c.value * reveal(p)
-        let s = v.toFixed(c.digits)
-        if (c.comma) {
-          const [a, b] = s.split('.')
-          s = a.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (b ? `.${b}` : '')
+        const fmt = (x: number) => {
+          let t = x.toFixed(c.digits)
+          if (c.comma) {
+            const [a, b] = t.split('.')
+            t = a.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (b ? `.${b}` : '')
+          }
+          return t
         }
+        // 끝 값의 너비를 처음부터 지킨다: 모자란 앞자리는 숫자 폭의 빈칸(U+2007), 쉼표 자리는 쉼표 폭의 빈칸(U+2008)으로. 가운데 맞춘
+        // 숫자가 자릿수가 늘 때마다 옆으로 밀렸다(검수)
+        const full = fmt(c.value)
+        let s = fmt(v)
+        if (s.length < full.length) s = full.slice(0, full.length - s.length).replace(/\d/g, '\u2007').replace(/[^\u2007]/g, '\u2008') + s
         const next = c.text.slice(0, c.at) + s + c.text.slice(c.at + c.len)
         if (c.node.nodeValue !== next) c.node.nodeValue = next
       }
@@ -1061,8 +1072,9 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
             rg.addColorStop(1, rgbCss(tint, 0))
             x.fillStyle = rg
             x.fillRect(c.fx - g[1], c.fy - g[1], g[1] * 2, g[1] * 2)
-          } else {
-            // 먹: 한 방울이 떨어져 번진다. 빛 번짐 없이 낮은 짙기의 얼룩만
+          } else if (c.mode === 'burst') {
+            // 먹: 한 방울이 떨어져 번진다. 빛 번짐 없이 낮은 짙기의 얼룩만. 흩어진 것이 모이는 장면에는 얼룩을 두지 않는다: 모일 자리의
+            // 회색 얼룩이 먹 자국처럼 보였다(검수)
             x.globalCompositeOperation = 'source-over'
             const drop = Math.min(1, I * 1.4)
             const rd = 5 + 7 * drop
@@ -1087,7 +1099,8 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       // 또렷해지는 순간: 모양을 딴 글자 그대로 빛이 번졌다 가라앉는다(어두운 바탕). 밝은 바탕은 먹이 번져 있다가 글자로 거두어진다
       const RS = c.spans.resolve
       const b0 = RS ? RS.start + (RS.end - RS.start) * 0.35 : 0
-      if (c.img && RS && e > b0 && e < RS.end + 320) {
+      // 밝은 바탕에서는 번지지 않는다: 글자 둘레의 회색 그림자로 읽혔다(검수). 어두운 바탕도 옅고 짧게(꾸밈 빛으로 보이지 않게)
+      if (c.dark && c.img && RS && e > b0 && e < RS.end + 320) {
         // 또렷한 글자가 거의 맺힌 뒤에 그 둘레로 번진다: 맺히기 전에 번지면 글자 대신 흐린 회색 덩어리가 보였다(필름).
         // 어두운 바탕은 글자 둘레의 빛, 밝은 바탕은 글자 둘레로 배어 나온 먹이 다시 거두어진다
         const p = clamp((e - b0) / (RS.end + 320 - b0))
@@ -1096,7 +1109,7 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
           x.globalCompositeOperation = c.dark ? 'lighter' : 'source-over'
           // 글 한 줄(넓적한 모양)은 짧고 옅게: 오래 번지면 흐린 글이 몇 칸째 떠 있었다(필름)
           const wide = c.img.w > c.img.h * 2.2 ? 0.5 : 1
-          x.globalAlpha = (c.dark ? 0.4 : 0.18) * env * wide
+          x.globalAlpha = 0.22 * env * wide
           x.filter = `blur(${Math.round((c.dark ? 14 - 6 * p : 10 * (1 - p) + 2) * (wide < 1 ? 0.6 : 1))}px)`
           x.drawImage(c.img.cv, c.img.x, c.img.y, c.img.w, c.img.h)
           x.filter = 'none'
@@ -1159,13 +1172,13 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       if (a <= 0.01) return
       if (c.dark && s.light) {
         x.globalCompositeOperation = 'lighter'
-        const rg = x.createRadialGradient(px, py, 0, px, py, 34)
-        rg.addColorStop(0, rgbCss(ink.c, 0.95 * a))
-        rg.addColorStop(0.12, rgbCss(ink.c, 0.6 * a))
-        rg.addColorStop(0.4, rgbCss(ink.c, 0.12 * a))
+        // 작은 심과 좁은 둘레만: 크게 번지면 렌즈 반짝이 같은 꾸밈으로 보였다(검수)
+        const rg = x.createRadialGradient(px, py, 0, px, py, 14)
+        rg.addColorStop(0, rgbCss(ink.c, 0.9 * a))
+        rg.addColorStop(0.25, rgbCss(ink.c, 0.45 * a))
         rg.addColorStop(1, rgbCss(ink.c, 0))
         x.fillStyle = rg
-        x.fillRect(px - 34, py - 34, 68, 68)
+        x.fillRect(px - 14, py - 14, 28, 28)
         x.globalCompositeOperation = 'source-over'
       } else {
         x.fillStyle = rgbCss(ink.c, 0.85 * a)

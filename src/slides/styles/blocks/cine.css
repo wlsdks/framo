@@ -187,6 +187,11 @@
   --fs: 44px;
 }
 
+/* 가운데 짜임의 이름표는 한 단계 크게: 26px는 회의실 3~5m에서 읽히지 않았다(검수) */
+.fr-center .bk-cn-label {
+  --fs: var(--t-body);
+}
+
 .fr-center .is-hero + .bk-cn-f {
   margin-top: 12px;
 }
