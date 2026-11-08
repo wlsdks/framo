@@ -16,7 +16,7 @@ export function presentKey(e: Pick<KeyboardEvent, 'key' | 'code'>): string {
 
 /** 키 하나로 할 일: 화면 가리기(blank가 null이면 걷기), 그 차례의 장으로 넘기기(넘기는 쪽이 처음과 끝에서 멈춘다), 발표 끝내기 */
 /** go의 jump: 번호를 쳐서 간다. 다음 장 번호여도 '다음'(누르면 나올 것을 먼저 보이기)이 아니라 그 장으로 바로 간다 */
-export type PresentAction = { kind: 'blank'; blank: Blank } | { kind: 'go'; index: number; jump?: boolean } | { kind: 'exit' }
+type PresentAction = { kind: 'blank'; blank: Blank } | { kind: 'go'; index: number; jump?: boolean } | { kind: 'exit' }
 
 /**
  * presentKey로 읽은 키를 할 일로. PowerPoint와 같게: → ↓ PageDown Space Enter N은 다음 장, ← ↑ PageUp Backspace P는 앞 장,
