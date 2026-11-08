@@ -17,7 +17,7 @@ describe('홍보 페이지', () => {
   it('다운로드 단추는 늘 최신 버전의 두 파일을 가리킨다', () => {
     const links = [...html.matchAll(/href="([^"]*releases[^"]*\.zip)"/g)].map((m) => m[1])
     expect(new Set(links)).toEqual(
-      new Set(['https://github.com/wlsdks/gyeol/releases/latest/download/gyeol-windows.zip', 'https://github.com/wlsdks/gyeol/releases/latest/download/gyeol-mac.zip']),
+      new Set(['https://github.com/wlsdks/framo/releases/latest/download/gyeol-windows.zip', 'https://github.com/wlsdks/framo/releases/latest/download/gyeol-mac.zip']),
     )
   })
 

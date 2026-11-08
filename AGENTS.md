@@ -4,7 +4,7 @@
 
 ## 무엇을 만드나
 
-이름은 **Framo**(frame에서. 예전 이름 ‘결’)입니다. 화면, 배포본, 홍보 페이지, 안내 글에 씁니다. 기계가 읽는 이름은 예전 그대로 `gyeol`입니다(저장소 `wlsdks/gyeol`, 패키지 이름, MCP 서버 id `gyeol`, `gyeol-mcp.mjs`, `release/gyeol-*.zip`, 홍보 페이지 주소): 바꾸면 이미 연결한 AI 설정과 내려받기 주소가 끊깁니다. 저장 형식과 저장소 이름(`html-maker/deck` 같은 format, IndexedDB 이름, `/__html-maker/` 주소, BroadcastChannel, localStorage 키)은 예전 이름 그대로 둡니다. 바꾸면 예전에 저장한 발표를 읽지 못합니다.
+이름은 **Framo**(frame에서. 예전 이름 ‘결’)입니다. 화면, 배포본, 홍보 페이지, 안내 글에 씁니다. 저장소는 `wlsdks/framo`입니다(2026-11-08에 `wlsdks/gyeol`에서 바꿈. GitHub이 예전 주소를 새 주소로 넘긴다). 기계가 읽는 이름은 예전 그대로 `gyeol`입니다(패키지 이름, MCP 서버 id `gyeol`, `gyeol-mcp.mjs`, `release/gyeol-*.zip`, 홍보 페이지 주소): 바꾸면 이미 연결한 AI 설정과 내려받기 주소가 끊깁니다. 저장 형식과 저장소 이름(`html-maker/deck` 같은 format, IndexedDB 이름, `/__html-maker/` 주소, BroadcastChannel, localStorage 키)은 예전 이름 그대로 둡니다. 바꾸면 예전에 저장한 발표를 읽지 못합니다.
 
 PPT로 하던 발표를 HTML로 만드는 도구입니다. 회사 발표에만 쓰는 것이 아니라서 화면과 홍보 페이지에서 ‘회사 발표’로 못 박지 않습니다. 팀장, 본부장께 결정을 받는 보고(사업 제안, 개선 제안, 계획)만이 아니라 주간 업무 보고, 결과·장애 보고, 프로젝트 착수, 지식 공유, 팀 소개처럼 동료나 다른 부서 앞에서 하는 발표도 다룹니다. 어느 한 직무(영업 같은)를 위한 도구가 아니라서, 설명과 안내 문구, 예시도 한 직무에 치우치지 않게 씁니다.
 
@@ -20,7 +20,7 @@ PPT로 하던 발표를 HTML로 만드는 도구입니다. 회사 발표에만 �
 
 1. **발표 내용은 이 PC 밖으로 나가지 않는다.**
    - 바깥 주소로 연결하는 코드를 넣지 않습니다: 외부 API, CDN의 글꼴·스크립트, 분석·오류 수집 도구.
-   - 이 PC 밖으로 나가는 연결은 둘뿐입니다. 하나는 ‘AI에게 부탁’으로, 사람이 누르면 이 PC의 Claude Code를 띄웁니다(`server/agent.ts`. 그 뒤의 연결은 Claude Code가 합니다). 다른 하나는 새 버전 확인과 받기로, `server/update.ts` 한 파일이 `github.com/wlsdks/gyeol`의 릴리스에만 갑니다(저장소 이름을 바꿀 때를 위해 바꿀 이름 `wlsdks/framo`도 압니다. 예전 이름이 200을 주지 않을 때만 같은 꼴로 묻고, 넘겨주기는 따라가지 않습니다): 확인은 `https://api.github.com/repos/wlsdks/gyeol/releases/latest`, 받기는 `https://github.com/wlsdks/gyeol/releases/download/<태그>/<zip>`과 GitHub이 넘겨주는 파일 보관소(`release-assets.githubusercontent.com`, `objects.githubusercontent.com`)입니다. 보내는 것은 Accept와 User-Agent(`Framo/버전`) 머리글뿐이고, 받은 zip은 GitHub이 알려 준 크기와 SHA-256이 맞을 때만 남기며 풀거나 실행하지 않습니다. 브라우저는 바깥으로 가지 않습니다(확인도 로컬 서버가 합니다).
+   - 이 PC 밖으로 나가는 연결은 둘뿐입니다. 하나는 ‘AI에게 부탁’으로, 사람이 누르면 이 PC의 Claude Code를 띄웁니다(`server/agent.ts`. 그 뒤의 연결은 Claude Code가 합니다). 다른 하나는 새 버전 확인과 받기로, `server/update.ts` 한 파일이 `github.com/wlsdks/gyeol`의 릴리스에만 갑니다(2026-11-08에 저장소 이름을 `wlsdks/framo`로 바꿨습니다. 예전 이름은 301로 넘기므로, 예전 이름이 200을 주지 않으면 `wlsdks/framo`에 같은 꼴로 묻습니다. 이미 설치한 버전도 이 길로 새 버전을 찾습니다. 넘겨주기는 따라가지 않습니다): 확인은 `https://api.github.com/repos/wlsdks/gyeol/releases/latest`, 받기는 `https://github.com/wlsdks/gyeol/releases/download/<태그>/<zip>`과 GitHub이 넘겨주는 파일 보관소(`release-assets.githubusercontent.com`, `objects.githubusercontent.com`)입니다. 보내는 것은 Accept와 User-Agent(`Framo/버전`) 머리글뿐이고, 받은 zip은 GitHub이 알려 준 크기와 SHA-256이 맞을 때만 남기며 풀거나 실행하지 않습니다. 브라우저는 바깥으로 가지 않습니다(확인도 로컬 서버가 합니다).
    - 이 밖의 연결을 더하거나 허락 목록을 넓히지 않습니다. 소스는 `scripts/offline.test.ts`가, 빌드 결과는 `scripts/offline.mjs`(pack과 검수가 같이 씀)가 지킵니다.
    - CSP(`server/csp.ts`, `src/export/exportHtml.tsx`의 `exportCsp`)를 느슨하게 바꾸지 않습니다.
    - 서버(`server/serve.ts`)는 `127.0.0.1`에만 묶고 Host 검사를 유지합니다.
@@ -78,7 +78,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 | `server/` | 로컬 서버, AI 공유 창구, ‘AI에게 부탁’으로 Claude Code 띄우기(`agent.ts`), 새 버전 확인과 받기(`update.ts`가 바깥 연결, `updateRoutes.ts`가 창구), CSP |
 | `mcp/` | MCP 서버 |
 | `scripts/`, `launch/` | 묶기, `Framo.exe` 만들기(`exe.mjs`, 아이콘은 `icon.mjs`로 `launch/framo.ico`), 라이선스 확인, 바깥 주소 검사(`offline.mjs`), 더블클릭 실행 파일 |
-| `site/` | 홍보 페이지(GitHub Pages, https://wlsdks.github.io/gyeol/). 바깥 주소에서 아무것도 불러오지 않는 정적 파일(글꼴도 안에 둠, CSP). 새 버전을 올리면 다운로드 구역의 버전, 날짜, 파일 크기도 고칩니다(`scripts/site.test.ts`가 버전을 확인). 고친 뒤 올리기: `git subtree push --prefix site origin gh-pages` |
+| `site/` | 홍보 페이지(GitHub Pages, https://wlsdks.github.io/framo/). 바깥 주소에서 아무것도 불러오지 않는 정적 파일(글꼴도 안에 둠, CSP). 새 버전을 올리면 다운로드 구역의 버전, 날짜, 파일 크기도 고칩니다(`scripts/site.test.ts`가 버전을 확인). 고친 뒤 올리기: `git subtree push --prefix site origin gh-pages` |
 
 ## 디자인
 

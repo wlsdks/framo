@@ -1,6 +1,6 @@
 # 릴리스: 버전 태그(v0.5.0 같은)를 올리면 그 커밋에서 검수(ci.yml)를 다 다시 돌리고(세 운영체제 × Node 둘, 윈도우 배포본 켜 보기),
 # 검수가 켜 본 윈도우용 zip과 맥용 zip을 GitHub 릴리스에 붙인다.
-# 앱의 '새 버전' 알림은 이 릴리스(github.com/wlsdks/gyeol)만 보고, zip의 SHA-256(GitHub가 붙이는 digest)을 확인한 뒤에 받는다.
+# 앱의 '새 버전' 알림은 이 릴리스(github.com/wlsdks/framo, 예전 이름 gyeol)만 보고, zip의 SHA-256(GitHub가 붙이는 digest)을 확인한 뒤에 받는다.
 # 윈도우용은 윈도우 러너에서 묶어 Framo.exe의 파일 정보를 윈도우에서 직접 읽어 확인한다(scripts/exe.mjs, resedit는 어디서나 돈다).
 # 올리는 법: package.json의 version을 고치고 커밋한 뒤 `git tag v0.5.0 && git push origin v0.5.0`
 # 쓰기 권한은 릴리스를 만드는 일(publish) 하나만 받는다. 그 일은 저장소의 코드나 npm 꾸러미를 돌리지 않고 받은 zip과 gh만 쓴다.
