@@ -7,6 +7,7 @@
 //   npm run look -- check [--base http://localhost:5199] [--seeds 1-4] [--themes white,navy,serif] [--large]
 //   npm run look -- frame --only cover,kpi [--base …]
 //   npm run look -- film  <갤러리 주소> --slide 0 [--level lively] [--every 300] [--count 12] [--out film.png]
+//   npm run look -- pdf   [--base …] [--deck 작업파일.deck] [--out deck.pdf] [--pages 폴더]
 //
 // shot   한 화면을 찍는다. --scrollbars는 윈도우처럼 늘 보이는 스크롤바를 흉내 낸다. --run은 찍기 전에 페이지에서 돌릴 스크립트 파일
 //        (async 함수의 몸통. 쉼표로 여럿을 이어 붙인다. 개발 서버의 모듈을 import('/src/…')로 불러 발표를 만들거나, 단추를 눌러 메뉴를
@@ -14,10 +15,13 @@
 // check  부품 조합(set=combos)을 조건마다 열어 checkCombos()와 checkAssembly()를 돌린다. 문제가 있으면 1로 끝난다.
 // frame  레이아웃의 모든 모양(variants=1)을 두 테마, 명조, 큰 글자, 편집 화면에서 열어 checkFrame()을 돌린다.
 // film   갤러리의 장 하나를 playSlide로 움직이며 every ms마다 찍어 한 장의 필름 띠로 묶는다(모션 검토).
+// pdf    편집기의 내보내기 → PDF를 그대로 밟아(예시 발표, --deck이면 그 작업 파일) 크롬이 인쇄할 장들을 그리게 하고 printToPDF로 담는다.
+//        인쇄 창을 처음 연 사람처럼 '배경 그래픽'은 끈 채로, 쪽 크기는 CSS의 @page대로. 쪽 수와 장 수, 쪽 크기, 글꼴을 넣었는지,
+//        그림으로 구운 것의 수를 알리고 어긋나면 1로 끝난다. --pages면 인쇄 화면으로 그린 장마다의 그림도 남긴다(외부 도구 없이 보기).
 // 개발 서버(npm run dev)가 떠 있어야 한다. 주소를 생략하면 http://localhost:5199(AGENTS.md의 개발 포트)를 쓴다.
 
 import { spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -61,8 +65,11 @@ async function openBrowser({ width = 1920, height = 1080 } = {}) {
   })
   let seq = 0
   const waiting = new Map()
+  /** @type {((msg: any) => void)[]} */
+  const listeners = []
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data)
+    if (!msg.id) listeners.forEach((l) => l(msg))
     const w = msg.id && waiting.get(msg.id)
     if (!w) return
     waiting.delete(msg.id)
@@ -82,6 +89,9 @@ async function openBrowser({ width = 1920, height = 1080 } = {}) {
   await tab('Runtime.enable')
 
   const page = {
+    /** 날 CDP 명령과 이벤트 (pdf가 쓴다) */
+    cdp: tab,
+    on: (/** @type {(msg: any) => void} */ fn) => listeners.push(fn),
     async size(w, h) {
       await tab('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false })
     },
@@ -259,12 +269,97 @@ async function film(o) {
   }
 }
 
+/** 보이는 글로 단추를 찾아 그 가운데를 마우스로 누른다(사람의 누름으로 친다) */
+async function press(page, text, selector = 'button') {
+  const at = await page.eval(`(() => { const el = [...document.querySelectorAll(${JSON.stringify(selector)})].find((b) => b.getBoundingClientRect().width && b.innerText.includes(${JSON.stringify(text)})); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`)
+  if (!at) throw new Error(`‘${text}’ 단추를 찾지 못했어요.`)
+  for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await page.cdp('Input.dispatchMouseEvent', { type, ...at, button: 'left', clickCount: 1 })
+}
+
+/** PDF에서 쪽 수, 쪽 크기, 글꼴, 그림을 센다(Skia가 쓰는 PDF는 이 표시들을 압축하지 않는다) */
+function pdfFacts(buf) {
+  const t = buf.toString('latin1')
+  const count = (re) => (t.match(re) || []).length
+  return {
+    pages: count(/\/Type \/Page\b(?!s)/g),
+    sizes: [...new Set((t.match(/\/MediaBox \[[^\]]*\]/g) || []).map((m) => m.slice(11, -1)))],
+    // 글자는 글꼴로 넣어야 벡터다(Type3도 글자 모양을 선으로 넣는다). 글꼴이 하나도 없으면 글자를 그림으로 구운 것이다
+    fonts: count(/\/Type \/Font\b/g),
+    images: count(/\/Subtype \/Image\b/g),
+  }
+}
+
+async function pdf(o) {
+  const base = o.base || DEFAULT_BASE
+  const page = await openBrowser({ width: 1600, height: 900 })
+  try {
+    // 인쇄 창 대신: 부른 것만 적어 두고, 인쇄가 끝났다고 보고 장들을 거두는 1초 뒤의 정리(exports.tsx)는 PDF를 다 만든 뒤로 미룬다
+    await page.cdp('Page.addScriptToEvaluateOnNewDocument', {
+      source: `window.print = () => { window.__printed = true }; { const st = window.setTimeout; window.setTimeout = function (fn, ms, ...a) { if (ms === 1000 && window.__printed) { window.__done = fn; return 0 } return st.call(window, fn, ms, ...a) } }`,
+    })
+    await page.go(base, 1200)
+    if (o.deck) {
+      await page.cdp('Page.setInterceptFileChooserDialog', { enabled: true })
+      const chosen = new Promise((resolve) => page.on((m) => m.method === 'Page.fileChooserOpened' && resolve(m.params)))
+      await press(page, '파일 열기')
+      const fc = await Promise.race([chosen, sleep(5000).then(() => null)])
+      if (!fc) throw new Error('파일 고르기 창이 열리지 않았어요.')
+      await page.cdp('DOM.setFileInputFiles', { files: [o.deck], backendNodeId: fc.backendNodeId })
+    } else await press(page, '완성된 예시 보기')
+    await sleep(3500)
+    await press(page, '내보내기')
+    await sleep(400)
+    await press(page, 'PDF', '.menu button')
+    await sleep(800)
+    // 빈칸이 남았다고 물으면 그대로 내보낸다
+    if (await page.eval(`!!document.querySelector('.modal')`)) await press(page, 'PDF', '.modal button')
+    for (let i = 0; i < 1200 && !(await page.eval('!!window.__printed')); i++) await sleep(100)
+    const shown = await page.eval(`document.querySelectorAll('.print-page').length`)
+    if (!shown) throw new Error('인쇄할 장이 그려지지 않았어요.')
+    if (o.pages) {
+      // 인쇄 화면으로 그린 장마다의 그림: PDF에 담긴 모습과 같은 짜임이다(PDF를 그림으로 바꾸는 도구 없이 보기).
+      // PDF보다 먼저 찍는다: PDF를 만들면 인쇄가 끝났다는 알림(afterprint)에 인쇄할 장들을 거둔다
+      mkdirSync(o.pages, { recursive: true })
+      await page.cdp('Emulation.setEmulatedMedia', { media: 'print' })
+      await page.size(1920, 1080)
+      for (let i = 0; i < shown; i++) {
+        const clip = await page.eval(`(() => { const r = document.querySelectorAll('.print-page')[${i}].getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height, scale: 1 } })()`)
+        const shot = await page.cdp('Page.captureScreenshot', { format: 'png', clip, captureBeyondViewport: true })
+        writeFileSync(join(o.pages, `${String(i + 1).padStart(3, '0')}.png`), Buffer.from(shot.data, 'base64'))
+      }
+      await page.cdp('Emulation.setEmulatedMedia', { media: '' })
+    }
+    // 조각으로 받는다: 장이 100장을 넘는 발표는 PDF가 커서 한 번에 받으면 답이 오지 않았다
+    const { stream } = await page.cdp('Page.printToPDF', { preferCSSPageSize: true, printBackground: false, transferMode: 'ReturnAsStream' })
+    const parts = []
+    for (;;) {
+      const c = await page.cdp('IO.read', { handle: stream, size: 1 << 20 })
+      parts.push(Buffer.from(c.data, c.base64Encoded ? 'base64' : 'latin1'))
+      if (c.eof) break
+    }
+    await page.cdp('IO.close', { handle: stream })
+    const out = o.out || 'deck.pdf'
+    const buf = Buffer.concat(parts)
+    writeFileSync(out, buf)
+    await page.eval('window.__done && window.__done(), true')
+    const f = pdfFacts(buf)
+    const problems = []
+    if (f.pages !== shown) problems.push(`쪽이 ${f.pages}개인데 장은 ${shown}장이에요`)
+    if (f.sizes.length !== 1 || f.sizes[0] !== '0 0 1440 810') problems.push(`쪽 크기가 16:9 한 가지가 아니에요: ${f.sizes.join(', ')}`)
+    if (!f.fonts) problems.push('글꼴이 없어요(글자를 그림으로 구웠어요)')
+    console.log(`${problems.length ? '✗' : '✓'} ${out}: 장 ${shown}장, 쪽 ${f.pages}, 크기 ${f.sizes.join(', ')}pt, 글꼴 ${f.fonts}, 그림 ${f.images}${problems.length ? '\n  ' + problems.join('\n  ') : ''}`)
+    if (problems.length) process.exitCode = 1
+  } finally {
+    await page.close()
+  }
+}
+
 /** @type {Record<string, (o: Record<string, any>) => Promise<void>>} */
-const COMMANDS = { shot, check, frame, film }
+const COMMANDS = { shot, check, frame, film, pdf }
 const o = args(process.argv.slice(2))
 const cmd = COMMANDS[o._[0]]
 if (!cmd) {
-  console.error('쓰는 법: npm run look -- shot|check|frame|film … (scripts/look.mjs 맨 위 참고)')
+  console.error('쓰는 법: npm run look -- shot|check|frame|film|pdf … (scripts/look.mjs 맨 위 참고)')
   process.exit(2)
 }
 cmd(o).catch((e) => {

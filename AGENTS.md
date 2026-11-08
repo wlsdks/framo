@@ -59,7 +59,7 @@ npm run build        # dist/(화면) + dist-node/(로컬 서버, MCP 서버)
 npm start            # http://127.0.0.1:41580
 npm run mcp          # MCP 서버를 직접 띄우기 (보통은 Claude Code, Codex가 띄움)
 npm run licenses     # 라이선스 확인
-npm run look -- shot|check|frame|film …  # 창 없는 크롬으로 화면 찍기, 조합·틀 검사, 모션 필름 띠(개발 서버가 떠 있을 때, scripts/look.mjs)
+npm run look -- shot|check|frame|film|pdf …  # 창 없는 크롬으로 화면 찍기, 조합·틀 검사, 모션 필름 띠, 내보내기 → PDF 검사(개발 서버가 떠 있을 때, scripts/look.mjs)
 npm run pack         # 나눠 줄 폴더와 zip (release/)
 # 릴리스: package.json의 version을 올려 커밋한 뒤 git tag vX.Y.Z && git push origin vX.Y.Z
 #   → .github/workflows/release.yml이 검수 후 zip 둘과 SHA256SUMS.txt를 GitHub 릴리스에 올린다

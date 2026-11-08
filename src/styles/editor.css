@@ -114,7 +114,7 @@
   font-weight: 600;
 }
 
-/* 저장 상태와 그 옆의 할 일 하나 (보관 폴더 정하기). 칠하지 않은 글자 단추: 늘 보이지만 편집보다 먼저 눈에 띄지 않게 */
+/* 저장 상태와 그 옆의 할 일 하나 (보관 폴더 고르기). 칠하지 않은 글자 단추: 늘 보이지만 편집보다 먼저 눈에 띄지 않게 */
 .save-wrap {
   position: relative;
   display: flex;
@@ -211,6 +211,17 @@
   gap: 14px;
   margin-top: 14px;
   font-size: 13px;
+}
+
+/* 고르기 단추 바로 아래: 단추를 누르면 열리는 창에서 할 일 (ui.tsx의 FOLDER_TIP). 할 일이라 본문(.save-pop-p)과 같은 크기와 색.
+   작고 옅은 글로 두었더니 창에서 가장 안 읽히는 글이 되었다 */
+.save-pop-tip {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+  /* 끝 줄에 한 낱말만 남지 않게 */
+  text-wrap: pretty;
 }
 
 .save-pop-foot {
