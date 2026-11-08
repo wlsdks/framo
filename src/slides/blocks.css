@@ -46,6 +46,8 @@
 @import './styles/blocks/decision.css';
 @import './styles/blocks/network.css';
 @import './styles/blocks/hub.css';
+@import './styles/blocks/aliases.css';
+@import './styles/blocks/dupes.css';
 @import './styles/blocks/gate.css';
 @import './styles/blocks/layers.css';
 @import './styles/blocks/search.css';

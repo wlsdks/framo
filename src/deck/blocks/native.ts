@@ -1040,6 +1040,67 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  dupes: {
+    name: '겹친 수고',
+    description: '여러 팀이 따로 하던 같은 일을 하나로 합쳐 같이 쓰는 모습',
+    motion: '팀마다 하던 같은 일이 동시에 밝아졌다가 한꺼번에 지워지고, 아래에 같이 쓸 하나가 올라와요',
+    fields: [
+      { key: 'heading', label: '소제목', hint: '예: 지금은 팀마다 따로', optional: true },
+      { key: 'label', label: '하나의 이름', hint: '예: 같이 쓰면' },
+      { key: 'result', label: '대신할 하나', hint: '예: 한 번 만든 일정 양식을 모든 팀이 씀', multiline: true },
+    ],
+    items: {
+      label: '팀',
+      min: 2,
+      max: 5,
+      default: 3,
+      fields: [
+        { key: 'title', label: '누가', hint: '팀이나 사람', hints: ['영업팀', '마케팅팀', '운영팀', '인사팀', '재무팀'] },
+        { key: 'body', label: '따로 하던 일', hint: '따로 하던 일', hints: ['주간 일정 양식을 직접 만듦', '주간 일정 양식을 직접 만듦', '주간 일정 양식을 직접 만듦', '주간 일정 양식을 직접 만듦', '주간 일정 양식을 직접 만듦'], multiline: true },
+      ],
+    },
+    minSpan: 6,
+    prefSpan: 12,
+    sample: {
+      fields: { heading: '지금은 팀마다 따로', label: '같이 쓰면', result: '한 번 만든 일정 양식을 모든 팀이 씀' },
+      items: [
+        { title: '영업팀', body: '주간 일정 양식을 직접 만듦' },
+        { title: '마케팅팀', body: '주간 일정 양식을 직접 만듦' },
+        { title: '운영팀', body: '주간 일정 양식을 직접 만듦' },
+      ],
+    },
+  },
+  aliases: {
+    name: '같은 대상, 다른 이름',
+    description: '하나를 곳마다 다르게 부르는 모습. 용어가 맞지 않아 생기는 혼란을 보여 줘요',
+    motion: '대상 이름이 곳마다 부르는 이름으로 차례로 바뀌다가 원래 이름으로 돌아와요',
+    fields: [
+      { key: 'label', label: '이름표', hint: '예: 같은 것' },
+      { key: 'center', label: '대상', hint: '예: 고객 문의' },
+      { key: 'note', label: '설명', hint: '예: 부서마다 부르는 이름이 달라 다시 확인해요', optional: true, multiline: true },
+    ],
+    items: {
+      label: '이름',
+      min: 2,
+      max: 6,
+      default: 4,
+      fields: [
+        { key: 'title', label: '부르는 이름', hint: '부르는 이름', hints: ['문의', '요청', '티켓', 'VOC', '건', '케이스'] },
+        { key: 'meta', label: '쓰는 곳', hint: '이 이름을 쓰는 곳', hints: ['고객센터', '운영팀', '개발팀', '기획팀', '영업팀', '품질팀'], optional: true },
+      ],
+    },
+    minSpan: 6,
+    prefSpan: 12,
+    sample: {
+      fields: { label: '같은 것', center: '고객 문의', note: '부서마다 부르는 이름이 달라 다시 확인해요' },
+      items: [
+        { title: '문의', meta: '고객센터' },
+        { title: '요청', meta: '운영팀' },
+        { title: '티켓', meta: '개발팀' },
+        { title: 'VOC', meta: '기획팀' },
+      ],
+    },
+  },
   network: {
     name: '연결도',
     description: '가운데 하나에 여러 시스템이나 팀이 이어진 모습',

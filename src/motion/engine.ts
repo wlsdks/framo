@@ -2513,6 +2513,96 @@ export function motionEngine(): MotionEngine {
           }
           break
         }
+        case 'dupes': {
+          // 따로 하던 같은 일: 팀 줄이 차례로 나오고(한 일은 아직 지우지 않은 글자색), 다 나오면 한 일들이 동시에 강조색으로 밝아졌다가
+          // (다 같은 일) 한꺼번에 줄이 그어지며 옅어진다. 그다음 아래의 하나가 올라온다. 한 일의 움직임은 한 애니메이션으로: 둘로
+          // 나누면 그 사이에 끝 모습(지운 모습)이 잠깐 보였다
+          lines(one('.bk-h'), 60)
+          const rows = $('.bk-dp-row')
+          const accent = getComputedStyle(scope).getPropertyValue('--accent').trim()
+          const ink = getComputedStyle(scope).getPropertyValue('--ink-2').trim()
+          const step = levelName === 'lively' ? 200 : 170
+          const flash = 120 + rows.length * step + 260
+          const strike = flash + 520
+          rows.forEach((row, k) => {
+            const at = 120 + k * step
+            fade(row.querySelector('.bk-dp-who'), at, 300)
+            const what = row.querySelector<HTMLElement>('.bk-dp-what')
+            if (!what || still) return
+            const total = strike + 420 - at
+            const o = (t: number) => Math.min(1, Math.max(0, (t - at) / total))
+            run(
+              anims,
+              what,
+              [
+                { opacity: 0, translate: `0 ${L.y * 0.4}px`, color: ink, textDecorationColor: 'transparent', offset: 0, easing: OUT },
+                { opacity: 1, translate: '0 0', color: ink, textDecorationColor: 'transparent', offset: o(at + 380) },
+                { opacity: 1, translate: '0 0', color: ink, textDecorationColor: 'transparent', offset: o(flash) },
+                { opacity: 1, translate: '0 0', color: accent, textDecorationColor: 'transparent', offset: o(flash + 180) },
+                { opacity: 1, translate: '0 0', color: ink, textDecorationColor: 'transparent', offset: o(strike) },
+              ],
+              s(at),
+              { easing: 'linear', duration: d(total) },
+            )
+          })
+          fade(one('.bk-dp-l'), strike + 260, 400)
+          rise(one('.bk-dp-r'), strike + 320, L.y * 0.5)
+          break
+        }
+        case 'aliases': {
+          // 같은 대상, 다른 이름: 위의 대상 글자가 곳마다 부르는 이름으로 차례로 바뀌고(바뀔 때 그 이름이 아래에 나타나며 잠깐 강조색),
+          // 마지막에 원래 이름으로 돌아온다. 글자를 바꾸는 것은 프레임마다 시계(nowFor)를 읽어 '하나씩'으로 멈추면 같이 멈춘다
+          fade(one('.bk-al-l'), 60, 400)
+          const c = one('.bk-al-c')
+          const its = $('.bk-al-it')
+          const names = its.map((it) => (it.querySelector('.bk-al-t')?.textContent ?? '').trim())
+          const hold = levelName === 'lively' ? 620 : 540
+          const t0 = 260
+          const accent = getComputedStyle(scope).getPropertyValue('--accent').trim()
+          its.forEach((it, k) => {
+            const at = t0 + k * hold
+            run(anims, it, [{ opacity: 0, translate: `0 ${L.y * 0.4}px` }], s(at), { easing: OUT, duration: d(320) })
+            const t = it.querySelector<HTMLElement>('.bk-al-t')
+            if (t && !still) run(anims, t, [{ color: accent }, { color: accent, offset: 0.6 }, { color: getComputedStyle(t).color }], s(at), { easing: 'linear', duration: d(hold) })
+          })
+          const back = t0 + its.length * hold
+          fade(one('.bk-al-n'), back + 200, 500)
+          if (c) {
+            run(anims, c, [{ opacity: 0 }], s(80), { easing: OUT, duration: d(240) })
+            const walker = document.createTreeWalker(c, NodeFilter.SHOW_TEXT)
+            const node = walker.nextNode() as Text | null
+            if (node && names.every(Boolean) && !still && !quiet && !c.closest('.m-edit, [data-mo-keep]')) {
+              const original = node.nodeValue || ''
+              const born = performance.now()
+              const swaps = names.map((_, k) => s(t0 + k * hold))
+              const end = s(back)
+              let frame = 0
+              let done = () => {}
+              waits.push(new Promise<void>((r) => (done = r)))
+              const tick = () => {
+                const el = nowFor(c) - born
+                if (el >= end) {
+                  node.nodeValue = original
+                  done()
+                  return
+                }
+                const k = swaps.filter((x) => x <= el).length - 1
+                node.nodeValue = k >= 0 ? names[k] : original
+                frame = requestAnimationFrame(tick)
+              }
+              frame = requestAnimationFrame(tick)
+              stops.push(() => {
+                cancelAnimationFrame(frame)
+                node.nodeValue = original
+                done()
+              })
+              // 바뀔 때마다 짧게 옅어졌다 또렷해진다(글자만 갈아 끼우면 깜빡이는 것처럼 보였다)
+              // 글자는 가장 옅을 때 바뀐다
+              ;[...swaps.slice(1), end].forEach((at) => run(anims, c, [{ opacity: 1 }, { opacity: 0.2, offset: 0.4 }, { opacity: 1 }], Math.max(0, at - d(104)), { easing: 'ease-out', duration: d(260) }))
+            }
+          }
+          break
+        }
         case 'hub': {
           // 모이고 퍼지기(모션 그래픽 장면). 모이기는 끝점이 위에서부터 맺히고 선이 가운데로 그어진 뒤 계기판이 서고, 퍼지기는
           // 계기판이 먼저 서고 선이 끝점으로 뻗는다. 다 서면 데이터 조각이 길을 따라 쉬지 않고 흐르고, 조각이 닿는 순간 그 길의
