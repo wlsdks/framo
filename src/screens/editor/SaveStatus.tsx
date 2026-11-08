@@ -233,7 +233,7 @@ function SaveDetails({ deck, close, onOpenVersions }: { deck: Deck; close: () =>
             <AlertIcon />‘{folder.name}’ 폴더에 저장하지 못했어요
           </p>
           <p className="save-pop-p">
-            폴더를 옮기거나 지웠거나, 공유 드라이브 연결이 끊겼거나, 폴더 허용이 풀렸을 수 있어요. 고친 내용은 이 브라우저에는 저장돼 있어요.
+            폴더를 옮기거나 지웠거나, 회사 드라이브 연결이 끊겼거나, 폴더 허용이 풀렸을 수 있어요. 고친 내용은 이 브라우저에는 저장돼 있어요.
           </p>
           <div className="save-pop-actions">
             <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={retryFolder}>
@@ -288,7 +288,7 @@ function SaveDetails({ deck, close, onOpenVersions }: { deck: Deck; close: () =>
         <>
           <p className="save-pop-h">지금은 이 브라우저 안에만 저장돼요</p>
           <p className="save-pop-p">
-            {FOLDER_WHY} 다른 PC에서도 열 수 없어요. PC나 팀 공유 드라이브의 폴더를 골라 두면 고칠 때마다 그곳에도 저장돼요.
+            {FOLDER_WHY} 다른 PC에서도 열 수 없어요. PC의 문서 폴더나 회사{'\u00a0'}드라이브의 폴더를 골라 두면 고칠 때마다 그곳에도 저장돼요.
           </p>
           <div className="save-pop-actions">
             <button type="button" className="btn btn-primary btn-sm" onClick={() => choose()}>
