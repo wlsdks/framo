@@ -12,6 +12,8 @@ export interface BlockEdit {
   /** 끌고 있는 부품. 그 칸은 놓일 자리로 그린다 */
   dragId: string | null
   selected: string | null
+  /** AI에게 숨긴 부품(deck/aiHidden.ts). 편집 화면에서만 작은 자물쇠로 알린다 */
+  aiHidden: ReadonlySet<string>
   /** '칸 더하기'로 연 칸: '부품id 칸키'. 비어 있어도 그린다 */
   opened: ReadonlySet<string>
   onCellPointerDown(e: PointerEvent<HTMLElement>, block: Block): void

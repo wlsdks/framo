@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { aiHiddenPatch, slideAiHidden } from '../../deck/aiHidden'
 import { slideName } from '../../deck/blocks'
 import type { Deck, Slide } from '../../deck/types'
 import { onMenuKeys } from '../../lib/menuKeys'
@@ -6,7 +7,7 @@ import { useDeck } from '../../store/deckStore'
 import { useEscape } from '../ui'
 
 /**
- * 슬라이드 하나의 메뉴: 복제, 발표에서 숨기기, 지우기. ('빼기'는 무언가를 잃는 말처럼 들려 쓰지 않는다)
+ * 슬라이드 하나의 메뉴: 복제, 발표에서 숨기기, AI에게 숨기기, 지우기. ('빼기'는 무언가를 잃는 말처럼 들려 쓰지 않는다)
  * 슬라이드 아래 '더 보기'(⋯)와 왼쪽 목록의 오른쪽 클릭이 같이 쓴다.
  * 두 곳의 글과 막는 규칙(하나뿐인 슬라이드는 지우지 않는다)이 따로 놀지 않게 한 곳에 둔다
  */
@@ -37,6 +38,21 @@ export function SlideMenuItems({ deck, slide, close, onRemove }: { deck: Deck; s
         <span className="menu-item-t">
           {slide.hidden ? '발표에 다시 보이기' : '발표에서 숨기기'}
           <span className="menu-item-desc">{slide.hidden ? '발표할 때 이 슬라이드를 다시 보여요' : '지우지 않고 발표할 때만 건너뛰어요'}</span>
+        </span>
+      </button>
+      {/* 글은 원래 AI에게 가지 않는다. 숨기면 무슨 슬라이드인지, 칸이 몇 자인지도 가지 않고 AI가 바꾸거나 옮기지 못한다 */}
+      <button
+        type="button"
+        role="menuitem"
+        className="menu-item"
+        onClick={() => {
+          close()
+          store.setOptions(slide.id, aiHiddenPatch(slide, !slideAiHidden(slide)))
+        }}
+      >
+        <span className="menu-item-t">
+          {slideAiHidden(slide) ? 'AI에게 보이기' : 'AI에게 숨기기'}
+          <span className="menu-item-desc">{slideAiHidden(slide) ? 'AI가 다시 이 슬라이드의 모양을 보고 다듬을 수 있어요' : 'AI가 이 슬라이드를 보지도 바꾸지도 못해요'}</span>
         </span>
       </button>
       <div className="menu-sep" role="separator" />

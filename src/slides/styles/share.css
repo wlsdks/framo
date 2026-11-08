@@ -55,9 +55,12 @@
   margin: 0 0 20px;
 }
 
+/* 한 줄로 줄이는 값(.one-line의 100cqi)이 장이나 칸 전체가 아니라 제 단의 너비에 맞게: 전체 너비로 재던 때는 긴 값이 옆 단 위로
+   넘어가 겹쳐 그려졌다. 도넛과 100칸의 이름표는 줄이 칸을 같이 쓰는 subgrid라 담지 않는다(아래) */
 .sh-item {
   position: relative;
   min-width: 0;
+  container-type: inline-size;
 }
 
 /* 조각 색 표시: 비율 위의 작은 네모(도넛, 100칸의 목록과 같은 꼴) */
@@ -254,6 +257,7 @@
 }
 
 :is(.va-donut, .va-units) .sh-item {
+  container-type: normal;
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;

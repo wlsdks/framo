@@ -566,6 +566,18 @@
   height: 13px;
 }
 
+/* AI에게 숨긴 장: 이름 옆의 작은 자물쇠 (컴포넌트의 자물쇠와 같은 그림). 경고가 아니라서 옅은 글자색 */
+.thumb-ai-hidden {
+  display: inline-flex;
+  flex: none;
+  color: var(--ink-3);
+}
+
+.thumb-ai-hidden .icon {
+  width: 13px;
+  height: 13px;
+}
+
 /* 가운데 작업 영역 */
 .stage {
   display: flex;

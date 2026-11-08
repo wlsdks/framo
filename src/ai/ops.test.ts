@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { autoArranged, autoPlace, BLOCKS, boardAreaH, boardSig, canCompose, makeBlock, resizeBlock, tiles } from '../deck/blocks'
+import { autoArranged, autoPlace, BLOCKS, boardAreaH, boardSig, canCompose, insertAt, makeBlock, resizeBlock, settleDeck, tiles } from '../deck/blocks'
+import { makeSlide } from '../deck/generate'
 import { createSampleDeck } from '../deck/sample'
 import type { Block, Deck, Item, LayoutId, Slide } from '../deck/types'
 import { applyOps, parseOp, parseRequest, slideEmpty, type Op } from './ops'
 import { REQUEST_FORMAT, REQUEST_VERSION } from './protocol'
-import { checkShape, shapeSlideId, toShape } from './share'
+import { checkShape, shapeBlockId, shapeSlideId, toShape as shapeOf, type ShapeBlock, type ShapeDeck, type ShapeSlide } from './share'
+
+/** 숨긴 장과 부품이 없는 발표의 모양: 장마다 레이아웃과 칸을 바로 읽는다 (숨긴 것은 share.test.ts의 'AI에게 숨기기'에서 본다) */
+type OpenShape = Omit<ShapeDeck, 'slides'> & { slides: (Omit<ShapeSlide, 'blocks'> & { blocks?: ShapeBlock[] })[] }
+const toShape = (...a: Parameters<typeof shapeOf>) => shapeOf(...a) as unknown as OpenShape
 
 const deck = createSampleDeck()
 const shape = toShape(deck)
@@ -591,5 +596,114 @@ describe('알아서 짠 판의 표시', () => {
     expect(back.results.map((r) => r.code)).toEqual(['applied', 'applied'])
     expect(ats(back.deck)).toEqual(now.map((b) => b.at))
     expect(back.deck.slides[i].arranged).toBe(boardSig(back.deck.slides[i].blocks!))
+  })
+})
+
+describe('AI에게 숨긴 것', () => {
+  // 숫자(n) 옆에 인용(q), 그 아래 장 너비의 글(t). 숫자를 AI에게 숨긴다. 편집기처럼 판을 맞춰 둔 발표에서 본다
+  const b = (type: Block['type'], id: string, fields: Record<string, string> = {}): Block => ({ ...makeBlock(type), id, fields })
+  const board = () => {
+    const top = insertAt(autoPlace([], b('number', 'n', { label: '절감액', value: '3.6억 원' }))!, { at: 'n', side: 'right' }, b('quote', 'q'))!
+    return insertAt(top, { at: null, side: 'below' }, b('text', 't'))!
+  }
+  const base = createSampleDeck()
+  const hiddenDeck = settleDeck({
+    ...base,
+    slides: [
+      ...base.slides,
+      { ...makeSlide('compose'), id: 'c1', blocks: board(), options: { aiHiddenBlocks: ['n'] } },
+      { ...makeSlide('statement'), id: 'p1', fields: {}, options: { aiHidden: true } },
+    ],
+  })
+  const C = shapeSlideId({ id: 'c1' })
+  const P = shapeSlideId({ id: 'p1' })
+  // 모양에는 숨긴 컴포넌트의 id가 없지만, 숨기기 전에 받은 모양의 id로 올 수 있다
+  const N = shapeBlockId({ id: 'n' })
+  const Q = shapeBlockId({ id: 'q' })
+  const T = shapeBlockId({ id: 't' })
+  const hiddenOf = (d: Deck) => JSON.stringify([d.slides.find((s) => s.id === 'p1'), d.slides.find((s) => s.id === 'c1')!.blocks!.find((x) => x.id === 'n')])
+  const apply = (d: Deck, ops: Op[]) => {
+    const out = applyOps(d, ops)
+    return { ...out, codes: out.results.map((r) => r.code) }
+  }
+
+  it('숨긴 컴포넌트를 가리키는 op는 모두 건너뛴다 (빈 컴포넌트라도 빼지 않는다)', () => {
+    const empty = settleDeck({ ...hiddenDeck, slides: hiddenDeck.slides.map((s) => (s.id === 'c1' ? { ...s, blocks: s.blocks!.map((x) => (x.id === 'n' ? { ...x, fields: {} } : x)) } : s)) })
+    const ops: Op[] = [
+      { op: 'set_block', slide: C, block: N, effect: 'rise' },
+      { op: 'set_size', slide: C, block: N, w: 4 },
+      { op: 'set_link', slide: C, block: N, side: 'right', link: 'plus' },
+      { op: 'set_hint', slide: C, block: N, field: 'label', text: '무엇의 숫자인지' },
+      { op: 'move_block', slide: C, block: N, edge: 'bottom' },
+      { op: 'move_block', slide: C, block: T, swap: N },
+      { op: 'move_block', slide: C, block: T, beside: N, side: 'after' },
+      { op: 'add_block', slide: C, type: 'note', beside: N, side: 'below' },
+      { op: 'set_order', slide: C, order: [N] },
+      { op: 'remove_block', slide: C, block: N },
+    ]
+    for (const d of [hiddenDeck, empty]) {
+      const out = apply(d, ops)
+      expect(out.codes).toEqual(ops.map(() => 'private'))
+      expect(hiddenOf(out.deck)).toBe(hiddenOf(d))
+    }
+  })
+
+  it('다른 컴포넌트를 바꾸다 숨긴 컴포넌트의 자리, 크기, 나오는 차례가 바뀌면 되돌린다', () => {
+    const { codes, deck: next } = apply(hiddenDeck, [
+      // 인용을 넓히면 숫자가 좁아진다
+      { op: 'set_size', slide: C, block: Q, w: 9 },
+      // 맨 위에 장 너비로 넣으면 숫자가 낮아지거나 내려간다
+      { op: 'add_block', slide: C, type: 'callout', edge: 'top' },
+      // 글을 맨 위로 옮기면 숫자가 내려간다
+      { op: 'move_block', slide: C, block: T, edge: 'top' },
+      // 인용을 먼저 나오게 하면 숫자가 둘째로 밀린다 (읽는 차례로 숫자, 인용, 글)
+      { op: 'set_order', slide: C, order: [Q] },
+    ])
+    expect(codes).toEqual(['private', 'private', 'private', 'private'])
+    expect(hiddenOf(next)).toBe(hiddenOf(hiddenDeck))
+  })
+
+  it('숨긴 컴포넌트에 닿지 않는 op는 그대로 된다', () => {
+    const { codes, deck: next } = apply(hiddenDeck, [
+      { op: 'set_block', slide: C, block: Q, effect: 'rise', when: 'click' },
+      { op: 'set_block', slide: C, block: T, speed: 'slow' },
+      { op: 'set_options', slide: C, tone: 'invert' },
+      { op: 'set_hint', slide: C, block: T, field: 'body', text: '설명을 두세 문장으로' },
+    ])
+    expect(codes).toEqual(['applied', 'applied', 'applied', 'applied'])
+    expect(hiddenOf(next)).toBe(hiddenOf(hiddenDeck))
+  })
+
+  it('숨긴 슬라이드는 바꾸지도 옮기지도 못하지만, 그 뒤에 넣거나 옮길 수는 있다', () => {
+    const ops: Op[] = [
+      { op: 'set_options', slide: P, tone: 'invert' },
+      { op: 'set_layout', slide: P, layout: 'points' },
+      { op: 'set_hidden', slide: P, hidden: true },
+      { op: 'set_guide', slide: P, text: '안내' },
+      { op: 'set_hint', slide: P, field: 'title', text: '안내' },
+      { op: 'remove_slide', slide: P },
+      { op: 'move_slide', slide: P, after: null },
+    ]
+    const out = apply(hiddenDeck, ops)
+    expect(out.codes).toEqual(ops.map(() => 'private'))
+    expect(out.deck.slides.map((s) => s.id)).toEqual(hiddenDeck.slides.map((s) => s.id))
+    const around = apply(hiddenDeck, [
+      { op: 'add_slide', after: P, layout: 'points', as: 'n1' },
+      { op: 'move_slide', slide: shapeSlideId(hiddenDeck.slides[1]), after: P },
+    ])
+    expect(around.codes).toEqual(['applied', 'applied'])
+    // 숨긴 슬라이드 바로 뒤에 옮긴 장, 그 뒤에 새 장
+    expect(around.deck.slides.slice(-3, -1).map((s) => s.id)).toEqual(['p1', hiddenDeck.slides[1].id])
+    expect(hiddenOf(around.deck)).toBe(hiddenOf(hiddenDeck))
+  })
+
+  it('숨긴 것이 없는 발표에는 아무 영향이 없다', () => {
+    const open = { ...hiddenDeck, slides: hiddenDeck.slides.map((s) => ({ ...s, options: { ...s.options, aiHidden: undefined, aiHiddenBlocks: undefined } })) }
+    const { codes } = apply(open, [
+      { op: 'set_size', slide: C, block: Q, w: 9 },
+      { op: 'set_order', slide: C, order: [Q] },
+      { op: 'set_options', slide: P, tone: 'invert' },
+    ])
+    expect(codes).toEqual(['applied', 'applied', 'applied'])
   })
 })

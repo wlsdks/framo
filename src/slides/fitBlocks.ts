@@ -2060,7 +2060,8 @@ export function blockFitter() {
   }
 
   /**
-   * 레이아웃 장(요약, 요점, 비교, 가격안, 표 같은)의 채움 (docs/VISUAL-RULES.md 6). 본문(.s-body)의 그려진 내용이 본문 높이의 60%에
+   * 레이아웃 장(요약, 요점, 비교, 가격안, 표 같은)의 채움 (docs/VISUAL-RULES.md 6). 본문이 넘치면 먼저 글자를 한두 단계 줄인다(fitPart의 (0)).
+   * 본문(.s-body)의 그려진 내용이 본문 높이의 60%에
    * 못 미치면 (가) 본문의 글자와 그림을 한 단계씩(1.2, 1.44) 키우고 (나) 그래도 비면 줄 사이를 줄마다 같은 값으로 넓힌다(--fill-air,
    * 캔버스 px, airMax까지. 레이아웃 CSS가 줄 사이에 더한다). 넘치거나 겹치거나 그림이 찌그러지거나 장 제목과 다투면 한 단계 앞으로.
    * (다) 그래도 60%에 못 미치면 위에 붙여 아래만 길게 비우지 않고 눈높이 가운데로 내린다(--eye, 위 : 아래 = 1 : 1.2. 부품 장의 eyeLevel과 같다).
@@ -2133,7 +2134,7 @@ export function blockFitter() {
     }
   }
 
-  function fitPart(slide: HTMLElement, { body, head, box, ups: steps }: ReturnType<typeof layoutParts>[number]): void {
+  function fitPart(slide: HTMLElement, { body, head, box, ups: grows }: ReturnType<typeof layoutParts>[number]): void {
     // 본문에 값을 적으면 잰 것을 비운다
     const setB = (name: string, v: string) => {
       body.style.setProperty(name, v)
@@ -2144,6 +2145,7 @@ export function blockFitter() {
       memo = new Map()
     }
     delB('--bk-fit')
+    delB('--fs-min')
     delB('--fill-air')
     delB('--eye')
     delete body.dataset.eye
@@ -2161,6 +2163,27 @@ export function blockFitter() {
     const frame = sr.bottom - (parseFloat(cs.getPropertyValue('--pad-y')) || 0) * k
     const room = frame - b.top
     if (end - b.top <= 0) return
+    // (0) 넘치면 본문의 글자와 그림을 단계로 줄인다(부품 장의 칸과 같은 0.84, 0.7: 글자 크기 단계표의 한두 단계). 넘침 알림과 같은
+    // 잣대(넘침 알림이 보는 상자가 4px 넘게 넘치거나 글이 본문 아래 하단 표시 자리로 나감)로 보고, 줄여도 넘치면 가장 작은 단계로 둔다
+    // (알림은 그대로 뜬다). 출처 글자(22px, 작게면 그만큼 작게)보다는 작아지지 않는다. 예전에는 키우기만 해서, 표의 칸이나 요약의 줄
+    // 이름처럼 긴 글을 쓰면 글자는 그대로인 채 '글이 넘쳤어요'만 떴다(긴 글 점검에서 레이아웃 장 칸 137개 가운데 13개).
+    // 쓰는 동안에도 줄인다: 붙잡아 두는 것은 키우는 단계뿐이다
+    // 넘친 만큼(캔버스 px): 넘침 알림이 보는 상자, 본문 아래 하단 표시 자리로 나간 글
+    const overBy = () => Math.max(spill(slide), ...lines(body).map((q) => (q.b - end) / k))
+    const first = overBy()
+    if (first > 4) {
+      setB('--fs-min', 'calc(var(--t-source) * min(1, var(--scale, 1)))')
+      // 크게(1.2배)는 첫 단계가 보통 크기다(부품 장의 ladder와 같다)
+      for (const f of slide.classList.contains('sz-large') ? [1 / 1.2, steps[1]] : steps) {
+        setB('--bk-fit', String(f))
+        if (overBy() <= 4) break
+      }
+      // 줄여도 조금도 덜 넘치지 않으면(본문 밖, 장 제목이 넘친 것) 줄이지 않는다
+      if (overBy() >= first - 1) {
+        delB('--bk-fit')
+        delB('--fs-min')
+      }
+    }
     // 맞추기 전에 넘침 경고가 보는 상자가 넘쳐 있던 만큼(1px은 반올림 몫). 키우고 넓히고 내려도 이보다 더 넘치게 하지 않는다(spill)
     const allow = Math.max(spill(slide), 1)
     const drawnBottom = () => {
@@ -2225,13 +2248,13 @@ export function blockFitter() {
     }
     // (가) 글자 단계는 60%를 못 채울 때만 올린다
     if (fill() < FILL_MIN) {
-      for (const [j, f] of steps.entries()) {
+      for (const [j, f] of grows.entries()) {
         // 쓰는 동안은 쓰기 전보다 키우지 않는다 (줄이는 것은 그대로)
         if (hold && f > hold.up) break
         setB('--bk-fit', String(f))
         if (bad()) {
           if (j === 0) delB('--bk-fit')
-          else setB('--bk-fit', String(steps[j - 1]))
+          else setB('--bk-fit', String(grows[j - 1]))
           break
         }
         if (fill() >= FILL_MIN) break

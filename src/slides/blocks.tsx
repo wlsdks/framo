@@ -343,6 +343,14 @@ function BlockCell({ block: b, blocks, live, seq, band, linked }: { block: Block
           {spec.name}
         </span>
       )}
+      {/* AI에게 숨긴 컴포넌트: 테두리 오른쪽 위의 작은 자물쇠. 편집 화면에서만 (발표, 내보내기, 목록 그림에는 없다) */}
+      {live && !slot && live.aiHidden.has(b.id) && (
+        <span className="bk-ai-hidden" title="AI에게 숨긴 컴포넌트예요" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M6.5 11h11v9h-11zM8.5 11V8a3.5 3.5 0 017 0v3" />
+          </svg>
+        </span>
+      )}
     </div>
   )
 }

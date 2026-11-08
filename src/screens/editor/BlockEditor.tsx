@@ -40,6 +40,7 @@ import {
   type Shown,
   type ShownCell,
 } from '../../deck/blocks'
+import { aiHiddenIds, aiHiddenPatch } from '../../deck/aiHidden'
 import { FRAME } from '../../deck/frame'
 import { motionOf } from '../../deck/themes'
 import type { Block, BlockEffect, BlockLink, BlockType, Deck, Slide } from '../../deck/types'
@@ -818,7 +819,10 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
       toast.show(text ? `${text.why} ${text.fix}` : '이 슬라이드에는 더 넣을 자리가 없어요. 컴포넌트를 지우거나 다음 슬라이드에 넣어 주세요.')
       return
     }
-    store.setBlocks(s.id, next, undefined, auto)
+    // AI에게 숨긴 컴포넌트를 복제하면 사본도 숨긴다 (같은 글이 든 사본이 AI에게 보이지 않게). 되돌리기는 한 번으로
+    const key = `duplicate ${copy.id}`
+    store.setBlocks(s.id, next, key, auto)
+    if (aiHiddenIds(s).has(b.id)) store.setOptions(s.id, aiHiddenPatch({ ...s, blocks: next }, true, copy.id), key)
     setSelected(copy.id)
   }
   /** 저장할 컴포넌트(하나, 또는 나란한 묶음)가 장에서 차지한 크기 (캔버스 px). 목록의 작은 그림을 그 비율로 그린다 */
@@ -916,6 +920,12 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
       onRemove={() => remove(b)}
       saves={saveChoices(slide, b.id)}
       onSave={(kind) => save(b, kind)}
+      aiHidden={aiHiddenIds(slide).has(b.id)}
+      onAiHidden={(hidden) => {
+        const s = slideRef.current
+        store.setOptions(s.id, aiHiddenPatch(s, hidden, b.id))
+        toast.show(hidden ? 'AI에게 숨겼어요. AI는 이 컴포넌트의 자리만 알고, 바꾸거나 옮기지 못해요.' : '이 컴포넌트의 모양을 다시 AI에게 보여요.', undoAction(toast), 6000)
+      }}
     />
   )
 
@@ -971,6 +981,7 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
     blocks: previewBlocks ?? links.previewBlocks,
     dragId,
     selected: drag ? null : selected,
+    aiHidden: aiHiddenIds(stageSlide),
     opened,
     selectedLink: links.selectedLink,
     linkPreview: links.preview,

@@ -2,6 +2,7 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { slideAiHidden } from '../../deck/aiHidden'
 import { slideName } from '../../deck/blocks'
 import { missingFields, pageInfo } from '../../deck/fields'
 import type { Deck, Slide } from '../../deck/types'
@@ -10,7 +11,7 @@ import { listAccessibility, movedSay, useListDrag } from '../../lib/listDrag'
 import { slideOverflow } from '../../slides/overflow'
 import { ScaledSlide, SlideCanvas, useStableSections } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
-import { AlertIcon, EyeOffIcon, PlusIcon, Popover } from '../ui'
+import { AlertIcon, EyeOffIcon, LockIcon, PlusIcon, Popover } from '../ui'
 import { keys } from '../../lib/keys'
 import { SHORTCUT } from './shortcuts'
 import { AddSlide } from './AddSlide'
@@ -228,7 +229,7 @@ const Thumb = memo(function Thumb(props: ThumbProps) {
         className="thumb-btn"
         aria-current={selected || undefined}
         // 이름은 짧게: 몇 번 장, 장 이름, 빈칸 수. 장 그림과 아래 이름은 이 이름과 겹치니 읽지 않는다
-        aria-label={`${page ? `슬라이드 ${page}` : '숨긴 슬라이드'}, ${slideName(slide)}${missing ? `, 빈칸 ${missing}곳` : ''}`}
+        aria-label={`${page ? `슬라이드 ${page}` : '숨긴 슬라이드'}, ${slideName(slide)}${missing ? `, 빈칸 ${missing}곳` : ''}${slideAiHidden(slide) ? ', AI에게 숨김' : ''}`}
         onClick={() => onSelect(slide.id)}
         onContextMenu={(e) => {
           e.preventDefault()
@@ -250,6 +251,11 @@ const Thumb = memo(function Thumb(props: ThumbProps) {
           {over && (
             <span className="thumb-over" title="글이 슬라이드 밖으로 넘쳤어요">
               <AlertIcon />
+            </span>
+          )}
+          {slideAiHidden(slide) && (
+            <span className="thumb-ai-hidden" title="AI에게 숨긴 슬라이드예요">
+              <LockIcon />
             </span>
           )}
           {slideName(slide)}

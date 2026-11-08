@@ -50,8 +50,11 @@
   list-style: none;
 }
 
+/* 한 줄로 줄이는 이름(.one-line의 100cqi)이 칸 전체가 아니라 제 단의 너비에 맞게: 칸 너비로 재던 때는 긴 이름이 옆 단의 이름 위로
+   넘어가 겹쳐 그려졌다 */
 .bk-al-it {
   min-width: 0;
+  container-type: inline-size;
 }
 
 .bk-al-t {
