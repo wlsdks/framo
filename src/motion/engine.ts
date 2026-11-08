@@ -727,6 +727,68 @@ export function motionEngine(): MotionEngine {
         )
       }
     }
+    /**
+     * 글이 한 글자씩 써진다(대화). 칸의 높이는 다 쓴 높이로 붙잡아 두어 쓰는 동안 아래 줄이 밀리지 않고, 글 끝에 강조색 커서가 따라간다.
+     * keep이면 다 쓴 뒤에도 커서가 남아 깜빡인다(생동감의 마지막 말: 장을 떠나면 걷힌다). 편집 중이거나 움직임을 줄인 화면에서는
+     * 글을 바꾸지 않고 흐리게 들이기만 한다. 끝나면 원래 글 조각으로 되돌린다(play의 끝 표시)
+     */
+    const typeOut = (el: Element | null, at: number, ms: number, keep = false) => {
+      if (!(el instanceof HTMLElement)) return
+      if (still || quiet || el.closest('.m-edit, [data-mo-keep]')) {
+        fade(el, at, 300)
+        return
+      }
+      const nodes: Text[] = []
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n as Text)
+      const texts = nodes.map((n) => n.nodeValue || '')
+      const chars = texts.map((t) => [...t])
+      const total = chars.reduce((a, c) => a + c.length, 0)
+      if (!total) return
+      const minH = el.style.minHeight
+      el.style.minHeight = el.offsetHeight + 'px'
+      const caret = document.createElement('span')
+      caret.className = 'mo-caret'
+      caret.setAttribute('aria-hidden', 'true')
+      const show = (k: number) => {
+        let left = k
+        nodes.forEach((n, i) => {
+          const take = Math.max(0, Math.min(chars[i].length, left))
+          n.nodeValue = chars[i].slice(0, take).join('')
+          left -= take
+        })
+      }
+      show(0)
+      el.appendChild(caret)
+      const start = performance.now() + s(at)
+      const dur = d(ms)
+      let frame = 0
+      let done = () => {}
+      waits.push(new Promise<void>((r) => (done = r)))
+      const restore = () => {
+        nodes.forEach((n, i) => (n.nodeValue = texts[i]))
+        el.style.minHeight = minH
+      }
+      const tick = (now: number) => {
+        const t = Math.min(1, Math.max(0, (now - start) / dur))
+        show(Math.round(total * t))
+        if (t < 1) frame = requestAnimationFrame(tick)
+        else {
+          restore()
+          el.appendChild(caret)
+          if (keep && levelName === 'lively') caret.classList.add('is-blink')
+          else caret.remove()
+          done()
+        }
+      }
+      frame = requestAnimationFrame(tick)
+      stops.push(() => {
+        cancelAnimationFrame(frame)
+        restore()
+        caret.remove()
+        done()
+      })
+    }
     /** 감싼 줄이 따로 나타나지 않는 숫자: 올라가기 시작할 때 함께 나타난다. 아직 차례가 아닌 줄에 0이 미리 보이지 않게 */
     const countIn = (el: Element | null, at: number) => {
       fade(el, at, 240)
@@ -2109,6 +2171,245 @@ export function motionEngine(): MotionEngine {
           const hl = one('.bk-fw-node.is-hl')
           // 부풀기는 transform으로: 나타날 때 쓴 scale과 같은 속성이면 늦게 만든 이것이 시작 전(fill backwards)부터 scale을 덮어 나타나기가 사라진다
           if (hl && links.length) run(anims, hl, [{ transform: 'scale(1)' }, { transform: 'scale(1.03)' }, { transform: 'scale(1)' }], s(again - 60), { easing: 'ease-in-out', duration: d(480) })
+          break
+        }
+        case 'chat': {
+          // 대본처럼: 말하는 사람이 나오고, 그 말이 한 글자씩 써진다. 앞의 말이 다 써지면 다음 사람. 말이 길어도 한 말은 1.2초 안에.
+          // 생동감에서는 마지막 말(답) 끝에 커서가 남아 깜빡인다
+          lines(one('.bk-h'), 60)
+          const turns = $('.bk-ch-turn')
+          let at = 160
+          turns.forEach((turn, k) => {
+            const say = turn.querySelector<HTMLElement>('.bk-ch-say')
+            const len = [...(say?.textContent ?? '')].length
+            const ms = Math.max(360, Math.min(1200, len * 45))
+            fade(turn.querySelector('.bk-ch-who'), at, 300)
+            run(anims, turn, [{ opacity: 0 }, { opacity: 1 }], s(at), { easing: OUT, duration: d(120) })
+            typeOut(say, at + 120, ms, k === turns.length - 1)
+            at += 120 + ms + 320
+          })
+          break
+        }
+        case 'wipe': {
+          // 지금이 먼저 줄마다 올라오고, 세로 선 하나가 왼쪽에서 오른쪽으로 같은 빠르기로 훑는다. 선이 지금 글의 끝을 지날 때 취소선이
+          // 그어지고(글이 한 단계 옅어지며), 바뀐 뒤 글은 선이 지나가는 만큼 왼쪽부터 드러난다. 자리는 움직임을 걸기 전에 잰다
+          const root = one('.bk-wp')
+          const bar = one('.bk-wp-bar')
+          const rows = $('.bk-wp-row')
+          if (!root || !rows.length) break
+          const W = root.offsetWidth || 1
+          const spots = rows.map((row) => {
+            const old = row.querySelector<HTMLElement>('.bk-wp-old')
+            const neu = row.querySelector<HTMLElement>('.bk-wp-new')
+            return { old, neu, o: old ? spot(old, root) : null, n: neu ? spot(neu, root) : null }
+          })
+          fade(one('.bk-wp-hf'), 60, 400)
+          rows.forEach((row, k) => rise(row.querySelector('.bk-wp-was'), 120 + k * 90, L.y * 0.4))
+          const t0 = 260 + rows.length * 90
+          const T = levelName === 'lively' ? 1500 : 1200
+          const x = (px: number) => t0 + (T * Math.max(0, Math.min(W, px))) / W
+          if (bar && !still) {
+            run(
+              anims,
+              bar,
+              [
+                { opacity: 0, translate: '0 0', offset: 0 },
+                { opacity: 1, translate: `${W * 0.04}px 0`, offset: 0.04 },
+                { opacity: 1, translate: `${W * 0.96}px 0`, offset: 0.96 },
+                { opacity: 0, translate: `${W}px 0`, offset: 1 },
+              ],
+              s(t0),
+              { easing: 'linear', duration: d(T) },
+            )
+          }
+          fade(one('.bk-wp-ht'), x(W * 0.4), 300)
+          for (const sp of spots) {
+            if (sp.old && sp.o) {
+              const ink = getComputedStyle(sp.old).color
+              run(anims, sp.old, [{ textDecorationColor: 'transparent', color: getComputedStyle(root).getPropertyValue('--ink-2').trim() || ink }], s(x(sp.o.r)), { easing: OUT, duration: d(260) })
+            }
+            if (sp.neu && sp.n)
+              run(anims, sp.neu, [{ clipPath: 'inset(-20% 100% -20% 0)' }, { clipPath: 'inset(-20% 0% -20% 0)' }], s(x(sp.n.l)), {
+                easing: 'linear',
+                duration: d(Math.max(80, x(sp.n.r) - x(sp.n.l))),
+              })
+          }
+          break
+        }
+        case 'gather': {
+          // 어지러운 것이 정리된다: 모인 것들이 장 여기저기(제자리에서 칸 너비의 절반 안팎 떨어진 곳)에 조금씩 기울어 흩어져 나타나고,
+          // 잠깐 머문 뒤 차례로 제자리로 날아와 줄을 선다. 다 서면 위의 가는 선이 그어지고 모이는 곳의 이름이 올라온다.
+          // 흩어진 자리는 차례마다 정해진 값(무작위가 아니라)이라 발표할 때마다 같은 그림이다
+          const root = one('.bk-gt2')
+          const its = $('.bk-gt2-it')
+          if (!root || !its.length) break
+          const W = root.offsetWidth || 1
+          const H = root.offsetHeight || 1
+          const spread = (k: number) => {
+            const a = (k * 137.5 * Math.PI) / 180
+            const r = 0.28 + ((k * 0.61803) % 1) * 0.22
+            return { x: Math.cos(a) * W * r, y: Math.sin(a) * H * r * 0.9, rot: ((k % 3) - 1) * 5 }
+          }
+          const fly = 80 + its.length * 70 + 420
+          // 한 조각의 움직임을 한 애니메이션으로: 흩어진 자리에 나타나 머물다 제자리로. 둘로 나누면 그 사이에 제자리에 잠깐 보였다
+          its.forEach((it, k) => {
+            const p = spread(k)
+            const start = 80 + k * 70
+            const go = fly + k * 80
+            const total = go + 620 - start
+            const away = { translate: `${p.x}px ${p.y}px`, rotate: `${p.rot}deg` }
+            run(
+              anims,
+              it,
+              [
+                { opacity: 0, ...away, offset: 0, easing: OUT },
+                { opacity: 0.85, ...away, offset: 260 / total },
+                { opacity: 0.85, ...away, offset: (go - start) / total, easing: CARRY },
+                { opacity: 1, translate: '0px 0px', rotate: '0deg', offset: 1 },
+              ],
+              s(start),
+              { easing: 'linear', duration: d(total) },
+            )
+          })
+          const settled = fly + its.length * 80 + 520
+          const head = one('.bk-gt2-head')
+          if (head) run(anims, head, [{ borderBottomColor: 'transparent' }], s(settled), { easing: OUT, duration: d(400) })
+          rise(one('.bk-gt2-c'), settled + 60, L.y * 0.5)
+          fade(one('.bk-gt2-n'), settled + 220, 500)
+          break
+        }
+        case 'search': {
+          // 하나를 찾으려고 여러 곳을 뒤진다: 기준선과 눈금이 깔리고 곳들이 서면, 강조색 커서가 첫 곳부터 차례로 건너뛴다.
+          // 건너뛸 때마다 그 곳의 이름이 잠깐 강조색이 됐다가 옅어지고(뒤졌지만 없음), 왼쪽 수가 하나씩 오른다(01 → 06).
+          // 다 뒤지면 결과 한 줄이 올라온다. 자리는 움직임을 걸기 전에 잰다
+          const list = one('.bk-sr-list')
+          const its = $('.bk-sr-it')
+          const cursor = one('.bk-sr-cursor')
+          const num = one('.bk-sr-k')
+          if (!list || !its.length) break
+          const xs = its.map((it) => spot(it.querySelector('.bk-sr-tick') ?? it, list).l)
+          fade(one('.bk-sr-l'), 60, 400)
+          draw(list, 120, 600, 'left center', '::before')
+          its.forEach((it, k) => {
+            run(anims, it.querySelector('.bk-sr-tick') as Element, [{ scale: '1 0' }], s(160 + k * 80), { easing: OUT, duration: d(300) })
+            rise(it.querySelector('.bk-sr-t'), 200 + k * 80, L.y * 0.4)
+            fade(it.querySelector('.bk-sr-m'), 260 + k * 80, 400)
+          })
+          rise(one('.bk-sr-num'), 200, L.y * 0.4)
+          const hop = levelName === 'lively' ? 480 : 400
+          const t0 = 260 + its.length * 80 + 300
+          const visible = cursor && getComputedStyle(cursor).display !== 'none' && !still
+          if (visible) {
+            const frames: Keyframe[] = []
+            const total = hop * its.length + 300
+            xs.forEach((x, k) => {
+              const at = (k * hop) / total
+              frames.push({ opacity: 1, translate: `${x}px 0`, offset: Math.min(1, at + (hop * 0.45) / total), easing: CARRY })
+              if (k === 0) frames.unshift({ opacity: 0, translate: `${x}px 0`, offset: 0, easing: 'linear' })
+            })
+            frames.push({ opacity: 0, translate: `${xs[xs.length - 1]}px 0`, offset: 1 })
+            run(anims, cursor!, frames, s(t0), { easing: 'linear', duration: d(total) })
+          }
+          const accent = getComputedStyle(list).getPropertyValue('--accent').trim()
+          its.forEach((it, k) => {
+            const t = it.querySelector<HTMLElement>('.bk-sr-t')
+            if (t && !still) run(anims, t, [{ color: getComputedStyle(t).color }, { color: accent, offset: 0.25 }, { color: getComputedStyle(t).color }], s(t0 + k * hop + hop * 0.4), { easing: 'ease-out', duration: d(hop * 1.4) })
+          })
+          // 수: 커서가 곳에 닿을 때마다 하나씩(굴리기가 아니라 셈: 01, 02, …)
+          if (num && !still && !quiet && !num.closest('.m-edit, [data-mo-keep]')) {
+            const final = num.textContent || ''
+            const width = final.length
+            const timers: number[] = []
+            num.textContent = '00'.slice(0, width)
+            its.forEach((_, k) => timers.push(window.setTimeout(() => (num.textContent = String(k + 1).padStart(width, '0')), s(t0 + k * hop + hop * 0.45))))
+            let done = () => {}
+            waits.push(new Promise<void>((r) => (done = r)))
+            timers.push(window.setTimeout(() => ((num.textContent = final), done()), s(t0 + its.length * hop + 100)))
+            stops.push(() => {
+              timers.forEach((t) => clearTimeout(t))
+              num.textContent = final
+              done()
+            })
+          }
+          rise(one('.bk-sr-r'), t0 + its.length * hop + 200, L.y * 0.4)
+          break
+        }
+        case 'layers': {
+          // 위가 아래에 기대어 선다: 축이 위에서 아래로 그어지는 동안 층이 위에서부터 차례로 내려앉고, 다 쌓이면 요청 조각이 축을 타고
+          // 맨 아래 층까지 내려갔다가(층을 지날 때마다 그 층 이름이 잠깐 강조색) 답으로 올라온다. 생동감에서는 그 뒤로도 오르내린다.
+          // 자리는 움직임을 걸기 전에 잰다
+          const list = one('.bk-ly-list')
+          const rows = $('.bk-ly-row')
+          if (!list || !rows.length) break
+          lines(one('.bk-h'), 60)
+          const axisX = 14
+          const ys = rows.map((row) => {
+            const r = spot(row, list)
+            const pad = parseFloat(getComputedStyle(row).paddingTop) || 0
+            const fs = parseFloat(getComputedStyle(row.querySelector('.bk-ly-t') ?? row).fontSize) || 36
+            return r.t + pad + fs * 0.65
+          })
+          draw(list, 100, 500 + rows.length * 120, 'top center', '::before')
+          rows.forEach((row, k) => {
+            run(anims, row, [{ opacity: 0, translate: `0 ${-L.y * 1.2}px` }], s(120 + k * 140), { easing: CARRY, duration: d(520) })
+          })
+          const built = 120 + rows.length * 140 + 420
+          if (ys.length > 1 && !still) {
+            const down: [number, number][] = ys.map((y) => [axisX, y])
+            const per = levelName === 'lively' ? 360 : 300
+            packet(list, down, built, per * (ys.length - 1))
+            packet(list, [...down].reverse(), built + per * (ys.length - 1) + 160, per * (ys.length - 1))
+            const accent = getComputedStyle(list).getPropertyValue('--accent').trim()
+            rows.forEach((row, k) => {
+              const t = row.querySelector<HTMLElement>('.bk-ly-t')
+              if (!t) return
+              const ink = getComputedStyle(t).color
+              run(anims, t, [{ color: ink }, { color: accent, offset: 0.3 }, { color: ink }], s(built + per * k - 60), { easing: 'ease-out', duration: d(520) })
+            })
+            const loop = [...down, ...[...down].reverse().slice(1)]
+            stream(list, loop, built + per * (ys.length - 1) * 2 + 600, d(Math.max(2600, ys.length * 900)))
+          }
+          break
+        }
+        case 'gate': {
+          // 들어온 것이 관문을 지난다: 통로가 왼쪽부터 그어지고 들어오는 것, 관문 눈금(아래위로 서며), 관문 이름이 차례로 나온다.
+          // 그다음 조각이 통로를 따라 관문을 하나씩 지나 나가는 것에 닿는다. 거르는 관문에서는 조각 하나가 아래로 떨어진다.
+          // 생동감에서는 조각이 쉬지 않고 들어와 지나가고, 두 번에 한 번은 거르는 관문에서 떨어진다
+          const root = one('.bk-gw')
+          const gates = $('.bk-gw-g')
+          if (!root || !gates.length) break
+          const W = root.offsetWidth || 1
+          // 통로의 높이: 관문 눈금의 가운데(gate.css의 가운데 줄)
+          const post0 = gates[0].querySelector('.bk-gw-post')
+          const midY = post0 ? (() => { const r = spot(post0, root); return (r.t + r.b) / 2 })() : (root.offsetHeight || 0) / 2
+          const dropIdx = gates.findIndex((g) => g.classList.contains('is-drop'))
+          const dropX = dropIdx >= 0 ? (() => { const r = spot(gates[dropIdx].querySelector('.bk-gw-post') ?? gates[dropIdx], root); return (r.l + r.r) / 2 })() : -1
+          const inEl = one('.bk-gw-in')
+          const outEl = one('.bk-gw-out')
+          const x0 = inEl ? spot(inEl, root).r : 0
+          const x1 = outEl ? spot(outEl, root).l : W
+          draw(root, 60, 700, 'left center', '::before')
+          rise(inEl, 100, L.y * 0.4)
+          gates.forEach((g, k) => {
+            const at = 200 + k * 140
+            run(anims, g.querySelector('.bk-gw-post') as Element, [{ scale: '1 0' }], s(at), { easing: OUT, duration: d(340) })
+            rise(g.querySelector('.bk-gw-t'), at + 60, L.y * 0.4)
+            fade(g.querySelector('.bk-gw-m'), at + 140, 400)
+          })
+          const ready = 200 + gates.length * 140 + 300
+          rise(outEl, ready - 100, L.y * 0.4)
+          fade(one('.bk-gw-x'), ready + 900, 500)
+          if (!still) {
+            const ride = levelName === 'lively' ? 1500 : 1300
+            packet(root, [[x0, midY], [x1, midY]], ready, ride, 'linear')
+            if (dropX > 0) {
+              // 떨어지는 조각: 거르는 관문까지 오다가 아래로 떨어지며 옅어진다
+              const fall = Math.max(200, (ride * (dropX - x0)) / Math.max(1, x1 - x0))
+              packet(root, [[x0, midY], [dropX, midY], [dropX, midY + 90]], ready + 500, fall + 380, 'linear')
+            }
+            stream(root, [[x0, midY], [x1, midY]], ready + ride + 700, d(2200))
+            stream(root, [[x0, midY], [x1, midY]], ready + ride + 700, d(2200), d(1100))
+          }
           break
         }
         case 'hub': {

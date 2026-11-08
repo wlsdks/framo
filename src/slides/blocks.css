@@ -46,6 +46,12 @@
 @import './styles/blocks/decision.css';
 @import './styles/blocks/network.css';
 @import './styles/blocks/hub.css';
+@import './styles/blocks/gate.css';
+@import './styles/blocks/layers.css';
+@import './styles/blocks/search.css';
+@import './styles/blocks/gather.css';
+@import './styles/blocks/wipe.css';
+@import './styles/blocks/chat.css';
 @import './styles/blocks/split.css';
 @import './styles/blocks/merge.css';
 @import './styles/blocks/tiles.css';

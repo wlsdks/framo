@@ -1,0 +1,79 @@
+/* ---------- 층 ----------
+   층마다 한 줄: 이름(크게, 굵게)과 무엇이 있는지(--ink-2). 층 사이는 가는 줄 선(--line), 왼쪽에 층을 꿰는 세로 축(--line-strong)과
+   층마다 짧은 가로 눈금. 축과 눈금은 단계 표시·일정과 같은 말투 */
+.bk-ly {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: 100%;
+}
+
+.bk-ly-list {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 64px;
+  list-style: none;
+}
+
+.bk-ly-list::before {
+  position: absolute;
+  top: calc(var(--ly-pad) + 0.65em);
+  bottom: calc(var(--ly-pad) + 0.65em);
+  left: 14px;
+  width: var(--rule-hair);
+  background: var(--line-strong);
+  content: '';
+  font-size: var(--t-h);
+}
+
+.bk-ly-row {
+  --ly-pad: calc(18px * var(--bk-fit, 1));
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 48px;
+  padding: var(--ly-pad) 0;
+}
+
+.bk-ly-list {
+  --ly-pad: calc(18px * var(--bk-fit, 1));
+}
+
+.bk-ly-row + .bk-ly-row {
+  border-top: var(--rule-hair) solid var(--line);
+}
+
+/* 층의 눈금: 축에서 이름 쪽으로 */
+.bk-ly-row::before {
+  position: absolute;
+  top: calc(var(--ly-pad) + 0.65em - 2px);
+  left: -50px;
+  width: 28px;
+  height: 4px;
+  background: var(--ink-2);
+  content: '';
+  font-size: var(--t-h);
+}
+
+.bk-ly-t {
+  --fs: var(--t-h);
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.bk-ly-m {
+  --fs: var(--t-body);
+  color: var(--ink-2);
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+@container bk (max-width: 760px) {
+  .bk-ly-row {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 6px;
+  }
+}

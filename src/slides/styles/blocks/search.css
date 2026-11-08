@@ -1,0 +1,135 @@
+/* ---------- 여기저기 찾기 ----------
+   왼쪽: 무엇을 찾는지(작게), 뒤진 곳의 수(크게, 숫자 무게 --num-weight), 결과 한 줄. 오른쪽: 곳들이 가는 기준선 위의 눈금으로
+   한 줄에 선다(단계 표시와 같은 자의 말투). 커서(.bk-sr-cursor)는 발표할 때만 보인다(engine.ts) */
+.bk-sr {
+  display: grid;
+  grid-template-columns: minmax(0, 0.32fr) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 72px;
+  align-content: start;
+}
+
+.bk-sr-l {
+  --fs: var(--t-small);
+  display: block;
+  color: var(--ink-2);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.bk-sr-num {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 8px 0 0;
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+}
+
+.bk-sr-k {
+  --fs: 128px;
+  color: var(--ink);
+  font-weight: var(--num-weight);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.bk-sr-u {
+  --fs: var(--t-h);
+  color: var(--ink-2);
+  line-height: 1;
+}
+
+.bk-sr-r {
+  --fs: var(--t-body);
+  display: block;
+  margin-top: 18px;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.bk-sr-list {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  column-gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 기준선: 첫 눈금에서 끝 눈금까지 */
+.bk-sr-list::before {
+  position: absolute;
+  top: 14px;
+  right: 0;
+  left: 0;
+  height: var(--rule-hair);
+  background: var(--line-strong);
+  content: '';
+}
+
+.bk-sr-it {
+  position: relative;
+  min-width: 0;
+}
+
+.bk-sr-tick {
+  display: block;
+  width: 4px;
+  height: 28px;
+  margin-bottom: 20px;
+  background: var(--ink-3);
+}
+
+.bk-sr-t {
+  --fs: var(--t-body);
+  display: block;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.bk-sr-m {
+  --fs: var(--t-small);
+  display: block;
+  margin-top: 6px;
+  color: var(--ink-2);
+  line-height: 1.35;
+}
+
+/* 커서: 높은 강조색 눈금. 다 보인 모습에서는 없다 */
+.bk-sr-cursor {
+  position: absolute;
+  top: -8px;
+  left: 0;
+  width: 4px;
+  height: 44px;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 좁은 칸: 수를 위에, 곳들은 두 단으로 */
+@container bk (max-width: 900px) {
+  .bk-sr {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 32px;
+    align-content: center;
+  }
+
+  .bk-sr-k {
+    --fs: 90px;
+  }
+
+  .bk-sr-list {
+    grid-template-columns: repeat(min(var(--n), 3), minmax(0, 1fr));
+    row-gap: 28px;
+  }
+
+  .bk-sr-list::before,
+  .bk-sr-cursor {
+    display: none;
+  }
+}

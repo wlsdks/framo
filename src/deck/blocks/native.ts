@@ -864,6 +864,182 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  chat: {
+    name: '대화',
+    description: '묻고 답하는 장면을 대본처럼. 지금 겪는 일이나 바뀐 뒤의 모습을 장면으로 보여 줘요',
+    motion: '말하는 사람이 차례로 나오고, 한 말이 한 글자씩 써져요',
+    fields: [{ key: 'heading', label: '소제목', hint: '예: 지금의 대화', optional: true }],
+    items: {
+      label: '말',
+      min: 2,
+      max: 5,
+      default: 3,
+      fields: [
+        { key: 'title', label: '누가', hint: '말하는 사람', hints: ['나', 'AI', '나', 'AI', '나'] },
+        { key: 'body', label: '한 말', hint: '한 말이나 한 일', hints: ['“지난달 회의록 어디 있어요?”', '“어느 회의인지 알려 주세요”', '(폴더를 뒤져 찾아 붙여 넣기)', '“요약해 드릴게요”', '“다음 달에 또 물어봐야겠네”'], multiline: true },
+      ],
+    },
+    minSpan: 6,
+    prefSpan: 12,
+    sample: {
+      fields: { heading: '지금의 대화' },
+      items: [
+        { title: '나', body: '“지난달 회의록 어디 있어요?”' },
+        { title: 'AI', body: '“어느 회의인지 알려 주세요”' },
+        { title: '나', body: '(폴더를 뒤져 찾아 붙여 넣기)' },
+      ],
+    },
+  },
+  wipe: {
+    name: '바뀌기',
+    description: '지금의 모습이 바뀐 뒤의 모습으로 넘어가는 장면. 줄마다 지금과 바뀐 뒤를 짝지어요',
+    motion: '세로 선이 왼쪽에서 오른쪽으로 훑고 지나가며 지금에 줄을 긋고 바뀐 뒤를 드러내요',
+    fields: [
+      { key: 'from', label: '지금 이름', hint: '예: 지금' },
+      { key: 'to', label: '바뀐 뒤 이름', hint: '예: 바뀐 뒤' },
+    ],
+    items: {
+      label: '줄',
+      min: 1,
+      max: 4,
+      default: 3,
+      fields: [
+        { key: 'title', label: '지금', hint: '지금의 모습', hints: ['회의록을 폴더에서 찾아요', '같은 질문을 매번 해요', '현황을 사람마다 물어요', '결정한 이유가 사라져요'], multiline: true },
+        { key: 'body', label: '바뀐 뒤', hint: '바뀐 뒤의 모습', hints: ['검색 한 번에 찾아요', '처음 한 번만 물어요', '한 화면에서 봐요', '이유가 기록으로 남아요'], multiline: true },
+      ],
+    },
+    minSpan: 8,
+    prefSpan: 12,
+    sample: {
+      fields: { from: '지금', to: '바뀐 뒤' },
+      items: [
+        { title: '회의록을 폴더에서 찾아요', body: '검색 한 번에 찾아요' },
+        { title: '같은 질문을 매번 해요', body: '처음 한 번만 물어요' },
+        { title: '현황을 사람마다 물어요', body: '한 화면에서 봐요' },
+      ],
+    },
+  },
+  gather: {
+    name: '흩어진 것 모으기',
+    description: '여러 곳에 흩어진 것이 한 이름 아래 정돈되는 모습',
+    motion: '조각들이 여기저기 흩어져 나타났다가 제자리로 날아와 줄을 서요',
+    fields: [
+      { key: 'center', label: '모이는 곳', hint: '모이는 곳의 이름 (예: 팀 공용 자료실)' },
+      { key: 'note', label: '설명', hint: '이름 옆 짧은 한 줄', optional: true },
+    ],
+    items: {
+      label: '모이는 것',
+      min: 3,
+      max: 8,
+      default: 6,
+      fields: [
+        { key: 'title', label: '이름', hint: '흩어져 있던 것', hints: ['회의록', '결정 기록', '용어집', '담당자 목록', '자주 묻는 질문', '지난 보고서', '일정표', '안내 문서'] },
+        { key: 'meta', label: '설명', hint: '어디에 있던 것', hints: ['메일함', '메신저', '개인 폴더', '공유 문서', '사람의 기억', '드라이브', '달력', '게시판'], optional: true },
+      ],
+    },
+    minSpan: 6,
+    prefSpan: 12,
+    sample: {
+      fields: { center: '팀 공용 자료실', note: '흩어진 것을 한 곳에' },
+      items: [
+        { title: '회의록', meta: '메일함' },
+        { title: '결정 기록', meta: '메신저' },
+        { title: '용어집', meta: '개인 폴더' },
+        { title: '담당자 목록', meta: '공유 문서' },
+        { title: '자주 묻는 질문', meta: '사람의 기억' },
+        { title: '지난 보고서', meta: '드라이브' },
+      ],
+    },
+  },
+  search: {
+    name: '여기저기 찾기',
+    description: '하나를 찾으려고 여러 곳을 차례로 뒤지는 모습. 뒤진 곳의 수가 크게 보여요',
+    motion: '커서가 곳에서 곳으로 건너뛰고, 건너뛸 때마다 뒤진 곳의 수가 하나씩 올라요',
+    fields: [
+      { key: 'heading', label: '찾는 것', hint: '예: 회의록 하나를 찾으려고' },
+      { key: 'unit', label: '단위', hint: '예: 곳' },
+      { key: 'result', label: '결과', hint: '예: 그래도 없으면 사람에게 물어요', optional: true },
+    ],
+    items: {
+      label: '곳',
+      min: 2,
+      max: 6,
+      default: 4,
+      fields: [
+        { key: 'title', label: '곳', hint: '뒤지는 곳', hints: ['메일함', '메신저', '공유 폴더', '게시판', '개인 메모', '동료'] },
+        { key: 'meta', label: '설명', hint: '그곳에서 찾기 어려운 이유', hints: ['제목이 제각각', '대화에 묻힘', '버전이 여럿', '오래된 글과 섞임', '본인만 앎', '바쁘면 못 물음'], optional: true },
+      ],
+    },
+    minSpan: 8,
+    prefSpan: 12,
+    sample: {
+      fields: { heading: '회의록 하나를 찾으려고', unit: '곳', result: '그래도 없으면 사람에게 물어요' },
+      items: [
+        { title: '메일함', meta: '제목이 제각각' },
+        { title: '메신저', meta: '대화에 묻힘' },
+        { title: '공유 폴더', meta: '버전이 여럿' },
+        { title: '게시판', meta: '오래된 글과 섞임' },
+      ],
+    },
+  },
+  layers: {
+    name: '층',
+    description: '위가 아래에 기대어 선 층. 쓰는 것, 잇는 것, 바탕이 되는 것을 위에서 아래로',
+    motion: '층이 위에서부터 쌓이고, 요청이 층을 타고 내려갔다가 답으로 올라와요',
+    fields: [{ key: 'heading', label: '소제목', hint: '예: 어떻게 이어지나요', optional: true }],
+    items: {
+      label: '층',
+      min: 2,
+      max: 5,
+      default: 3,
+      fields: [
+        { key: 'title', label: '층 이름', hint: '층 이름', hints: ['쓰는 화면', '잇는 곳', '모은 자료', '원래 시스템', '보관'] },
+        { key: 'meta', label: '무엇이 있나', hint: '이 층에 있는 것', hints: ['사내 포털, 메신저', '하나의 연결 창구', '정리한 문서와 기록', '인사, 결재, 일정', '백업과 기록'], optional: true },
+      ],
+    },
+    minSpan: 6,
+    prefSpan: 12,
+    sample: {
+      fields: { heading: '어떻게 이어지나요' },
+      items: [
+        { title: '쓰는 화면', meta: '사내 포털, 메신저' },
+        { title: '잇는 곳', meta: '하나의 연결 창구' },
+        { title: '모은 자료', meta: '정리한 문서와 기록' },
+        { title: '원래 시스템', meta: '인사, 결재, 일정' },
+      ],
+    },
+  },
+  gate: {
+    name: '관문',
+    description: '들어온 것이 확인하는 관문을 하나씩 지나 나가는 모습. 거르는 관문 하나를 고를 수 있어요',
+    motion: '조각이 통로를 따라 관문을 지나고, 거르는 관문에서 몇 개는 아래로 떨어져요',
+    fields: [
+      { key: 'from', label: '들어오는 것', hint: '예: 들어온 신청' },
+      { key: 'to', label: '나가는 것', hint: '예: 처리된 신청' },
+      { key: 'dropped', label: '걸러지는 것', hint: '예: 빠진 서류', optional: true },
+    ],
+    items: {
+      label: '관문',
+      min: 2,
+      max: 5,
+      default: 3,
+      fields: [
+        { key: 'title', label: '관문', hint: '확인하는 것', hints: ['본인 확인', '서류 확인', '중복 확인', '승인', '기록'] },
+        { key: 'meta', label: '하는 일', hint: '여기서 하는 일', hints: ['누가 냈는지', '빠진 것이 없는지', '같은 신청이 있는지', '담당자가 승인', '처리 내역을 남김'], optional: true },
+      ],
+    },
+    highlight: { label: '거르는 관문', fallback: 1 },
+    minSpan: 8,
+    prefSpan: 12,
+    sample: {
+      fields: { from: '들어온 신청', to: '처리된 신청', dropped: '빠진 서류는 돌려보냄' },
+      items: [
+        { title: '본인 확인', meta: '누가 냈는지' },
+        { title: '서류 확인', meta: '빠진 것이 없는지' },
+        { title: '승인', meta: '담당자가 승인' },
+      ],
+    },
+  },
   network: {
     name: '연결도',
     description: '가운데 하나에 여러 시스템이나 팀이 이어진 모습',
