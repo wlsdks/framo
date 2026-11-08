@@ -1573,9 +1573,11 @@ export function blockFitter() {
     // 짧은 글 둘은 칸 전체가 아닌 그려진 글만 칸 안에서 옮긴다. 다른 줄이 본문 전체를 쓰는 차트처럼 한 칸이면 그 줄과
     // 맞출 단이 없으므로 이 줄만 균형을 잡는다. 다른 줄도 여러 단이면 단 사이 정렬을 지키려고 건드리지 않는다.
     const shortText = new Set(['callout', 'message', 'bullets', 'text', 'quote'])
+    // 짧은 값의 큰 숫자('D', '7')도 그려진 너비가 좁아 같이 맞춘다: 칸 왼쪽에 한 글자만 서고 옆 글과의 사이가 660px 비었다(검수)
+    const short = (c: HTMLElement) => shortText.has(c.dataset.type ?? '') || (c.dataset.type === 'number' && !!c.querySelector('.bk-num[data-short]'))
     const balanced = new Set<string>()
     bands.forEach((band, key) => {
-      if (band.length !== 2 || !band.every((c) => shortText.has(c.dataset.type ?? '') && !c.classList.contains('lk-row')) || num(band[0], '--y') !== num(band[1], '--y')) return
+      if (band.length !== 2 || !band.every((c) => short(c) && !c.classList.contains('lk-row')) || num(band[0], '--y') !== num(band[1], '--y')) return
       if (cells.some((c) => !band.includes(c) && (num(c, '--x') !== 0 || num(c, '--w') !== 12 || c.classList.contains('lk-row')))) return
       const pair = [...band].sort((p, q) => num(p, '--x') - num(q, '--x'))
       const ink = pair.map((c) => drawnX(c, true))
