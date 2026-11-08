@@ -53,3 +53,13 @@
   --msg-cap: calc(36px * var(--scale, 1));
 }
 
+
+/* 장 제목이 있으면 버금 문장은 핵심 한 줄보다 한 단계 아래에서 멈춘다: 핵심 한 줄은 44(짧지 않은 제목이면 36)에서 멈추는데 버금 문장(36)은
+   장이 빌 때 1.44배(52)까지 커져, 회색 버금 문장이 굵은 핵심보다 커 보이는 위계 뒤집힘이 났다(검수) */
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) .bk-msg-s {
+  font-size: min(calc(36px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1))));
+}
+
+.l-compose:has(.s-title:is(.fit-1, .fit-2):not(.is-hint, .is-empty)) .bk-msg-s {
+  font-size: min(calc(30px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1))));
+}
