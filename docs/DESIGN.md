@@ -61,7 +61,7 @@ Deck  { id, title, meta: { type, audience, duration, method, org, presenter, dat
         theme: { id, accent? }, logo, slides: Slide[] }
 Slide { id, layout, purpose, section, fields: {title, lead, body, ...}, items: Item[],
         hints, guide, notes, options, hidden, backdrop? }
-Backdrop { kind, at?: {x, y, w, h}, strength? }   // 장의 배경: 분위기 하나, 12×12칸의 자리, 짙기
+Backdrop { kind, at?: {x, y, w, h}, strength? }   // 장의 배경: 분위기 넷 가운데 하나, 12×12칸의 자리, 짙기
 Item  { id, title, body, value, meta, image }
 ```
 
@@ -227,7 +227,7 @@ Item  { id, title, body, value, meta, image }
 
 ### 배경 모션
 
-- 장의 글과 컴포넌트 뒤에 까는 잔잔한 그래픽이다. 분위기 일곱(확산, 모여 시작, 흐름, 깊이, 구조, 여운, 연결)은 [MOTION.md](MOTION.md)의 9절과 같은 이름이고, 장의 말에 맞는 것을 고른다(12절의 바탕 칸). 맞는 것이 없으면 두지 않는다.
+- 장의 글과 컴포넌트 뒤에 까는 잔잔한 그래픽이다. [MOTION.md](MOTION.md) 9절의 분위기 가운데 넷(확산, 모여 시작, 흐름, 연결)이고, 장의 말에 맞는 것을 고른다(12절의 바탕 칸). 맞는 것이 없으면 두지 않는다. 깊이, 구조, 여운은 지형도, 모눈 템플릿, 장식 괘선으로 읽혀 뺐다.
 - 지면의 말투를 지킨다: 장의 글자색 하나로, 점과 가는 선으로, 옅게. 칠한 면, 번짐 빛, 그러데이션, 강조색은 없다(강조색은 장의 답에만). 글은 늘 그 위에 또렷하다: 배경은 장의 쌓임 맥락에서 `z-index: -1`이고, 글이 놓인 자리를 재서 그 둘레에서는 배경이 비켜 옅어진다. 데이터나 화면 표시(막대, 빈 원, 과녁)처럼 읽히는 모양은 쓰지 않는다.
 - 자리는 장 전체를 12×12칸으로 나눈 칸이다. 가장자리에 닿지 않는 쪽은 그림이 서서히 옅어져 네모 끝이 선처럼 보이지 않는다. 한 점이 있는 배경은 처음 고를 때 글이 적은 쪽에 놓는다.
 - 진하기는 셋(옅게, 보통, 또렷하게). 글이 많은 장은 옅게, 글이 적은 표지와 섹션은 또렷하게(처음 고를 때 표지, 섹션, 맺음, 한 문장 장은 또렷하게로 놓는다).

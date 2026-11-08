@@ -80,10 +80,11 @@ export type SceneId = 'opening' | 'answer' | 'numbers' | 'flow' | 'compare' | 't
 /** 장의 바탕. invert는 테마의 반대(밝은 테마면 어둡게), accent는 강조색 면 */
 export type Tone = 'base' | 'invert' | 'accent'
 /**
- * 배경: 장의 글과 컴포넌트 뒤에서 잔잔히 움직이는 그래픽. 분위기마다 하나(docs/MOTION.md 9절의 일곱: 확산, 모여 시작, 흐름, 깊이, 구조, 여운, 연결).
- * 목록과 이름은 deck/backdrops.ts, 그리기와 움직임은 motion/backdrop.ts
+ * 배경: 장의 글과 컴포넌트 뒤에서 잔잔히 움직이는 그래픽. docs/MOTION.md 9절의 분위기 일곱 가운데 넷(확산, 모여 시작, 흐름, 연결).
+ * 목록과 이름은 deck/backdrops.ts, 그리기와 움직임은 motion/backdrop.ts. 이 브랜치에서 잠깐 있던 깊이, 구조, 여운(depth, structure,
+ * linger)은 뺐다: 그 값이 남은 발표는 모르는 배경처럼 그리지 않고 값은 지우지 않는다(backdropOf)
  */
-export type BackdropId = 'diffuse' | 'gather' | 'flow' | 'depth' | 'structure' | 'linger' | 'link'
+export type BackdropId = 'diffuse' | 'gather' | 'flow' | 'link'
 /** 배경의 짙기 */
 export type BackdropStrength = 'soft' | 'base' | 'strong'
 

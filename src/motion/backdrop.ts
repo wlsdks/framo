@@ -1,11 +1,12 @@
 // 배경: 장의 글과 컴포넌트 뒤에 까는 잔잔한 그래픽과 그 움직임. 앱의 발표 화면과 내보낸 HTML의 뷰어가 똑같이 쓴다.
-// 기준은 docs/MOTION.md의 '9. 바탕 움직임'이다: 분위기 일곱(확산, 모여 시작, 흐름, 깊이, 구조, 여운, 연결)이 곧 배경 일곱이다.
+// 기준은 docs/MOTION.md의 '9. 바탕 움직임'이다: 분위기 일곱 가운데 넷(확산, 모여 시작, 흐름, 연결)이 배경이다. 깊이, 구조, 여운은
+// 지형도, 모눈 템플릿, 장식 괘선 두 줄로 읽혀 뺐다(감성 검수. 그때의 그림은 git의 8461f809에 있다: 모션 그래픽 프리셋으로 다시 만들 때)
 //
 // - 배경마다 '때 e의 모습'을 그리는 그림 하나(Scene)다. 끝 모습(들어오기가 끝나고 머무는 모습)은 이 그림으로 SVG를 만들어 장에 넣고
 //   (편집 화면, 목록 그림, PDF, PPT, 내보낸 HTML의 처음 모습), 발표할 때는 같은 그림을 캔버스에 프레임마다 그린다.
 //   그래서 움직임이 끝난 모습과 멈춘 그림이 같다. 숫자 하나, 글 한 줄 없이 자리의 크기만으로 그린다.
 //   그리는 도구(시간의 순수 함수, SVG와 캔버스 그리기, 캔버스 재생기)는 motion/draw.ts에 있고 인자(kit)로 받는다.
-//   여기에는 배경 일곱의 그림과 배경만의 규칙(세기, 이어지는 장, 살아 있는 그림이 있는 장)만 둔다
+//   여기에는 배경 넷의 그림과 배경만의 규칙(세기, 이어지는 장, 살아 있는 그림이 있는 장)만 둔다
 // - 움직임: 장이 나올 때 한 번 들어오고(엔진이 mo-backdrop으로 알린다, motion/engine.ts) 2초 남짓에 가라앉는다(장의 글보다 늦게 끝나
 //   마지막 박자를 가져가지 않게). 차분하게는 그 한 번뿐이고,
 //   생동감만 그 뒤로 아주 느린 흐름(한 주기 12초 넘게, 장 폭의 2% 안)이 이어진다. 장에 살아 있는 그림(되풀이하는 컴포넌트)이 있으면
@@ -44,11 +45,11 @@ interface BackdropRuntime {
 }
 
 export function backdropMotion(kit: DrawKit): BackdropRuntime {
-  const { TAU, clamp, lerp, amp, clock, sway, span, every, rng, svgPaint } = kit
+  const { TAU, clamp, lerp, clock, span, every, rng, svgPaint } = kit
   const { out, reveal, carry } = kit.ease
 
   // ======================================================================
-  // 배경 일곱. 저마다 '들어올 때 한 번'의 몸짓이 그 분위기의 말이다(docs/MOTION.md 9절의 표)
+  // 배경 넷. 저마다 '들어올 때 한 번'의 몸짓이 그 분위기의 말이다(docs/MOTION.md 9절의 표)
   // ======================================================================
 
   /**
@@ -301,259 +302,6 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
   }
 
   /**
-   * 깊이(앞뒤 층이 천천히 어긋난다): 땅의 높낮이를 그린 등고선. 낮은 곳(바깥)의 선부터 높은 곳(안쪽)의 선까지 차례로 맺히는데,
-   * 높은 층일수록 멀리 비켜 있다가 제자리로 내려앉아 층이 겹겹이 맞춰진다(카메라가 다가가며 깊이가 생기는 것처럼). 네 번째 선마다
-   * 조금 짙게(지도의 계곡선처럼). 꼭대기에 강조색 고리와 점을 두던 때는 숫자 옆의 과녁처럼 읽혔고, 답이 맺힌 뒤에 나타나 마지막
-   * 박자를 가져갔다(검수).
-   * 생동감의 느린 흐름: 층이 높이에 비례해 아주 조금(꼭대기가 12px 안) 어긋났다 돌아온다(28초 주기)
-   */
-  function depth(w: number, h: number): Scene {
-    const hyp = Math.sqrt(w * h)
-    const hills = [
-      [0.68, 0.38, 0.17, 1],
-      [0.3, 0.72, 0.13, 0.62],
-      [0.86, 0.82, 0.1, 0.45],
-      [0.18, 0.2, 0.12, 0.35],
-      [0.5, 0.58, 0.22, 0.3],
-    ].map(([x, y, s, k]) => ({ x: x * w, y: y * h, s: s * hyp, k }))
-    const cell = Math.max(14, Math.min(24, hyp / 60))
-    const gw = Math.ceil(w / cell) + 1
-    const gh = Math.ceil(h / cell) + 1
-    const F = new Float32Array(gw * gh)
-    let lo = Infinity
-    let hi = -Infinity
-    for (let j = 0; j < gh; j++)
-      for (let i = 0; i < gw; i++) {
-        let v = 0
-        for (const hl of hills) {
-          const ux = i * cell - hl.x
-          const uy = j * cell - hl.y
-          v += hl.k * Math.exp(-(ux * ux + uy * uy) / (2 * hl.s * hl.s))
-        }
-        F[j * gw + i] = v
-        if (v < lo) lo = v
-        if (v > hi) hi = v
-      }
-    const L = 12
-    const step = (hi - lo) / (L + 1)
-    /** 값 v의 선들(이어 붙인 꺾은선, 닫혔는지). 같은 칸 모서리를 지나는 토막끼리 잇는다(정사각 행진) */
-    const iso = (v: number): [Float32Array, boolean][] => {
-      // 모서리 id: 가로 모서리 (i, j)-(i+1, j)는 2(j*gw+i), 세로 모서리 (i, j)-(i, j+1)은 2(j*gw+i)+1
-      const at = (edge: number): [number, number] => {
-        const base = edge >> 1
-        const i = base % gw
-        const j = (base / gw) | 0
-        const a0 = F[base]
-        const a1 = edge & 1 ? F[base + gw] : F[base + 1]
-        const k = (v - a0) / (a1 - a0)
-        return edge & 1 ? [i * cell, (j + k) * cell] : [(i + k) * cell, j * cell]
-      }
-      const link = new Map<number, number[]>()
-      const add = (p: number, q: number) => {
-        ;(link.get(p) || link.set(p, []).get(p)!).push(q)
-        ;(link.get(q) || link.set(q, []).get(q)!).push(p)
-      }
-      for (let j = 0; j < gh - 1; j++)
-        for (let i = 0; i < gw - 1; i++) {
-          const b = j * gw + i
-          const cs = (F[b] > v ? 1 : 0) | (F[b + 1] > v ? 2 : 0) | (F[b + gw + 1] > v ? 4 : 0) | (F[b + gw] > v ? 8 : 0)
-          if (cs === 0 || cs === 15) continue
-          const top = 2 * b
-          const right = 2 * (b + 1) + 1
-          const bottom = 2 * (b + gw)
-          const left = 2 * b + 1
-          if (cs === 1 || cs === 14) add(left, top)
-          else if (cs === 2 || cs === 13) add(top, right)
-          else if (cs === 3 || cs === 12) add(left, right)
-          else if (cs === 4 || cs === 11) add(right, bottom)
-          else if (cs === 6 || cs === 9) add(top, bottom)
-          else if (cs === 7 || cs === 8) add(left, bottom)
-          else if (cs === 5) {
-            add(left, top)
-            add(right, bottom)
-          } else {
-            add(top, right)
-            add(left, bottom)
-          }
-        }
-      const seen = new Set<number>()
-      const lines: [Float32Array, boolean][] = []
-      // 끝이 열린 줄(자리 가장자리에 닿는 선)부터, 그다음 닫힌 고리
-      const starts = [...link.keys()].sort((p, q) => (link.get(p)!.length === 1 ? 0 : 1) - (link.get(q)!.length === 1 ? 0 : 1))
-      for (const s of starts) {
-        if (seen.has(s)) continue
-        const pts: number[] = []
-        let cur = s
-        let prev = -1
-        let closed = false
-        for (;;) {
-          seen.add(cur)
-          pts.push(...at(cur))
-          const next = link.get(cur)!.find((q) => q !== prev && (!seen.has(q) || (q === s && pts.length > 4)))
-          if (next === undefined) break
-          if (next === s) {
-            closed = true
-            break
-          }
-          prev = cur
-          cur = next
-        }
-        if (pts.length >= 4) lines.push([new Float32Array(pts), closed])
-      }
-      return lines
-    }
-    const LEVELS = Array.from({ length: L }, (_, k) => iso(lo + step * (k + 1)))
-    const STAG = 90
-    const IN = 650
-    const end = 80 + (L - 1) * STAG + IN + 100
-    return {
-      end,
-      draw(P, e, tau) {
-        // 가장 높은 층이 비켜 있는 거리. 높이에 비례해 층마다 덜 비켜 있다
-        const far = Math.min(w, h) * 0.05
-        const drift = amp(tau) * 12
-        const dx = drift ? sway(tau, 28000, 0.25) : 0
-        const dy = drift ? sway(tau, 36000, 0.6) : 0
-        for (let k = 0; k < L; k++) {
-          const p = span(e, 80 + k * STAG, IN)
-          if (p <= 0) continue
-          const z = (k + 1) / L
-          const settle = 1 - out(p)
-          const ox = (far * settle + drift * dx) * z
-          const oy = (-far * 0.6 * settle + drift * dy * 0.7) * z
-          const index = k % 4 === 3
-          for (const [pts, closed] of LEVELS[k]) {
-            for (let i = 0; i < pts.length; i += 2) P.to(pts[i] + ox, pts[i + 1] + oy)
-            P.stroke(index ? 1.5 : 1, 0, (index ? 0.17 : 0.11) * clamp(p * 1.6), closed)
-          }
-        }
-      },
-    }
-  }
-
-  /**
-   * 구조(눈금과 격자가 맞춰진다): 점들이 조금씩 어긋난 자리에서 나타나 비스듬한 물결을 따라 고른 격자로 맞춰진다. 오른쪽 위가 짙고
-   * 왼쪽 아래로 갈수록 옅어져(대개 제목과 본문이 놓이는 쪽) 모눈종이처럼 장을 덮지 않는다. 다 맞춰진 뒤에는 움직이지 않는다(맞춰졌다는
-   * 고요가 이 분위기의 말이다). 네 칸마다의 교차점은 점 대신 작은 십자(눈금)라 도면의 격자처럼 읽힌다. 칸 묶음을 촘촘한 점으로
-   * 채우던 때는 막대 그래프처럼 읽혀 숫자 장에서 '저건 뭐냐'를 불렀다(검수). 점만 1.5px로 두던 때는 검은 테마의 필름에서 보이지 않았다
-   */
-  function structure(w: number, h: number): Scene {
-    const R = rng(11)
-    const p = 40
-    const cols = Math.max(4, Math.floor(w / p))
-    const rows = Math.max(3, Math.floor(h / p))
-    const ox = (w - (cols - 1) * p) / 2
-    const oy = (h - (rows - 1) * p) / 2
-    const X: number[] = []
-    const Y: number[] = []
-    const A: number[] = []
-    const JX: number[] = []
-    const JY: number[] = []
-    const WAIT: number[] = []
-    const MAJOR: boolean[] = []
-    for (let r = 0; r < rows; r++)
-      for (let c = 0; c < cols; c++) {
-        const xn = c / Math.max(1, cols - 1)
-        const yn = r / Math.max(1, rows - 1)
-        // 오른쪽 위에서 멀어질수록 옅게
-        const g = Math.exp(-((1 - xn) ** 2 + yn ** 2) / (2 * 0.42 * 0.42))
-        const a = 0.06 + 0.24 * g
-        if (a < 0.075) continue
-        X.push(ox + c * p)
-        MAJOR.push(c % 4 === 0 && r % 4 === 0)
-        Y.push(oy + r * p)
-        A.push(a)
-        const ang = R() * TAU
-        const off = p * (0.25 + 0.3 * R())
-        JX.push(Math.cos(ang) * off)
-        JY.push(Math.sin(ang) * off)
-        // 오른쪽 위에서 왼쪽 아래로 비스듬히 맞춰져 간다
-        WAIT.push(60 + ((1 - xn) * 0.55 + yn * 0.45) * 650)
-      }
-    const IN = 650
-    const end = Math.max(...WAIT) + IN + 80
-    return {
-      end,
-      draw(P, e) {
-        for (let i = 0; i < X.length; i++) {
-          const k = span(e, WAIT[i], IN)
-          if (k <= 0) continue
-          const m = 1 - out(k)
-          const x = X[i] + JX[i] * m
-          const y = Y[i] + JY[i] * m
-          const a = A[i] * clamp(k * 3)
-          if (!MAJOR[i]) {
-            P.dot(x, y, 1.8, 0, a)
-            continue
-          }
-          // 눈금: 팔이 맞춰지며 자란다
-          const arm = 7 * out(k)
-          P.to(x - arm, y)
-          P.to(x + arm, y)
-          P.stroke(1, 0, a)
-          P.to(x, y - arm)
-          P.to(x, y + arm)
-          P.stroke(1, 0, a)
-        }
-      },
-    }
-  }
-
-  /**
-   * 여운(아주 느리게 옅어지며 가라앉는다): 퉁긴 줄의 울림이 잦아드는 모습. 가는 줄 하나가 퉁겨진 모양으로 나타나 느리게 떨다가
-   * 가라앉고, 조금 뒤 아래의 짧고 옅은 줄 하나(메아리)가 더 작게 떨다 가라앉는다. 떨림은 줄의 고유한 떨기 셋(기본과 두 배, 세 배)을
-   * 겹친 것이고 높은 떨기일수록 빨리 잦아든다(실제 줄처럼). 떨리는 동안 조금 짙다가 가라앉으며 제 짙기로 옅어진다. 쉬는 줄은 아주
-   * 조금 처지고 끝으로 갈수록 가늘게 사라진다. 두 줄은 90px 넘게 떨어져 겹선이 되지 않는다.
-   * 가는 선 여섯을 겹쳐 두던 때는 40px 안의 겹선 다발이라 공책 줄이나 화면 줄무늬로 읽혔고, 작은 점을 흩어 가라앉히던 때는 먼지처럼
-   * 보였다(검수, 필름).
-   * 생동감의 느린 흐름: 14초마다 위의 줄에 아주 작은 떨림(3px 안)이 한 번 지나간다
-   */
-  function linger(w: number, h: number): Scene {
-    const amp0 = Math.min(34, h * 0.05)
-    const strings = [
-      { y: h * 0.48, a0: w * 0.06, a1: w * 0.94, amp: amp0, p: 0.37, t0: 80, alpha: 0.22, sag: h * 0.012 },
-      { y: h * 0.48 + Math.max(90, h * 0.15), a0: w * 0.22, a1: w * 0.82, amp: amp0 * 0.55, p: 0.64, t0: 360, alpha: 0.13, sag: h * 0.008 },
-    ]
-    // 기본 떨기(초에 1.3번)와 잦아드는 빠르기(ms). 1.5초면 처음 떨림의 3% 아래로 가라앉는다
-    const F = 1.3
-    const DAMP = 420
-    const RING = 1500
-    const end = strings[1].t0 + RING + 100
-    const SEG = 12
-    const N = 72
-    return {
-      end,
-      draw(P, e, tau) {
-        const g = every(tau, 5000, 14000, 2400)
-        for (let si = 0; si < strings.length; si++) {
-          const st = strings[si]
-          const t = e - st.t0
-          if (t <= 0) continue
-          const appear = clamp(t / 140)
-          const damp = Math.exp(-t / DAMP)
-          // 떨기 셋: 퉁긴 자리(p)에 따라 세기가 다르고, n번째는 n배 빠르게 떨며 n배 빨리 잦아든다
-          const modes = [1, 2, 3].map((n) => (st.amp * Math.sin(n * Math.PI * st.p) * Math.cos((2 * Math.PI * F * n * t) / 1000) * Math.exp((-t * n) / DAMP)) / (n * n))
-          // 생동감: 위의 줄에만 아주 작은 떨림이 한 번 지나간다
-          const tremor = si === 0 && g ? 3 * Math.sin(Math.PI * g[1]) * Math.cos(2 * Math.PI * 2 * g[1]) : 0
-          const a = st.alpha * appear * (1 + 0.8 * damp)
-          const yAt = (u: number) =>
-            st.y + st.sag * Math.sin(Math.PI * u) + (modes[0] + tremor) * Math.sin(Math.PI * u) + modes[1] * Math.sin(2 * Math.PI * u) + modes[2] * Math.sin(3 * Math.PI * u)
-          // 끝으로 갈수록 옅어지게 마디마다 짙기를 달리 긋는다
-          for (let sg = 0; sg < SEG; sg++) {
-            const k0 = Math.round((sg * N) / SEG)
-            const k1 = Math.round(((sg + 1) * N) / SEG)
-            for (let k = k0; k <= k1; k++) {
-              const u = k / N
-              P.to(lerp(st.a0, st.a1, u), yAt(u))
-            }
-            P.stroke(1.1, 0, a * Math.pow(Math.sin((Math.PI * (k0 + k1)) / 2 / N), 0.7))
-          }
-        }
-      },
-    }
-  }
-
-  /**
    * 연결(점과 점 사이에 선이 이어진다): 자리 아래쪽 바닥선 위에 양쪽 무리의 점이 서고, 낮은 활 모양의 가는 선이 짧은 짝부터 하나씩
    * 그어져 두 쪽을 잇는다. 활은 여섯 가닥, 높이는 자리 높이의 4분의 1까지라 자리의 아래 띠에만 있다(위쪽은 대개 글과 표가 있다).
    * 활을 높고 많이(열일곱, 아홉) 긋던 때는 비교 표의 글과 줄 선을 가로질러 데이터처럼 읽혔다(검수).
@@ -608,7 +356,7 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     }
   }
 
-  const KINDS: Record<string, (w: number, h: number) => Scene> = { diffuse, gather, flow, depth, structure, linger, link }
+  const KINDS: Record<string, (w: number, h: number) => Scene> = { diffuse, gather, flow, link }
   /** 짙기: 옅게, 보통, 또렷하게. 그림의 짙기에 곱한다 */
   const STRENGTH: Record<string, number> = { soft: 0.6, base: 1, strong: 1.45 }
 

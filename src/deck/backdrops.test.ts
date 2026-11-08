@@ -13,11 +13,12 @@ import type { Backdrop, Deck, Slide } from './types'
 const withSlides = (...slides: Slide[]): Deck => ({ ...createSampleDeck(), slides })
 
 describe('배경의 값', () => {
-  it('배경 이름은 모션 기준(docs/MOTION.md 9절)의 분위기 일곱과 같다', () => {
+  it('배경 이름은 모션 기준(docs/MOTION.md 9절)의 분위기 이름에서 고른다', () => {
     const doc = readFileSync(join(process.cwd(), 'docs', 'MOTION.md'), 'utf8')
     const table = doc.slice(doc.indexOf('| 분위기 |'), doc.indexOf('### 10.'))
     const moods = [...table.matchAll(/^\| ([^|]+?) \| /gm)].map((m) => m[1]).filter((n) => n !== '분위기' && !n.startsWith('---'))
-    expect(BACKDROPS.map((b) => b.name)).toEqual(moods)
+    expect(moods.length).toBe(7)
+    for (const b of BACKDROPS) expect(moods, b.name).toContain(b.name)
   })
 
   it('그릴 배경: 모르는 종류는 그리지 않고, 틀린 자리와 짙기는 기본값으로 그린다(값은 고치지 않는다)', () => {
@@ -48,6 +49,16 @@ describe('배경의 값', () => {
 
 describe('배경과 예전 파일', () => {
   const deck = withSlides({ ...makeSlide('cover'), backdrop: { kind: 'diffuse', at: { x: 0, y: 0, w: 8, h: 8 } } }, { ...makeSlide('points'), backdrop: { kind: 'aurora' } as unknown as Backdrop })
+
+  it('뺀 배경(깊이, 구조, 여운)은 그리지 않고 값은 남는다', () => {
+    for (const kind of ['depth', 'structure', 'linger']) {
+      const slide = { ...makeSlide('points'), backdrop: { kind } as unknown as Backdrop }
+      expect(backdropOf(slide), kind).toBeNull()
+      const d = withSlides(slide)
+      expect(unknownParts(d)).toBe(0)
+      expect(migrateDeck(d).slides[0].backdrop).toEqual({ kind })
+    }
+  })
 
   it('모르는 배경(더 새 버전의 것)은 발표를 막지 않고, 열고 고쳐도 값이 남는다', () => {
     expect(unknownParts(deck)).toBe(0)
