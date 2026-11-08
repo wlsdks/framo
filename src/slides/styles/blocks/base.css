@@ -89,6 +89,14 @@
   text-wrap-style: balance;
 }
 
+/* 그림 컴포넌트의 굵은 이름표(소제목, 곳·단계·층의 이름)는 44px(크게면 그 1.2배)까지: 판을 혼자 쓰는 그림은 맞추기(fitBlocks)가
+   그림과 숫자를 1.44배까지 키우는데, 굵은 36px 이름이 52px가 되면 장 제목(62)과 다퉈 키우기가 통째로 1.2배에서 멈췄다(rivals).
+   이름표는 제목 한 단계 아래에 머물고 그림이 커진다. 목록은 fitBlocks.ts의 PICTURES와 같다 */
+.bk:is([data-type='flow'], [data-type='network'], [data-type='merge'], [data-type='split'], [data-type='tiles'], [data-type='hub'], [data-type='gather'], [data-type='search'], [data-type='layers'], [data-type='gate'], [data-type='dupes'], [data-type='aliases'], [data-type='adoption'], [data-type='spread'], [data-type='rank'])
+  :is(.bk-h, .bk-nw-t, .bk-hb-t, .bk-gt2-t, .bk-ly-t, .bk-dp-r, .bk-al-t, .bk-mg-name, .bk-mg-label, .bk-fw-t, .bk-gw-t, .bk-gw-in, .bk-gw-out, .bk-sr-t, .bk-ra-t, .bk-spr-t, .bk-ad-t, .bk-sg-name) {
+  font-size: min(calc(44px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+}
+
 /* 칸이 좁거나 낮으면 글자를 글자 크기 비율(1.2)의 단계로 작게: 반 칸, 3분의 1 칸이나 300px 밑은 한 단계(0.84),
    4분의 1 칸은 두 단계(0.7). 높이로는 한 단계까지만: 낮은 칸은 글자를 줄이기보다 옆으로 눕힌다.
    좁고 낮아도 곱하지 않고 작은 쪽 하나만 쓴다(min). 곱하면 좁고 낮은 칸에서

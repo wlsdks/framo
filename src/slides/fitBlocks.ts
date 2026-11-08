@@ -1193,18 +1193,24 @@ export function blockFitter() {
 
   /**
    * 장 제목과 다투는 글이 있는지: 같은 굵기(600 이상)에 제목 ÷ 1.2 이상인 한글 글. 내용이 적은 장의 문장을 키우다 제목만큼 커지면
-   * 제목이 여럿으로 읽힌다. 숫자는 답이라 커도 된다. slide는 장(또는 장 머리를 품은 상자)
+   * 제목이 여럿으로 읽힌다. 숫자는 답이라 커도 된다. slide는 장(또는 장 머리를 품은 상자).
+   * 그림 컴포넌트(PICTURES)에서는 제목과 다른 색의 글(강조색의 답, 버금 글자색)을 견주지 않는다(screens/assembly.ts의 rivals와 같다).
+   * 그림의 굵은 이름표는 CSS가 44px(크게면 그 1.2배)에서 멈춰 제목과 다투지 않는다(styles/blocks/base.css). 예전에는 굵은 36px
+   * 이름이 1.44배면 51.84px로 제목 ÷ 1.2(51.67)를 0.17px 넘어서, 판을 혼자 쓰는 그림이 늘 1.2배에서 멈추고 작게 남았다
    */
   function rivals(slide: Element | null, scopes: HTMLElement[]): boolean {
     const title = slide?.querySelector<HTMLElement>(':scope > .s-head .s-title, :scope > .cs-main > .cs-title')
     if (!title || !(title.textContent || '').trim()) return false
-    const tf = parseFloat(getComputedStyle(title).fontSize)
+    const ts = getComputedStyle(title)
+    const tf = parseFloat(ts.fontSize)
     for (const scope of scopes)
       for (const q of lines(scope)) {
         const el = q.n.parentElement
         if (!el || !/[가-힣]{2}/.test(q.n.textContent || '')) continue
         const cs = getComputedStyle(el)
-        if (parseFloat(cs.fontSize) >= tf / 1.2 - 0.5 && Number(cs.fontWeight) >= 600) return true
+        if (parseFloat(cs.fontSize) < tf / 1.2 - 0.5 || Number(cs.fontWeight) < 600) continue
+        if (cs.color !== ts.color && PICTURES.has(el.closest<HTMLElement>('.bk')?.dataset.type || '')) continue
+        return true
       }
     return false
   }
