@@ -215,8 +215,10 @@ export function blockFitter() {
     // 여백 안으로 8px까지는 봐준다 (그 정도는 여백이 무너져 보이지 않는다)
     const pad = (v: string) => Math.max(0, parseFloat(v) - 8) * k
     // 글 줄이 여백에 걸쳐도 되는 틈도 캔버스 px로(2px, 잘리지 않는 높이를 재는 갤러리의 반 크기 장에서 화면 1px).
-    // 화면 px로 두면 장을 그리는 크기마다 기준이 달라서, 내보낸 파일을 열었을 때(줄여 그린다)와 발표할 때(꽉 채운다) 글자 크기가 달랐다
-    const slack = 2 * k
+    // 화면 px로 두면 장을 그리는 크기마다 기준이 달라서, 내보낸 파일을 열었을 때(줄여 그린다)와 발표할 때(꽉 채운다) 글자 크기가 달랐다.
+    // 키울 때(tight)는 틈 없이: 이 틈만큼 키우면 잘림 검사(screens/measureBlocks.ts, 여백 8px까지)보다 1~2px 깊이 들어갔다
+    // (숫자 한 줄을 옆 큰 숫자에 맞춰 키우자 카드 아래 설명이 1.3px 넘어 '칸 밖'이 됐다)
+    const slack = (tight ? 0 : 2) * k
     const top = r.top + pad(cs.paddingTop) - slack
     const bottom = r.bottom - pad(cs.paddingBottom) + slack
     const left = r.left + pad(cs.paddingLeft) - slack
