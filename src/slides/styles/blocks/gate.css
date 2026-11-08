@@ -207,3 +207,29 @@
   color: var(--ink-2);
   font-weight: 400;
 }
+
+/* 걸러지는 것은 하는 일과 갈라 읽히게: 하는 일 바로 아래에 같은 글자색으로 붙어 그 관문의 설명 한 줄처럼 읽혔다(사용자).
+   조금 띄우고 이름표(걸러지는 것)를 글 앞에 단다. 이름표는 글과 한 상자(::before)라 발표할 때 같이 나타난다 */
+.bk-gw-x:not(:empty) {
+  margin-top: 0.7em;
+}
+
+/* 이름표는 글 앞에 같은 줄로: 위에 따로 한 줄을 두면 관문의 잘리지 않는 높이가 40px 높아졌다 */
+.bk-gw-x:not(:empty)::before {
+  margin-right: 0.5em;
+  color: var(--ink-3);
+  /* 이름표 크기: 걸러지는 것의 글자(키운 단계까지)를 따르되 이름표 바닥(22px) 밑으로는 */
+  font-size: max(var(--t-label), 0.72em);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+  content: '걸러지는 것';
+}
+
+/* 관문의 이름, 하는 일, 들어오고 나가는 것은 낱말 사이에서만 꺾는다: 좁은 단에서 '사내 정보'가 '사내 정 / 보'처럼 낱말 가운데서
+   갈렸다. 줄 길이도 고르게 */
+.bk-gw :is(.bk-gw-in, .bk-gw-out, .bk-gw-t, .bk-gw-m, .bk-gw-x) {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
