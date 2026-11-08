@@ -320,9 +320,17 @@ async function pdf(o) {
       }
       await page.cdp('Emulation.setEmulatedMedia', { media: '' })
     }
-    const r = await page.cdp('Page.printToPDF', { preferCSSPageSize: true, printBackground: false })
+    // 조각으로 받는다: 장이 100장을 넘는 발표는 PDF가 커서 한 번에 받으면 답이 오지 않았다
+    const { stream } = await page.cdp('Page.printToPDF', { preferCSSPageSize: true, printBackground: false, transferMode: 'ReturnAsStream' })
+    const parts = []
+    for (;;) {
+      const c = await page.cdp('IO.read', { handle: stream, size: 1 << 20 })
+      parts.push(Buffer.from(c.data, c.base64Encoded ? 'base64' : 'latin1'))
+      if (c.eof) break
+    }
+    await page.cdp('IO.close', { handle: stream })
     const out = o.out || 'deck.pdf'
-    const buf = Buffer.from(r.data, 'base64')
+    const buf = Buffer.concat(parts)
     writeFileSync(out, buf)
     await page.eval('window.__done && window.__done(), true')
     const f = pdfFacts(buf)
