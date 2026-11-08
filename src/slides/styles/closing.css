@@ -44,22 +44,26 @@
   margin-top: calc(-1em * ((1.08 - var(--head-box, 1.19)) / 2 + var(--head-gap, 0.15)));
 }
 
-/* 요청 목록이 없는 마지막 장: 큰 제목을 장 위에 붙이면 그 아래가 통째로 비었다(사용자: 제목만 위에 있고 나머지가 다 빈다).
-   제목을 한 단계 키워 눈높이(위 1 : 아래 1.2)에 두고, 발표자와 연락처는 그대로 아래 틀선에 앉힌다 */
-.l-closing:not(:has(.cl-steps)) .cl-main::before {
+/* 큰 제목은 눈높이(위 1 : 아래 1.2)에, 발표자와 연락처는 그대로 아래 틀선에. 제목을 장 위에 붙이면 요청 목록이 없을 때 그 아래가
+   통째로 비었고(사용자: 제목만 위에 있고 나머지가 다 빈다), 요청이 있으면 제목은 왼쪽 위, 요청은 오른쪽 아래로 대각선에 찢어져
+   보였다(검수). 요청 목록도 같은 눈높이에 둔다(아래 .cl-steps). 요청이 없으면 제목을 한 단계 키운다 */
+.l-closing .cl-main::before {
   flex: 1 1 0;
   content: '';
 }
 
-.l-closing:not(:has(.cl-steps)) .cl-main > .cl-title {
-  --fs: 128px;
+.l-closing .cl-main > .cl-title {
   flex: none;
   margin-top: 0;
 }
 
-.l-closing:not(:has(.cl-steps)) .cl-contact {
+.l-closing .cl-contact {
   flex: 1.2 1 0;
   justify-content: flex-end;
+}
+
+.l-closing:not(:has(.cl-steps)) .cl-main > .cl-title {
+  --fs: 128px;
 }
 
 .cl-contact > .meta-row:last-child dd {
@@ -72,13 +76,15 @@
   gap: 32px;
 }
 
-/* 줄 높이는 내용에 정해진 사이(위아래 --cl-pad)를 더한 만큼이다(docs/VISUAL-RULES.md 6). 목록은 단 아래에 붙여 마지막 줄을
-   왼쪽 단의 발표자, 연락처 끝에 맞춘다: 큰 제목은 왼쪽 위, 요청은 오른쪽 아래로 대각선에 놓인다.
+/* 줄 높이는 내용에 정해진 사이(위아래 --cl-pad)를 더한 만큼이다(docs/VISUAL-RULES.md 6).
    예전에는 셋이면 줄을 단 높이로 나눠(1fr) 늘려서 줄마다 위아래가 100px 넘게 비고 요청 사이가 크게 벌어져 흩어져 보였다 */
 .cl-steps {
   --cl-pad: 56px;
   display: grid;
-  align-content: end;
+  /* 제목과 같은 눈높이(위 1 : 아래 1.2): 아래 끝에 붙이던 때는 큰 제목(왼쪽 위)과 대각선으로 찢어졌다(검수) */
+  align-content: center;
+  /* 가운데보다 조금 위(눈높이): 아래에 본문 사이 하나만큼 더 비운다 */
+  padding-bottom: var(--body-gap);
   min-height: 0;
 }
 
