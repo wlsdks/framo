@@ -8,7 +8,8 @@ import { createSampleDeck } from '../src/deck/sample'
 import { OP_CODES } from '../src/ai/ops'
 import { REQUEST_FORMAT, REQUEST_VERSION } from '../src/ai/protocol'
 import { toShape } from '../src/ai/share'
-import { CSP, CSP_META, HOST, createAppServer } from './serve'
+import { CSP, CSP_META } from './csp'
+import { HOST, createAppServer } from './serve'
 
 let server: Server
 let port: number
