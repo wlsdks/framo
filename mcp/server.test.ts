@@ -143,7 +143,10 @@ describe('MCP 서버', () => {
     await tool('get_result', { request: SECRET })
     await tool('propose_changes', { deck: list.decks[0].deck, note: 'x', ops: [{ op: 'set_field', text: SECRET }] })
     expect(raw.join('\n')).not.toContain(SECRET)
-    expect(raw.join('\n')).not.toContain('7731')
+    // 숫자 비밀은 해시 id(새로 만든 장과 부품은 id가 매번 달라 해시도 다르다)와 고친 시각에 우연히 들어 있을 수 있어서
+    // 그것만 지우고 본다 (share.test.ts와 같다). 응답 안의 JSON은 글자로 한 번 더 싸여 따옴표 앞에 \가 붙는다
+    const plain = raw.join('\n').replace(/[sdbr][0-9a-f]{8,12}/g, '').replace(/\\?"(updatedAt|createdAt)\\?":\d+/g, '')
+    expect(plain).not.toContain('7731')
   })
 
   it('칸의 글은 글자 수 구간으로만, 넘침은 참으로만 보이고, 도구 설명이 그 뜻을 알려 준다', async () => {
