@@ -106,6 +106,12 @@ export const BLOCK_GROUPS: { name: string; short: string; description: string; t
   { name: '이미지와 사람', short: '이미지', description: '화면 캡처, 사진, 담당자, 로고', types: ['image', 'people', 'logos'] },
 ]
 
+/**
+ * 기본 컴포넌트 고르기(BLOCK_GROUPS)에 없는 부품: 모션 그래픽은 내 컴포넌트의 '모션 그래픽' 묶음에서 틀을 골라 넣는다
+ * (레시피와 버전이 있는 사람마다의 컴포넌트라서, 빈 것을 끌어다 놓는 기본 컴포넌트와 다르다)
+ */
+export const CUSTOM_TYPES: readonly BlockType[] = ['cine']
+
 export const BLOCK_LOOKS: { id: BlockLook; name: string }[] = [
   { id: 'plain', name: '바탕 없음' },
   // 예전 '옅은 면'. 지면의 말투(괘선)로 바꾸며 칠하지 않고 위 머리 괘선과 아래 줄 선으로 묶는다(docs/DESIGN.md)
@@ -133,6 +139,8 @@ export const BLOCK_EFFECTS: { id: BlockEffect; name: string; description: string
  * 템플릿 같은 움직임이 됐다. 그 둘은 늘 '더 보기'에 둔다. AI 카탈로그는 그대로 모두(BLOCK_EFFECTS)
  */
 export function effectChoices(type: BlockType): { first: BlockEffect[]; more: BlockEffect[] } {
+  // 모션 그래픽은 제 장면이 움직임이다: 장면(기본)이나 없음만
+  if (type === 'cine') return { first: ['auto', 'none'], more: [] }
   const group = BLOCK_GROUPS.find((g) => g.types.includes(type))?.short
   const fits: BlockEffect[] = group === '글' ? ['fade', 'rise'] : group === '차트' ? ['wipe', 'fade'] : ['rise', 'fade']
   const first: BlockEffect[] = ['auto', ...fits, 'none']

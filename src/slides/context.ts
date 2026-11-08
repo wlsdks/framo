@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { Block, DeckMeta, ItemKey, Slide, SlideOptions } from '../deck/types'
+import type { Block, CineRecipe, DeckMeta, ItemKey, Slide, SlideOptions } from '../deck/types'
 import type { LayoutSpec } from '../deck/layouts'
 import type { Scale } from './sharedScale'
 
@@ -62,6 +62,10 @@ interface SlideCtx {
   scale?: Scale
   /** 장 하나의 잣대들(차트 자리 → 잣대). 레이아웃 장은 '', 부품 장은 부품 id */
   scales?: ReadonlyMap<string, Scale>
+  /** 발표가 품은 모션 그래픽의 레시피(deck.cines) */
+  cines?: Readonly<Record<string, CineRecipe>>
+  /** 모션 그래픽 부품 안: 그 부품이 쓰는 레시피의 버전 id */
+  cineId?: string
 }
 
 export const SlideContext = createContext<SlideCtx | null>(null)

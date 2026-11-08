@@ -259,6 +259,18 @@ export const ALLOW = {
   },
   /** 찾은 것 가운데 잠시 두는 것. '종류: 항목' 꼴로, 찾은 것과 글자 그대로 맞춘다 */
   pending: [
+    // 정리 대기: 모션 그래픽의 쉬운 손잡이(모션 편집의 오른쪽 칸)가 쓴다. 다음 커밋(내 모션 그래픽과 손잡이)에서 지움
+    '파일 안에서만 쓰는 내보내기: src/deck/cine.ts#CINE_SHAPES',
+    '파일 안에서만 쓰는 내보내기: src/deck/cine.ts#CINE_AMOUNTS',
+    '파일 안에서만 쓰는 내보내기: src/deck/cine.ts#CINE_SPREADS',
+    '파일 안에서만 쓰는 내보내기: src/deck/cine.ts#CINE_CAMERAS',
+    '파일 안에서만 쓰는 내보내기: src/deck/cine.ts#CINE_PACES',
+    '쓰지 않는 내보내기: src/deck/cine.ts#CINE_ENTERS',
+    '쓰지 않는 내보내기: src/deck/cine.ts#cineKnown',
+    '파일 안에서만 쓰는 내보내기: src/deck/cine.ts#mainText',
+    '시험에서만 쓰는 내보내기: src/deck/cine.ts#knobValue',
+    '시험에서만 쓰는 내보내기: src/deck/cine.ts#knobsFor',
+    '파일 안에서만 쓰는 내보내기: src/deck/cine.ts#entersFor',
     // 정리 대기: 다른 작업과 겹쳐 병합 뒤 지움 (부품, 모션, 화면, 자동 버전을 다른 작업이 고치는 중이었다)
     '파일 안에서만 쓰는 내보내기: src/deck/blocks/arrange.ts#NUMBER_TYPES',
     '파일 안에서만 쓰는 내보내기: src/deck/blocks/arrange.ts#arrangeCost',

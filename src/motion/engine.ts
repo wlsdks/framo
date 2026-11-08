@@ -1275,6 +1275,8 @@ export function motionEngine(): MotionEngine {
      */
     type Stepper = { cell: HTMLElement; marks: number[]; i: number; born: number; held: number; at: number | null; raf: number }
     const steppers: Stepper[] = []
+    /** 누르면 먼저 끝까지 보낼 것(모션 그래픽이 아직 그리는 중이면 끝 모습으로 건너뛰고 true). 장을 넘기는 것은 그다음 누름이다 */
+    const skips: (() => boolean)[] = []
     /** 다 보인 장(뒤로 돌아온 장, 넘긴 장): 그 뒤에 재는 '하나씩'은 멈추지 않는다. 멈출 자리는 다음 프레임에 재므로, 그사이에
      *  다 보이게 한 장을 다시 멈춰 세웠다(뒤로 돌아온 대화가 두 마디에서 멈춰 있었다) */
     let shown = false
@@ -3616,6 +3618,11 @@ export function motionEngine(): MotionEngine {
           // 주석은 본문보다 물러나 있는 글이라 움직임도 조용히: 올라오지 않고 흐려지듯만, 위의 것이 다 나온 뒤에
           fade(one('.bk-nt'), 120, 700)
           break
+        case 'cine':
+          // 모션 그래픽(motion/cine.ts)은 엔진 밖에서 그린다: 시작할 때와 세기, 빠르기를 알리고, 그쪽의 시계(Web Animations 하나)를 이 묶음의
+          // 끝맺음(anims)에 받는다. 그래서 모션 편집의 멈추기와 끌어 보기, 발표하는 사람이 누르면 끝 모습으로 건너뛰기(skips)가 그 시계로 된다
+          one('.bk-cn')?.dispatchEvent(new CustomEvent('mo-cine', { bubbles: true, detail: { level: still ? 'none' : levelName, at: s(0), pace, anims, stops, skips } }))
+          break
         default:
           rise(cell, 0)
       }
@@ -4215,6 +4222,7 @@ export function motionEngine(): MotionEngine {
 
     /** 누르면: 다음 묶음을 보이고 그 자리에서 움직인다. 장 바꾸기의 기다림 없이 바로 */
     const next = () => {
+      if (skips.some((f) => f())) return true
       const st = steppers.find((x) => x.i < x.marks.length && x.cell.isConnected)
       if (st) {
         stepOn(st)

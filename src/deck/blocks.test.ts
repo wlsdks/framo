@@ -6,6 +6,7 @@ import {
   bandOf,
   byReading,
   BLOCK_GROUPS,
+  CUSTOM_TYPES,
   BLOCK_TYPES,
   BLOCKS,
   blockMinH,
@@ -111,8 +112,8 @@ describe('부품 목록', () => {
     expect(isLayoutBlock('toString')).toBe(false)
   })
 
-  it('부품 고르기 묶음에 모든 부품이 한 번씩 있다', () => {
-    const listed = BLOCK_GROUPS.flatMap((g) => g.types)
+  it('부품 고르기 묶음에 모든 부품이 한 번씩 있다 (내 컴포넌트에서 넣는 모션 그래픽 말고)', () => {
+    const listed = [...BLOCK_GROUPS.flatMap((g) => g.types), ...CUSTOM_TYPES]
     expect(new Set(listed).size).toBe(listed.length)
     expect([...listed].sort()).toEqual([...BLOCK_TYPES].sort())
   })

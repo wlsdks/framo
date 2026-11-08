@@ -1,0 +1,285 @@
+/* ---------- 모션 그래픽 (slides/blocks/Cine.tsx, motion/cine.ts) ----------
+   영화 타이틀처럼 한 장면을 짠 컴포넌트. 여기의 모양이 끝 모습이다(편집 화면, PDF, PPT, 목록): 글은 칸 그대로, 남는 선은 SVG.
+   발표할 때 엔진이 캔버스를 얹어 장면을 그리고(빛, 먹, 입자, 카메라), 끝나면 이 모습으로 돌아온다. 글의 짜임은 셋(레시피의 frame):
+   큰 글자와 옆의 제목(mark), 가운데 하나(center), 가로로 그어지는 선과 두 끝(line). 글자 크기는 칸 높이로 단계를 고른다(1.2 비율의
+   단계에서만. 큰 글자는 264 다음 단계 316 · 380 · 456을 쓴다: 영화 타이틀의 한 글자는 장 높이의 절반쯤이라야 무대가 된다) */
+
+.bk-cn {
+  position: relative;
+  height: 100%;
+}
+
+.bk-cn-cam {
+  position: absolute;
+  inset: 0;
+}
+
+/* 남는 선(선, 물결): 칸을 0~1000으로 늘린 좌표에 굵기를 지켜 긋는다(vector-effect). 발표할 때 캔버스가 같은 길을 같은 색으로 긋는다 */
+.bk-cn-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+
+.bk-cn-txt {
+  position: relative;
+  height: 100%;
+}
+
+.bk-cn-f:empty {
+  display: none;
+}
+
+.bk-cn-glyph {
+  --fs: 380px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  white-space: pre;
+}
+
+/* 큰 글자의 상자는 글자 윗선(cap)과 바닥선으로 자른다: 옆의 제목과 눈으로 보이는 글자끼리 가운데를 맞춘다 */
+.bk-cn-glyph,
+.bk-cn-glyph > :is(.ed-input, .ed-hint) {
+  text-box: trim-both cap alphabetic;
+}
+
+.bk-cn-title {
+  --fs: 74px;
+  font-family: var(--font-head);
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-tracking);
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+.bk-cn-lead,
+.bk-cn-sub,
+.bk-cn-text {
+  --fs: var(--t-lead);
+  color: var(--ink-2);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.bk-cn-label,
+.bk-cn-note {
+  --fs: var(--t-label);
+  color: var(--ink-2);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+
+.bk-cn-value {
+  --fs: 184px;
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+/* ---------- 큰 글자와 옆의 제목 (mark) ---------- */
+
+.fr-mark .bk-cn-txt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 88px;
+}
+
+.fr-mark .bk-cn-words {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+
+@container bk (max-height: 560px) {
+  .fr-mark .bk-cn-glyph {
+    --fs: 316px;
+  }
+
+  .fr-mark .bk-cn-title {
+    --fs: 62px;
+  }
+}
+
+@container bk (max-height: 420px) {
+  .fr-mark .bk-cn-glyph {
+    --fs: 220px;
+  }
+
+  .fr-mark .bk-cn-title {
+    --fs: 52px;
+  }
+
+  .fr-mark .bk-cn-txt {
+    column-gap: 64px;
+  }
+}
+
+@container bk (min-height: 760px) {
+  .fr-mark .bk-cn-glyph {
+    --fs: 456px;
+  }
+
+  .fr-mark .bk-cn-title {
+    --fs: 90px;
+  }
+}
+
+/* 좁은 칸: 큰 글자 아래에 제목을 쌓는다(옆에 두면 제목이 한 줄에 두세 글자씩 꺾였다) */
+@container bk (max-width: 900px) {
+  .fr-mark .bk-cn-txt {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    row-gap: 48px;
+  }
+
+  .fr-mark .bk-cn-glyph {
+    --fs: 264px;
+  }
+
+  .fr-mark .bk-cn-title {
+    --fs: 52px;
+  }
+}
+
+/* ---------- 가운데 하나 (center) ---------- */
+
+.fr-center .bk-cn-txt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: 24px;
+  text-align: center;
+}
+
+.fr-center .bk-cn-f {
+  max-width: 100%;
+}
+
+.fr-center .is-hero .bk-cn-title {
+  --fs: 108px;
+  line-height: 1.12;
+}
+
+.fr-center .bk-cn-title:not(.is-hero *) {
+  --fs: 44px;
+}
+
+.fr-center .is-hero + .bk-cn-f {
+  margin-top: 12px;
+}
+
+@container bk (max-height: 560px) {
+  .fr-center .bk-cn-value {
+    --fs: 154px;
+  }
+
+  .fr-center .is-hero .bk-cn-title {
+    --fs: 90px;
+  }
+}
+
+@container bk (max-height: 400px) {
+  .fr-center .bk-cn-value {
+    --fs: 108px;
+  }
+
+  .fr-center .is-hero .bk-cn-title {
+    --fs: 62px;
+  }
+
+  .fr-center .bk-cn-txt {
+    gap: 16px;
+  }
+}
+
+@container bk (min-height: 760px) {
+  .fr-center .bk-cn-value {
+    --fs: 220px;
+  }
+
+  .fr-center .is-hero .bk-cn-title {
+    --fs: 128px;
+  }
+}
+
+/* ---------- 선과 두 끝 (line) ----------
+   선은 칸 높이의 56%(motion/cine.ts의 PATH_Y)에 칸 너비를 건너간다. 두 끝의 이름은 선 아래 양 끝에, 제목은 위 왼쪽에 */
+
+/* 제목은 선 위 왼쪽에 붙여 선과 한 묶음으로 읽게(위 끝에 두면 선과 제목 사이가 비어 따로 놀았다) */
+.fr-line .bk-cn-txt {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 20px;
+  height: calc(56% - 56px);
+}
+
+.fr-line .bk-cn-title {
+  --fs: 62px;
+}
+
+.fr-line :is(.f-label, .f-note) {
+  position: absolute;
+  top: calc(56% + 40px);
+  max-width: 44%;
+}
+
+.fr-line .f-label {
+  left: 0;
+}
+
+.fr-line .f-note {
+  right: 0;
+  text-align: right;
+}
+
+.fr-line :is(.bk-cn-label, .bk-cn-note) {
+  --fs: var(--t-lead);
+  color: var(--ink);
+}
+
+@container bk (max-height: 420px) {
+  .fr-line .bk-cn-title {
+    --fs: 52px;
+  }
+
+  .fr-line :is(.f-label, .f-note) {
+    top: calc(56% + 28px);
+  }
+}
+
+/* 발표할 때 얹는 캔버스(motion/cine.ts): 칸 안이면 글 뒤에, 장 전체로 번지면 장의 맨 뒤(배경 다음, z-index -1)에.
+   장이 쌓임 맥락이어야 -1이 장의 바탕 위, 글 아래다(배경 backdrop.css와 같다) */
+.bk-cn-cv > canvas {
+  display: block;
+}
+
+.slide:has(> .bk-cn-cv) {
+  isolation: isolate;
+}
+
+/* 장 전체로 번지는 모션 그래픽은 칸 밖으로 나간 입자도 보여야 한다 */
+.bk-cine {
+  overflow: visible;
+}
+
+/* 멈춘 출력(PDF)에는 끝 모습만: 캔버스는 움직이는 동안에만 있다 */
+@media print {
+  .bk-cn-cv {
+    display: none;
+  }
+}

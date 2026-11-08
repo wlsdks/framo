@@ -4,6 +4,7 @@ import {
   BLOCK_LINK_IDS,
   BLOCK_TYPES,
   BLOCKS,
+  CUSTOM_TYPES,
   BOARD_ROWS,
   boardAreaH,
   boardCost,
@@ -102,7 +103,8 @@ const SCENES: BlockType[][][] = [
 /** 어느 장면에도 없는 부품은 설명 글과 짝지은 장면으로 (새 부품을 더해도 시험에서 빠지지 않게) */
 const ALL_SCENES: BlockType[][][] = [
   ...SCENES,
-  ...BLOCK_TYPES.filter((t) => !SCENES.some((s) => s.some((slot) => slot.includes(t)))).map((t) => [[t], ['text', 'bullets', 'message']] as BlockType[][]),
+  // 모션 그래픽은 판에 혼자 서는 장면이라(내 컴포넌트에서 넣는다) 조합을 만들지 않는다
+  ...BLOCK_TYPES.filter((t) => !CUSTOM_TYPES.includes(t) && !SCENES.some((s) => s.some((slot) => slot.includes(t)))).map((t) => [[t], ['text', 'bullets', 'message']] as BlockType[][]),
 ]
 
 /** 끌어다 놓는 자리를 고를 때 가장 좋은 자리의 점수에서 이만큼까지 (combos의 사람이 놓는 자리) */

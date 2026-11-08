@@ -16,6 +16,7 @@ import {
   BLOCK_SPEEDS,
   BLOCK_SPEED_IDS,
   BLOCK_TYPES,
+  CUSTOM_TYPES,
   BLOCK_WHENS,
   BLOCK_WHEN_IDS,
   BLOCKS,
@@ -274,7 +275,8 @@ export function catalog() {
       return {
         type,
         name: spec.name,
-        description: spec.description,
+        // 모션 그래픽은 사람이 내 라이브러리에서 넣고 고치는 장면이다: AI는 모양(칸이 비었는지)만 본다
+        description: CUSTOM_TYPES.includes(type) ? `${spec.description}. AI는 넣거나 바꾸지 못하고 칸의 상태만 봐요(add_block으로 넣을 수 없어요)` : spec.description,
         motion: spec.motion,
         // 가장 좁은 너비(판의 칸 수). 12면 장 너비를 혼자 쓴다
         minSpan: spec.minSpan,

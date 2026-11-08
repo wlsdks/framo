@@ -455,7 +455,8 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
    * 모이고 퍼지기는 늘, 나머지는 생동감에서만 되풀이한다(docs/MOTION.md '살아 있는 그림')
    */
   const LIVING = '.bk[data-type="hub"]'
-  const LIVING_LIVELY = ['flow', 'network', 'cycle', 'decision', 'whys', 'steps'].map((t) => `.bk[data-type="${t}"]`).join(',')
+  // 모션 그래픽(cine)은 생동감에서 드문 되풀이가 있다(motion/cine.ts의 LOOP)
+  const LIVING_LIVELY = ['flow', 'network', 'cycle', 'decision', 'whys', 'steps', 'cine'].map((t) => `.bk[data-type="${t}"]`).join(',')
   /** 되풀이가 있는 배경. 나머지는 생동감에서도 들어오기 한 번뿐이다(다 모이고 이어진 뒤의 고요가 말이다) */
   const FLOWS: Record<string, boolean> = { diffuse: true, flow: true }
   /**

@@ -15,6 +15,7 @@ import { BigNumber } from './blocks/BigNumber'
 import { Bullets } from './blocks/Bullets'
 import { Callout } from './blocks/Callout'
 import { Checks } from './blocks/Checks'
+import { Cine } from './blocks/Cine'
 import { Delta } from './blocks/Delta'
 import { Decision } from './blocks/Decision'
 import { Whys } from './blocks/Whys'
@@ -133,6 +134,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   steps: Steps,
   date: DateBlock,
   note: Note,
+  cine: Cine,
 }
 
 const FOLDS = new Map<BlockType, ReadonlySet<string>>()
@@ -200,6 +202,7 @@ function BlockBody({ block, span }: { block: Block; span: number }) {
         folds,
         span,
         scale: ctx.scales?.get(block.id),
+        cineId: block.type === 'cine' ? block.cine : undefined,
       }}
     >
       <div className="bk-in">

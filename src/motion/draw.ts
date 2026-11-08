@@ -63,8 +63,8 @@ export interface DrawKit {
   TAU: number
   clamp(x: number): number
   lerp(a: number, b: number, k: number): number
-  /** 들어와 자리 잡기, 걷히며 드러나기, 자리에서 자리로, 끝없이 오가기 (엔진의 EASE와 같은 곡선) */
-  ease: { out(x: number): number; reveal(x: number): number; carry(x: number): number; breathe(x: number): number }
+  /** 들어와 자리 잡기, 걷히며 드러나기, 자리에서 자리로, 끝없이 오가기, 카메라 (엔진의 EASE와 같은 곡선) */
+  ease: { out(x: number): number; reveal(x: number): number; carry(x: number): number; breathe(x: number): number; camera(x: number): number }
   /** 느린 흐름이 0부터 천천히 붙는 세기와 시계(처음에 멈춰 있다가 제 빠르기에 이른다) */
   amp(tau: number, ramp?: number): number
   clock(tau: number, ramp?: number): number
@@ -122,6 +122,8 @@ export function drawKit(): DrawKit {
   const carry = bezier(0.45, 0, 0.25, 1)
   /** 끝없이 오가기(느린 흐름) */
   const breathe = bezier(0.45, 0, 0.55, 1)
+  /** 카메라: 천천히 떠나 길게 멈춘다(모션 그래픽의 물러나기와 다가가기) */
+  const camera = bezier(0.33, 0, 0.12, 1)
   /** 느린 흐름이 들어오기 끝에서 0부터 천천히 붙는 세기 */
   const amp = (tau: number, ramp = 3000) => {
     const k = clamp(tau / ramp)
@@ -361,7 +363,7 @@ export function drawKit(): DrawKit {
     TAU,
     clamp,
     lerp,
-    ease: { out, reveal, carry, breathe },
+    ease: { out, reveal, carry, breathe, camera },
     amp,
     clock,
     sway,

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { copiedAiHidden } from '../deck/aiHidden'
 import { asCompose, boardSig, cleanDeckBlocks, copyBlocks, mapBlock, settleDeck, tidyLinks, withLayout } from '../deck/blocks'
 import { tidyBackdrop } from '../deck/backdrops'
+import { tidyCines } from '../deck/cine'
 import { unknownParts } from '../deck/compat'
 import { pastedItems, withOneMore } from '../deck/edits'
 import { makeSlide, uid } from '../deck/generate'
@@ -151,7 +152,8 @@ export const useDeck = create<DeckState>((set, get) => {
     const { deck, past, future, lastKey, lastTime } = get()
     if (!deck) return
     // 부품 장의 판은 바뀐 부품, 제목, 글자 크기에 맞춰 다시 나눈다 (커진 부품이 옆에서 자리를 받는다)
-    const next = { ...settleDeck(fn(deck), deck), updatedAt: Date.now() }
+    // 모션 그래픽을 빼거나 다른 버전으로 바꾸면 쓰지 않게 된 레시피는 발표에서 뺀다(되돌리면 그때의 발표와 함께 돌아온다)
+    const next = { ...tidyCines(settleDeck(fn(deck), deck)), updatedAt: Date.now() }
     // 아무것도 바뀌지 않았으면 기록하지 않는다. 지금 것을 다시 고르면(같은 차례, 같은 강조) 빈 되돌리기 단계가 생겨서
     // Ctrl+Z를 눌러도 아무 일이 없는 것처럼 보였다
     unchanged = sameDeck(next, deck)
