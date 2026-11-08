@@ -128,8 +128,8 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
     if (only && !only.includes(type)) return []
     const spec = BLOCKS[type]
     const original = sampleBlock(type)
-    // 숫자가 아닌 입력도 실제 크기로 재어 본다. 예시의 다른 부품은 바꾸지 않는다.
-    const sample = type === 'ring' && value != null ? { ...original, fields: { ...original.fields, value } } : original
+    // 숫자가 아닌 입력도 실제 크기로 재어 본다(비율 원). 큰 숫자는 굴러가는 모습을 값마다 본다('12,000건'처럼 쉼표가 든 값도). 예시의 다른 부품은 바꾸지 않는다.
+    const sample = (type === 'ring' || type === 'number') && value != null ? { ...original, fields: { ...original.fields, value } } : original
     // &fill=max: 항목을 가장 많이 넣었을 때, &fill=default: 새로 넣을 때의 수, &fill=3: 세 개. 예시 항목을 되풀이해 채운다
     const count = !spec.items
       ? 0

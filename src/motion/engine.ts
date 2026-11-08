@@ -395,21 +395,41 @@ export function motionEngine(): MotionEngine {
       const b = range.getBoundingClientRect()
       if (!b.width || !b.height) return false
     }
-    // 숫자마다 감싼다. 감싼 것은 글자 모양을 바꾸지 않는 보통 span이라 줄과 폭이 그대로다
+    // 숫자마다 감싼다. 감싼 것은 글자 모양을 바꾸지 않는 보통 span이라 줄과 폭이 그대로다. 숫자 안의 자리 쉼표('12,000')도
+    // 감싼다: 앞자리가 아직 비어 있는 동안 쉼표만 떠 있지 않게(아래 앞자리 0)
     const frag = document.createDocumentFragment()
     const cells: HTMLElement[] = []
+    const seps: { el: HTMLElement; left: number }[] = []
+    const numAt = text.search(/\d/)
+    const numEnd = numAt + all[0].length
     let plain = ''
-    for (const ch of text) {
-      if (ch >= '0' && ch <= '9') {
-        if (plain) frag.appendChild(document.createTextNode(plain))
-        plain = ''
-        const c = document.createElement('span')
-        c.textContent = ch
-        cells.push(c)
-        frag.appendChild(c)
-      } else plain += ch
-    }
+    Array.from(text).forEach((ch, i) => {
+      const digit = ch >= '0' && ch <= '9'
+      if (!digit && !(ch === ',' && i > numAt && i < numEnd)) {
+        plain += ch
+        return
+      }
+      if (plain) frag.appendChild(document.createTextNode(plain))
+      plain = ''
+      const c = document.createElement('span')
+      c.textContent = ch
+      if (digit) cells.push(c)
+      else seps.push({ el: c, left: cells.length - 1 })
+      frag.appendChild(c)
+    })
     if (plain) frag.appendChild(document.createTextNode(plain))
+    // 앞자리 0: 일의 자리보다 높은 자리는 그 자리에 0이 아닌 숫자가 오기 전까지(또는 더 높은 자리가 보이기 전까지) 비워 둔다.
+    // 자리마다 0부터 굴리면 '12,000건'이 '00,000건'에서 출발했다(검수). 보이는 때는 굴러가는 몫(곡선을 지난 값)으로 정한다:
+    // 띠가 0과 1 사이 반을 지날 때(0.5 / 끝 숫자). 더 높은 자리가 보이면 그 아래 자리는 0이어도 보인다
+    const units = Math.max(0, all[0].split('.')[0].replace(/\D/g, '').length - 1)
+    const show: number[] = cells.map(() => 0)
+    let higher = Infinity
+    for (let i = 0; i < units; i++) {
+      const d = Number(cells[i].textContent)
+      show[i] = Math.min(d > 0 ? 0.5 / d : Infinity, higher)
+      higher = Math.min(higher, show[i])
+      if (show[i] === Infinity) show[i] = 1
+    }
     const parts = Array.prototype.slice.call(frag.childNodes) as Node[]
     const original = node
     const covers: HTMLElement[] = []
@@ -447,6 +467,9 @@ export function motionEngine(): MotionEngine {
         if (lost) return
         const was = pace
         pace = speed
+        // 굴러가는 몫이 p를 지날 때 나타난다: 같은 곡선을 효과 전체에 걸면 키프레임의 자리(offset)는 곡선을 지난 몫과 견준다
+        const appear = (target: HTMLElement, p: number) =>
+          run(anims, target, [{ opacity: 0, offset: 0 }, { opacity: 0, offset: p }, { opacity: 1, offset: p }, { opacity: 1, offset: 1 }], at, { easing, duration })
         cells.forEach((c, i) => {
           const b = boxes[i]
           const h = heights[i]
@@ -479,7 +502,9 @@ export function motionEngine(): MotionEngine {
           // 지나쳤다 돌아오지 않는다. 예전 생동감은 끝 숫자를 창 높이의 16%만큼 지나쳤다 돌아왔는데, 녹화해 보니 자리마다
           // 따로 지나쳐서 0.4초쯤 숫자가 들쭉날쭉 어긋나 보였다. 생동감도 같은 감속 곡선으로, 조금 더 길게 굴러 천천히 멈춘다
           run(anims, strip, [{ translate: `0 ${stop * h}px` }], at, { easing, duration })
+          if (show[i] > 0) appear(cover, show[i])
         })
+        for (const sep of seps) if (sep.left >= 0 && show[sep.left] > 0) appear(sep.el, show[sep.left])
         pace = was
       },
     }
@@ -692,28 +717,63 @@ export function motionEngine(): MotionEngine {
       for (let node = walker.nextNode(); node; node = walker.nextNode()) if (/\d/.test(node.nodeValue || '')) n++
       return n
     }
+    /** 숫자가 굴러 맞춰지는 때(차례의 ms): at에 굴리기 시작한 숫자가 멈추는 때. 설명 글은 이때 켜진다 */
+    const rolled = (at: number) => at + (levelName === 'lively' ? 900 : 800) / L.speed
+    /**
+     * 큰 숫자(핵심 숫자, 큰 숫자, 숫자 한 줄, 사례의 성과)는 모아 두었다가(settleCounts) 같은 때에 굴러가는 것 가운데 이끄는 숫자
+     * (강조한 항목의 숫자, 없으면 먼저 나오는 숫자) 하나만 굴리고, 나머지는 제자리에서 맺힌다(차례대로 나타나기만). 숫자 셋이 함께
+     * 굴러가면 눈이 셋으로 갈렸다(검수, MOTION.md 기준 2 '초점은 한 번에 하나'). 그림과 짝인 숫자(막대, 고리 옆)는 그림과 같이 굴러서
+     * 모으지 않는다
+     */
+    const BIG = '.kp-value, .bk-num-v, .bk-sl-v, .cs-value'
+    type CountReq = { el: Element; start: number; ms: number; go: () => void }
+    let counting: CountReq[] | null = null
+    const settleCounts = () => {
+      if (!counting || !counting.length) return
+      const list = counting.sort((a, b) => a.start - b.start)
+      counting = []
+      let group: CountReq[] = []
+      let end = -Infinity
+      const lead = () => {
+        if (group.length) (group.find((r) => r.el.closest('.is-hl')) ?? group[0]).go()
+        group = []
+      }
+      for (const r of list) {
+        if (r.start >= end) {
+          lead()
+          end = r.start + r.ms
+        }
+        group.push(r)
+      }
+      lead()
+    }
     /** match: 같은 값을 그리는 그림(비율 고리, 목표 막대)의 시간과 곡선. 주면 숫자가 그림과 같이 움직인다(roll) */
     const count = (el: Element | null, at: number, match?: { easing: string; duration: number }) => {
       // 편집 중인 칸의 글자는 바꾸지 않는다 (쓰고 있는 글과 엇갈리지 않게). 옮겨 온 숫자는 다시 굴리지 않는다
       if (!el || still || el.closest('.m-edit, [data-mo-keep]')) return
       // 자리마다 굴린다. 생동감은 조금 더 길게 구른다. 굴릴 수 없는 칸은 0부터 올린다
       const lively = levelName === 'lively'
-      // 숫자가 둘인 값은 숫자 조각마다 굴린다(digitTexts). 0부터 올리기는 숫자 하나만 다뤄서, 굴릴 수 없으면 그대로 둔다
-      const runs = digitTexts(el)
-      // 20 이하의 정수 하나(4곳, 7명)는 굴리지 않고 0부터 하나씩 센다: 자리마다 한 바퀴 더 굴리면 4가 되기 전에 5, 3이 보여
-      // 틀린 수처럼 읽혔다(발표 녹화)
-      const small = /^\D*\b([0-9]|1[0-9]|20)\b\D*$/.test(el.textContent || '')
-      if (runs === 1 && small) {
-        countUp(el, s(at), (match?.duration ?? (lively ? 900 : 700)) * pace, stops, waits)
-        return
+      // 굴리는 때와 빠르기는 지금 정한다(모아 두었다 굴려도 이 숫자의 차례 그대로)
+      const start = s(at)
+      const speed = pace
+      const ms = (match?.duration ?? (lively ? 900 : 800)) * speed
+      const go = () => {
+        const was = pace
+        pace = speed
+        // 숫자가 둘인 값은 숫자 조각마다 굴린다(digitTexts). 0부터 올리기는 숫자 하나만 다뤄서, 굴릴 수 없으면 그대로 둔다
+        const runs = digitTexts(el)
+        // 20 이하의 정수 하나(4곳, 7명)는 굴리지 않고 0부터 하나씩 센다: 자리마다 한 바퀴 더 굴리면 4가 되기 전에 5, 3이 보여
+        // 틀린 수처럼 읽혔다(발표 녹화)
+        const small = /^\D*\b([0-9]|1[0-9]|20)\b\D*$/.test(el.textContent || '')
+        if (runs === 1 && small) countUp(el, start, (match?.duration ?? (lively ? 900 : 700)) * pace, stops, waits)
+        else if (runs > 1) for (let i = 0; i < runs; i++) roll(el, start, lively ? 900 : 800, anims, restores, i)
+        // 숫자는 장이 나오고 2초 안에 다 멈춘다(녹화해 보니 1.3초씩 굴리면 다음 장으로 넘길 때까지 굴러가고 있었다)
+        else if (!roll(el, start, match?.duration ?? (lively ? 900 : 800), anims, restores, 0, match?.easing))
+          countUp(el, start, (lively ? 1000 : 800) * pace, stops, waits)
+        pace = was
       }
-      if (runs > 1) {
-        for (let i = 0; i < runs; i++) roll(el, s(at), lively ? 900 : 800, anims, restores, i)
-        return
-      }
-      // 숫자는 장이 나오고 2초 안에 다 멈춘다(녹화해 보니 1.3초씩 굴리면 다음 장으로 넘길 때까지 굴러가고 있었다)
-      if (!roll(el, s(at), match?.duration ?? (lively ? 900 : 800), anims, restores, 0, match?.easing))
-        countUp(el, s(at), (lively ? 1000 : 800) * pace, stops, waits)
+      if (counting && el.matches(BIG)) counting.push({ el, start, ms, go })
+      else go()
     }
     /**
      * 지금 점(강조한 점)이 맺힌 뒤 고리가 두 번 퍼진다. 고리는 그동안만 점 안에 넣는다.
@@ -1429,6 +1489,8 @@ export function motionEngine(): MotionEngine {
           if (variant === 'cards') card(el, at)
           else rise(el, at, L.y * 0.7)
           count(el.querySelector('.kp-value'), at + 40)
+          // 설명은 숫자가 맞춰진 뒤에 켜진다: 숫자와 함께 나오면 굴러가는 숫자 옆에서 글을 먼저 읽게 했다(검수)
+          fade(el.querySelector('.kp-body'), rolled(at + 40), 400)
         })
         fade(one('.s-source'), end + 200)
         break
@@ -2052,7 +2114,7 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-num-l'), 100, 500)
           rise(one('.bk-num-v'), 140, L.y * 0.4)
           count(one('.bk-num-v'), 160)
-          fade(one('.bk-num-n'), 520, 600)
+          fade(one('.bk-num-n'), rolled(160), 500)
           break
         case 'delta': {
           // 같은 값이 바뀌는 것으로 보이게(대상 일관성, Heer & Robertson 2007): 뒤 값이 0이 아니라 앞 값에서 출발해 새 값으로
@@ -3533,8 +3595,8 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-sl-l'), 60, 500)
           rise(one('.bk-sl-v'), 120, L.y * 0.4)
           count(one('.bk-sl-v'), 140)
-          fade(one('.bk-sl-c'), 520, 400)
-          fade(one('.bk-sl-n'), 600, 500)
+          fade(one('.bk-sl-c'), rolled(140), 400)
+          fade(one('.bk-sl-n'), rolled(140) + 80, 500)
           draw(one('.bk-sl-box'), 300, levelName === 'lively' ? 800 : 650, 'left center', '::after')
           break
         case 'meter': {
@@ -4162,11 +4224,14 @@ export function motionEngine(): MotionEngine {
       still = quiet
       const outer = jobs
       jobs = []
+      counting = []
       try {
         make()
+        settleCounts()
         flushJobs()
       } finally {
         jobs = outer
+        counting = null
         still = false
         pace = 1
       }
@@ -4199,6 +4264,8 @@ export function motionEngine(): MotionEngine {
       // 장면: 움직이기 전에 자리를 재 두고(prepare), 레이아웃의 연출을 건 뒤 그 움직임을 다시 짜고 층을 얹는다
       const after = sceneName && !still ? scene(sceneName) : null
       choreo(layout, slideVariant)
+      // 모아 둔 큰 숫자를 굴린다(장면이 다시 짤 움직임에 숫자도 들게)
+      settleCounts()
       // 장면은 모아 둔 쓰기를 한 뒤에 다시 짠다: 나눈 낱말이 장 안에 있어야 어느 묶음의 움직임인지 안다
       flushJobs()
       if (after) after()
