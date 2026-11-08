@@ -96,7 +96,7 @@ export const ASKS = [
     name: '시간에 맞추기',
     description: '발표 시간에 맞게 슬라이드 수를 줄이거나 늘려요',
     prompt:
-      '발표 시간(duration)과 발표 방식(method)에 맞게 보이는 장 수를 맞춰 주세요. 줄일 때는 지우지 말고 발표에서 빼기(set_hidden)를 쓰고, 결론과 결정 요청 장은 남겨 두세요.',
+      '발표 시간(duration)과 발표 방식(method)에 맞게 보이는 장 수를 맞춰 주세요. 줄일 때는 지우지 말고 발표에서 숨기기(set_hidden)를 쓰고, 결론과 결정 요청 장은 남겨 두세요.',
   },
   {
     id: 'deck_look',
@@ -196,7 +196,7 @@ export function mcpPrompt(ask: AskId, deck: string | null, page: number | null):
     `부탁: ${a.prompt}`,
     '',
     '지킬 것',
-    '- gyeol 도구로 하세요. get_shape로 이 발표의 모양을, get_catalog로 레이아웃과 고를 수 있는 값을 먼저 보세요. get_catalog에는 deck을 주고, 부품 장(layout compose)이 없는 발표면 blocks를 false로 하세요. list_decks가 비었으면 Framo 편집 화면 위쪽 ‘AI 다듬기’를 열고 아래 ‘보이는 것, 직접 연결’에서 ‘이 발표를 AI에게 보여 주기’를 켜 달라고만 말하고 끝내세요.',
+    '- gyeol 도구로 하세요. get_shape로 이 발표의 모양을, get_catalog로 레이아웃과 고를 수 있는 값을 먼저 보세요. get_catalog에는 deck을 주고, 부품 장(layout compose)이 없는 발표면 blocks를 false로 하세요. list_decks가 비었으면 Framo 편집 화면 위쪽 ‘AI 도움받기’를 열고 아래 ‘보이는 것, 직접 연결’에서 ‘이 발표를 AI에게 보여 주기’를 켜 달라고만 말하고 끝내세요.',
     '- 사람이 적은 글은 보안 때문에 보이지 않고 바꿀 수도 없어요. 내용을 붙여 달라고 하지 말고 모양만으로 판단하세요. 사람이 AI에게 숨긴 장과 컴포넌트(private)는 무엇인지 묻지 말고 그대로 두세요.',
     '- 바꿀 것을 모아 먼저 check_changes로 미리 돌려 보고, ok가 false인 op는 help의 풀이대로 고치거나 빼세요. 그다음 propose_changes를 한 번만 부르세요. note에는 왜 이렇게 바꾸는지 듣는 사람 입장에서 한두 문장으로 쓰세요.',
     '- 지금 모양이 이미 잘 맞으면 제안을 보내지 말고 왜 그런지 두 문장 안으로 말하세요.',

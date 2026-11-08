@@ -11,9 +11,10 @@ describe('모션 편집의 머리', () => {
     expect(src).not.toContain('제목 없는 슬라이드')
   })
 
-  it('되돌리기와 다시 하기는 한글 입력 상태에서도 된다 (자판 자리로 읽는다)', () => {
-    // 한글 입력 상태의 Ctrl+Z는 key가 'ㅋ'로 와서, 모션 편집에서는 되돌리기가 되지 않았다(편집기는 presentKey로 읽는다)
-    expect(src).toMatch(/const k = presentKey\(e\)\.toLowerCase\(\)/)
-    expect(src).not.toMatch(/const k = e\.key\.toLowerCase\(\)/)
+  it('되돌리기와 다시 하기는 편집기의 단축키가 받는다 (한글 입력 상태에서도 되고, 두 번 되돌리지 않게)', () => {
+    // 덮는 창이던 때는 스튜디오가 따로 받았다. 이제 편집기의 한 모습이라 따로 받으면 한 번 눌러 두 번 되돌린다
+    expect(src).not.toMatch(/undo\(\)|redo\(\)/)
+    const shortcuts = readFileSync(join(__dirname, '..', 'shortcuts.ts'), 'utf8')
+    expect(shortcuts).toMatch(/const k = presentKey\(e\)\.toLowerCase\(\)/)
   })
 })

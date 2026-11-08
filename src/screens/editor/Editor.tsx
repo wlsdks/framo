@@ -19,19 +19,21 @@ import { loadBestDeck, persistNow } from '../../store/persist'
 import { useEditLock } from '../../store/useEditLock'
 import { canRecord } from '../../present/record'
 import { Present, type RecordResult } from '../Present'
-import { BackIcon, CloseIcon, HistoryIcon, Info, RedoIcon, SAVE_HELP, takeNotice, undoAction, UndoIcon, useToast } from '../ui'
+import { BackIcon, CloseIcon, HistoryIcon, Info, KeyboardIcon, RedoIcon, SAVE_HELP, takeNotice, undoAction, UndoIcon, useToast } from '../ui'
 import { measureOver } from './aiOver'
 import { ASK_ERROR, AiInbox, AiMenu, AiReview, AskStatus } from './AiShare'
 import { useBlockEditing } from './BlockEditor'
 import { BlockLibrary } from './BlockLibrary'
 import { ExportMenu, PresentButton, ThemeMenu } from './DeckMenus'
+import { DeckSettings } from './DeckSettings'
 import { useExports } from './exports'
 import { Inspector } from './Inspector'
 import { MotionPanel } from './MotionPanel'
 import { MotionStudio } from './studio/MotionStudio'
 import { CheckDialog, PresentDialogs, usePresentLaunch } from './presentLaunch'
 import { SaveStatus } from './SaveStatus'
-import { useEditorShortcuts } from './shortcuts'
+import { pressShortcut, SHORTCUT, useEditorShortcuts } from './shortcuts'
+import { ShortcutHelp } from './ShortcutHelp'
 import { useSidePanel } from './sidePanel'
 import { SlideList } from './SlideList'
 import { SlideStage } from './SlideStage'
@@ -160,8 +162,17 @@ function EditorBody({ deck }: { deck: Deck }) {
   const canRedo = useDeck((s) => s.future.length > 0)
   const { markVersion, saveNow } = useAutosave(deck)
   const [versionsOpen, setVersionsOpen] = useState(false)
-  // 움직임 편집: 편집기 위에 덮어 연다. 발표하고 돌아오면 다시 그 자리
+  // 단축키 보기 (위 막대의 키보드 단추, ?)
+  const [keysOpen, setKeysOpen] = useState(false)
+  // 움직임 편집: 편집기 안에서 슬라이드 자리와 오른쪽 칸을 바꿔 쓴다(왼쪽 슬라이드 목록은 그대로). 발표하고 돌아오면 다시 그 자리.
+  // 버전 기록을 여는 동안은 편집 화면으로 보이고, 닫으면 다시 모션 편집
   const [studio, setStudio] = useState<{ from: string | null } | null>(null)
+  const inStudio = !!studio && !versionsOpen
+  const openStudio = () => {
+    // 편집기에서 고른 것은 스튜디오가 이어받는다. 편집기 쪽 고르기는 끈다(지우기 키가 그 컴포넌트를 지우지 않게)
+    setStudio({ from: blocks.selected })
+    blocks.select(null)
+  }
   // '레이아웃 바꾸기'에서 그림에 올린 레이아웃. 슬라이드 자리에 그 모습으로 미리 보인다
   const [layoutPeek, setLayoutPeek] = useState<LayoutId | null>(null)
   useEffect(() => setLayoutPeek(null), [slide?.id])
@@ -231,6 +242,28 @@ function EditorBody({ deck }: { deck: Deck }) {
     present: (here, how) => void launch.start(here ? slide?.id : undefined, false, how),
     saveNow,
     print: () => exporting.printPdf(),
+    run: (action) => {
+      if (action === 'help') return setKeysOpen(true)
+      if (action === 'studio') return studio ? setStudio(null) : openStudio()
+      if (action === 'library') {
+        // 모션 편집 중이면 편집으로 돌아와 컴포넌트를 연다(모션 편집의 오른쪽 칸에는 컴포넌트 목록이 없다)
+        setStudio(null)
+        return side.toggleLibrary()
+      }
+      if (action === 'duplicate') {
+        if (!slide) return
+        store.duplicateSlide(slide.id)
+        return toast.show('슬라이드를 복제했어요', undoAction(toast))
+      }
+      // 테마, 발표 설정, AI 도움받기, 새 슬라이드는 그 단추를 누른 것과 같게 (메뉴를 여닫는 일은 단추가 맡는다)
+      pressShortcut(action)
+    },
+    blockSelected: () => !!blocks.selected,
+    step: (d) => {
+      const at = deck.slides.findIndex((s) => s.id === slide?.id)
+      const next = deck.slides[at + d]
+      if (next) store.select(next.id)
+    },
     toast,
   })
 
@@ -292,10 +325,14 @@ function EditorBody({ deck }: { deck: Deck }) {
           >
             <HistoryIcon />
           </button>
+          <button type="button" className={cx('icon-btn', keysOpen && 'is-on')} aria-label="단축키 보기" title={`단축키 보기 (${keys(SHORTCUT.help)})`} onClick={() => setKeysOpen(true)}>
+            <KeyboardIcon />
+          </button>
           {/* 되돌리기와 버전 기록(고친 것을 다루는 것)과 발표 전체의 메뉴를 가는 선 하나로 나눈다 */}
           <span className="ed-top-sep" aria-hidden="true" />
           <AiMenu deck={deck} ai={ai} ask={ask} />
           <ThemeMenu deck={deck} />
+          <DeckSettings deck={deck} slide={slide} toast={toast} />
           <ExportMenu
             onHtml={() => void exporting.exportHtml()}
             onPdf={() => exporting.printPdf()}
@@ -307,68 +344,61 @@ function EditorBody({ deck }: { deck: Deck }) {
         </div>
       </header>
 
-      <div className={cx('ed-body', versionsOpen && 'has-versions', side.shown && !versionsOpen && 'has-side')}>
+      <div className={cx('ed-body', versionsOpen && 'has-versions', side.shown && !versionsOpen && !inStudio && 'has-side', inStudio && 'is-studio')}>
         <SlideList deck={deck} selectedId={slide?.id ?? null} onRemove={removeSlide} />
-        {slide && <SlideStage deck={deck} slide={slide} ai={ai} ask={ask} blocks={blocks} fileOver={fileOver} side={side} layoutPeek={layoutPeek} onRemove={removeSlide} />}
-        {versionsOpen ? (
-          <VersionPanel deck={deck} onClose={() => setVersionsOpen(false)} notify={(text) => toast.show(text, undefined, 6000)} />
+        {inStudio && slide ? (
+          <MotionStudio
+            deck={deck}
+            slide={slide}
+            initial={studio.from}
+            onClose={() => setStudio(null)}
+            onConvert={blocks.convert}
+            onPresent={(id) => void launch.start(id)}
+            toast={toast}
+          />
         ) : (
-          slide && (
-            // 오른쪽 칸은 탭 셋: 이 장 설정, 움직임, 컴포넌트. 컴포넌트를 고르는 동안에도 어디로 돌아가는지 보인다
-            <aside className="side" aria-label="오른쪽 칸">
-              <div className="side-tabs" role="tablist" onKeyDown={onTabListKeys}>
-                <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'settings'} tabIndex={side.tab === 'settings' ? 0 : -1} onClick={side.settings}>
-                  이 슬라이드 설정
-                </button>
-                <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'motion'} tabIndex={side.tab === 'motion' ? 0 : -1} onClick={side.motion}>
-                  모션
-                </button>
-                <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'library'} tabIndex={side.tab === 'library' ? 0 : -1} onClick={() => blocks.setLibraryOpen(true)}>
-                  컴포넌트
-                </button>
-                {blocks.libraryOpen && (
-                  <Info label="컴포넌트 넣는 법">
-                    슬라이드로 끌어다 놓거나 눌러서 넣어요. 아무 데나 놓아도 알맞은 자리에 맞춰져요. 그림에 마우스를 올리면 발표할 때의 모션을 보여 줘요.
-                  </Info>
-                )}
-                {/* 좁은 창에서 슬라이드 위에 띄웠을 때만 보인다 */}
-                <button type="button" className="icon-btn side-close" aria-label="오른쪽 칸 닫기" title="닫기 (Esc)" onClick={side.close}>
-                  <CloseIcon />
-                </button>
-              </div>
-              {side.tab === 'library' ? (
-                <BlockLibrary deck={deck} slide={slide} blocks={blocks} toast={toast} />
-              ) : side.tab === 'motion' ? (
-                <MotionPanel
-                  deck={deck}
-                  slide={slide}
-                  blocks={blocks}
-                  toast={toast}
-                  onOpenStudio={() => {
-                    // 편집기에서 고른 것은 스튜디오가 이어받는다. 편집기 쪽 고르기는 끈다(지우기 키가 그 컴포넌트를 지우지 않게)
-                    setStudio({ from: blocks.selected })
-                    blocks.select(null)
-                  }}
-                />
-              ) : (
-                <Inspector deck={deck} slide={slide} areaHeight={blocks.areaHeight} onFocusField={(m) => focusField(slide.id, m)} onGoSlide={goToSlide} onPeekLayout={setLayoutPeek} />
-              )}
-            </aside>
-          )
+          <>
+            {slide && <SlideStage deck={deck} slide={slide} ai={ai} ask={ask} blocks={blocks} fileOver={fileOver} side={side} layoutPeek={layoutPeek} onRemove={removeSlide} />}
+            {versionsOpen ? (
+              <VersionPanel deck={deck} onClose={() => setVersionsOpen(false)} notify={(text) => toast.show(text, undefined, 6000)} />
+            ) : (
+              slide && (
+                // 오른쪽 칸은 탭 셋: 이 장 설정, 움직임, 컴포넌트. 컴포넌트를 고르는 동안에도 어디로 돌아가는지 보인다
+                <aside className="side" aria-label="오른쪽 칸">
+                  <div className="side-tabs" role="tablist" onKeyDown={onTabListKeys}>
+                    <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'settings'} tabIndex={side.tab === 'settings' ? 0 : -1} onClick={side.settings}>
+                      이 슬라이드 설정
+                    </button>
+                    <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'motion'} tabIndex={side.tab === 'motion' ? 0 : -1} onClick={side.motion}>
+                      모션
+                    </button>
+                    <button type="button" role="tab" className="side-tab" aria-selected={side.tab === 'library'} tabIndex={side.tab === 'library' ? 0 : -1} onClick={() => blocks.setLibraryOpen(true)}>
+                      컴포넌트
+                    </button>
+                    {blocks.libraryOpen && (
+                      <Info label="컴포넌트 넣는 법">
+                        슬라이드로 끌어다 놓거나 눌러서 넣어요. 아무 데나 놓아도 알맞은 자리에 맞춰져요. 그림에 마우스를 올리면 발표할 때의 모션을 보여 줘요.
+                      </Info>
+                    )}
+                    {/* 좁은 창에서 슬라이드 위에 띄웠을 때만 보인다 */}
+                    <button type="button" className="icon-btn side-close" aria-label="오른쪽 칸 닫기" title="닫기 (Esc)" onClick={side.close}>
+                      <CloseIcon />
+                    </button>
+                  </div>
+                  {side.tab === 'library' ? (
+                    <BlockLibrary deck={deck} slide={slide} blocks={blocks} toast={toast} />
+                  ) : side.tab === 'motion' ? (
+                    <MotionPanel deck={deck} slide={slide} onOpenStudio={openStudio} />
+                  ) : (
+                    <Inspector deck={deck} slide={slide} areaHeight={blocks.areaHeight} onFocusField={(m) => focusField(slide.id, m)} onGoSlide={goToSlide} onPeekLayout={setLayoutPeek} />
+                  )}
+                </aside>
+              )
+            )}
+          </>
         )}
       </div>
 
-      {studio && slide && (
-        <MotionStudio
-          deck={deck}
-          slide={slide}
-          initial={studio.from}
-          onClose={() => setStudio(null)}
-          onConvert={blocks.convert}
-          onPresent={(id) => void launch.start(id)}
-          toast={toast}
-        />
-      )}
       <PresentDialogs deck={deck} launch={launch} onGoTo={goToSlide} />
       {exporting.confirm && (
         <CheckDialog
@@ -392,6 +422,7 @@ function EditorBody({ deck }: { deck: Deck }) {
           onReject={() => rejectAi(reviewing)}
         />
       )}
+      {keysOpen && <ShortcutHelp onClose={() => setKeysOpen(false)} />}
       {toast.node}
     </div>
   )

@@ -145,7 +145,7 @@ function ArrangeSection({ deck, slide, areaHeight }: { deck: Deck; slide: Slide;
       r.moved
         ? '자동으로 배치했어요. 되돌리기로 이전 배치로 돌아갈 수 있어요.'
         : r.mark
-          ? '지금 배치를 그대로 두었어요. 이제부터 컴포넌트를 넣거나 빼면 자동으로 다시 배치해요.'
+          ? '지금 배치를 그대로 두었어요. 이제부터 컴포넌트를 넣거나 지우면 자동으로 다시 배치해요.'
           : '지금보다 나은 자동 배치를 찾지 못했어요. 직접 옮길 수도 있어요.',
     )
   }
@@ -185,7 +185,7 @@ function FrameSection({ slide }: { slide: Slide }) {
     <section className="ins-sec">
       <h2 className="ins-h">표시</h2>
       <Toggle label="제목과 부제" on={slide.options.hideHead !== true} onChange={(on) => setOptions(slide.id, { hideHead: on ? undefined : true })} />
-      <Toggle label="출처와 아래 표시" on={slide.options.hideFoot !== true} onChange={(on) => setOptions(slide.id, { hideFoot: on ? undefined : true })} />
+      <Toggle label="출처와 슬라이드 아래쪽" on={slide.options.hideFoot !== true} onChange={(on) => setOptions(slide.id, { hideFoot: on ? undefined : true })} />
     </section>
   )
 }

@@ -439,7 +439,7 @@
   font-weight: 600;
 }
 
-/* 테마 메뉴: 이름은 왼쪽, 고르는 것은 오른쪽에 한 줄씩. 1280×600에서도 '장 넘기기'까지 스크롤 없이 보이게 (DeckMenus.tsx) */
+/* 테마 메뉴: 이름은 왼쪽, 고르는 것은 오른쪽에 한 줄씩 (DeckMenus.tsx). 생김새만 고르고, 발표하는 방식은 발표 설정(deck-settings.css)에 */
 .theme-menu {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
@@ -468,23 +468,13 @@
   margin: 0;
 }
 
-/* 이름이 긴 단추('섹션과 쪽 번호', '움직임에 맞춰')는 글만큼 넓게, 나머지가 남는 너비를 나눈다 */
+/* 이름이 긴 단추('본명조 제목')는 글만큼 넓게, 나머지가 남는 너비를 나눈다 */
 .theme-menu .seg-full .seg-btn {
   flex: 1 1 auto;
   padding: 0 8px;
 }
 
-.theme-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.theme-row > .seg {
-  flex: 1;
-}
-
-.theme-row > .link-btn {
+.link-btn {
   flex: none;
   margin: 0;
   font-size: 12px;

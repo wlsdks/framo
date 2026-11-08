@@ -123,7 +123,7 @@
 | 띄운 것을 장 안의 것에 맞춰 두기 | `useTrackRect.ts`. 바뀔 만한 때만 잰다(매 프레임 재지 않는다) |
 | 발표 시작, 단축키, 내보내기, 오른쪽 칸 | `presentLaunch.tsx`, `shortcuts.ts`, `exports.tsx`, `sidePanel.ts`(탭과 좁은 창) |
 | 오른쪽 칸의 탭 | `Inspector.tsx`(이 장 설정), `MotionPanel.tsx`(움직임: 장 넘기기, 나오는 차례와 때), `BlockLibrary.tsx`(컴포넌트: 기본 컴포넌트), `SavedParts.tsx`(내 컴포넌트) |
-| 움직임 편집 | `studio/MotionStudio.tsx`(덮는 화면: 무대, 연출, 고른 컴포넌트), `studio/Timeline.tsx`(시간표), `studio/player.ts`(엔진이 건 움직임을 읽어 시간표를 만들고 멈추기, 끌어 보기). 연출 묶음은 `deck/blocks/presets.ts` |
+| 움직임 편집 | `studio/MotionStudio.tsx`(편집기 안의 한 모습: 가운데 무대와 시간표, 오른쪽 칸에 슬라이드 전체나 고른 컴포넌트의 값), `studio/Timeline.tsx`(시간표), `studio/player.ts`(엔진이 건 움직임을 읽어 시간표를 만들고 멈추기, 끌어 보기). 연출 묶음은 `deck/blocks/presets.ts` |
 | 내 컴포넌트 | 떼어 내고 다시 넣기는 `deck/blocks/saved.ts`, 두는 곳은 `store/saved.ts`(브라우저와 보관 폴더), 파일은 `store/partsFile.ts` |
 | 고칠 때마다 저장, 자동 버전 | `src/store/autosave.ts` |
 | 화면 곳곳의 작은 부품(아이콘, 툴팁 `Info`, `Toggle`, 고르는 단추 줄 `Segmented`, 알림) | `screens/ui.tsx` |

@@ -35,8 +35,8 @@ interface DeckState {
   setTheme(id: ThemeId): void
   setAccent(accent: string | undefined): void
   setMotion(motion: Motion): void
-  /** 글꼴, 글자 크기, 아래 표시, 장 넘기기 */
-  setLook(patch: Partial<Pick<DeckTheme, 'font' | 'size' | 'footer' | 'transition'>>): void
+  /** 글꼴, 이 PC 글꼴, 글자 크기, 슬라이드 아래쪽, 장 넘기기 */
+  setLook(patch: Partial<Pick<DeckTheme, 'font' | 'localFont' | 'size' | 'footer' | 'transition'>>): void
 
   setField(slideId: string, key: string, value: string): void
   setItem(slideId: string, index: number, key: ItemKey, value: string): void
@@ -252,7 +252,12 @@ export const useDeck = create<DeckState>((set, get) => {
       commit((d) => ({ ...d, motion }))
     },
     setLook(patch) {
-      commit((d) => ({ ...d, theme: { ...d.theme, ...patch } }))
+      // undefined로 넘긴 값은 지운다(이 PC 글꼴 거두기): 키를 남기면 저장한 파일에 빈 값이 남는다
+      commit((d) => {
+        const theme = { ...d.theme, ...patch }
+        for (const k of Object.keys(patch) as (keyof typeof patch)[]) if (patch[k] === undefined) delete theme[k]
+        return { ...d, theme }
+      })
     },
 
     setField(slideId, key, value) {

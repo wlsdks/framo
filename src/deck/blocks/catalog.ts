@@ -84,21 +84,24 @@ export const BLOCKS: Record<BlockType, BlockSpec> = {
 
 export const BLOCK_TYPES = Object.keys(BLOCKS) as BlockType[]
 
-/** 부품 고르기의 묶음. 모든 부품이 꼭 한 번씩 (테스트가 확인). short는 묶음 단추(한 줄에 다 들어가게 짧게), description은 묶음 제목 밑의 한 줄 */
+/**
+ * 부품 고르기의 묶음. 모든 부품이 꼭 한 번씩 (테스트가 확인). short는 묶음 단추(한 줄에 다 들어가게 짧게), description은 묶음 제목 밑의 한 줄.
+ * 묶음 단추는 이 목록대로 그려서 묶음을 더하면 단추도 따라 는다(컴포넌트 고르기가 묶음 이름을 따로 적지 않는다).
+ * 예전의 '작은 컴포넌트'(작게)는 크기로 나눈 묶음이라, 무엇을 보여 줄지로 찾는 사람은 어디 있는지 알 수 없었다.
+ * 소제목과 주석은 글에, 숫자 한 줄과 막대 하나와 범위와 상태는 숫자에, 단계 표시와 날짜는 순서와 일정에 둔다
+ */
 export const BLOCK_GROUPS: { name: string; short: string; description: string; types: BlockType[] }[] = [
-  { name: '글과 메시지', short: '글', description: '결론 한 줄, 설명, 목록, 인용, 예상 질문', types: ['message', 'text', 'bullets', 'quote', 'callout', 'faq', 'summary', 'points'] },
-  // 좁은 칸, 낮은 줄에 여럿 쌓거나 나란히 두는 작은 것들. 넓은 칸에서는 늘이지 않고 한 줄로 눕힌다
-  { name: '작은 컴포넌트', short: '작게', description: '소제목, 숫자 한 줄, 막대 하나, 범위, 상태, 단계 표시, 날짜, 주석', types: ['heading', 'stat', 'meter', 'range', 'status', 'steps', 'date', 'note'] },
-  { name: '숫자', short: '숫자', description: '큰 숫자, 전과 후, 목표 대비, 비율, 계산식', types: ['number', 'delta', 'goal', 'ring', 'ratio', 'spark', 'calc', 'kpi', 'scorecard'] },
+  { name: '글과 메시지', short: '글', description: '결론 한 줄, 설명, 목록, 인용, 예상 질문, 소제목, 주석', types: ['message', 'text', 'bullets', 'quote', 'callout', 'faq', 'summary', 'points', 'heading', 'note'] },
+  { name: '숫자', short: '숫자', description: '큰 숫자, 전과 후, 목표 대비, 비율, 계산식, 숫자 한 줄, 막대 하나, 범위, 상태', types: ['number', 'delta', 'goal', 'ring', 'ratio', 'spark', 'calc', 'kpi', 'scorecard', 'stat', 'meter', 'range', 'status'] },
   {
     name: '차트',
     short: '차트',
     description: '막대, 두 값 비교, 추이, 지표 흐름, 비중, 증감, 설문 결과, 달성, 원인 순위, 색 표, 깔때기, 시장 규모',
     types: ['bars', 'versus', 'attain', 'stack', 'trend', 'sparks', 'share', 'bridge', 'diverge', 'likert', 'pareto', 'heat', 'funnel', 'market'],
   },
-  { name: '흐름과 일정', short: '일정', description: '할 일, 일정표, 단계, 진행률, 순서', types: ['checks', 'gantt', 'process', 'timeline', 'progress', 'agenda'] },
+  { name: '순서와 일정', short: '순서·일정', description: '할 일, 일정표, 단계, 진행률, 순서, 단계 표시, 날짜', types: ['checks', 'gantt', 'process', 'timeline', 'progress', 'agenda', 'steps', 'date'] },
   // 발표할 때의 움직임이 내용을 말하는 컴포넌트: 데이터가 건너가고, 갈라지고, 모이고, 조립된다. 다 보인 모습도 그 자체로 읽히는 그림이다
-  { name: '움직이는 컴포넌트', short: '움직이는', description: '모이고 퍼지기, 흐름, 조건별 흐름, 원인 캐기, 순환, 연결도, 나누기, 모으기, 칸 조립, 대화, 바뀌기, 흩어진 것 모으기, 여기저기 찾기, 층, 관문, 겹친 수고, 같은 대상, 다른 이름, 확산 곡선, 퍼짐, 순위 바뀌기', types: ['hub', 'flow', 'decision', 'whys', 'cycle', 'network', 'split', 'merge', 'tiles', 'chat', 'wipe', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption', 'spread', 'rank'] },
+  { name: '움직이는 도식', short: '도식', description: '모이고 퍼지기, 흐름, 조건별 흐름, 원인 캐기, 순환, 연결도, 나누기, 모으기, 칸 조립, 대화, 바뀌기, 흩어진 것 모으기, 여기저기 찾기, 층, 관문, 겹친 수고, 같은 대상, 다른 이름, 확산 곡선, 퍼짐, 순위 바뀌기', types: ['hub', 'flow', 'decision', 'whys', 'cycle', 'network', 'split', 'merge', 'tiles', 'chat', 'wipe', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption', 'spread', 'rank'] },
   { name: '비교와 표', short: '비교', description: '표, 두 안 비교, 평가표, 우선순위, 위치, 가격안', types: ['facts', 'risks', 'swot', 'compare', 'rating', 'matrix', 'position', 'pricing', 'table'] },
   { name: '이미지와 사람', short: '이미지', description: '화면 캡처, 사진, 담당자, 로고', types: ['image', 'people', 'logos'] },
 ]
@@ -123,6 +126,18 @@ export const BLOCK_EFFECTS: { id: BlockEffect; name: string; description: string
   { id: 'letters', name: '한 글자씩', description: '글이 읽는 차례로 한 글자씩 차분히 내려앉아요. 핵심 한 줄이나 인용에 어울려요' },
   { id: 'none', name: '없음', description: '처음부터 보여요' },
 ]
+
+/**
+ * 컴포넌트의 모션 고르기에서 먼저 보이는 것: 기본(컴포넌트에 맞게), 그 종류에 어울리는 둘, 없음. 나머지는 '더 보기'에.
+ * 열한 가지를 한꺼번에 늘어놓으면 처음 쓰는 분은 무엇이 다른지 몰랐고, '튀어나오기', '한 글자씩'처럼 눈에 띄는 것을 쉽게 골라
+ * 템플릿 같은 움직임이 됐다. 그 둘은 늘 '더 보기'에 둔다. AI 카탈로그는 그대로 모두(BLOCK_EFFECTS)
+ */
+export function effectChoices(type: BlockType): { first: BlockEffect[]; more: BlockEffect[] } {
+  const group = BLOCK_GROUPS.find((g) => g.types.includes(type))?.short
+  const fits: BlockEffect[] = group === '글' ? ['fade', 'rise'] : group === '차트' ? ['wipe', 'fade'] : ['rise', 'fade']
+  const first: BlockEffect[] = ['auto', ...fits, 'none']
+  return { first, more: BLOCK_EFFECTS.map((e) => e.id).filter((id) => !first.includes(id)) }
+}
 
 /** 언제 나오는지. 이름과 설명은 움직임 탭과 AI 카탈로그에 함께 쓴다 */
 export const BLOCK_WHENS: { id: BlockWhen; name: string; description: string }[] = [

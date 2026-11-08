@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ACCENT_COMBOS, THEME_ORDER, TONES, themeStyle } from './themes'
+import { ACCENT_COMBOS, localFontOf, THEME_ORDER, TONES, themeStyle } from './themes'
 
 // 짙은 면(진한 면 컴포넌트, 표지 옆면, 색 면 단락 장) 위의 글이 묻히지 않는지. 예전에는 면이 쨍한 남색이고 강조가 4.5:1이라
 // 답(후 숫자)이 흰 이름표보다 흐렸고, 바뀐 만큼 칩은 3.7:1이었다
@@ -48,4 +48,25 @@ describe('짙은 면 위의 글', () => {
           expect(contrast(accent, mix(accent, deep, 0.16))).toBeGreaterThanOrEqual(4.5)
         })
       }
+})
+
+// 테마 메뉴의 '내 PC 글꼴': 이 PC에 깔린 글꼴의 이름만 저장하고, 없는 PC에서는 고른 짝의 글꼴로 그린다
+describe('내 PC 글꼴', () => {
+  it('고른 글꼴을 제목과 본문의 맨 앞에 두고, 뒤에는 고른 짝의 글꼴을 그대로 둔다', () => {
+    const base = themeStyle({ id: 'white', font: 'suit' }) as Record<string, string>
+    const s = themeStyle({ id: 'white', font: 'suit', localFont: '  회사 고딕 Bold ' }) as Record<string, string>
+    expect(s['--font-head']).toBe(`"회사 고딕 Bold", ${base['--font-head']}`)
+    expect(s['--font-body']).toBe(`"회사 고딕 Bold", ${base['--font-body']}`)
+    expect(localFontOf({ localFont: 'Noto Sans KR (Medium)' })).toBe('Noto Sans KR (Medium)')
+  })
+
+  it('글꼴 이름 밖으로 빠져나갈 수 있는 이름이나 글이 아닌 값은 쓰지 않는다 (값은 지우지 않는다)', () => {
+    const base = themeStyle({ id: 'white' }) as Record<string, string>
+    for (const bad of ['a"; color: red', "a'", 'a\\b', 'x}', '<b>', 'a\nb', '', '   ', 'x'.repeat(81), 3, null]) {
+      const theme = { id: 'white' as const, localFont: bad as string }
+      expect(localFontOf(theme)).toBeNull()
+      expect((themeStyle(theme) as Record<string, string>)['--font-head']).toBe(base['--font-head'])
+      expect(theme.localFont).toBe(bad)
+    }
+  })
 })

@@ -100,7 +100,7 @@ export const ACCENT_COMBOS: { name: string; accent: string }[] = [
 
 export const THEME_ORDER: ThemeId[] = ['white', 'navy']
 
-/** 발표할 때의 움직임. 이름과 설명은 테마 메뉴와 AI 카탈로그에 함께 쓴다. */
+/** 발표할 때의 움직임. 이름과 설명은 발표 설정과 AI 카탈로그에 함께 쓴다. */
 export const MOTIONS: { id: Motion; name: string; description: string }[] = [
   { id: 'none', name: '없음', description: '넘기면 바로 다 보여요.' },
   { id: 'calm', name: '차분하게', description: '제목, 항목이 차례로 살짝 올라와요. 보고 자리에 어울려요.' },
@@ -125,20 +125,28 @@ export const TEXT_SIZES: { id: TextSize; name: string; description: string }[] =
   { id: 'large', name: '크게', description: '큰 회의실이나 화면 공유에서 잘 읽혀요.' },
 ]
 
+/**
+ * 슬라이드 아래쪽에 보이는 것. 예전 이름 '아래 표시', '섹션만', '숨기기'는 무엇이 어디에 보이는지 알기 어려웠다.
+ * 발표 설정(DeckSettings.tsx)이 고를 때마다 그 슬라이드의 아래쪽 모습을 같이 보인다
+ */
 export const FOOTERS: { id: FooterMode; name: string; description: string }[] = [
-  { id: 'section', name: '섹션만', description: '아래에 지금 섹션 이름만 보여요. 화면으로 발표할 때 알맞아요.' },
-  { id: 'all', name: '섹션과 쪽 번호', description: '아래에 지금 섹션 이름과 쪽 번호가 보여요. 인쇄하거나 보낼 때 알맞아요.' },
-  { id: 'page', name: '쪽 번호만', description: '아래에 쪽 번호만 보여요.' },
-  { id: 'none', name: '숨기기', description: '아래에 아무것도 넣지 않아요.' },
+  { id: 'section', name: '섹션 이름', description: '슬라이드 아래에 지금 섹션 이름을 보여요(섹션이 없으면 발표 이름). 화면으로 발표할 때 알맞아요.' },
+  { id: 'all', name: '섹션 이름과 쪽 번호', description: '섹션 이름과 쪽 번호를 같이 보여요. 인쇄하거나 보낼 때 알맞아요.' },
+  { id: 'page', name: '쪽 번호', description: '슬라이드 아래에 쪽 번호만 보여요.' },
+  { id: 'none', name: '아무것도 없음', description: '슬라이드 아래에 아무것도 넣지 않아요.' },
 ]
 
+/**
+ * 화면 전환. 처음 값은 '자동'이라 대부분은 고르지 않아도 된다. 예전 이름 '모션에 맞춰', '모핑'은 무엇이 되는지 알기 어려웠다.
+ * 발표 설정이 고를 때마다 두 슬라이드가 넘어가는 작은 그림을 같이 보인다
+ */
 export const TRANSITIONS: { id: Transition; name: string; description: string }[] = [
-  { id: 'auto', name: '모션에 맞춰', description: '차분하게는 흐리게, 생동감은 밀기로 넘어가요.' },
+  { id: 'auto', name: '자동', description: '모션에 맞춰 알아서 골라요. 차분하게는 흐리게, 생동감은 밀기로 넘어가요.' },
   { id: 'none', name: '바로', description: '전환 없이 바로 다음 슬라이드가 보여요.' },
   { id: 'fade', name: '흐리게', description: '앞 슬라이드가 흐려지며 다음 슬라이드가 나타나요.' },
   { id: 'slide', name: '밀기', description: '다음 슬라이드가 옆에서 밀고 들어와요.' },
   { id: 'zoom', name: '다가오기', description: '다음 슬라이드가 앞으로 다가오듯 커지며 나타나요.' },
-  { id: 'morph', name: '모핑', description: '두 슬라이드에 같은 제목이나 컴포넌트가 있으면 사라지지 않고 새 자리와 크기로 옮겨 가요. 나머지는 흐리게 바뀌어요.' },
+  { id: 'morph', name: '이어지게', description: '두 슬라이드에 같은 제목이나 컴포넌트가 있으면 사라지지 않고 새 자리와 크기로 옮겨 가요(PowerPoint의 모핑). 나머지는 흐리게 바뀌어요.' },
 ]
 
 /** 제목 덩어리의 자리 (표지, 섹션). 장 위에서 제목을 위아래로 끌거나 이 장 설정에서 고른다 */
@@ -268,6 +276,21 @@ export function headLook(theme?: { id?: string; font?: string }): { title: Glyph
   const f = FONT_LOOK[fontOf(theme ?? {})]
   return { title: f.title, lead: f.lead, trim: (HEAD.titleLine - f.box) / 2 + f.gap }
 }
+
+/**
+ * 이 PC 글꼴의 이름을 CSS에 넣을 수 있게. 따옴표, 역빗금, 쌍반점, 중괄호, 꺾쇠처럼 글꼴 이름 밖으로 빠져나갈 수 있는 글자가 있거나 너무 길면
+ * 쓰지 않는다(null). 값은 지우지 않고 그대로 두어, 저장해도 잃지 않는다(모르면 쉬고 지우지 않게)
+ */
+export function localFontOf(deckTheme: { localFont?: unknown }): string | null {
+  const name = deckTheme.localFont
+  if (typeof name !== 'string') return null
+  const t = name.trim()
+  if (!t || t.length > 80 || /["'\\;{}<>\u0000-\u001f]/.test(t)) return null
+  return t
+}
+
+/** 글꼴 줄: 이 PC 글꼴을 골랐으면 그것을 맨 앞에, 없는 PC에서는 고른 짝의 글꼴로 */
+const withLocal = (local: string | null, stack: string) => (local ? `"${local}", ${stack}` : stack)
 
 /** 글꼴 고르는 단추의 이름을 그 글꼴(제목 글꼴)로 써서 고르기 전에 모양을 보이게 */
 export function fontPreview(id: FontId): CSSProperties {
@@ -421,6 +444,7 @@ export function isDarkLook(deckTheme: DeckTheme, tone: Tone = 'base'): boolean {
 export function themeStyle(deckTheme: DeckTheme, tone: Tone = 'base'): CSSProperties {
   const c = paletteOf(deckTheme, tone)
   const f = FONT_LOOK[fontOf(deckTheme)]
+  const local = localFontOf(deckTheme)
   return {
     '--bg': c.bg,
     '--ink': c.ink,
@@ -436,8 +460,8 @@ export function themeStyle(deckTheme: DeckTheme, tone: Tone = 'base'): CSSProper
     '--deep-ink': c.deepInk,
     '--deep-accent': c.deepAccent,
     '--deep-mark': c.deepMark,
-    '--font-head': f.font,
-    '--font-body': f.body,
+    '--font-head': withLocal(local, f.font),
+    '--font-body': withLocal(local, f.body),
     '--head-weight': f.weight,
     '--display-weight': f.weight + 100,
     '--num-weight': f.num,

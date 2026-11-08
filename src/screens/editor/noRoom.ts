@@ -37,11 +37,11 @@ export function noRoomText(r: NoRoom, type: BlockType, where: 'here' | 'move' | 
   const name = BLOCKS[type].name
   switch (r.kind) {
     case 'full':
-      return { why: `슬라이드 하나에는 컴포넌트를 ${MAX_BLOCKS}개까지 넣어요.`, fix: '컴포넌트를 하나 빼거나 새 슬라이드에 넣어 주세요.' }
+      return { why: `슬라이드 하나에는 컴포넌트를 ${MAX_BLOCKS}개까지 넣어요.`, fix: '컴포넌트를 하나 지우거나 새 슬라이드에 넣어 주세요.' }
     case 'large':
       return {
         why: `작은 컴포넌트가 아닌 것은 슬라이드 하나에 ${MAX_LARGE}개까지 넣어요. 더 많으면 어디를 봐야 할지 흐려져요.`,
-        fix: '컴포넌트를 하나 빼거나 새 슬라이드에 넣어 주세요. 소제목, 숫자 한 줄 같은 작은 컴포넌트는 더 넣을 수 있어요.',
+        fix: '컴포넌트를 하나 지우거나 새 슬라이드에 넣어 주세요. 소제목, 숫자 한 줄 같은 작은 컴포넌트는 더 넣을 수 있어요.',
       }
     case 'link':
       return { why: '기존 연결 기호의 대상을 유지하며 컴포넌트를 넣을 자리가 없어요.', fix: '연결 기호를 조정하거나 새 슬라이드에 넣어 주세요.' }
@@ -80,7 +80,7 @@ export function noRoomText(r: NoRoom, type: BlockType, where: 'here' | 'move' | 
       if (r.already)
         return {
           why: '이 슬라이드의 컴포넌트들이 이미 슬라이드 높이를 넘었어요.',
-          fix: where === 'change' ? '항목을 줄이거나 컴포넌트를 빼면 바꿀 수 있어요.' : '항목을 줄이거나 컴포넌트를 빼면 들어가요.',
+          fix: where === 'change' ? '항목을 줄이거나 컴포넌트를 지우면 바꿀 수 있어요.' : '항목을 줄이거나 컴포넌트를 지우면 들어가요.',
         }
       // 몇 %인지는 쓰는 사람에게 뜻이 없다. 조금 넘치는지만 알려 주면 항목 하나만 빼도 되는지 가늠한다
       const over = r.need / Math.max(1, r.room) <= 1.1 ? '슬라이드 높이를 조금 넘어서' : '슬라이드 높이를 넘어서'
@@ -91,7 +91,7 @@ export function noRoomText(r: NoRoom, type: BlockType, where: 'here' | 'move' | 
             : where === 'move'
               ? `${josa(name, '을', '를')} 여기로 옮기면 이 슬라이드의 컴포넌트들이 ${over} 글이 잘려요.`
               : `${josa(name, '을', '를')} 넣으면 이 슬라이드의 컴포넌트들이 ${over} 글이 잘려요.`,
-        fix: where === 'change' ? '다른 컴포넌트를 빼거나 항목을 줄이면 바꿀 수 있어요.' : '다른 컴포넌트를 빼거나 항목을 줄이면 들어가요.',
+        fix: where === 'change' ? '다른 컴포넌트를 지우거나 항목을 줄이면 바꿀 수 있어요.' : '다른 컴포넌트를 지우거나 항목을 줄이면 들어가요.',
       }
     }
   }

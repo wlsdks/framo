@@ -78,7 +78,7 @@ export function SlideStage({
   )
   const peekSlide = useMemo(() => (layoutPeek ? layoutPreview(slide, layoutPeek) : null), [slide, layoutPeek])
 
-  // 테마 메뉴에서 움직임을 고르면 이 장에서 발표할 때처럼 한 번 보여 준다
+  // 발표 설정의 '이 슬라이드에서 보기', 모션 탭의 '미리 보기'를 누르면 이 장에서 발표할 때처럼 한 번 보여 준다
   const [preview, setPreview] = useState(0)
   const previewRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
