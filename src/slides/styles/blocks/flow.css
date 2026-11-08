@@ -473,14 +473,14 @@
      이름의 한도는 장 제목을 따른다(아래 .l-compose 규칙의 --fw-name-cap): 제목이 길어 작아지면 이름이 제목보다 크지 않게 */
   .bk-fw[data-n] .bk-fw-t {
     --fs: var(--t-h);
-    font-size: min(calc(var(--fw-name-cap, 52px) * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+    font-size: min(calc(var(--fw-name-cap, 52px) * var(--fit, 1) * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
   }
 
   .bk-fw[data-n] .bk-fw-i {
     --fs: var(--t-body);
     gap: var(--fw-i-gap);
     font-family: var(--font-head);
-    font-size: min(calc(var(--fw-name-cap, 52px) / 1.2 * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+    font-size: min(calc(var(--fw-name-cap, 52px) / 1.2 * var(--fit, 1) * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
     font-weight: var(--num-weight);
     letter-spacing: -0.01em;
   }
@@ -510,9 +510,9 @@
     font-weight: 500;
   }
 
-  /* 설명은 번호와 같은 한도(이름 한 단계 아래)에서 멈춘다: 이름이 제목을 따라 작아질 때 설명이 이름만 해지지 않게 */
+  /* 설명은 번호와 같은 한도(이름 한 단계 아래)에서 멈춘다: 이름이 제목을 따라, 또는 한 줄에 들도록 작아질 때 설명이 이름만 해지지 않게 */
   .bk-fw[data-n] .bk-fw-m {
-    font-size: min(calc(var(--fw-name-cap, 52px) / 1.2 * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+    font-size: min(calc(var(--fw-name-cap, 52px) / 1.2 * var(--fit, 1) * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
   }
 }
 
@@ -522,4 +522,11 @@
 
 .l-compose:has(.s-title.fit-2:not(.is-hint, .is-empty)) .bk-fw {
   --fw-name-cap: 36px;
+}
+
+/* 단계 이름은 짧은 이름표라 한 줄에 둔다: 이름이 꺾이면 맞추기(fitBlocks.ts의 flowNames)가 이름, 번호, 설명을 같이 한 단계씩(1.2)
+   내린 배율을 흐름에 적는다(--fw-fit). 길이에 따라 줄이는 배율(--fit, base.css)과 같은 자리라 칸 크기의 단계와 곱해지고, 판을 혼자 쓸
+   때의 한도(위 --fw-name-cap)도 같이 내려간다. 오가는 양과 오가는 것은 그대로 */
+.bk-fw :is(.bk-fw-t, .bk-fw-i, .bk-fw-m) {
+  --fit: var(--fw-fit, 1);
 }

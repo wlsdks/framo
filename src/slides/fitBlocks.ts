@@ -292,10 +292,94 @@ export function blockFitter() {
   }
 
   /**
+   * 글 칸이 그려진 줄 수 (줄의 윗선이 글자 높이의 반 넘게 다르면 다른 줄). 글 조각만 센다: 편집 화면의 칸 테(.ed-halo)는 글 위아래로
+   * 넓어서 상자째 세면 한 줄 칸이 두 줄로 보였다
+   */
+  function rowsOf(el: Element): number {
+    if (!range) range = document.createRange()
+    const tops: number[] = []
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    while (walk.nextNode()) {
+      range.selectNodeContents(walk.currentNode)
+      for (const q of Array.from(range.getClientRects())) if (q.width > 1 && !tops.some((t) => Math.abs(t - q.top) < q.height / 2)) tops.push(q.top)
+    }
+    return tops.length
+  }
+
+  /**
+   * 흐름의 단계 이름은 짧은 이름표라 한 줄에 둔다(docs/DESIGN.md '흐름'). 이름이 꺾이면 이름, 번호, 설명을 같이 한 단계(1.2)씩 내려
+   * 모든 이름이 한 줄에 드는 가장 큰 단계를 고른다(--fw-fit, flow.css). 판을 혼자 쓰는 흐름은 이름을 52까지 키워서, 다섯 단계면 단계 칸이
+   * 좁아 '각자 / 만들기'처럼 두 낱말 이름이 반으로 꺾이고 한 낱말 이름만 한 줄이라 이름과 설명의 윗선이 들쭉날쭉했고 설명도 꺾였다.
+   * 이름마다 크기를 따로 두지 않는다(흐름 안의 이름은 한 크기). 번호(이름 한 단계 아래)가 바닥(--fs-min) 밑으로 가지 않는 만큼까지만
+   * 내린다. 그래도 한 줄에 들지 않는 긴 이름이 있으면 꺾이는 줄이 가장 적어지는 단계 가운데 가장 큰 단계: 긴 이름만 낱말 사이에서
+   * 꺾이고(word-break: keep-all) 다른 이름은 한 줄이다. 처음 크기로 두면 짧은 이름까지 모두 반으로 꺾였고, 바닥까지 내리면 덜 꺾이지도
+   * 않는데 흐름 전체가 작아졌다. 좁은 칸에서 세로로 쌓은 흐름도 같다(이름이 칸 너비보다 길면 꺾인다).
+   * 편집 화면에서 글을 쓰는 동안은 쓰기 전의 단계 그대로(typing): 글자마다 고르면 이름이 꺾이는 글자에서 흐름 전체가 한 단계 작아지고,
+   * 지우면 다시 커져 손 아래에서 들썩였다. 다 쓰고 나가면 다시 고른다.
+   * 글자 크기가 바뀔 때마다 다시 골라야 해서 place가 부른다(칸을 줄이고 키울 때마다 place를 부른다)
+   */
+  function flowNames(scope: ParentNode): void {
+    const flows = scope instanceof HTMLElement && scope.classList.contains('bk-fw') ? [scope] : Array.from(scope.querySelectorAll<HTMLElement>('.bk-fw'))
+    for (const fw of flows) {
+      const area = fw.closest<HTMLElement>('.bk-area')
+      if (area && typing(area)) continue
+      const put = (d: number) => {
+        const v = d === 1 ? '' : String(Math.round(d * 1e4) / 1e4)
+        if (fw.style.getPropertyValue('--fw-fit') === v) return
+        if (v) fw.style.setProperty('--fw-fit', v)
+        else fw.style.removeProperty('--fw-fit')
+      }
+      const cs = getComputedStyle(fw)
+      const names = Array.from(fw.querySelectorAll<HTMLElement>('.bk-fw-t')).filter((el) => el.getClientRects().length)
+      if (!names.length) {
+        put(1)
+        continue
+      }
+      // 고를 수 있는 단계: 처음 크기(1)부터 1.2씩 나눠, 번호가 바닥에 닿기 전까지
+      const floor = (parseFloat(cs.getPropertyValue('--fs-min')) || 0) - 0.5
+      let now = Number(fw.style.getPropertyValue('--fw-fit')) || 1
+      let fs = parseFloat(getComputedStyle(names[0]).fontSize)
+      // 지금 단계에서 이름이 바닥에 걸려 있으면(칸이 줄어 글자가 작아졌다) 처음 크기를 거꾸로 셈할 수 없어 처음 크기로 돌려 잰다
+      if (now !== 1 && fs <= floor + 1) {
+        put(1)
+        now = 1
+        fs = parseFloat(getComputedStyle(names[0]).fontSize)
+      }
+      const base = fs / now
+      const ks = [1]
+      while ((base * ks[ks.length - 1]) / 1.44 >= floor && ks.length < 6) ks.push(ks[ks.length - 1] / 1.2)
+      // 이름들이 그려진 줄 수의 합. 글자가 작을수록 줄지 않으니 가장 작은 단계의 합이 가장 적다
+      const rows = () => names.reduce((n, el) => n + rowsOf(el), 0)
+      // 지금 단계에서 시작한다: 맞춘 뒤 다시 고를 때(칸을 옮기고 높이를 맞추는 동안 여러 번) 처음부터 내려 보지 않게
+      let i = Math.max(0, ks.findIndex((d) => Math.abs(d - now) < 1e-3))
+      put(ks[i])
+      if (rows() === names.length) {
+        while (i > 0) {
+          put(ks[i - 1])
+          if (rows() > names.length) {
+            put(ks[i])
+            break
+          }
+          i--
+        }
+        continue
+      }
+      put(ks[ks.length - 1])
+      const least = rows()
+      for (const d of ks) {
+        put(d)
+        if (rows() <= least) break
+      }
+    }
+  }
+
+  /**
    * 위치 비교의 이름표 자리를 그려진 크기로 다시 고른다. 그리기 전에 글 길이로 어림한 자리(layouts/Position.tsx의 labelSides)를 먼저 보고,
-   * 앞의 점의 이름표나 다른 점을 덮거나 판 밖으로 나가면 오른쪽, 왼쪽, 위, 아래 차례로 겹치지 않는 자리를 찾는다. 없으면 어림한 자리
+   * 앞의 점의 이름표나 다른 점을 덮거나 판 밖으로 나가면 오른쪽, 왼쪽, 위, 아래 차례로 겹치지 않는 자리를 찾는다. 없으면 어림한 자리.
+   * 흐름의 단계 이름도 여기서 다시 고른다(flowNames)
    */
   function place(scope: ParentNode): void {
+    flowNames(scope)
     const plots = scope instanceof HTMLElement && scope.classList.contains('pm-plot') ? [scope] : Array.from(scope.querySelectorAll<HTMLElement>('.pm-plot'))
     const SIDES = ['is-left', 'is-up', 'is-down']
     const tries = [[], ['is-left'], ['is-up'], ['is-down'], ['is-left', 'is-up'], ['is-left', 'is-down']]
