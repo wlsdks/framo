@@ -35,7 +35,7 @@ const ORPHAN = 0.22
 const TEXT_TYPES = new Set(['message', 'text', 'quote', 'callout', 'bullets', 'note', 'faq', 'heading'])
 
 /** 글이 문장이 아니라 그림의 이름표인 부품 (흐름, 연결도, 나누기, 모으기, 칸 조립) */
-const FIGURE_TYPES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases'])
+const FIGURE_TYPES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption'])
 
 type Span = { t: number; b: number }
 

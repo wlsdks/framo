@@ -1,0 +1,161 @@
+/* ---------- 확산 곡선 ----------
+   종 모양 곡선(옅은 선 하나)과 그 아래 다섯 무리의 면. 지난 무리는 강조색 농담, 지금 무리는 강조색을 짙게, 남은 무리는 아주 옅게.
+   누적 S자 곡선은 글자색의 가는 선. 무리 경계는 옅은 선, 바닥선 아래에 경계마다 누적 몫을 작게.
+   그림은 칸의 남는 높이를 받고(차트), 항목 칸은 곡선의 무리와 같은 너비로 그 아래에 선다 */
+.bk-ad {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.bk-ad-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 24px;
+  margin-bottom: calc(20px * var(--bk-fit, 1));
+}
+
+.bk-ad-l {
+  --fs: var(--t-small);
+  color: var(--ink-2);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.bk-ad-n {
+  --fs: var(--t-small);
+  color: var(--ink-3);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.bk-ad-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 140px;
+}
+
+.bk-ad-fill,
+.bk-ad-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.bk-ad-svg {
+  overflow: visible;
+}
+
+.bk-ad-band {
+  fill: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.bk-ad-band.is-past {
+  fill: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.bk-ad-band.is-now {
+  fill: color-mix(in srgb, var(--accent) 62%, transparent);
+}
+
+.bk-ad-s {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+
+.bk-ad-bell {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: var(--rule-hair);
+  vector-effect: non-scaling-stroke;
+}
+
+.bk-ad-edge,
+.bk-ad-base {
+  stroke: var(--line);
+  stroke-width: var(--rule-hair);
+  vector-effect: non-scaling-stroke;
+}
+
+/* 누적 곡선의 이름: 곡선이 닿는 오른쪽 위 끝 */
+.bk-ad-sl {
+  --fs: var(--t-small);
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: var(--ink-3);
+  line-height: 1;
+  transform: translateY(-120%);
+}
+
+/* 훑는 세로선: 발표할 때만 움직이며 보이고 다 보인 모습에서는 없다 */
+.bk-ad-sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  border-left: var(--rule-hair) solid var(--ink-2);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bk-ad-scale {
+  position: relative;
+  height: 1.6em;
+  margin-top: 10px;
+}
+
+.bk-ad-cum {
+  --fs: var(--t-small);
+  position: absolute;
+  top: 0;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.bk-ad-list {
+  display: grid;
+  column-gap: 0;
+  margin: calc(14px * var(--bk-fit, 1)) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bk-ad-it {
+  min-width: 0;
+  padding-right: 16px;
+}
+
+.bk-ad-t {
+  --fs: var(--t-body);
+  display: block;
+  color: var(--ink-2);
+  font-weight: 700;
+  line-height: 1.3;
+  text-wrap: balance;
+  word-break: keep-all;
+}
+
+.bk-ad-it.is-now .bk-ad-t {
+  color: var(--ink);
+}
+
+.bk-ad-m {
+  --fs: var(--t-small);
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-3);
+  line-height: 1.4;
+  text-wrap: pretty;
+  word-break: keep-all;
+}

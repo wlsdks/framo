@@ -1232,7 +1232,7 @@ export function blockFitter() {
   ] as const
   const ANSWER_TEXT = ANSWERS.map((a) => a.text).join(', ')
   // 글이 문장이 아니라 그림의 이름표인 부품 (screens/assembly.ts의 FIGURE_TYPES와 같다)
-  const PICTURES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases'])
+  const PICTURES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption'])
   // 숫자와 단위('2.4조 원', '억 원')는 답이라 견주지 않는다 (screens/assembly.ts의 numeric과 같다)
   const numberish = (s: string) => {
     const words = s.replace(/[\d.,%+\-~()\s]/g, '')

@@ -1101,6 +1101,40 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  adoption: {
+    name: '확산 곡선',
+    description: '새 방식이 퍼지는 다섯 무리(2.5, 13.5, 34, 34, 16%)와 지금 어디까지 왔는지',
+    motion: '시간 선이 왼쪽부터 훑으며 무리가 차오르고 누적 곡선이 같이 자란 뒤 지금 무리가 밝아져요',
+    fields: [
+      { key: 'label', label: '이름표', hint: '예: 확산 단계' },
+      { key: 'note', label: '설명', hint: '예: 지금은 첫 무리, 3개월 차에 다음 무리로', optional: true, multiline: true },
+      { key: 'total', label: '누적 곡선 이름', hint: '예: 누적', optional: true },
+    ],
+    items: {
+      label: '무리',
+      // 다섯 무리(2.5, 13.5, 34, 34, 16%)가 곧 확산 곡선이라 늘 다섯: 셋이면 곡선의 반만 칠해진 채 남았다
+      min: 5,
+      max: 5,
+      default: 5,
+      fields: [
+        { key: 'title', label: '무리', hint: '무리 이름', hints: ['처음 쓰는 사람', '앞서 쓰는 사람', '앞쪽 다수', '뒤쪽 다수', '마지막'] },
+        { key: 'meta', label: '설명', hint: '누구인지', optional: true, multiline: true },
+      ],
+    },
+    highlight: { label: '지금 무리', fallback: 0 },
+    minSpan: 6,
+    prefSpan: 12,
+    sample: {
+      fields: { label: '새 결재 시스템', note: '지금은 앞서 쓰는 사람까지', total: '누적' },
+      items: [
+        { title: '시범 부서', meta: '2.5%' },
+        { title: '먼저 쓰는 팀', meta: '13.5%' },
+        { title: '본사 절반', meta: '34%' },
+        { title: '지점', meta: '34%' },
+        { title: '나머지', meta: '16%' },
+      ],
+    },
+  },
   network: {
     name: '연결도',
     description: '가운데 하나에 여러 시스템이나 팀이 이어진 모습',

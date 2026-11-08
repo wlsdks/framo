@@ -23,6 +23,7 @@ import { Diverge } from './blocks/Diverge'
 import { Facts } from './blocks/Facts'
 import { Flow } from './blocks/Flow'
 import { Hub } from './blocks/Hub'
+import { Adoption } from './blocks/Adoption'
 import { Aliases } from './blocks/Aliases'
 import { Dupes } from './blocks/Dupes'
 import { Gate } from './blocks/Gate'
@@ -101,6 +102,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   sparks: Sparks,
   flow: Flow,
   hub: Hub,
+  adoption: Adoption,
   aliases: Aliases,
   dupes: Dupes,
   gate: Gate,

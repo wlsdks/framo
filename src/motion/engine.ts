@@ -2513,6 +2513,54 @@ export function motionEngine(): MotionEngine {
           }
           break
         }
+        case 'adoption': {
+          // 확산 곡선: 바닥선과 종 모양 윤곽이 먼저 그어지고, 세로선(시간)이 왼쪽에서 오른쪽으로 같은 빠르기로 훑는다. 선이 지나간 만큼
+          // 무리의 면과 누적 S자 곡선이 드러나고(같은 가림막), 경계를 지날 때 그 경계의 누적 몫(2.5% → 16% → …)이, 무리 칸에 들어설 때
+          // 그 무리 이름이 올라온다. 다 훑으면 지금 무리가 한 번 밝아진다. '하나씩'이면 무리 이름이 오르는 때마다 멈춘다(훑기도 같이).
+          // 자리는 움직임을 걸기 전에 잰다
+          const stage = one('.bk-ad-stage')
+          if (!stage) break
+          const W = stage.offsetWidth || 1
+          const its = $('.bk-ad-it')
+          const starts = its.map((it) => spot(it, stage).l)
+          const cums = $('.bk-ad-cum').map((el) => ({ el, x: spot(el, stage).l + el.offsetWidth / 2 }))
+          fade(one('.bk-ad-l'), 60, 400)
+          fade(one('.bk-ad-n'), 160, 500)
+          fade(one('.bk-ad-base'), 120, 400)
+          const bell = one('.bk-ad-bell')
+          if (bell && !still)
+            run(anims, bell, [{ strokeDasharray: '100 100', strokeDashoffset: '100' }, { strokeDasharray: '100 100', strokeDashoffset: '0' }], s(160), { easing: OUT, duration: d(900) })
+          const t0 = 620
+          const T = levelName === 'lively' ? 2400 : 2000
+          const x = (px: number) => t0 + (T * Math.max(0, Math.min(W, px))) / W
+          const fill = one('.bk-ad-fill')
+          const bar = one('.bk-ad-sweep')
+          if (fill && !still) run(anims, fill, [{ clipPath: 'inset(-4% 100% -4% 0)' }, { clipPath: 'inset(-4% 0% -4% 0)' }], s(t0), { easing: 'linear', duration: d(T) })
+          if (bar && !still)
+            run(
+              anims,
+              bar,
+              [
+                { opacity: 0, translate: '0 0', offset: 0 },
+                { opacity: 1, translate: `${W * 0.03}px 0`, offset: 0.03 },
+                { opacity: 1, translate: `${W * 0.97}px 0`, offset: 0.97 },
+                { opacity: 0, translate: `${W}px 0`, offset: 1 },
+              ],
+              s(t0),
+              { easing: 'linear', duration: d(T) },
+            )
+          $('.bk-ad-edge').forEach((el, k) => fade(el, x(cums[k]?.x ?? 0), 300))
+          for (const c of cums) rise(c.el, x(c.x) - 60, L.y * 0.3)
+          its.forEach((it, k) => rise(it, x(starts[k]) + 80, L.y * 0.4))
+          fade(one('.bk-ad-sl'), t0 + T - 200, 400)
+          const now = one('.bk-ad-band.is-now')
+          if (now && !still) {
+            const base = getComputedStyle(now).fill
+            const accent = getComputedStyle(scope).getPropertyValue('--accent').trim()
+            run(anims, now, [{ fill: base }, { fill: base, offset: 0.001 }, { fill: accent, offset: 0.35 }, { fill: base }], s(t0 + T + 120), { easing: 'ease-in-out', duration: d(900) })
+          }
+          break
+        }
         case 'dupes': {
           // 따로 하던 같은 일: 팀 줄이 차례로 나오고(한 일은 아직 지우지 않은 글자색), 다 나오면 한 일들이 동시에 강조색으로 밝아졌다가
           // (다 같은 일) 한꺼번에 줄이 그어지며 옅어진다. 그다음 아래의 하나가 올라온다. 한 일의 움직임은 한 애니메이션으로: 둘로
