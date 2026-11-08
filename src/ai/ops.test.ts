@@ -184,6 +184,11 @@ describe('제안 적용', () => {
       expect(applyOps(deck, [op!]).deck.theme.font).toBe(font)
     }
     expect(parseOp({ op: 'set_theme', transition: 'spin' })).toBeNull()
+    // 사람이 고른 이 PC 글꼴이 있어도 글꼴 제안을 적용하면 그 글꼴로 보인다 (남겨 두면 앞에 서서 바뀐 것이 보이지 않았다)
+    const mine = { ...deck, theme: { ...deck.theme, localFont: '회사 고딕' } }
+    expect(applyOps(mine, [parseOp({ op: 'set_theme', font: 'suit' })!]).deck.theme).toMatchObject({ font: 'suit' })
+    expect(applyOps(mine, [parseOp({ op: 'set_theme', font: 'suit' })!]).deck.theme.localFont).toBeUndefined()
+    expect(applyOps(mine, [parseOp({ op: 'set_theme', size: 'large' })!]).deck.theme.localFont).toBe('회사 고딕')
   })
 
   it('두 판으로 나뉜 장은 옆 판의 자리와 너비를 정해진 값으로만 바꾼다. 글은 그대로', () => {

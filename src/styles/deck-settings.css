@@ -589,3 +589,144 @@
     opacity: 0;
   }
 }
+
+/* ---------- 테마 메뉴의 내 PC 글꼴 (screens/editor/LocalFonts.tsx) ---------- */
+
+.theme-fonts {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.theme-local {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.theme-local .link-btn {
+  margin: 0;
+  font-size: 12px;
+}
+
+.theme-local-n {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-local-n b {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+/* 글꼴 고르기: 테마 메뉴와 같은 너비, 찾기 칸 아래에 글꼴마다 그 글꼴로 쓴 이름과 예시 글 */
+.lf {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  width: calc(72px + 14px + 226px * 2 + 12px);
+  /* 테마 메뉴(.pop-theme)의 높이 안에서 목록만 굴린다 */
+  max-height: calc(100vh - 100px);
+  padding: 2px 4px;
+}
+
+.lf-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lf-h {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lf-find {
+  min-height: 36px;
+}
+
+.lf-note {
+  margin: 4px 2px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lf-list {
+  display: grid;
+  gap: 2px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-gutter: stable;
+}
+
+.lf-row {
+  display: grid;
+  /* 이름, 그 글꼴로 쓴 예시 글, 고른 표시 */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 16px;
+  align-items: baseline;
+  column-gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.lf-row:hover {
+  background: var(--hover);
+}
+
+.lf-row:focus-visible {
+  outline: 2px solid var(--sel);
+  outline-offset: -2px;
+}
+
+.lf-row.is-on {
+  color: var(--sel);
+}
+
+.lf-row .icon {
+  grid-column: 3;
+  align-self: center;
+  width: 16px;
+  height: 16px;
+}
+
+.lf-name,
+.lf-sample {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lf-name {
+  font-size: 15px;
+}
+
+.lf-sample {
+  grid-column: 2;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.lf-more {
+  padding: 8px 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+}

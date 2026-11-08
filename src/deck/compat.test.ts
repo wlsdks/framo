@@ -104,6 +104,16 @@ describe('새 버전에서 만든 발표 알아보기', () => {
     useDeck.getState().close()
   })
 
+  it('내 PC 글꼴은 세지 않는다: 그 글꼴이 없는 PC와 예전 버전은 고른 짝의 글꼴로 그리고, 이름은 저장해도 남는다', () => {
+    // 이름 하나라 잃을 글이 없다. 예전 버전은 localFont를 모르고 테마를 통째로 옮겨 적어서 값이 그대로 남는다
+    const deck = { ...createSampleDeck(), theme: { id: 'white' as const, font: 'serif' as FontId, localFont: '회사 고딕' } }
+    expect(unknownParts(deck)).toBe(0)
+    useDeck.getState().open(deck)
+    useDeck.getState().setLook({ size: 'large' })
+    expect(useDeck.getState().deck?.theme).toMatchObject({ font: 'serif', localFont: '회사 고딕', size: 'large' })
+    useDeck.getState().close()
+  })
+
   it('편집기는 그런 발표를 열지 않고 들고만 있다', () => {
     const newer = withSlides(compose({ id: 'x', type: 'hologram', fields: { body: '새 부품' }, items: [] } as unknown as Block))
     useDeck.getState().open(newer)

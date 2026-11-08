@@ -277,6 +277,21 @@ export function headLook(theme?: { id?: string; font?: string }): { title: Glyph
   return { title: f.title, lead: f.lead, trim: (HEAD.titleLine - f.box) / 2 + f.gap }
 }
 
+/**
+ * 이 PC 글꼴의 이름을 CSS에 넣을 수 있게. 따옴표, 역빗금, 쌍반점, 중괄호, 꺾쇠처럼 글꼴 이름 밖으로 빠져나갈 수 있는 글자가 있거나 너무 길면
+ * 쓰지 않는다(null). 값은 지우지 않고 그대로 두어, 저장해도 잃지 않는다(모르면 쉬고 지우지 않게)
+ */
+export function localFontOf(deckTheme: { localFont?: unknown }): string | null {
+  const name = deckTheme.localFont
+  if (typeof name !== 'string') return null
+  const t = name.trim()
+  if (!t || t.length > 80 || /["'\\;{}<>\u0000-\u001f]/.test(t)) return null
+  return t
+}
+
+/** 글꼴 줄: 이 PC 글꼴을 골랐으면 그것을 맨 앞에, 없는 PC에서는 고른 짝의 글꼴로 */
+const withLocal = (local: string | null, stack: string) => (local ? `"${local}", ${stack}` : stack)
+
 /** 글꼴 고르는 단추의 이름을 그 글꼴(제목 글꼴)로 써서 고르기 전에 모양을 보이게 */
 export function fontPreview(id: FontId): CSSProperties {
   return { fontFamily: FONT_LOOK[id].font }
@@ -429,6 +444,7 @@ export function isDarkLook(deckTheme: DeckTheme, tone: Tone = 'base'): boolean {
 export function themeStyle(deckTheme: DeckTheme, tone: Tone = 'base'): CSSProperties {
   const c = paletteOf(deckTheme, tone)
   const f = FONT_LOOK[fontOf(deckTheme)]
+  const local = localFontOf(deckTheme)
   return {
     '--bg': c.bg,
     '--ink': c.ink,
@@ -444,8 +460,8 @@ export function themeStyle(deckTheme: DeckTheme, tone: Tone = 'base'): CSSProper
     '--deep-ink': c.deepInk,
     '--deep-accent': c.deepAccent,
     '--deep-mark': c.deepMark,
-    '--font-head': f.font,
-    '--font-body': f.body,
+    '--font-head': withLocal(local, f.font),
+    '--font-body': withLocal(local, f.body),
     '--head-weight': f.weight,
     '--display-weight': f.weight + 100,
     '--num-weight': f.num,
