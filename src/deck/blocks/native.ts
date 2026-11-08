@@ -1167,7 +1167,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
   },
   rank: {
     name: '순위 바뀌기',
-    description: '지난번과 지금의 순위를 나란히 두고 바뀐 자리를 선으로 이어요. 지금 순서대로 적고 항목마다 지난 순위만 적으면 돼요(처음 든 것은 비워요)',
+    description: '지난번과 지금의 순위를 나란히 두고 바뀐 자리를 선으로 이어요. 지금 순서대로 적고 항목마다 지난 순위만 적으면 돼요(새로 들어온 것은 비워 두세요)',
     motion: '지난 순서로 서 있던 항목이 지금 순위로 자리를 옮기고, 옮긴 길이 선으로 남아요',
     fields: [
       { key: 'label', label: '무엇의 순위', hint: '예: 많이 찾은 사내 안내' },
@@ -1181,8 +1181,9 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       default: 5,
       fields: [
         { key: 'title', label: '이름', hint: '지금 순위대로 적어요', hints: ['회의록 양식', '휴가 신청', '출장비 기준', '보안 수칙', '새 결재 안내', '사내 동호회'] },
-        // 편집할 때 '지난 [순위]'로 읽힌다(Rank.tsx). 처음 든 항목은 비워 두면 '새로'가 된다(설명에 적었다)
-        { key: 'meta', label: '지난 순위', hint: '순위', hints: ['4', '1', '2', '3', '', '5'] },
+        // 편집할 때 '지난 [순위]'로 읽힌다(Rank.tsx). 새로 들어온 항목은 비워 두면 '새로'가 된다: 그 자리의 안내는 '지난 없음'.
+        // 좁은 칸에서는 이름 옆에 서서 안내가 길면 이름이 세 줄로 쪼개졌다('지난 예: 3 (처음 든 것은 비워요)')
+        { key: 'meta', label: '지난 순위', hint: '순위', hints: ['4', '1', '2', '3', '없음', '5'] },
       ],
     },
     highlight: { label: '강조할 항목', fallback: 0 },

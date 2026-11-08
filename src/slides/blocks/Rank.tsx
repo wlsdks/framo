@@ -8,7 +8,7 @@ import { cx } from '../../lib/cx'
 import { useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
 
-/** '3', '3위', ' 3 ' 같은 글에서 순위(1 이상의 정수)를 읽는다. 못 읽으면 null(처음 든 항목) */
+/** '3', '3위', ' 3 ' 같은 글에서 순위(1 이상의 정수)를 읽는다. 못 읽으면 null(새로 들어온 항목) */
 export function rankOf(text: string): number | null {
   const m = text.match(/\d+/)
   if (!m) return null
@@ -43,7 +43,7 @@ const ROW = 10
 /**
  * 순위 바뀌기: 지난 순위(왼쪽, 옅게)와 지금 순위(오른쪽)를 나란히 두고, 같은 항목을 가는 선으로 잇는다. 선이 기울어진 만큼이
  * 오르내린 만큼이라 표를 읽지 않아도 무엇이 올랐는지 보인다. 강조할 항목(기본은 지금 1위)의 선과 이름만 강조색.
- * 쓰는 사람은 지금 순서대로 이름을 적고 항목마다 지난 순위만 적는다(처음 든 항목은 비운다): 순위를 두 번 적거나 줄을 맞출 일이 없다.
+ * 쓰는 사람은 지금 순서대로 이름을 적고 항목마다 지난 순위만 적는다(새로 들어온 항목은 비운다): 순위를 두 번 적거나 줄을 맞출 일이 없다.
  * 좁은 칸에서는 지금 순위 목록 하나에 바뀐 만큼(▲3)만 둔다(rank.css). 발표할 때는 지난 순서로 서 있던 항목이 지금 자리로
  * 옮겨 가며 선이 그어진다(engine.ts): 순위가 바뀌는 움직임 자체가 할 말이다
  */
@@ -52,7 +52,7 @@ export function Rank() {
   const all = slide.items.slice(0, BLOCKS.rank.items!.max).map((it, i) => ({ it, i }))
   const shown = mode === 'final' ? all.filter(({ it }) => !isBlankItem(it)) : all
   const n = shown.length
-  // 편집할 때 아직 아무것도 적지 않은 항목은 안내 예시로 그린다(넣자마자 어떤 그림인지 보이게). 이름을 적은 항목의 빈 지난 순위는 '처음 든 항목'
+  // 편집할 때 아직 아무것도 적지 않은 항목은 안내 예시로 그린다(넣자마자 어떤 그림인지 보이게). 이름을 적은 항목의 빈 지난 순위는 '새로 들어온 항목'
   const hinted = (it: (typeof shown)[number]['it'], i: number, k: 'title' | 'meta') =>
     mode !== 'final' && isBlankItem(it) ? rowHint(slide.layout, slide.hints, it, k, i) : it[k]
   const names = shown.map(({ it, i }) => hinted(it, i, 'title').trim())
