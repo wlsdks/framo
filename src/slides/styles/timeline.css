@@ -356,15 +356,16 @@
 }
 
 /* 부품 칸 안에서는 한 단계 작게, 줄 사이를 촘촘하게: 장 한 장의 크기로 재면 둘만 돼도 칸이 340px 높아야 했다.
-   칸이 높으면 줄 사이에 바람을 넣는다(fitBlocks의 --bk-air) */
+   칸이 높으면 줄 사이에 바람을 넣되(fitBlocks의 --bk-air) 6px까지만: 줄 위아래에 다 받으면(12px) 두 줄뿐인 일정이 줄 선을 사이에 두고
+   글 높이의 두 배(78px)만큼 떨어져, 일정이 아니라 따로 놓인 두 문장처럼 보였다(명조, 맡은 사람 아래). 남는 높이는 장의 위아래가 받는다 */
 .bk.va-steps .tl,
 .bk.va-steps .tl:is([data-n='2'], [data-n='3']) {
-  --tl-pad: calc(16px + var(--bk-air, 0px));
+  --tl-pad: calc(16px + min(var(--bk-air, 0px), 6px));
   --tl-fs: 36px;
 }
 
 .bk.va-steps .tl:is([data-n='5'], [data-n='6']) {
-  --tl-pad: calc(10px + var(--bk-air, 0px));
+  --tl-pad: calc(10px + min(var(--bk-air, 0px), 6px));
   --tl-fs: 30px;
 }
 

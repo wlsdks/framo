@@ -30,6 +30,7 @@ import { dirSlides } from './dirSlides'
 // &hl=2 는 강조할 항목(일정은 지금 단계)을 고를 수 있는 장 모두에 같은 번호를 준다.
 // &count=5 는 레이아웃 장의 항목 수를 그만큼(정한 범위 안에서). 예시 항목을 되풀이해 채운다.
 // &names=10월 1주,10월 2주 와 &values=900,60,40 은 레이아웃 장과 부품 장의 항목 이름과 값을 그 글로(쉼표로 나눠 되풀이). 긴 이름, 큰 차이를 볼 때.
+// &metas=각자 소속 팀의 막힌 일 처럼 항목의 설명(meta)도 같다. &head=장 제목 은 set=blocks의 장에 제목을 단다(부제 대신, 제목 아래 빈 곳을 볼 때).
 // &flip=1 은 두 판으로 나뉜 장(표지, 사례, 이미지와 설명, 결정 요청)의 옆 판을 반대쪽으로, &side=3 처럼 숫자면 옆 판의 너비(고를 수 있는 값일 때만).
 // &hideHead=1, &hideFoot=1 은 제목·부제와 아래 표시를 각각 숨긴 슬라이드를 점검한다. &blankHead=1 은 제목과 부제를 비운다.
 // set=edge 는 차트 장이 무너지기 쉬운 값(음수, 빈 값, 많은 항목, 같은 값)만 모아 본다.
@@ -120,7 +121,7 @@ function edgeSlides(): Slide[] {
  * 핵심 한 줄과 같이 들어가지 않는 부품은 혼자 둔다(편집기도 그 장에는 넣지 않는다).
  * 함께 놓는 부품(fill-)은 높이를 잴 때(measureBlocks) 건너뛴다.
  */
-function blockSlides(fill: string | null, only?: string[], variant?: string | null, look?: string | null, lane?: boolean, value?: string | null, fiveLanes?: boolean, status?: string | null): Slide[] {
+function blockSlides(fill: string | null, only?: string[], variant?: string | null, look?: string | null, lane?: boolean, value?: string | null, fiveLanes?: boolean, status?: string | null, head?: string | null): Slide[] {
   return BLOCK_TYPES.flatMap((type, n) => {
     if (only && !only.includes(type)) return []
     const spec = BLOCKS[type]
@@ -155,7 +156,7 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
     const slide = (id: string, title: string, rows: { id: string; blocks: Block[]; spans?: number[]; grow?: number }[]): Slide => {
       // 이름은 장 제목이 아니라 부제에: 장 제목이 있으면 핵심 한 줄과 인용이 한 단계 작아져서(message.css, quote.css) 제목 없는 장에서
       // 그려질 큰 글자로 재지 못했다. 부품의 잘리지 않는 높이는 더 큰 쪽으로 잰다
-      const s: Slide = { ...makeSlide('compose'), id: `bk-${n}-${id}`, fields: { lead: `${spec.name}: ${title}` } }
+      const s: Slide = { ...makeSlide('compose'), id: `bk-${n}-${id}`, fields: head ? { title: head } : { lead: `${spec.name}: ${title}` } }
       const fit = boardFit(composeAreaH(s))
       const blocks = boardFromRows(rows, fit)
       // 위 줄과 같이 들어가지 않으면 그 부품만
@@ -200,7 +201,7 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
   }
   const deck = createSampleDeck()
   if (set === 'edge') return { ...deck, theme: { id: theme }, slides: edgeSlides() }
-  if (set === 'blocks') return { ...deck, theme: { id: theme }, slides: blockSlides(params.get('fill'), params.get('types')?.split(','), params.get('bv'), params.get('bl'), params.get('lane') === '1', params.get('value'), params.get('lanes') === '5', params.get('status')) }
+  if (set === 'blocks') return { ...deck, theme: { id: theme }, slides: blockSlides(params.get('fill'), params.get('types')?.split(','), params.get('bv'), params.get('bl'), params.get('lane') === '1', params.get('value'), params.get('lanes') === '5', params.get('status'), params.get('head')) }
   if (set === 'stress') return { ...deck, theme: { id: theme }, slides: stressSlides(params.get('type'), params.get('bv'), params.get('bl')) }
   // 판은 그 테마(글꼴)와 글자 크기의 본문 높이로 짠다: 명조 제목은 고딕보다 머리가 높다
   const look = { theme: { id: theme, size: params.get('size') ?? undefined } }
@@ -222,11 +223,16 @@ function withCount(s: Slide, n: number): Slide {
   return { ...s, items: Array.from({ length: k }, (_, i) => (i < s.items.length ? s.items[i] : { ...s.items[i % s.items.length], id: `${s.items[i % s.items.length].id}-${i}` })) }
 }
 
-/** &names, &values: 레이아웃 장과 부품 장의 항목 이름(값)을 쉼표로 나눈 글로 바꿔 본다. 모자라면 되풀이한다 */
-function withTexts(s: Slide, names?: string[], values?: string[]): Slide {
-  if (!names && !values) return s
+/** &names, &values, &metas: 레이아웃 장과 부품 장의 항목 이름(값, 설명)을 쉼표로 나눈 글로 바꿔 본다. 모자라면 되풀이한다 */
+function withTexts(s: Slide, names?: string[], values?: string[], metas?: string[]): Slide {
+  if (!names && !values && !metas) return s
   const put = (items: Slide['items']) =>
-    items.map((it, i) => ({ ...it, ...(names ? { title: names[i % names.length] } : {}), ...(values ? { value: values[i % values.length] } : {}) }))
+    items.map((it, i) => ({
+      ...it,
+      ...(names ? { title: names[i % names.length] } : {}),
+      ...(values ? { value: values[i % values.length] } : {}),
+      ...(metas ? { meta: metas[i % metas.length] } : {}),
+    }))
   return {
     ...s,
     items: put(s.items),
@@ -284,7 +290,7 @@ export function Gallery() {
     ...base,
     theme: { ...base.theme, ...look },
     slides: slides.map((s) => ({
-      ...withTexts(withCount(s, Number(params.get('count')) || 0), params.get('names')?.split(','), params.get('values')?.split(',')),
+      ...withTexts(withCount(s, Number(params.get('count')) || 0), params.get('names')?.split(','), params.get('values')?.split(','), params.get('metas')?.split(',')),
       ...(params.get('blankHead') === '1' ? { fields: { ...s.fields, title: '', lead: '' } } : {}),
       options: {
         ...s.options,

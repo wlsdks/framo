@@ -1,7 +1,8 @@
 /* ---------- 나누기 ----------
    위에 무엇의 합계인지(이름표 글자)와 합계(큰 숫자), 그 아래 굵은 막대 하나를 조각의 몫대로 나눈다(조각 사이는 바탕 틈).
    조각의 이름과 값은 그 조각 바로 아래에 같은 몫의 칸으로 맞춰 선다(--sg-cols, Split.tsx). 조각 색은 강조색의 농담
-   (tints.ts, 구성비와 같은 차례), 강조할 조각을 고르면 그것만 강조색. 이름표가 맞춰 서기에 칸이 좁거나 조각이 작으면 막대 아래 목록으로 */
+   (tints.ts, 구성비와 같은 차례), 강조할 조각을 고르면 그것만 강조색. 이름표가 맞춰 서기에 칸이 좁거나 조각이 작으면 막대 아래 목록으로
+   (목록에서만 조각 색 네모를 범례로 둔다) */
 
 /* 막대는 칸이 높으면 같이 굵어진다(120px까지): 장 하나를 다 쓰는 칸에서 64px 그대로면 위아래가 비어 막대가 가는 줄처럼 보였다.
    가장 낮은 칸에서는 64px 그대로라 잘리지 않는 높이(blockHeights.ts)가 바뀌지 않는다 */
@@ -85,12 +86,11 @@
   margin-top: 16px;
 }
 
-/* 조각에서 내려온 짧은 선(조각 색) 옆에 이름표: 어느 조각의 이름표인지 색과 자리로 같이 읽힌다 */
+/* 이름표는 제 조각의 왼쪽 끝에서 시작한다: 어느 조각의 이름표인지 자리가 말한다. 조각에서 내려오는 짧은 색 선(3px)을 앞에 세우던
+   때는 항목 앞의 강조색 막대처럼 보였다(사용자: 작은 꾸밈 표시) */
 .bk-sg-key {
   position: relative;
   min-width: 0;
-  padding-left: 18px;
-  border-left: 3px solid var(--c);
 }
 
 .bk-sg-key.is-none {
@@ -202,14 +202,13 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: baseline;
     column-gap: 16px;
-    padding-left: 0;
-    border-left: 0;
   }
 
+  /* 목록에서는 이름표가 조각 아래에 서지 않아 조각 색의 네모가 어느 조각인지 잇는다(범례). 모서리는 막대와 같이 각지게 */
   .bk-sg-key::before {
     width: 18px;
     height: 18px;
-    border-radius: 4px;
+    border-radius: var(--r-mark);
     background: var(--c);
     content: '';
   }

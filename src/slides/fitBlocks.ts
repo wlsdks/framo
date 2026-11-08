@@ -215,8 +215,10 @@ export function blockFitter() {
     // 여백 안으로 8px까지는 봐준다 (그 정도는 여백이 무너져 보이지 않는다)
     const pad = (v: string) => Math.max(0, parseFloat(v) - 8) * k
     // 글 줄이 여백에 걸쳐도 되는 틈도 캔버스 px로(2px, 잘리지 않는 높이를 재는 갤러리의 반 크기 장에서 화면 1px).
-    // 화면 px로 두면 장을 그리는 크기마다 기준이 달라서, 내보낸 파일을 열었을 때(줄여 그린다)와 발표할 때(꽉 채운다) 글자 크기가 달랐다
-    const slack = 2 * k
+    // 화면 px로 두면 장을 그리는 크기마다 기준이 달라서, 내보낸 파일을 열었을 때(줄여 그린다)와 발표할 때(꽉 채운다) 글자 크기가 달랐다.
+    // 키울 때(tight)는 틈 없이: 이 틈만큼 키우면 잘림 검사(screens/measureBlocks.ts, 여백 8px까지)보다 1~2px 깊이 들어갔다
+    // (숫자 한 줄을 옆 큰 숫자에 맞춰 키우자 카드 아래 설명이 1.3px 넘어 '칸 밖'이 됐다)
+    const slack = (tight ? 0 : 2) * k
     const top = r.top + pad(cs.paddingTop) - slack
     const bottom = r.bottom - pad(cs.paddingBottom) + slack
     const left = r.left + pad(cs.paddingLeft) - slack
@@ -1264,8 +1266,12 @@ export function blockFitter() {
     const cs = getComputedStyle(slide)
     const foot = Math.max(0, (parseFloat(cs.paddingBottom) || 0) - (parseFloat(cs.getPropertyValue('--pad-y')) || 0)) * k
     const spare = a.bottom + foot - a.top - (b - t)
-    // 내용은 본문 상자 밖으로는 내리지 않는다
-    const move = Math.round(Math.min(a.top + spare / 2.2 - t, a.bottom - b) / k)
+    // 위의 빈 곳은 보이는 그대로 장 머리(제목, 부제) 아래부터 센다(레이아웃 장의 fitLayout과 같다): 본문 윗선부터 세면 --body-gap만큼
+    // 위가 넓어져, 판을 혼자 쓰는 납작한 흐름(다섯 단계)이 장 제목보다 장 아래 끝에 더 가까이 앉아 제목 아래가 휑했다.
+    // (gap + 내린 값) : (아래 - 내린 값) = 1 : 1.2. 내용은 본문 상자 밖으로는 내리지 않는다
+    const head = slide.querySelector<HTMLElement>(':scope > .s-head')
+    const gap = head?.getClientRects().length ? Math.max(0, a.top - head.getBoundingClientRect().bottom) : 0
+    const move = Math.round(Math.min(a.top + (spare - 1.2 * gap) / 2.2 - t, a.bottom - b) / k)
     return move < 8 ? 0 : move
   }
 
@@ -1284,7 +1290,7 @@ export function blockFitter() {
   ] as const
   const ANSWER_TEXT = ANSWERS.map((a) => a.text).join(', ')
   // 글이 문장이 아니라 그림의 이름표인 부품 (screens/assembly.ts의 FIGURE_TYPES와 같다)
-  const PICTURES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption', 'spread'])
+  const PICTURES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption', 'spread', 'rank'])
   // 숫자와 단위('2.4조 원', '억 원')는 답이라 견주지 않는다 (screens/assembly.ts의 numeric과 같다)
   const numberish = (s: string) => {
     const words = s.replace(/[\d.,%+\-~()\s]/g, '')

@@ -19,7 +19,7 @@ import { blockDrawn, blockEdgeSeen, blockFigures, blockTextLines } from '../slid
  * - 떠 있는 칸: 바탕 없는 칸에서 칸 높이의 절반도 안 되는 내용이 칸 가운데에 내려가 있는 것
  * - 이음표: 앞 부품과 선 건너편 부품이 뜻이 서는 짝인지 (links.ts의 linkFits)
  * - 짜임: 높이가 넉넉한데 단을 나눈 목록, 내용이 적은데 본문의 왼쪽 위에 몰린 장(너비의 절반도 안 쓰고 아래 3분의 1 넘게 빈)
- * - 글 폭: 글 부품(TEXT_TYPES)의 한 줄이 MEASURE_EM(그 글자 크기의 배수)보다 긴 것, 여러 줄 글의 끝 줄에 낱말 하나만 남은 것
+ * - 글 폭: 글 부품(TEXT_TYPES)의 한 줄이 MEASURE_EM(그 글자 크기의 배수)보다 긴 것, 여러 줄 글의 끝 줄에 낱말 하나만 남은 것(그림의 이름표도)
  * #/gallery?set=combos&seed=1&n=60 (또는 set=review) → 콘솔에서 await checkAssembly()
  */
 
@@ -31,11 +31,13 @@ const GAP_VARY = 24
 const MEASURE_EM = 25.5
 /** 끝 줄이 가장 긴 줄의 이만큼도 안 되면 낱말 하나가 홀로 남은 것 */
 const ORPHAN = 0.22
+/** 그림의 이름표는 줄이 짧아(여덟 글자 남짓) 두 글자 낱말 하나만 남아도 끝 줄이 가장 긴 줄의 4분의 1이다: '결과를 시스템에 / 기록' */
+const ORPHAN_LABEL = 0.34
 /** 글 폭과 끝 줄을 보는 부품: 문장을 쓰는 글 부품 */
 const TEXT_TYPES = new Set(['message', 'text', 'quote', 'callout', 'bullets', 'note', 'faq', 'heading'])
 
 /** 글이 문장이 아니라 그림의 이름표인 부품 (흐름, 연결도, 나누기, 모으기, 칸 조립) */
-const FIGURE_TYPES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption', 'spread'])
+const FIGURE_TYPES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption', 'spread', 'rank'])
 
 type Span = { t: number; b: number }
 
@@ -225,11 +227,15 @@ function bands(slide: HTMLElement, area: HTMLElement, k: number): string[] {
   return out
 }
 
-/** 글 폭과 끝 줄 */
+/**
+ * 글 폭과 끝 줄. 그림의 이름표(FIGURE_TYPES)는 끝 줄만 본다: 좁은 단에서 꺾이는 흐름의 단계 설명이 '담당자가 한 번 더 / 확인'으로
+ * 갈려도 글 부품만 보던 검사는 몰랐다. 이름표의 줄 길이는 그림이 정한 단 너비라 보지 않는다
+ */
 function measure(area: HTMLElement, k: number): string[] {
   const out = new Set<string>()
   for (const cell of area.querySelectorAll<HTMLElement>(':scope > .bk')) {
-    if (!TEXT_TYPES.has(cell.dataset.type ?? '')) continue
+    const prose = TEXT_TYPES.has(cell.dataset.type ?? '')
+    if (!prose && !FIGURE_TYPES.has(cell.dataset.type ?? '')) continue
     const inner = cell.querySelector<HTMLElement>(':scope > .bk-in')
     if (!inner) continue
     // 글 칸(요소)마다 줄을 모은다: 같은 높이의 조각은 한 줄
@@ -250,10 +256,10 @@ function measure(area: HTMLElement, k: number): string[] {
       const text = (el.textContent ?? '').trim().slice(0, 12)
       const ws = rows.map((x) => (x.r - x.l) / k)
       const most = Math.max(...ws)
-      if (most > fs * MEASURE_EM) out.add(`${cell.dataset.type}: 한 줄이 ${Math.round(most)}px(글자 크기의 ${Math.round(most / fs)}배)로 길어요 「${text}」`)
+      if (prose && most > fs * MEASURE_EM) out.add(`${cell.dataset.type}: 한 줄이 ${Math.round(most)}px(글자 크기의 ${Math.round(most / fs)}배)로 길어요 「${text}」`)
       rows.sort((a, b) => a.t - b.t)
       const tail = (rows.at(-1)!.r - rows.at(-1)!.l) / k
-      if (rows.length >= 2 && tail < most * ORPHAN) out.add(`${cell.dataset.type}: 끝 줄에 낱말 하나만 남았어요 「${text}」`)
+      if (rows.length >= 2 && tail < most * (prose ? ORPHAN : ORPHAN_LABEL)) out.add(`${cell.dataset.type}: 끝 줄에 낱말 하나만 남았어요 「${text}」`)
     })
   }
   return [...out]

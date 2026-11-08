@@ -2492,6 +2492,36 @@ export function motionEngine(): MotionEngine {
           }
           break
         }
+        case 'rank': {
+          // 순위 바뀌기: 순위가 바뀐 길이 곧 할 말이다. 지난 순위가 위에서부터 서고, 잇는 선이 왼쪽에서부터 한꺼번에 그어져 서로
+          // 엇갈린다(4위에서 1위로 치고 오르는 강조색 선이 이야기를 한다). 선이 오른쪽에 닿으면 지금 순위가 제자리에서 위부터
+          // 차례로 나타나고(선이 그 줄에 닿는 때), 다 서면 바뀐 만큼(▲3)이 나온다. 이름을 지난 줄에서 지금 줄로 옮기던 때는 옮기는 동안 이름끼리 서로
+          // 가로질러 글이 겹쳤고(듣는 분에게 화면이 깨진 것처럼 보였다), 지금 목록이 지난 순서로 먼저 떠 1위가 맨 아래에 있는 순간이 생겼다.
+          // 좁은 칸(지난 목록과 선이 없다)에서는 지금 목록이 위에서부터 선다. 자리는 움직임을 걸기 전에 잰다
+          const board = one('.bk-ra-board')
+          const now = $('.bk-ra-it')
+          if (!board || !now.length) break
+          fade(one('.bk-ra-l'), 0, 500)
+          const links = one('.bk-ra-links')
+          const wide = !!links && getComputedStyle(links).display !== 'none'
+          // 글은 날아오거나 미끄러지지 않고 제자리에서 나타난다(움직임은 선과 조각이 맡는다)
+          if (!wide) {
+            fade(one('.bk-ra-when.is-to'), 60, 500)
+            items('.bk-ra-it', 120, (el, at) => fade(el, at, 420))
+            break
+          }
+          fade(one('.bk-ra-when.is-from'), 40, 500)
+          const was = $('.bk-ra-wi')
+          was.forEach((el, i) => fade(el, 80 + i * 70, 420))
+          const go = 80 + was.length * 70 + 300
+          const travel = levelName === 'lively' ? 1100 : 900
+          run(anims, links!, [{ clipPath: 'inset(-8px 100% -8px 0)' }, { clipPath: 'inset(-8px 0 -8px 0)' }], s(go), { easing: CARRY, duration: d(travel) })
+          const land = go + travel * 0.8
+          fade(one('.bk-ra-when.is-to'), land - 120, 400)
+          now.forEach((el, k) => fade(el, land + k * 60, 420))
+          for (const mv of $('.bk-ra-mv')) fade(mv, land + now.length * 60 + 160, 500)
+          break
+        }
         case 'spread': {
           // 퍼짐: 옅은 눈금 판이 먼저 깔리고, 단계마다 그 단계에 드는 눈금이 왼쪽 가운데의 씨앗에서 가까운 차례로 번진다(물결).
           // 기울어 있던 눈금이 똑바로 서며 물든다(사람들이 같은 쪽을 보기 시작한다). 단계의 몫과 이름은 그 단계가 번지기
