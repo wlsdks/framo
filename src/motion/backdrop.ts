@@ -430,7 +430,8 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
   /**
    * 구조(눈금과 격자가 맞춰진다): 점들이 조금씩 어긋난 자리에서 나타나 비스듬한 물결을 따라 고른 격자로 맞춰진다. 오른쪽 위가 짙고
    * 왼쪽 아래로 갈수록 옅어져(대개 제목과 본문이 놓이는 쪽) 모눈종이처럼 장을 덮지 않는다. 다 맞춰진 뒤에는 움직이지 않는다(맞춰졌다는
-   * 고요가 이 분위기의 말이다). 칸 묶음을 촘촘한 점으로 채우던 때는 막대 그래프처럼 읽혀 숫자 장에서 '저건 뭐냐'를 불렀다(검수)
+   * 고요가 이 분위기의 말이다). 네 칸마다의 교차점은 점 대신 작은 십자(눈금)라 도면의 격자처럼 읽힌다. 칸 묶음을 촘촘한 점으로
+   * 채우던 때는 막대 그래프처럼 읽혀 숫자 장에서 '저건 뭐냐'를 불렀다(검수). 점만 1.5px로 두던 때는 검은 테마의 필름에서 보이지 않았다
    */
   function structure(w: number, h: number): Scene {
     const R = rng(11)
@@ -445,15 +446,17 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     const JX: number[] = []
     const JY: number[] = []
     const WAIT: number[] = []
+    const MAJOR: boolean[] = []
     for (let r = 0; r < rows; r++)
       for (let c = 0; c < cols; c++) {
         const xn = c / Math.max(1, cols - 1)
         const yn = r / Math.max(1, rows - 1)
         // 오른쪽 위에서 멀어질수록 옅게
         const g = Math.exp(-((1 - xn) ** 2 + yn ** 2) / (2 * 0.42 * 0.42))
-        const a = 0.05 + 0.15 * g
-        if (a < 0.06) continue
+        const a = 0.06 + 0.24 * g
+        if (a < 0.075) continue
         X.push(ox + c * p)
+        MAJOR.push(c % 4 === 0 && r % 4 === 0)
         Y.push(oy + r * p)
         A.push(a)
         const ang = R() * TAU
@@ -472,7 +475,21 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
           const k = span(e, WAIT[i], IN)
           if (k <= 0) continue
           const m = 1 - out(k)
-          P.dot(X[i] + JX[i] * m, Y[i] + JY[i] * m, 1.5, 0, A[i] * clamp(k * 3))
+          const x = X[i] + JX[i] * m
+          const y = Y[i] + JY[i] * m
+          const a = A[i] * clamp(k * 3)
+          if (!MAJOR[i]) {
+            P.dot(x, y, 1.8, 0, a)
+            continue
+          }
+          // 눈금: 팔이 맞춰지며 자란다
+          const arm = 7 * out(k)
+          P.to(x - arm, y)
+          P.to(x + arm, y)
+          P.stroke(1, 0, a)
+          P.to(x, y - arm)
+          P.to(x, y + arm)
+          P.stroke(1, 0, a)
         }
       },
     }
