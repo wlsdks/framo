@@ -1929,29 +1929,35 @@ export function motionEngine(): MotionEngine {
         case 'decision': {
           // 생동감: 질문에서 조각이 괄호 줄기를 타고 갈래마다 번갈아 들어가고, 닿는 갈래의 조건이 잠깐 강조색이 된다.
           // 조각의 길은 움직임을 걸기 전에 잰다: 올라오기(rise)는 걸자마자 시작 자리(아래로 밀린 자리)에 서서, 뒤에 재면 길이 선에서
-          // 비켜 났다(발표 화면에서 조각이 선 아래로 지나갔다). 선은 CSS가 그린다(decision.css): 질문에서 오는 가로선은 목록 높이의
-          // 가운데, 줄기는 목록 왼쪽 끝, 갈래는 줄 위에서 0.7em
+          // 비켜 났다(발표 화면에서 조각이 선 아래로 지나갔다). 선은 쌓기가 그린 갈래 곡선이다(fitBlocks.ts의 forks)
           const root = one('.bk-dc')
           const list = one('.bk-dc-list')
           const rows = $('.bk-dc-row')
           const ways: { path: [number, number][]; cond: HTMLElement | null }[] = []
-          if (root && list && rows.length) {
-            const l = spot(list, root)
-            const gap = parseFloat(getComputedStyle(root).getPropertyValue('--bk-col-gap')) || 48
-            const ly = (l.t + l.b) / 2
-            rows.forEach((row) => {
-              const r = spot(row, root)
-              // 가지는 줄의 첫 글줄 가운데(0.7em, 줄의 글자 크기는 조건과 같은 단계)에 28px (decision.css)
-              const y = r.t + 0.7 * (parseFloat(getComputedStyle(row).fontSize) || 30)
-              ways.push({ path: [[l.l - gap, ly], [l.l, ly], [l.l, y], [l.l + 28, y]], cond: row.querySelector('.bk-dc-condition') })
+          // 조각의 길은 쌓기가 그은 갈래 곡선(decision.css, fitBlocks.ts의 forks)을 따라 점으로 뽑는다(곡선의 단위는 칸 안의 px)
+          const paths = $('.bk-dc-fork') as unknown as SVGPathElement[]
+          if (root && list && rows.length && paths.length === rows.length) {
+            paths.forEach((p, i) => {
+              const len = p.getTotalLength()
+              const pts: [number, number][] = []
+              for (let j = 0; j <= 24; j++) {
+                const pt = p.getPointAtLength((len * j) / 24)
+                pts.push([pt.x, pt.y])
+              }
+              ways.push({ path: pts, cond: rows[i].querySelector('.bk-dc-condition') })
             })
           }
           fade(one('.bk-dc-label'), 40, 400)
           rise(one('.bk-dc-question'), 100, L.y * 0.5)
           let last = 240
+          // 갈래마다 곡선이 질문에서 그어져 나가고, 닿을 즈음 그 갈래의 조건과 할 일이 나타난다
+          const forkEls = paths
           items('.bk-dc-row', 240, (el, at) => {
-            rise(el, at, L.y * 0.4)
-            last = Math.max(last, at)
+            const k = rows.indexOf(el as HTMLElement)
+            const f = forkEls[k]
+            if (f && !still) run(anims, f, [{ strokeDasharray: '1 1', strokeDashoffset: '1' }, { strokeDasharray: '1 1', strokeDashoffset: '0' }], s(at - 160), { easing: OUT, duration: d(520) })
+            rise(el, at + 120, L.y * 0.4)
+            last = Math.max(last, at + 120)
           })
           if (root && ways.length) {
             const accent = getComputedStyle(root).getPropertyValue('--accent').trim()

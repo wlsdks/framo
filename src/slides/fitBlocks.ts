@@ -1976,6 +1976,8 @@ export function blockFitter() {
       area.classList.remove('is-fitting')
       for (const f of flips) f.a.currentTime = f.t
     }
+    // 조건별 흐름의 갈래 곡선: 자리가 다 정해진 뒤에 잰다
+    for (const dc of Array.from(root.querySelectorAll<HTMLElement>('.bk-dc'))) forks(dc)
     // 부품 장 밖(한 장을 다 쓰는 위치 비교, 추이)도
     for (const plot of Array.from(root.querySelectorAll<HTMLElement>('.pm-plot, .tn-canvas'))) if (!plot.closest('.bk-area')) labels(plot)
     // 레이아웃 장의 채움 (fitLayout)
@@ -2217,6 +2219,56 @@ export function blockFitter() {
     if (lo > 0 && now !== lo + 'px') setB('--fill-air', lo + 'px')
     else if (lo === 0 && now) delB('--fill-air')
     eye()
+  }
+
+  /**
+   * 조건별 흐름의 갈래: 질문 끝에서 갈래마다 조건의 첫 글줄 가운데로 곡선을 긋는다(svg.bk-dc-forks, 칸 안의 px). 옆으로 놓이면 수평으로
+   * 떠나 수평으로 닿는 곡선(가운데에서 부드럽게 꺾인다), 질문이 위에 쌓이면 질문 아래에서 내려와 둥글게 꺾여 들어간다.
+   * CSS의 괄호 선([)은 글자 크기를 어림해 그어서 가지와 줄기가 글줄과 어긋났다(사용자: 망가져 있다). 그려진 자리를 재어 긋는다
+   */
+  function forks(dc: HTMLElement): void {
+    const svg = dc.querySelector<SVGSVGElement>(':scope > .bk-dc-forks')
+    const q = dc.querySelector<HTMLElement>('.bk-dc-question')
+    if (!svg) return
+    const box = dc.getBoundingClientRect()
+    const k = dc.offsetWidth ? box.width / dc.offsetWidth : 1
+    const rows = Array.from(dc.querySelectorAll<HTMLElement>('.bk-dc-row'))
+    while (svg.firstChild) svg.firstChild.remove()
+    if (!q || !rows.length || !k) return
+    const qr = q.getBoundingClientRect()
+    const local = (x: number, y: number) => [(x - box.left) / k, (y - box.top) / k]
+    const stacked = qr.bottom <= rows[0].getBoundingClientRect().top + 1
+    const [qx1, qy0] = local(qr.right, qr.top)
+    const [qx0, qy1] = local(qr.left, qr.bottom)
+    svg.setAttribute('viewBox', `0 0 ${dc.offsetWidth} ${dc.offsetHeight}`)
+    const NS = 'http://www.w3.org/2000/svg'
+    const r2 = (v: number) => Math.round(v * 10) / 10
+    for (const row of rows) {
+      const cond = row.querySelector<HTMLElement>('.bk-dc-condition') ?? row
+      const cr = cond.getBoundingClientRect()
+      const lh = parseFloat(getComputedStyle(cond).lineHeight) * k || cr.height
+      const [x1, y1] = local(cr.left, cr.top + Math.min(lh, cr.height) / 2)
+      let d: string
+      if (stacked) {
+        // 질문 아래(왼쪽에서 조금 들어온 자리)에서 내려와 반지름 14로 꺾여 조건 앞까지
+        const x0 = qx0 + 10
+        const y0 = qy1 + 12
+        const r = Math.min(14, Math.max(0, y1 - y0), Math.max(0, x1 - 12 - x0))
+        d = `M ${r2(x0)} ${r2(y0)} V ${r2(y1 - r)} Q ${r2(x0)} ${r2(y1)} ${r2(x0 + r)} ${r2(y1)} H ${r2(x1 - 12)}`
+      } else {
+        const x0 = qx1 + 20
+        const y0 = (qy0 + qy1) / 2
+        const xe = x1 - 16
+        const c = Math.max(12, (xe - x0) * 0.55)
+        d = `M ${r2(x0)} ${r2(y0)} C ${r2(x0 + c)} ${r2(y0)} ${r2(xe - c)} ${r2(y1)} ${r2(xe)} ${r2(y1)}`
+      }
+      const p = document.createElementNS(NS, 'path')
+      p.setAttribute('class', 'bk-dc-fork')
+      p.setAttribute('d', d)
+      // 길이를 1로: 모션이 곡선을 긋는 값(stroke-dashoffset)을 곡선마다 재지 않게
+      p.setAttribute('pathLength', '1')
+      svg.append(p)
+    }
   }
 
   /** 이름표 자리 고르기의 바깥 입구: 움직이는 중인 판(점이 내려앉는 중이다)은 끝난 뒤에. 추이의 점 숫자도 같다 */

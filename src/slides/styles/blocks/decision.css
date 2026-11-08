@@ -138,3 +138,42 @@
     height: 0.7em;
   }
 }
+
+/* ---------- 갈래 곡선 ----------
+   괄호 선(가지, 줄기, 질문에서 오는 가로선)을 걷고, 쌓기가 잰 자리로 그은 곡선(fitBlocks.ts의 forks)만 둔다 */
+.bk-dc-row::before,
+.bk-dc-row::after,
+.bk-dc-list::after {
+  content: none;
+}
+
+.bk-dc-forks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.bk-dc-fork {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: var(--rule-hair);
+  vector-effect: non-scaling-stroke;
+}
+
+.bk-dc {
+  /* 곡선이 지나갈 자리: 질문과 갈래 사이를 넓게 */
+  column-gap: max(140px, 9cqw);
+}
+
+.bk-dc-row {
+  padding-left: 0;
+}
+
+@container bk (max-width: 900px) {
+  .bk-dc-row {
+    padding-left: 40px;
+  }
+}
