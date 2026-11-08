@@ -811,6 +811,25 @@ export function motionEngine(): MotionEngine {
         const on = n.classList.contains('is-on')
         if (on !== !!(w && w.on)) flips.push({ el: n, to: on })
         if (!w) return
+        // 점 숫자가 서는 쪽이 바뀌었으면(점이 오르내려 선과 부딪히는 쪽이 달라졌다) 반까지는 앞 장의 쪽에 두고, 가운데에서 숫자만 잠깐
+        // 옅어졌다가 새 쪽에서 다시 선다. 그대로 두면 짝을 바꿔 끼우는 처음 0.26초에 숫자가 점의 반대쪽으로 건너뛰었다(필름)
+        const side = sideOf(n)
+        if (side !== (w.side || '')) {
+          const before = (w.side || '').split(' ')
+          const after = side.split(' ')
+          const labels = (Array.prototype.slice.call(n.children) as HTMLElement[]).filter((c) => (c.textContent || '').trim())
+          const styles = labels.map((c) => c.getAttribute('style'))
+          sets.push((p) => {
+            const list = p < 0.5 ? before : after
+            for (const c of SIDES) n.classList.toggle(c, list.indexOf(c) >= 0)
+            const o = Math.min(1, Math.abs(p - 0.5) / 0.14)
+            for (const c of labels) c.style.opacity = o >= 1 ? '' : String(o)
+          })
+          undo.push(() => {
+            for (const c of SIDES) n.classList.toggle(c, after.indexOf(c) >= 0)
+            labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
+          })
+        }
         let k = 0
         for (const c of Array.prototype.slice.call(n.childNodes) as Node[]) {
           if (c.nodeType !== 3) continue
@@ -3932,8 +3951,14 @@ export function motionEngine(): MotionEngine {
   const SVG_VALUES = ['d', 'points', 'cx', 'cy', 'r', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height']
   /** 날짜는 세는 수가 아니라서 옮기지 않는다(11월 28일에서 12월 3일로 가며 날을 거꾸로 센다) */
   const NOT_VALUES = '[data-type="date"]'
-  /** on: 센 몫을 칸마다 칠해 보이는 표시(칸 조립의 칸, 비율의 막대)가 켜져 있었는지(is-on) */
-  type Values = Map<string, { texts: (string | null)[]; vars: Record<string, string>; attrs: Record<string, string>; on?: boolean }>
+  /** 점 숫자가 점의 어느 쪽에 서는지(추이, 두 값 비교: slides/fitBlocks.ts가 그려진 자리를 보고 고른다) */
+  const SIDES = ['is-below', 'is-after', 'is-before', 'is-mid']
+  /**
+   * on: 센 몫을 칸마다 칠해 보이는 표시(칸 조립의 칸, 비율의 막대)가 켜져 있었는지(is-on).
+   * side: 점 숫자가 섰던 쪽(SIDES)
+   */
+  type Values = Map<string, { texts: (string | null)[]; vars: Record<string, string>; attrs: Record<string, string>; on?: boolean; side?: string }>
+  const sideOf = (el: Element) => SIDES.filter((c) => el.classList.contains(c)).join(' ')
 
   /** 숫자를 지운 글: 숫자만 바뀐 것끼리 짝을 맞추는 열쇠 */
   const numless = (t: string) => t.replace(/\d[\d,]*(\.\d+)?/g, '#')
@@ -3989,7 +4014,8 @@ export function motionEngine(): MotionEngine {
           }
         }
       const on = el.classList.contains('is-on')
-      if (any || on) out.set(path, { texts, vars, attrs, on })
+      const side = sideOf(el)
+      if (any || on || side) out.set(path, { texts, vars, attrs, on, side })
     })
     return out
   }
