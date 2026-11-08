@@ -74,7 +74,10 @@
 | 발표할 때의 움직임 | `src/motion/engine.ts` |
 | 장의 배경: 목록, 이름, 어울리는 장, 자주 쓰는 자리, 처음 자리(`BACKDROPS`, `backdropOf`, `baseBackdrop`) | `src/deck/backdrops.ts`. 편집기, 장 모음, AI 카탈로그(`backdrops`), 모양(`backdrop`), 제안(`set_backdrop`)이 같이 쓴다 |
 | 배경의 그림과 움직임(끝 모습 SVG와 발표할 때의 캔버스가 같은 함수) | `src/motion/backdrop.ts`. 엔진은 `mo-backdrop` 알림 하나만 보낸다. 내보낸 HTML에 소스째 들어간다 |
-| 모션 그래픽을 그리는 도구(시간의 순수 함수, 이징, 정해진 씨앗의 난수, 점과 선만 그리는 SVG·캔버스 그리기, 캔버스 재생기) | `src/motion/draw.ts`의 `drawKit`. 배경이 인자로 받아 쓰고, 다른 모션 그래픽도 같은 그림(`Scene`: 때 e의 모습을 그리는 순수 함수)을 다시 쓴다. 내보낸 HTML에 소스째 들어간다 |
+| 모션 그래픽을 그리는 도구(시간의 순수 함수, 이징, 정해진 씨앗의 난수, 점과 선만 그리는 SVG·캔버스 그리기, 캔버스 재생기) | `src/motion/draw.ts`의 `drawKit`. 배경과 모션 그래픽 엔진이 인자로 받아 쓴다(배경은 같은 그림 `Scene`: 때 e의 모습을 그리는 순수 함수). 내보낸 HTML에 소스째 들어간다(뷰어는 하나를 만들어 둘에 넘긴다) |
+| 모션 그래픽(cine)의 레시피: 틀 넷, 값의 범위와 기본값, 버전 id(내용 해시), 쉬운 손잡이, 시간표, 받은 레시피 바로잡기 | `src/deck/cine.ts`. 엔진에는 레시피가 아니라 아는 것만 채운 대본(`cineScript`)을 넘긴다(칸의 `data-script`). 발표를 열 때(`migrateDeck`)와 고칠 때(`deckStore.commit`) 쓰지 않는 버전을 뺀다(`tidyCines`) |
+| 모션 그래픽의 그리기와 움직임(빛, 먹, 입자, 카메라, 글의 들어오기, WebGL2와 Canvas2D, 성능 단계) | `src/motion/cine.ts`. 엔진은 `mo-cine` 알림 하나만 보내고, 시계(Web Animations 하나)를 끝맺음(`anims`)과 건너뛰기(`skips`)로 받는다. 내보낸 HTML에 소스째 들어간다 |
+| 내 모션 그래픽(갈래와 버전, 이름) | `src/store/cines.ts`(브라우저와 보관 폴더의 `내 모션 그래픽.cines`), 파일 꼴은 `src/store/cinesFile.ts`. 편집기에서 넣기, 손잡이, 봉인은 `screens/editor/cineEdit.ts` |
 | 편집 화면에서 다시 맞춘 자리로 미끄러지기(쓰는 동안의 조립. 부품 칸의 FLIP도 같은 시간과 곡선) | `src/slides/liveMotion.ts` |
 | 영상으로 저장할 때 장마다 머무는 시간과 걸리는 시간 어림 | `src/present/pace.ts`. 녹화(`Present.tsx`)와 묻는 창이 같이 쓴다 |
 | 단축키 표기 | `src/lib/keys.ts` |
@@ -106,7 +109,7 @@
 | 정의, 예시 | `src/deck/blocks/native.ts` |
 | 그리기 | `src/slides/blocks/<이름>.tsx`. 표는 `slides/blocks.tsx`의 `NATIVE_VIEWS` |
 | 모양 | `src/slides/styles/blocks/<id>.css`. `blocks.css`에 `@import`로 더한다 |
-| 묶음 | `BLOCK_GROUPS` |
+| 묶음 | `BLOCK_GROUPS`(모션 그래픽처럼 내 컴포넌트에서 넣는 부품은 `CUSTOM_TYPES`) |
 | 움직임 | `engine.ts`의 `nativeAuto` |
 | 높이 | 갤러리에서 다시 잰다(`screens/measureBlocks.ts`) |
 
@@ -129,6 +132,7 @@
 | 오른쪽 칸의 탭 | `Inspector.tsx`(이 장 설정), `MotionPanel.tsx`(움직임: 장 넘기기, 나오는 차례와 때), `BlockLibrary.tsx`(컴포넌트: 기본 컴포넌트), `SavedParts.tsx`(내 컴포넌트) |
 | 움직임 편집 | `studio/MotionStudio.tsx`(편집기 안의 한 모습: 가운데 무대와 시간표, 오른쪽 칸에 슬라이드 전체나 고른 컴포넌트의 값), `studio/Timeline.tsx`(시간표), `studio/player.ts`(엔진이 건 움직임을 읽어 시간표를 만들고 멈추기, 끌어 보기). 연출 묶음은 `deck/blocks/presets.ts` |
 | 내 컴포넌트 | 떼어 내고 다시 넣기는 `deck/blocks/saved.ts`, 두는 곳은 `store/saved.ts`(브라우저와 보관 폴더), 파일은 `store/partsFile.ts` |
+| 모션 그래픽 | 내 컴포넌트의 묶음과 틀 고르기는 `CineLibrary.tsx`, 넣기·손잡이·봉인은 `cineEdit.ts`, 모션 편집의 손잡이는 `studio/CineKnobs.tsx`. 레시피와 부품은 한 고침에 같이 들어간다(`deckStore.stageCine`) |
 | 고칠 때마다 저장, 자동 버전 | `src/store/autosave.ts` |
 | 화면 곳곳의 작은 부품(아이콘, 툴팁 `Info`, `Toggle`, 고르는 단추 줄 `Segmented`, 알림) | `screens/ui.tsx` |
 | 화면의 모양 | `src/styles/<화면>.css`. `app.css`는 `@import` 차례만 둔다. 마우스를 올린 회색은 `--hover`, `--hover-2` 둘 |
@@ -148,6 +152,7 @@
 | `src/motion/engine.test.ts`, `src/slides/fitBlocks.test.ts` | 레이아웃과 부품마다 연출이 있고, 고를 수 있는 때, 빠르기, 쪽, 장 넘기기를 엔진이 안다. 엔진과 글자 맞추기가 바깥 이름 없이 소스만으로 다시 만들어진다(내보낸 HTML에 소스째 들어간다) |
 | `src/deck/generate.test.ts` | 구성 규칙(결론부터, 시간에 맞는 장 수, 듣는 사람). 레이아웃 묶음과 예시 |
 | `src/deck/saved.test.ts`, `src/store/partsFile.test.ts` | 내 컴포넌트: 저장한 것이 장과 따로 놀고, 넣을 때마다 새 id, 자리가 없으면 넣지 않는다. 파일에서는 아는 것만 읽는다 |
+| `src/deck/cine.test.ts`, `src/motion/cine.test.ts`, `src/store/cines.test.ts` | 모션 그래픽: 레시피에 사람의 글이 없고, 새 엔진의 레시피도 아는 층만 그리며, 버전 id가 내용 해시다. 엔진이 소스만으로 다시 만들어진다. 라이브러리는 고친 것을 새 버전으로 쌓고 새 버전이 있을 때만 알린다 |
 | `compat`, `migrate`, `storage`, `deckStore` | 예전 파일과 새 파일, 두 벌 맞추기, 되돌리기 |
 | `scripts/unused.test.ts`, `scripts/readSource.test.ts` | 쓰지 않는 파일, 내보내기, 패키지가 없다. 그 검사가 소스를 바르게 읽는다(아래 6장) |
 

@@ -1,0 +1,120 @@
+/* ---------- 모션 그래픽 (screens/editor/CineLibrary.tsx, studio/CineKnobs.tsx) ----------
+   내 컴포넌트의 '모션 그래픽' 묶음(내가 만든 장면, 새로 만들기의 틀 넷)과 모션 편집의 손잡이. 카드는 내 컴포넌트와 같은 꼴이다 */
+
+.cn-lib {
+  margin: 0 0 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cn-lib-h {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 10px;
+}
+
+.cn-lib-h .lib-group {
+  margin-right: 0;
+}
+
+.cn-new {
+  margin-left: auto;
+}
+
+.cn-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cn-card {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 장 그림(16:9) 그대로: 장면은 판 가득이라 비율을 바꾸면 무엇이 모이는지 보이지 않는다 */
+.cn-thumb {
+  position: relative;
+  margin-bottom: 6px;
+  overflow: hidden;
+  border-radius: var(--r);
+  box-shadow: 0 0 0 1px var(--line);
+  aspect-ratio: 16 / 9;
+  transition: box-shadow 0.16s;
+}
+
+.cn-card:hover .cn-thumb {
+  box-shadow: 0 0 0 1px var(--ink-3);
+}
+
+.cn-card:focus-visible .cn-thumb {
+  box-shadow: 0 0 0 2px var(--sel);
+}
+
+.cn-card-n {
+  display: block;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.cn-card-d {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* 모션 편집의 손잡이 */
+.cn-ver {
+  margin: -4px 0 12px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cn-newer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0 0 14px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cn-newer > span {
+  margin-right: auto;
+}
+
+.cn-fs {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cn-fs:disabled {
+  opacity: 0.5;
+}
+
+.cn-toggles {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* 오른쪽 칸 '모션'의 요약: 내 라이브러리에 더 새 버전이 있다는 알림(누르면 모션 편집에서 바꾼다) */
+.mp-newer {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}

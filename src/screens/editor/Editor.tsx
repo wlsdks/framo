@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { applyOps, type ChangeRequest } from '../../ai/ops'
 import { useAiAsk } from '../../ai/useAiAsk'
 import { useAiShare } from '../../ai/useAiShare'
@@ -30,6 +30,7 @@ import { useExports } from './exports'
 import { Inspector } from './Inspector'
 import { MotionPanel } from './MotionPanel'
 import { MotionStudio } from './studio/MotionStudio'
+import { OPEN_STUDIO } from './cineEdit'
 import { CheckDialog, PresentDialogs, usePresentLaunch } from './presentLaunch'
 import { SaveStatus } from './SaveStatus'
 import { pressShortcut, SHORTCUT, useEditorShortcuts } from './shortcuts'
@@ -184,6 +185,17 @@ function EditorBody({ deck }: { deck: Deck }) {
   const ai = useAiShare(deck, measureOver)
   const ask = useAiAsk(deck, () => useDeck.getState().setAiShare(true), measureOver)
   const blocks = useBlockEditing(deck, slide, toast)
+  // 모션 그래픽을 넣으면 모션 편집을 열어 그것을 고른다(장면을 바로 보이고 손잡이를 고르게, cineEdit.ts)
+  const selectRef = useRef(blocks.select)
+  selectRef.current = blocks.select
+  useEffect(() => {
+    const open = (e: Event) => {
+      setStudio({ from: (e as CustomEvent<string>).detail })
+      selectRef.current(null)
+    }
+    window.addEventListener(OPEN_STUDIO, open)
+    return () => window.removeEventListener(OPEN_STUDIO, open)
+  }, [])
   const fileOver = useImageInput(blocks, toast)
   const side = useSidePanel(blocks)
 

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { copiedAiHidden } from '../deck/aiHidden'
 import { asCompose, boardSig, cleanDeckBlocks, copyBlocks, mapBlock, settleDeck, tidyLinks, withLayout } from '../deck/blocks'
 import { tidyBackdrop } from '../deck/backdrops'
-import { tidyCines } from '../deck/cine'
+import { cineId, tidyCines } from '../deck/cine'
 import { unknownParts } from '../deck/compat'
 import { pastedItems, withOneMore } from '../deck/edits'
 import { makeSlide, uid } from '../deck/generate'
@@ -10,7 +10,7 @@ import { dropIndex, followIndex, isMetaKey, moveIn } from '../deck/fields'
 import { LAYOUTS, variantOf } from '../deck/layouts'
 import { migrateDeck } from '../deck/migrate'
 import { GESTURE_KEY } from '../lib/pointerSession'
-import type { Backdrop, Block, Deck, DeckTheme, ItemKey, LayoutId, MetaKey, Motion, Slide, SlideOptions, ThemeId } from '../deck/types'
+import type { Backdrop, Block, CineRecipe, Deck, DeckTheme, ItemKey, LayoutId, MetaKey, Motion, Slide, SlideOptions, ThemeId } from '../deck/types'
 
 const HISTORY_LIMIT = 100
 /** 같은 칸을 이 시간 안에 이어서 고치면 되돌리기 한 단계로 묶는다 */
@@ -146,6 +146,32 @@ function shownAfter(from: Deck, to: Deck, selectedId: string | null): string | n
   return to.slides[Math.min(Math.max(at - 1, 0), to.slides.length - 1)]?.id ?? null
 }
 
+/**
+ * 다음 고침에 함께 넣을 모션 그래픽의 레시피. 모션 그래픽을 넣거나 손잡이로 바꿀 때 레시피(deck.cines)와 부품(block.cine)이 한 고침에
+ * 들어가야 되돌리기 한 번에 둘이 같이 돌아간다. 부품을 넣는 길(판에 놓기)은 여럿이라, 레시피는 여기에 맡겨 두고 commit이 부품이 가리키는
+ * 것만 넣는다(가리키지 않으면 넣지 않는다)
+ */
+const staged = new Map<string, CineRecipe>()
+
+/** 레시피를 맡기고 그 버전 id를 돌려준다. 이 id를 단 부품을 넣거나 바꾸는 다음 고침에 레시피가 함께 들어간다 */
+export function stageCine(recipe: CineRecipe): string {
+  const id = cineId(recipe)
+  staged.set(id, recipe)
+  return id
+}
+
+function withStaged(deck: Deck): Deck {
+  if (!staged.size) return deck
+  let cines = deck.cines
+  for (const s of deck.slides)
+    for (const b of s.blocks ?? []) {
+      const r = b.type === 'cine' && b.cine && !cines?.[b.cine] ? staged.get(b.cine) : undefined
+      if (r) cines = { ...cines, [b.cine!]: r }
+    }
+  staged.clear()
+  return cines === deck.cines ? deck : { ...deck, cines }
+}
+
 export const useDeck = create<DeckState>((set, get) => {
   /** 덱을 바꾸고 되돌리기 기록을 남긴다 */
   function commit(fn: (deck: Deck) => Deck, key?: string) {
@@ -153,7 +179,7 @@ export const useDeck = create<DeckState>((set, get) => {
     if (!deck) return
     // 부품 장의 판은 바뀐 부품, 제목, 글자 크기에 맞춰 다시 나눈다 (커진 부품이 옆에서 자리를 받는다)
     // 모션 그래픽을 빼거나 다른 버전으로 바꾸면 쓰지 않게 된 레시피는 발표에서 뺀다(되돌리면 그때의 발표와 함께 돌아온다)
-    const next = { ...tidyCines(settleDeck(fn(deck), deck)), updatedAt: Date.now() }
+    const next = { ...tidyCines(withStaged(settleDeck(fn(deck), deck))), updatedAt: Date.now() }
     // 아무것도 바뀌지 않았으면 기록하지 않는다. 지금 것을 다시 고르면(같은 차례, 같은 강조) 빈 되돌리기 단계가 생겨서
     // Ctrl+Z를 눌러도 아무 일이 없는 것처럼 보였다
     unchanged = sameDeck(next, deck)

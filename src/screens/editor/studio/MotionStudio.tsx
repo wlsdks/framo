@@ -38,6 +38,8 @@ import { FROM_SHORT, INHERIT, nameOf, SLIDE_TRANSITIONS } from '../MotionPanel'
 import { SceneOverride, ScenePicker } from '../ScenePicker'
 import { usePlayer, useReducedMotion } from './player'
 import { MotionCopy } from './MotionCopy'
+import { CineKnobs } from './CineKnobs'
+import { sealDirty } from '../cineEdit'
 import { Timeline } from './Timeline'
 import { SHORTCUT } from '../shortcuts'
 import { keys } from '../../../lib/keys'
@@ -164,12 +166,13 @@ export function MotionStudio({
       }
     }, ENTER_HOLD)
   }, [prev, reduced, slide, deck, player.engine])
-  // 장을 옮기거나 닫으면 넘기던 것을 거둔다
+  // 장을 옮기거나 닫으면 넘기던 것을 거둔다. 그 장에서 고친 모션 그래픽은 내 라이브러리에 새 버전으로 남긴다(cineEdit.ts)
   useEffect(
     () => () => {
       enterRun.current++
       setEntering(false)
       document.documentElement.classList.remove('ms-vt')
+      void sealDirty(useDeck.getState().deck)
     },
     [slide.id],
   )
@@ -269,7 +272,18 @@ export function MotionStudio({
           )}
         </div>
         <div className="ms-side-body">
-          {block ? (
+          {block?.type === 'cine' ? (
+            // 모션 그래픽: 나타나는 모습 대신 장면의 쉬운 손잡이(모일 모양, 입자, 빛, 카메라 …)
+            <CineKnobs
+              key={block.id}
+              slide={slide}
+              block={block}
+              n={ids.indexOf(block.id) + 1}
+              disabled={level === 'none'}
+              onWhen={(w) => setBlock(block, { when: w === 'after' ? undefined : w }, false)}
+              onPlay={() => player.playOne(block.id)}
+            />
+          ) : block ? (
             <BlockMotion key={block.id} slide={slide} block={block} n={ids.indexOf(block.id) + 1} name={name} disabled={level === 'none'} onSet={setBlock} onPlay={() => player.playOne(block.id)} />
           ) : (
             <>

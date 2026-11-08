@@ -25,6 +25,7 @@ import { decodePartsFile, encodePartsFile, PARTS_EXT } from '../../store/partsFi
 import { addManySaved, removeSaved, renameSaved, restoreSaved, useSaved } from '../../store/saved'
 import { DownloadIcon, MoreIcon, NewSlideIcon, Popover, UploadIcon, undoAction, type Toast } from '../ui'
 import { soloSlide, type BlockEditing } from './BlockEditor'
+import { CineSection } from './CineLibrary'
 import { CANVAS, COL_W } from './canvas'
 import { useLook, type Look } from './look'
 import { noRoomText, type NoRoomText } from './noRoom'
@@ -209,146 +210,150 @@ export function SavedParts({ deck, slide, blocks, toast }: { deck: Deck; slide: 
   return (
     <>
       <input ref={fileRef} type="file" accept={`${PARTS_EXT},application/json`} hidden onChange={(e) => void onFile(e)} />
-      {loaded && !parts.length ? (
-        <div className="mine-empty">
-          <p className="mine-empty-t">자주 쓰는 조합을 저장해 두세요</p>
-          <p className="mine-empty-p">
-            슬라이드 위에서 컴포넌트를 고르고, 슬라이드 아래 도구에서 컴포넌트 이름을 눌러 '내 컴포넌트로 저장'을 고르면 그 컴포넌트, 그 줄, 슬라이드 전체를 저장해요. 어느 발표에서든 다시 넣을 수 있어요.
-          </p>
-          <button type="button" className="btn btn-sm" onClick={() => fileRef.current?.click()}>
-            <UploadIcon />
-            파일에서 가져오기
-          </button>
-        </div>
-      ) : (
-        <div className="lib-list mine-list">
-          <div className="mine-head">
-            <span className="lib-group-n">{parts.length}개</span>
-            <button type="button" className="mine-head-btn" title={`${PARTS_EXT} 파일의 컴포넌트를 더해요`} onClick={() => fileRef.current?.click()}>
+      <div className="lib-list mine-list">
+        {/* 모션 그래픽: 내가 만든 장면들과 새로 만들기(틀 고르기). 저장한 컴포넌트와 같은 목록에서 스크롤된다(CineLibrary.tsx) */}
+        <CineSection deck={deck} slide={slide} blocks={blocks} toast={toast} />
+        {loaded && !parts.length ? (
+          <div className="mine-empty">
+            <p className="mine-empty-t">자주 쓰는 조합을 저장해 두세요</p>
+            <p className="mine-empty-p">
+              슬라이드 위에서 컴포넌트를 고르고, 슬라이드 아래 도구에서 컴포넌트 이름을 눌러 '내 컴포넌트로 저장'을 고르면 그 컴포넌트, 그 줄, 슬라이드 전체를 저장해요. 어느 발표에서든 다시 넣을 수 있어요.
+            </p>
+            <button type="button" className="btn btn-sm" onClick={() => fileRef.current?.click()}>
               <UploadIcon />
-              가져오기
-            </button>
-            <button type="button" className="mine-head-btn" title="모두 한 파일로 저장해요. 다른 사람과 주고받거나 다른 PC로 옮길 때 써요" onClick={exportAll}>
-              <DownloadIcon />
-              파일로 저장
+              파일에서 가져오기
             </button>
           </div>
-          <ul className="mine-grid">
-            {parts.map((part) => {
-              const locked = lockedOf(part)
-              const drag = part.kind === 'block'
-              return (
-                <li key={part.id} className="mine-item">
-                  <button
-                    type="button"
-                    className={cx('lib-card', !drag && 'is-tap', locked && 'is-blocked', why?.id === part.id && 'is-why')}
-                    title={
-                      locked
-                        ? `${part.name}: 이 슬라이드에 ${closed ? '넣지 않아요' : '함께 넣을 수 없어요'}. 눌러서 이유를 보세요`
-                        : part.kind === 'slide'
-                          ? `${part.name}: 눌러서 이 슬라이드 다음에 새 슬라이드로 넣어요`
-                          : part.kind === 'row'
-                            ? `${part.name}: 눌러서 이 슬라이드 맨 아래에 넣어요`
-                            : `${part.name}: 끌어다 놓거나 눌러서 넣어요`
-                    }
-                    onPointerDown={(e) => {
-                      if (!drag) return
-                      const card = e.currentTarget
-                      blocks.pressCard(e, freshBlock(part), () => tap(part, card))
-                    }}
-                    // 끌 수 있는 카드는 위의 누르기에서 끌기와 나눠 다루고, 키보드로 누를 때만 여기서
-                    onClick={(e) => (!drag || e.detail === 0) && tap(part, e.currentTarget)}
-                  >
-                    <SavedThumb deck={look} part={part} />
-                  </button>
-                  <div className="mine-meta">
-                    {renaming === part.id ? (
-                      <input
-                        className="mine-rename"
-                        defaultValue={part.name}
-                        aria-label="이름"
-                        maxLength={40}
-                        autoFocus
-                        onFocus={(e) => e.currentTarget.select()}
-                        onBlur={(e) => {
-                          void renameSaved(part.id, e.currentTarget.value)
-                          setRenaming(null)
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') e.currentTarget.blur()
-                          else if (e.key === 'Escape') {
-                            e.preventDefault()
-                            setRenaming(null)
-                          }
-                        }}
-                      />
-                    ) : (
-                      <span className="mine-name" onDoubleClick={() => setRenaming(part.id)}>
-                        {part.name}
-                      </span>
-                    )}
-                    {/* 기본 컴포넌트의 넣을 수 없는 카드와 같은 말과 표시 (자물쇠는 'AI에게 숨기기'의 표시라 쓰지 않는다) */}
-                    <span className="mine-kind">
-                      {locked ? (
-                        <>
-                          <NewSlideIcon />
-                          새 슬라이드에 넣을 수 있어요
-                        </>
-                      ) : (
-                        kindText(part)
-                      )}
-                    </span>
-                    <Popover
-                      flip
-                      className="mine-menu"
-                      button={({ open, toggle }) => (
-                        <button type="button" className="icon-btn mine-more" aria-label={`${part.name} 메뉴`} aria-expanded={open} onClick={toggle}>
-                          <MoreIcon />
-                        </button>
-                      )}
+        ) : (
+          <>
+            <div className="mine-head">
+              <span className="lib-group-n">{parts.length}개</span>
+              <button type="button" className="mine-head-btn" title={`${PARTS_EXT} 파일의 컴포넌트를 더해요`} onClick={() => fileRef.current?.click()}>
+                <UploadIcon />
+                가져오기
+              </button>
+              <button type="button" className="mine-head-btn" title="모두 한 파일로 저장해요. 다른 사람과 주고받거나 다른 PC로 옮길 때 써요" onClick={exportAll}>
+                <DownloadIcon />
+                파일로 저장
+              </button>
+            </div>
+            <ul className="mine-grid">
+              {parts.map((part) => {
+                const locked = lockedOf(part)
+                const drag = part.kind === 'block'
+                return (
+                  <li key={part.id} className="mine-item">
+                    <button
+                      type="button"
+                      className={cx('lib-card', !drag && 'is-tap', locked && 'is-blocked', why?.id === part.id && 'is-why')}
+                      title={
+                        locked
+                          ? `${part.name}: 이 슬라이드에 ${closed ? '넣지 않아요' : '함께 넣을 수 없어요'}. 눌러서 이유를 보세요`
+                          : part.kind === 'slide'
+                            ? `${part.name}: 눌러서 이 슬라이드 다음에 새 슬라이드로 넣어요`
+                            : part.kind === 'row'
+                              ? `${part.name}: 눌러서 이 슬라이드 맨 아래에 넣어요`
+                              : `${part.name}: 끌어다 놓거나 눌러서 넣어요`
+                      }
+                      onPointerDown={(e) => {
+                        if (!drag) return
+                        const card = e.currentTarget
+                        blocks.pressCard(e, freshBlock(part), () => tap(part, card))
+                      }}
+                      // 끌 수 있는 카드는 위의 누르기에서 끌기와 나눠 다루고, 키보드로 누를 때만 여기서
+                      onClick={(e) => (!drag || e.detail === 0) && tap(part, e.currentTarget)}
                     >
-                      {(close) => (
-                        <>
-                          <button
-                            type="button"
-                            className="menu-item"
-                            onClick={() => {
-                              close()
-                              setRenaming(part.id)
-                            }}
-                          >
-                            이름 바꾸기
-                          </button>
-                          <button
-                            type="button"
-                            className="menu-item"
-                            onClick={() => {
-                              close()
-                              exportOne(part)
-                            }}
-                          >
-                            파일로 저장
-                          </button>
-                          <button
-                            type="button"
-                            className="menu-item is-danger"
-                            onClick={() => {
-                              close()
-                              void remove(part)
-                            }}
-                          >
-                            지우기
-                          </button>
-                        </>
+                      <SavedThumb deck={look} part={part} />
+                    </button>
+                    <div className="mine-meta">
+                      {renaming === part.id ? (
+                        <input
+                          className="mine-rename"
+                          defaultValue={part.name}
+                          aria-label="이름"
+                          maxLength={40}
+                          autoFocus
+                          onFocus={(e) => e.currentTarget.select()}
+                          onBlur={(e) => {
+                            void renameSaved(part.id, e.currentTarget.value)
+                            setRenaming(null)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') e.currentTarget.blur()
+                            else if (e.key === 'Escape') {
+                              e.preventDefault()
+                              setRenaming(null)
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span className="mine-name" onDoubleClick={() => setRenaming(part.id)}>
+                          {part.name}
+                        </span>
                       )}
-                    </Popover>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
+                      {/* 기본 컴포넌트의 넣을 수 없는 카드와 같은 말과 표시 (자물쇠는 'AI에게 숨기기'의 표시라 쓰지 않는다) */}
+                      <span className="mine-kind">
+                        {locked ? (
+                          <>
+                            <NewSlideIcon />
+                            새 슬라이드에 넣을 수 있어요
+                          </>
+                        ) : (
+                          kindText(part)
+                        )}
+                      </span>
+                      <Popover
+                        flip
+                        className="mine-menu"
+                        button={({ open, toggle }) => (
+                          <button type="button" className="icon-btn mine-more" aria-label={`${part.name} 메뉴`} aria-expanded={open} onClick={toggle}>
+                            <MoreIcon />
+                          </button>
+                        )}
+                      >
+                        {(close) => (
+                          <>
+                            <button
+                              type="button"
+                              className="menu-item"
+                              onClick={() => {
+                                close()
+                                setRenaming(part.id)
+                              }}
+                            >
+                              이름 바꾸기
+                            </button>
+                            <button
+                              type="button"
+                              className="menu-item"
+                              onClick={() => {
+                                close()
+                                exportOne(part)
+                              }}
+                            >
+                              파일로 저장
+                            </button>
+                            <button
+                              type="button"
+                              className="menu-item is-danger"
+                              onClick={() => {
+                                close()
+                                void remove(part)
+                              }}
+                            >
+                              지우기
+                            </button>
+                          </>
+                        )}
+                      </Popover>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        )}
+      </div>
 
       {shownWhy && (
         <div className="lib-why" role="dialog" aria-label={`${josa(shownWhy.part.name, '을', '를')} 넣을 수 없는 이유`}>

@@ -1,6 +1,7 @@
 import { del, get, keys, set } from 'idb-keyval'
 import type { Deck } from '../deck/types'
 import { DECK_EXT, decodeDeckFile, encodeDeckFile, fileStamp, safeFileName } from './deckFile'
+import { CINES_EXT } from './cinesFile'
 import { PARTS_EXT } from './partsFile'
 import { settings } from './settings'
 
@@ -17,6 +18,8 @@ const AUTO_KEEP = 10
 const AUTO_SUFFIX = ` 자동${DECK_EXT}`
 /** 내 컴포넌트를 담는 파일 (발표 파일과 같은 폴더에 하나) */
 const PARTS_FILE = `내 컴포넌트${PARTS_EXT}`
+/** 내 모션 그래픽을 담는 파일. 내 컴포넌트 파일과 따로다(예전 버전이 그 파일을 다시 쓰면 모르는 항목을 지운다) */
+const CINES_FILE = `내 모션 그래픽${CINES_EXT}`
 
 type Mode = { mode: 'readwrite' }
 const RW: Mode = { mode: 'readwrite' }
@@ -315,26 +318,33 @@ export function trashDeckInFolder(deck: Deck): Promise<void> {
   })
 }
 
-/** 보관 폴더의 내 컴포넌트 파일. 없거나 폴더를 쓸 수 없으면 null */
-export async function readPartsFromFolder(): Promise<string | null> {
+/** 보관 폴더의 발표 아닌 파일 하나(내 컴포넌트, 내 모션 그래픽). 없거나 폴더를 쓸 수 없으면 null */
+async function readAside(name: string): Promise<string | null> {
   const dir = await readyFolder()
   if (!dir) return null
   try {
-    return await readText(await dir.getFileHandle(PARTS_FILE))
+    return await readText(await dir.getFileHandle(name))
   } catch {
     return null
   }
 }
 
-export function writePartsToFolder(text: string): Promise<boolean> {
+function writeAside(name: string, text: string): Promise<boolean> {
   return serial(async () => {
     const dir = await readyFolder()
     if (!dir) return false
     try {
-      await writeText(dir, PARTS_FILE, text)
+      await writeText(dir, name, text)
       return true
     } catch {
       return false
     }
   })
 }
+
+/** 보관 폴더의 내 컴포넌트 파일. 없거나 폴더를 쓸 수 없으면 null */
+export const readPartsFromFolder = () => readAside(PARTS_FILE)
+export const writePartsToFolder = (text: string) => writeAside(PARTS_FILE, text)
+/** 보관 폴더의 내 모션 그래픽 파일 */
+export const readCinesFromFolder = () => readAside(CINES_FILE)
+export const writeCinesToFolder = (text: string) => writeAside(CINES_FILE, text)

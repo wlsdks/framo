@@ -75,7 +75,7 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 
 | 위치 | 내용 |
 |---|---|
-| `src/deck/` | 데이터 모델(`types.ts`), 보고 종류별 구성(`blueprints.ts`, 종류 하나는 `blueprints/<id>.ts`), 레이아웃 정의와 묶음(`layouts.ts`), 부품과 자리 규칙(`blocks/`, 한 곳에서 내보내는 것은 `blocks.ts`), 구성 만들기(`generate.ts`), 편집기와 AI 제안이 같이 쓰는 항목 수·레이아웃 바꾸기(`edits.ts`), 예시 발표(`sample.ts`), 레이아웃별 예시 장(`showcase.ts`) |
+| `src/deck/` | 데이터 모델(`types.ts`), 보고 종류별 구성(`blueprints.ts`, 종류 하나는 `blueprints/<id>.ts`), 레이아웃 정의와 묶음(`layouts.ts`), 부품과 자리 규칙(`blocks/`, 한 곳에서 내보내는 것은 `blocks.ts`), 구성 만들기(`generate.ts`), 편집기와 AI 제안이 같이 쓰는 항목 수·레이아웃 바꾸기(`edits.ts`), 예시 발표(`sample.ts`), 레이아웃별 예시 장(`showcase.ts`), 모션 그래픽의 레시피(`cine.ts`: 틀, 손잡이, 버전 id. 그리기는 `src/motion/cine.ts`) |
 | `src/slides/` | 슬라이드 그리기(`layouts.tsx`가 `layouts/`의 레이아웃별 파일을 모은다), 부품 장(`blocks.tsx`, 부품 장만의 부품은 `blocks/`의 부품별 파일), 슬라이드 디자인(`slides.css`가 `styles/`의 레이아웃별 파일을, `blocks.css`가 `styles/blocks/`의 부품별 파일을 차례대로 묶는다), 편집 표시(`edit.css`) |
 | `src/screens/` | 홈, 프레임 잡기, 편집기(`editor/`), 발표 화면, 장 모음(`System.tsx`, 디자인 시스템) |
 | `src/store/` | 편집 상태(zustand), 저장(IndexedDB + 보관 폴더), 버전 |
