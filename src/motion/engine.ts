@@ -1301,6 +1301,33 @@ export function motionEngine(): MotionEngine {
       run(anims, p, frames, s(at), { easing, duration: d(duration) })
       run(anims, p, [{ opacity: 0, scale: '0.5' }, { opacity: 1, scale: '1', offset: 0.14 }, { opacity: 1, scale: '1', offset: 0.86 }, { opacity: 0, scale: '0.5' }], s(at), { easing: 'linear', duration: d(duration) })
     }
+    /**
+     * 계속 흐르는 조각(생동감에서만): packet과 같은 조각을 길 위에 붙여 두고 장을 떠날 때까지 되풀이해 흘려보낸다.
+     * 끝맺음 목록(anims)에 넣지 않고 따로 모아(stops) 장을 떠날 때 거두므로 '누르면' 차례를 붙잡지 않는다.
+     * 차분하게, 움직임 없음, 동작 줄이기에서는 흐르지 않는다: 보고를 듣는 동안 장 한쪽이 계속 움직이면 눈을 빼앗는다
+     */
+    const stream = (host: Element | null, path: [number, number][], at: number, period: number, phase = 0) => {
+      if (!host || path.length < 2 || levelName !== 'lively' || quiet || still) return
+      const p = document.createElement('span')
+      p.className = 'mo-pk is-stream'
+      p.setAttribute('aria-hidden', 'true')
+      host.appendChild(p)
+      const lens = path.slice(1).map((q, i) => Math.hypot(q[0] - path[i][0], q[1] - path[i][1]))
+      const total = lens.reduce((a, b) => a + b, 0) || 1
+      let walked = 0
+      const frames = path.map((q, i) => {
+        walked += i ? lens[i - 1] : 0
+        return { translate: `${q[0]}px ${q[1]}px`, offset: walked / total }
+      })
+      const timing = { duration: period, delay: s(at) + phase, iterations: Infinity, easing: CARRY, fill: 'backwards' as FillMode }
+      const a = p.animate(frames, timing)
+      const b = p.animate([{ opacity: 0, scale: '0.5' }, { opacity: 1, scale: '1', offset: 0.14 }, { opacity: 1, scale: '1', offset: 0.86 }, { opacity: 0, scale: '0.5' }], { ...timing, easing: 'linear' })
+      stops.push(() => {
+        a.cancel()
+        b.cancel()
+        p.remove()
+      })
+    }
     /** 부품 안 상자의 자리(host 기준, 장의 px). 장은 줄여 그려지기도 해서 화면 px를 host의 비율로 되돌린다 */
     const spot = (el: Element, host: HTMLElement) => {
       const h = host.getBoundingClientRect()
@@ -1858,6 +1885,11 @@ export function motionEngine(): MotionEngine {
               again += fast
             }
             land(ports[0] ?? null, again - 80)
+            // 생동감: 그 뒤로는 조각 둘이 고리를 마주 보며 쉬지 않고 돈다(한 바퀴 길을 이어 붙여 한 줄로)
+            const loop = legs.flat()
+            const lap = d(Math.max(2600, steps.length * 700))
+            stream(stage, loop, again + 300, lap)
+            stream(stage, loop, again + 300, lap, lap / 2)
           } else if (getComputedStyle(root).getPropertyValue('--cy-flat').trim() === '1') {
             steps.forEach((step, n) => {
               const at = 120 + n * hop
@@ -1979,6 +2011,8 @@ export function motionEngine(): MotionEngine {
             packet(link, ends(link), again, fast)
             again += fast
           }
+          // 생동감: 그 뒤로는 조각이 단계 사이를 쉬지 않고 건너간다(선마다 엇갈려). 데이터가 계속 오가는 흐름으로 보인다
+          links.forEach((link, i) => stream(link, ends(link), again + 300, d(1400), (i * 1400) / Math.max(2, links.length)))
           const hl = one('.bk-fw-node.is-hl')
           // 부풀기는 transform으로: 나타날 때 쓴 scale과 같은 속성이면 늦게 만든 이것이 시작 전(fill backwards)부터 scale을 덮어 나타나기가 사라진다
           if (hl && links.length) run(anims, hl, [{ transform: 'scale(1)' }, { transform: 'scale(1.03)' }, { transform: 'scale(1)' }], s(again - 60), { easing: 'ease-in-out', duration: d(480) })
@@ -2125,6 +2159,8 @@ export function motionEngine(): MotionEngine {
           }
           // transform으로 (흐름의 끝 단계와 같은 까닭)
           run(anims, hub, [{ transform: 'scale(1)' }, { transform: 'scale(1.025)' }, { transform: 'scale(1)' }], s(arrive - 120), { easing: 'ease-in-out', duration: d(420) })
+          // 생동감: 그 뒤로는 상자마다 조각이 쉬지 않고 가운데로 모여든다(상자마다 엇갈려)
+          nodes.forEach((_, k) => stream(map, paths[k], arrive + 200, d(1600), (k * 1600) / Math.max(2, nodes.length)))
           break
         }
         case 'split': {

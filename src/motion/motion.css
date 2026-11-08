@@ -114,6 +114,16 @@
   pointer-events: none;
 }
 
+/* 계속 흐르는 조각(engine.ts의 stream, 생동감에서만): 둥글고 옅게 빛난다. 한 번 건너가는 네모와 달리 장에 머무는 동안 흐르는
+   데이터라서, 그림의 선과 같은 강조색 빛으로 '흐르는 것'임을 보인다 */
+.mo-pk.is-stream {
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
 /* ---------- 장 바꾸기 ---------- */
 
 @keyframes mo-vt-fade-out {
