@@ -383,3 +383,56 @@
 .bk.va-steps .tl:is([data-n='5'], [data-n='6']) .tl-meta {
   --fs: 22px;
 }
+
+/* ---------- 점 대신 눈금 ----------
+   일정의 점과 지금 단계의 고리(바탕 틈과 강조색 테)는 흔한 타임라인 서식처럼 보였다(사용자). 점의 자리(--tl-dot의 상자)는 그대로 두고
+   그 가운데에 축을 가로지르는 눈금을 긋는다: 가로 일정은 세로 눈금, 세로로 쌓은 일정(va-steps)은 가로 눈금. 지나온 단계와 지금 단계는
+   강조색, 남은 단계는 옅게, 지금 단계는 두 배 넘게 길게. 단계 표시, 순환, 모이고 퍼지기와 같은 말투(가는 선과 눈금)다 */
+:is(
+    .tl-dot,
+    .tl-item:is(.is-done, .is-now) .tl-dot,
+    .tl-item.is-now .tl-dot,
+    .has-now .tl-item:not(.is-done, .is-now) .tl-dot,
+    .va-steps .tl-dot,
+    .va-steps .tl-item.is-now .tl-dot,
+    .va-steps .tl.has-now .tl-item:not(.is-done, .is-now) .tl-dot
+  ) {
+  --tl-c: var(--ink);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tl-dot::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 100%;
+  background: var(--tl-c);
+  content: '';
+  translate: -50% -50%;
+}
+
+:is(.tl-item:is(.is-done, .is-now) .tl-dot, .va-steps .tl-item:is(.is-done, .is-now) .tl-dot) {
+  --tl-c: var(--accent);
+}
+
+:is(.has-now .tl-item:not(.is-done, .is-now) .tl-dot, .va-steps .tl.has-now .tl-item:not(.is-done, .is-now) .tl-dot) {
+  --tl-c: var(--ink-3);
+}
+
+.tl-item.is-now .tl-dot::after {
+  height: 240%;
+}
+
+.va-steps .tl-dot::after {
+  width: 100%;
+  height: 4px;
+}
+
+.va-steps .tl-item.is-now .tl-dot::after {
+  width: 240%;
+  height: 4px;
+}
