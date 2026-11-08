@@ -136,6 +136,16 @@
   }
 }
 
+/* 큰 글자 하나뿐이면(제목과 부제를 비운 발표 모습) 판 가운데에: 왼쪽에 붙으면 오른쪽 절반이 통째로 비었다 */
+.fr-mark .bk-cn-txt:not(:has(.bk-cn-words > .bk-cn-f:not(:empty))) {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+}
+
+.fr-mark .bk-cn-words:not(:has(> .bk-cn-f:not(:empty))) {
+  display: none;
+}
+
 /* 좁은 칸: 큰 글자 아래에 제목을 쌓는다(옆에 두면 제목이 한 줄에 두세 글자씩 꺾였다) */
 @container bk (max-width: 900px) {
   .fr-mark .bk-cn-txt {

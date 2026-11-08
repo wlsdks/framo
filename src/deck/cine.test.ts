@@ -37,7 +37,7 @@ function strings(v: unknown, out: string[] = []): string[] {
 function deckWith(recipe: CineRecipe, extra: Record<string, CineRecipe> = {}): Deck {
   const deck = createSampleDeck()
   const id = cineId(recipe)
-  const slide = { ...deck.slides[0], id: 'c1', layout: 'compose' as const, blocks: [{ id: 'b1', type: 'cine' as const, fields: { glyph: 'D' }, items: [], cine: id, at: { x: 0, y: 0, w: 12, h: 12 } }] }
+  const slide = { ...deck.slides[0], id: 'c1', layout: 'compose' as const, blocks: [{ id: 'b1', type: 'cine' as const, fields: { glyph: 'N' }, items: [], cine: id, at: { x: 0, y: 0, w: 12, h: 12 } }] }
   return { ...deck, slides: [slide, ...deck.slides.slice(1)], cines: { [id]: recipe, ...extra } }
 }
 

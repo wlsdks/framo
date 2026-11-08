@@ -86,13 +86,13 @@ export const CINE_ENTERS: Choice<CineEnter>[] = [
 
 /** 모션 그래픽 칸의 이름과 안내. 컴포넌트 정의(blocks/native.ts)가 그대로 쓴다 */
 export const CINE_FIELD_SPECS: { key: CineFieldKey; label: string; hint: string; multiline?: boolean }[] = [
-  { key: 'glyph', label: '큰 글자', hint: 'D' },
-  { key: 'title', label: '제목', hint: '확산 모델 도입', multiline: true },
-  { key: 'lead', label: '부제', hint: '그림 한 장을 만드는 시간을 줄여요', multiline: true },
+  { key: 'glyph', label: '큰 글자', hint: 'N' },
+  { key: 'title', label: '제목', hint: '새 협업 도구', multiline: true },
+  { key: 'lead', label: '부제', hint: '흩어진 일정을 한곳에서 봐요', multiline: true },
   { key: 'label', label: '이름표', hint: '시작' },
   { key: 'text', label: '글', hint: '한두 문장', multiline: true },
   { key: 'sub', label: '덧붙이는 말', hint: '뒷받침하는 한 줄', multiline: true },
-  { key: 'value', label: '숫자', hint: '1,200만' },
+  { key: 'value', label: '숫자', hint: '1,280명' },
   { key: 'note', label: '끝 이름표', hint: '1년 뒤' },
 ]
 
@@ -123,10 +123,10 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
     name: '빛에서 글자로',
     description: '한 점의 빛이 번졌다가 입자가 큰 글자로 모여 또렷해지고, 제목이 써지며 카메라가 물러나요.',
     fits: '표지, 새 이름이나 제품, 단락의 시작',
-    sample: { glyph: 'D', title: '확산 모델 도입', lead: '그림 한 장을 만드는 시간을 줄여요' },
+    sample: { glyph: 'N', title: '새 협업 도구', lead: '흩어진 일정을 한곳에서 봐요' },
     recipe: {
       frame: 'mark',
-      phases: phases(['seed', 450], ['spread', 1150, 120], ['gather', 1600, 380], ['resolve', 700, 360], ['write', 1000, 220], ['pull', 1900, 900]),
+      phases: phases(['seed', 450], ['spread', 1000, 120], ['gather', 1750, 500], ['resolve', 700, 260], ['write', 1000, 220], ['pull', 1900, 900]),
       particles: { amount: 'many', size: 1, tone: 'mix', depth: 0.6, trail: true, spread: 'round' },
       shape: { kind: 'glyph', field: 'glyph' },
       light: true,
@@ -134,7 +134,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       camera: 'pull',
       pace: 'normal',
       texts: [
-        { key: 'glyph', enter: 'settle', on: 'resolve' },
+        { key: 'glyph', enter: 'settle', on: 'resolve', lag: 0.2 },
         { key: 'title', enter: 'write', on: 'write' },
         { key: 'lead', enter: 'settle', on: 'write', lag: 0.55 },
       ],
@@ -148,7 +148,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
     name: '확산',
     description: '한 점에서 입자가 장 끝까지 번지는 동안 가운데 숫자가 같은 빠르기로 굴러가 맞춰져요.',
     fits: '도입, 커지는 수, 퍼지는 것',
-    sample: { value: '1,200만', title: '한 달에 만드는 그림', sub: '도입 첫해 기준' },
+    sample: { value: '1,280명', title: '새로 함께한 사람', sub: '올해 3분기까지' },
     recipe: {
       frame: 'center',
       phases: phases(['seed', 300], ['spread', 2400, 120], ['write', 900, 1700]),
@@ -176,7 +176,7 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
     sample: { label: '결론', title: '한 곳에서 찾아요', sub: '흩어진 고객 정보를 하나로' },
     recipe: {
       frame: 'center',
-      phases: phases(['seed', 700], ['gather', 2000, 250], ['resolve', 800, 420], ['write', 700, 300]),
+      phases: phases(['seed', 550], ['gather', 1950, 250], ['resolve', 800, 420], ['write', 700, 300]),
       particles: { amount: 'many', size: 0.9, tone: 'mix', depth: 0.5, trail: true, spread: 'round' },
       shape: { kind: 'glyph', field: 'title' },
       light: true,

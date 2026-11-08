@@ -336,7 +336,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const mode: Scene['mode'] = spans.spread ? 'burst' : path ? 'pen' : 'scatter'
     // 번지는 크기: 뒤에 모임이 있으면 장의 한가운데를 채울 만큼, 번짐으로 끝나면 장 끝 너머까지
     const far = Math.hypot(Math.max(fx, host.w - fx), Math.max(fy, host.h - fy))
-    const reach = spans.gather ? Math.min(host.w, host.h) * 0.46 : far * 0.95
+    const reach = spans.gather ? Math.min(host.w, host.h) * 0.56 : far * 0.95
     const ang = new Float32Array(n)
     const rad = new Float32Array(n)
     const z = new Float32Array(n)
@@ -354,20 +354,21 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const pu = new Float32Array(n)
     const share = s.tone === 'accent' ? 1 : s.tone === 'mix' ? 0.12 : 0
     // 갈래: 물에 떨어진 먹이 번질 때처럼 몇 가닥의 굽은 갈래로 뻗는다(고른 구름이면 화면 가득 모래 같은 점만 남았다, 필름).
-    // 갈래는 모두 같은 쪽으로 휘어서 번짐 전체가 천천히 도는 소용돌이로 읽히고, 모일 때도 같은 쪽으로 감겨 든다
+    // 갈래는 모두 같은 쪽으로 조금 휘어서 번짐 전체가 천천히 도는 것으로 읽히고, 모일 때도 같은 쪽으로 감겨 든다. 많이 휘면
+    // 나선 은하나 바람개비로 읽혔다(필름)
     const arms: number[][] = []
     const ARMS = 5
     const turn = R() * TAU
     // 갈래마다 각도, 길이, 휘는 몫, 굵기를 다르게: 고르게 나누면 눈송이나 꽃처럼 꾸민 무늬로 읽혔다(필름)
-    for (let a = 0; a < ARMS; a++) arms.push([turn + ((a + (R() - 0.5) * 0.8) / ARMS) * TAU, 0.6 + 0.7 * R(), 1.4 + 1.1 * R(), 0.14 + 0.18 * R()])
+    for (let a = 0; a < ARMS; a++) arms.push([turn + ((a + (R() - 0.5) * 0.8) / ARMS) * TAU, 0.6 + 0.7 * R(), 0.45 + 0.6 * R(), 0.14 + 0.18 * R()])
     const arm = new Int8Array(n)
     const gauss = () => Math.sqrt(-2 * Math.log(1 - R() * 0.995)) * Math.cos(TAU * R())
     for (let i = 0; i < n; i++) {
-      if (spans.gather && R() < 0.68) {
+      if (spans.gather && R() < 0.55) {
         // 갈래 위: 갈래의 각도 둘레에 좁게, 갈래를 따라(끝으로 갈수록 드물게)
         const a = Math.floor(R() * ARMS)
         arm[i] = a
-        rad[i] = Math.min(1.5, 0.18 + Math.pow(R(), 1.2) * arms[a][1])
+        rad[i] = Math.min(1.5, 0.28 + Math.pow(R(), 1.2) * arms[a][1])
         // 갈래는 가운데의 덩어리에서 뻗어 나와 끝으로 갈수록 가늘어진다(가운데까지 가는 날이면 바람개비 무늬로 읽혔다, 필름)
         ang[i] = arms[a][0] + gauss() * arms[a][3] * (0.75 / (0.25 + rad[i]))
       } else {
@@ -477,7 +478,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       // √t: 처음에 빠르게 터져 나가고 점점 느려진다(먹이 물에 번지는 꼴). 구간이 끝나도 아주 느리게 이어 번진다
       const k = Math.sqrt(clamp((e - sp.start) / Math.max(1, sp.end - sp.start) / 2.6) * 2.6)
       const seed = c.spans.seed ? prog(c.spans.seed, e) : 1
-      const r = c.reach * c.rad[i] * k * (c.z[i] === 0 ? 1.45 : 1) + 3 + 5 * seed
+      // 맺힘 동안은 한 점 둘레의 작은 덩어리(고르게 같은 반지름이면 작은 고리로 보였다, 필름)
+      const r = c.reach * c.rad[i] * k * (c.z[i] === 0 ? 1.45 : 1) + (3 + 10 * seed) * c.rad[i]
       // 갈래는 바깥으로 갈수록 휜 나선이고(처음부터 휘어 있다: 곧은 살은 금 간 유리처럼 보였다), 번짐 전체가 천천히 돈다(같은 쪽으로)
       const a = c.arm[i]
       const curl = a >= 0 ? c.arms[a][2] * c.rad[i] : 0
@@ -527,11 +529,13 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       }
       const k = out(q)
       // 펜 끝에서 튀는 몫: 대부분은 선 가까이, 몇은 멀리(붓이 종이를 스칠 때의 튐)
-      const side = Math.cos(c.ph[i * 2]) * (8 + 46 * c.rad[i] * c.rad[i])
-      const back = -26 * Math.abs(Math.sin(c.ph[i * 2 + 1]))
+      const side = Math.cos(c.ph[i * 2]) * (10 + 64 * c.rad[i] * c.rad[i])
+      const back = -34 * Math.abs(Math.sin(c.ph[i * 2 + 1]))
       o[0] = c.tx[i] + back * (1 - k)
       o[1] = c.ty[i] + side * (1 - k)
       a *= smooth(0, 0.12, q)
+      // 갓 튄 것은 크고 밝게, 내려앉으며 선의 굵기로(멀리서도 펜 끝이 무엇을 남기는지 보이게)
+      r *= 1 + 0.9 * (1 - k)
     } else {
       free(c, i, e, o)
       if (c.mode === 'burst') {
@@ -541,7 +545,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
         a *= smooth(0.35, 1, seed) * (1 - 0.3 * Math.min(1, sp)) * (1.15 - 0.45 * Math.min(1, c.rad[i]))
         // 번짐으로 끝나는 장면: 장 끝으로 나가며 사라진다(끝 모습에는 아무것도 남지 않는다)
         // 번짐으로 끝나는 장면: 번지는 앞(바깥 입자)이 밝고 안은 걷힌다. 퍼지는 물결로 읽혀야 '퍼진다'가 선다(고른 구름은 먼지로 읽혔다)
-        if (!G) a *= (0.3 + 0.95 * smooth(0.2, 1.1, c.rad[i])) * (1 - smooth(0.45, 1, sp) * (0.6 + 0.4 * Math.min(1, c.rad[i])))
+        if (!G) a *= (0.3 + 1.1 * smooth(0.2, 1.1, c.rad[i])) * (1 - smooth(0.62, 1, sp) * (0.6 + 0.4 * Math.min(1, c.rad[i])))
       } else if (c.mode === 'scatter') {
         // 흩어진 자리에서 하나씩 맺힌다
         const seed = c.spans.seed ? prog(c.spans.seed, e) : 1
@@ -549,7 +553,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       }
       if (G) {
         const len = Math.max(1, G.end - G.start)
-        const lag = 0.38 * len
+        const lag = 0.3 * len
         const g = carry(clamp((e - G.start - c.delay[i] * lag) / (len - lag)))
         if (g > 0) {
           const fx = o[0]
@@ -564,7 +568,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
           o[0] = u * u * fx + 2 * u * g * cx + g * g * tx
           o[1] = u * u * fy + 2 * u * g * cy + g * g * ty
           // 모일수록 또렷해진다
-          a = lerp(a, c.alpha[i], g)
+          // 모일수록 밝아진다(흩어진 먼지는 옅게, 모양에 닿은 것은 또렷하게): 모양이 먼지 속에서 떠올라야 '모였다'가 읽힌다
+          a = lerp(a * 0.75, c.alpha[i] * 1.35, g)
           r *= 1 - 0.25 * g
         }
       }
@@ -579,7 +584,10 @@ export function cineMotion(kit: DrawKit): CineRuntime {
         o[0] += Math.cos(c.ang[i]) * 34 * q
         o[1] += Math.sin(c.ang[i]) * 22 * q - 16 * q
         a *= 1 - q
-      } else a *= 1 - out(pr)
+      } else {
+        // 또렷한 글자가 맺히는 만큼만 걷힌다(처음에는 천천히): 빨리 걷히면 입자 글자와 DOM 글자 사이에 글자가 거의 없는 한 박자가 생겼다(필름)
+        a *= 1 - smooth(0.2, 0.95, pr)
+      }
       r *= 1 - 0.35 * pr
     } else if (!RS && G && e > G.end) a *= 1 - clamp((e - G.end) / 400)
     o[2] = r
@@ -1076,16 +1084,18 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       }
       // 또렷해지는 순간: 모양을 딴 글자 그대로 빛이 번졌다 가라앉는다(어두운 바탕). 밝은 바탕은 먹이 번져 있다가 글자로 거두어진다
       const RS = c.spans.resolve
-      if (c.img && RS && e > RS.start && e < RS.end + 260) {
-        // 입자로 된 글자가 한 박자 보인 뒤에 번진다(모인 것이 보여야 '모였다'가 읽힌다)
-        const p = clamp((e - RS.start) / (RS.end + 260 - RS.start))
-        const env = Math.sin(Math.PI * Math.min(1, p * 1.25)) * (1 - smooth(0.7, 1, p))
+      const b0 = RS ? RS.start + (RS.end - RS.start) * 0.35 : 0
+      if (c.img && RS && e > b0 && e < RS.end + 320) {
+        // 또렷한 글자가 거의 맺힌 뒤에 그 둘레로 번진다: 맺히기 전에 번지면 글자 대신 흐린 회색 덩어리가 보였다(필름).
+        // 어두운 바탕은 글자 둘레의 빛, 밝은 바탕은 글자 둘레로 배어 나온 먹이 다시 거두어진다
+        const p = clamp((e - b0) / (RS.end + 320 - b0))
+        const env = Math.sin(Math.PI * p)
         if (env > 0.01) {
           x.globalCompositeOperation = c.dark ? 'lighter' : 'source-over'
           // 글 한 줄(넓적한 모양)은 짧고 옅게: 오래 번지면 흐린 글이 몇 칸째 떠 있었다(필름)
           const wide = c.img.w > c.img.h * 2.2 ? 0.5 : 1
-          x.globalAlpha = (c.dark ? 0.55 : 0.22) * env * wide
-          x.filter = `blur(${Math.round((c.dark ? 22 - 8 * p : 14 * (1 - p) + 2) * (wide < 1 ? 0.6 : 1))}px)`
+          x.globalAlpha = (c.dark ? 0.4 : 0.18) * env * wide
+          x.filter = `blur(${Math.round((c.dark ? 14 - 6 * p : 10 * (1 - p) + 2) * (wide < 1 ? 0.6 : 1))}px)`
           x.drawImage(c.img.cv, c.img.x, c.img.y, c.img.w, c.img.h)
           x.filter = 'none'
           x.globalAlpha = 1
@@ -1177,18 +1187,18 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         b[m * 5] = tmp[0]
         b[m * 5 + 1] = tmp[1]
         // 밝은 바탕의 먹 알갱이는 조금 크고 옅게: 작고 짙으면 먼지 티끌로 읽혔다(필름)
-        b[m * 5 + 2] = c.dark ? tmp[2] : tmp[2] * 1.5
-        b[m * 5 + 3] = Math.min(1, tmp[3]) * (c.dark ? 0.78 : 0.3)
+        b[m * 5 + 2] = c.dark ? tmp[2] : tmp[2] * 1.7
+        b[m * 5 + 3] = Math.min(1, tmp[3]) * (c.dark ? 0.78 : 0.42)
         b[m * 5 + 4] = c.tone[i]
         m++
         if (moving && i % 2 === 0) {
           for (let g = 1; g <= 2; g++) {
-            particle(c, i, e - g * 24, tmp)
+            particle(c, i, e - g * 34, tmp)
             if (tmp[3] <= 0.004) continue
             b[m * 5] = tmp[0]
             b[m * 5 + 1] = tmp[1]
             b[m * 5 + 2] = tmp[2] * (1 - 0.15 * g)
-            b[m * 5 + 3] = Math.min(1, tmp[3]) * (c.dark ? 0.78 : 0.36) * (g === 1 ? 0.42 : 0.18)
+            b[m * 5 + 3] = Math.min(1, tmp[3]) * (c.dark ? 0.78 : 0.42) * (g === 1 ? 0.42 : 0.18)
             b[m * 5 + 4] = c.tone[i]
             m++
           }
