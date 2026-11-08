@@ -828,3 +828,12 @@
   display: inline-block;
   width: 8px;
 }
+
+/* 한글이 없을 수 있는 글꼴의 시작 (이름으로 어림한다) */
+.lf-sep {
+  margin: 10px 10px 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-3);
+  font-size: 12px;
+}

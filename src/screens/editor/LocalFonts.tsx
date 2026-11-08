@@ -91,8 +91,10 @@ export function LocalFontPicker({ current, onPick, onBack }: { current: string |
         <p className="lf-note">‘{query.trim()}’이 들어간 글꼴이 없어요</p>
       ) : (
         <ul className="lf-list">
-          {shown.map((f) => (
+          {shown.map((f, i) => (
             <li key={f}>
+              {/* 한글 글꼴일 것 같은 이름 다음부터: 한글이 없는 글꼴은 예시 글의 한글이 기본 글꼴로 보여서, 고른 뒤에야 다르다는 것을 알았다 */}
+              {!KOREAN.test(f) && (i === 0 || KOREAN.test(shown[i - 1])) && <p className="lf-sep">한글이 없을 수 있는 글꼴이에요. 한글은 기본 글꼴로 보여요</p>}
               <button type="button" className={`lf-row${f === current ? ' is-on' : ''}`} aria-pressed={f === current} onClick={() => onPick(f)}>
                 {/* 이름과 예시 글 모두 그 글꼴로. 글꼴에 없는 글자(한글이 없는 영문 글꼴)는 기본 글꼴로 보인다 */}
                 <span className="lf-name" style={{ fontFamily: familyCss(f) }}>
