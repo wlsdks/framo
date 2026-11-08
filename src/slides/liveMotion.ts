@@ -27,7 +27,7 @@ export const LIVE_ID = 'ed-live'
 /** 옮겨 보일 것: 본문과 그 줄, 부품의 안쪽과 그 첫 상자, 항목, 이음표, 글 칸, 그림. 부품 칸(.bk)은 재기만 한다 */
 const PIECES = '.bk, .bk-in, .bk-in > *, .s-body, .s-body > *, .cs-story, .cs-results, .it, .bk-link, .ed, img, svg'
 /** 장의 내용이 아닌 편집 표시와 사라지는 중인 칸 */
-const NOT_PIECES = '.ed-halo, .it-remove, .it-grip, .pn-tools, .img-tools, .bk-handle, .bk-leaving, .bk-line, button'
+const NOT_PIECES = '.ed-halo, .ed-ghost, .it-remove, .it-grip, .pn-tools, .img-tools, .bk-handle, .bk-leaving, .bk-line, button'
 /** 끄거나 크기를 바꾸는 동안(그 일의 움직임이 따로 있다) */
 const BUSY = '.is-item-dragging, .is-pane-moving, .is-pane-sizing, .is-block-dragging, .is-block-resizing, .is-row-resizing'
 
@@ -246,4 +246,43 @@ export function liveAfter(root: Element | null | undefined, scope: string): void
       { duration: LIVE_MS, easing: LIVE_EASING, composite: 'add', id: LIVE_ID },
     )
   }
+}
+
+/** 글 줄마다의 자리 (같은 줄로 나뉘었는지 견준다) */
+function lineMarks(el: Element): string {
+  const r = document.createRange()
+  r.selectNodeContents(el)
+  return Array.from(r.getClientRects(), (q) => `${Math.round(q.left)},${Math.round(q.top)},${Math.round(q.width)}`).join('|')
+}
+
+/**
+ * 쓰기를 끝낸 칸의 줄이 다시 나뉠 때 옛 줄에서 새 줄로 겹쳐 바뀌게. 쓰는 동안은 줄을 고르게 나누지 않는다(edit.css: 글자마다 줄이 바뀌어
+ * 쓰는 줄이 손 아래에서 흔들렸다). 나가면 다시 고르게(balance, pretty) 나뉘는데, 그 한 번이 튀지 않게 쓰던 모습의 사본(.ed-ghost)을
+ * 잠깐 겹쳐 옅게 하고 새 줄을 짙게 한다. 줄이 그대로이거나, 사본의 글자 모양이 다르면(그 칸만의 글자 규칙) 하지 않는다.
+ * 칸을 떠난 바로 그때(blur) 부른다: 떠나면 줄은 다음 그리기에서 다시 나뉜다
+ */
+export function liveRewrap(input: HTMLElement): void {
+  const ed = input.parentElement
+  if (!ed?.classList.contains('ed') || !ed.closest('.slide.m-edit') || !input.textContent?.trim() || quiet() || !document.hasFocus()) return
+  const cs = getComputedStyle(input)
+  if (cs.getPropertyValue('text-wrap-style') === 'auto' || cs.whiteSpace === 'nowrap') return
+  ed.querySelector(':scope > .ed-ghost')?.remove()
+  const ghost = document.createElement('span')
+  ghost.className = 'ed-ghost'
+  ghost.setAttribute('aria-hidden', 'true')
+  for (const n of Array.from(input.childNodes)) ghost.append(n.cloneNode(true))
+  ed.append(ghost)
+  const gs = getComputedStyle(ghost)
+  if (gs.font !== cs.font || gs.letterSpacing !== cs.letterSpacing || lineMarks(ghost) === lineMarks(input)) {
+    ghost.remove()
+    return
+  }
+  // 자리를 옮기는 것보다 짧게: 두 줄 모양이 겹쳐 보이는 가운데 동안이 길면 글이 번져 보였다
+  const fade = { duration: LIVE_MS * 0.6, easing: LIVE_EASING, id: LIVE_ID }
+  const out = ghost.animate([{ opacity: 1 }, { opacity: 0 }], { ...fade, fill: 'forwards' })
+  out.finished.then(
+    () => ghost.remove(),
+    () => ghost.remove(),
+  )
+  input.animate([{ opacity: 0 }, { opacity: 1 }], fade)
 }
