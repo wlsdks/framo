@@ -19,7 +19,7 @@ export interface FieldSpec {
   image?: boolean
 }
 
-export interface ItemFieldSpec {
+interface ItemFieldSpec {
   key: ItemKey
   label: string
   hint: string
@@ -765,13 +765,9 @@ export function rowHint(layout: LayoutId, hints: Record<string, string>, item: I
 
 /**
  * 칸의 이름(스크린 리더가 읽는 이름). 안내 문구는 예시라서 채운 칸의 이름이 되면 틀린 말을 읽는다.
- * 항목 칸은 '숫자 2 이름'처럼 몇째 항목인지까지. 정의에 없는 칸(표지의 소속 같은 덱 값)은 빈 글
+ * 항목 칸은 '숫자 2 이름'처럼 몇째 항목인지까지. 정의에 없는 칸(표지의 소속 같은 덱 값)은 빈 글.
+ * 레이아웃은 LAYOUTS[id], 부품 장만의 부품은 부품 정의(BLOCKS)를 넘긴다
  */
-export function labelFor(layout: LayoutId, key: string, itemKey?: ItemKey, index?: number): string {
-  return labelIn(LAYOUTS[layout], key, itemKey, index)
-}
-
-/** labelFor를 칸 정의로: 부품 장만의 부품은 레이아웃이 아니라 부품 정의(BLOCKS)에 칸 이름이 있다 */
 export function labelIn(spec: Pick<LayoutSpec, 'fields' | 'items'>, key: string, itemKey?: ItemKey, index?: number): string {
   if (itemKey) {
     const field = spec.items?.fields.find((x) => x.key === itemKey)?.label

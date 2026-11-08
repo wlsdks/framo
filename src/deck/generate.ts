@@ -81,7 +81,7 @@ export function withDefaultOptions(layout: LayoutId, options: SlideOptions, item
   return options
 }
 
-export interface DeckInput {
+interface DeckInput {
   type: DeckType
   audience: Audience
   minutes: number

@@ -10,7 +10,7 @@ import type { Block, BlockType, Deck, Slide } from './types'
 /** 컴포넌트마다 옮기는 움직임 값. 언제(when)와 나오는 차례는 연출이 정한다 */
 type BlockMotion = Pick<Block, 'effect' | 'speed' | 'from'>
 
-export interface MotionCopyRow {
+interface MotionCopyRow {
   slideId: string
   /** 장 번호 (1부터, 숨긴 장도 센다: 슬라이드 목록과 같게) */
   page: number

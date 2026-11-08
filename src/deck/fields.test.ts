@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { deckBlanks, deckMissingCount, dropIndex, isBlankItem, missingFields, optionalBlanks, presentable, shownOnly, unshownCount } from './fields'
+import { deckBlanks, dropIndex, isBlankItem, missingFields, optionalBlanks, presentable, shownOnly, unshownCount } from './fields'
 import { createDeck, emptyItem, makeSlide } from './generate'
 import { BLOCKS, withLayout } from './blocks'
-import { labelFor, labelIn, LAYOUT_ORDER, LAYOUTS } from './layouts'
+import { labelIn, LAYOUT_ORDER, LAYOUTS } from './layouts'
 import type { Item } from './types'
 
 const item = (title: string): Item => ({ ...emptyItem(), title })
@@ -134,17 +134,17 @@ describe('그리는 칸만 남긴 장 (shownOnly)', () => {
   })
 })
 
-describe('칸의 이름 (labelFor)', () => {
+describe('칸의 이름 (labelIn)', () => {
   it('항목 칸은 몇째 항목인지까지, 안내 문구(예시)는 쓰지 않는다', () => {
-    expect(labelFor('kpi', 'title')).toBe('제목')
-    expect(labelFor('kpi', 'title', 'title', 1)).toBe('숫자 2 이름')
-    expect(labelFor('kpi', 'value', 'value', 0)).toBe('숫자 1')
+    expect(labelIn(LAYOUTS.kpi, 'title')).toBe('제목')
+    expect(labelIn(LAYOUTS.kpi, 'title', 'title', 1)).toBe('숫자 2 이름')
+    expect(labelIn(LAYOUTS.kpi, 'value', 'value', 0)).toBe('숫자 1')
   })
 
   it('모든 레이아웃의 모든 칸에 이름이 있다', () => {
     for (const spec of Object.values(LAYOUTS)) {
-      for (const f of spec.fields) expect(labelFor(spec.id, f.key), `${spec.id}.${f.key}`).not.toBe('')
-      for (const f of spec.items?.fields ?? []) expect(labelFor(spec.id, f.key, f.key, 0), `${spec.id}.items.${f.key}`).not.toBe('')
+      for (const f of spec.fields) expect(labelIn(spec, f.key), `${spec.id}.${f.key}`).not.toBe('')
+      for (const f of spec.items?.fields ?? []) expect(labelIn(spec, f.key, f.key, 0), `${spec.id}.items.${f.key}`).not.toBe('')
     }
   })
 
@@ -176,7 +176,7 @@ describe('빈칸과 비워 둬도 되는 칸', () => {
   it('발표의 빈칸 수는 장마다 센 빈칸을 더한 것 (숨긴 장은 빼고)', () => {
     const hidden = { ...deck, slides: deck.slides.map((s, i) => (i === 1 ? { ...s, hidden: true } : s)) }
     const sum = hidden.slides.filter((s) => !s.hidden).reduce((n, s) => n + missingFields(s, hidden.meta).length, 0)
-    expect(deckMissingCount(hidden)).toBe(sum)
+    expect(deckBlanks(hidden).reduce((n, b) => n + b.missing.length, 0)).toBe(sum)
     expect(deckBlanks(hidden).every((b) => !b.slide.hidden && b.missing.length > 0)).toBe(true)
   })
 })
