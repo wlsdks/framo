@@ -21,8 +21,8 @@ describe('넣을 수 없는 까닭의 말', () => {
     expect(noRoomText({ kind: 'height', need: 800, room: 700 }, 'table', 'here').why).toBe('표를 넣으면 이 슬라이드의 컴포넌트들이 슬라이드 높이를 넘어서 글이 잘려요.')
     const already = noRoomText({ kind: 'height', need: 900, room: 700, already: true }, 'table', 'here')
     expect(already.why).toBe('이 슬라이드의 컴포넌트들이 이미 슬라이드 높이를 넘었어요.')
-    expect(already.fix).toBe('항목을 줄이거나 컴포넌트를 빼면 들어가요.')
-    expect(noRoomText({ kind: 'height', need: 900, room: 700, already: true }, 'bullets', 'change').fix).toBe('항목을 줄이거나 컴포넌트를 빼면 바꿀 수 있어요.')
+    expect(already.fix).toBe('항목을 줄이거나 컴포넌트를 지우면 들어가요.')
+    expect(noRoomText({ kind: 'height', need: 900, room: 700, already: true }, 'bullets', 'change').fix).toBe('항목을 줄이거나 컴포넌트를 지우면 바꿀 수 있어요.')
   })
 
   it('맞바꾸기: 두 컴포넌트를 이름으로, 같은 컴포넌트끼리면 두', () => {

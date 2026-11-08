@@ -90,14 +90,16 @@ export function composeFrom(slide: Slide): Slide {
   const left = Object.fromEntries(Object.entries(f).filter(([k, v]) => !used.includes(k) && v?.trim()))
   fields = { ...left, ...fields }
   const items = !moved && slide.items.some(written) ? slide.items : []
-  // 장마다 고른 것 가운데 부품 장에도 있는 것(바탕, 움직임, 화면 전환, 머리와 아래 표시 감추기)은 그대로 둔다
-  const { tone, motion, scene, transition, hideHead, hideFoot } = slide.options
+  // 장마다 고른 것 가운데 부품 장에도 있는 것(바탕, 움직임, 화면 전환, 머리와 아래 표시 감추기, AI에게 숨기기)은 그대로 둔다.
+  // AI에게 숨긴 장은 부품 장이 되어도 숨긴 채다: 같은 글이 부품으로 옮겨 갔을 뿐이다
+  const { tone, motion, scene, transition, hideHead, hideFoot, aiHidden } = slide.options
   const options = {
     ...(tone ? { tone } : {}),
     ...(motion ? { motion } : {}),
     ...(transition ? { transition } : {}),
     ...(hideHead ? { hideHead } : {}),
     ...(hideFoot ? { hideFoot } : {}),
+    ...(aiHidden ? { aiHidden } : {}),
   }
   // 줄을 판으로: 바뀐 장의 제목과 부제로 본문 높이를 어림해 부품마다 잘리지 않는 크기로 나눈다
   const blocks = boardFromRows(rows, boardFit(composeAreaH({ fields, hints: headHints, options }, undefined, true)))
@@ -141,6 +143,8 @@ export function unwrapCompose(slide: Slide, layout: LayoutId): Slide | null {
   // 부품에 같은 이름의 머리 칸이 있어도 장의 머리를 덮는다 (가져온 파일)
   const clash = Object.keys(head).some((k) => b.fields[k]?.trim() && b.fields[k] !== head[k])
   if (hidden || clash) return null
+  // AI에게 숨긴 부품이었으면 그 글이 장으로 옮겨 오므로 장을 숨긴다 (되돌렸다고 AI에게 보이게 되지 않게)
+  const aiHidden = slide.options.aiHiddenBlocks?.includes(b.id) ? { aiHidden: true } : {}
   return {
     ...slide,
     layout,
@@ -148,7 +152,7 @@ export function unwrapCompose(slide: Slide, layout: LayoutId): Slide | null {
     items: b.items,
     hints: { ...slide.hints, ...b.hints },
     variant: b.variant,
-    options: { ...slide.options, ...(b.highlight !== undefined ? { highlight: b.highlight } : {}) },
+    options: { ...slide.options, ...(b.highlight !== undefined ? { highlight: b.highlight } : {}), ...aiHidden },
     blocks: undefined,
   }
 }

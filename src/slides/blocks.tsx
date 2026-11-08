@@ -272,7 +272,7 @@ function Links({ blocks, live }: { blocks: Block[]; live: BlockEdit | null }) {
             data-link={`${m.t.dir}${m.t.id}`}
             data-after={m.t.id}
             {...(live && !preview
-              ? { role: 'button', 'aria-label': `연결 기호: ${name}`, title: `${name} (눌러서 바꾸거나 빼기)`, onPointerDown: (e: React.PointerEvent<HTMLElement>) => live.onLinkPointerDown(e, m.t) }
+              ? { role: 'button', 'aria-label': `연결 기호: ${name}`, title: `${name} (눌러서 바꾸거나 지우기)`, onPointerDown: (e: React.PointerEvent<HTMLElement>) => live.onLinkPointerDown(e, m.t) }
               : { 'aria-hidden': true })}
           >
             <span className="bk-link-g">
@@ -341,6 +341,14 @@ function BlockCell({ block: b, blocks, live, seq, band, linked }: { block: Block
             <path d="M9 5.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-6 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-6 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
           </svg>
           {spec.name}
+        </span>
+      )}
+      {/* AI에게 숨긴 컴포넌트: 테두리 오른쪽 위의 작은 자물쇠. 편집 화면에서만 (발표, 내보내기, 목록 그림에는 없다) */}
+      {live && !slot && live.aiHidden.has(b.id) && (
+        <span className="bk-ai-hidden" title="AI에게 숨긴 컴포넌트예요" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M6.5 11h11v9h-11zM8.5 11V8a3.5 3.5 0 017 0v3" />
+          </svg>
         </span>
       )}
     </div>

@@ -37,7 +37,7 @@ import {
   SHARE_SUBDIRS,
   type ShareSubdir,
 } from '../src/ai/protocol'
-import { catalog, checkShape, onlyKnownStrings, type ShapeDeck } from '../src/ai/share'
+import { catalog, checkShape, onlyKnownStrings, TEXT_STATES, type ShapeDeck } from '../src/ai/share'
 import { BACKDROP_IDS, BACKDROP_STRENGTHS } from '../src/deck/backdrops'
 import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LINK_IDS, BLOCK_LOOK_IDS, BLOCK_REVEAL_IDS, BLOCK_SPEED_IDS, BLOCK_TYPES, BLOCK_WHEN_IDS, BOARD_COLS, BOARD_ROWS, MAX_BLOCKS } from '../src/deck/blocks'
 import { DURATIONS } from '../src/deck/blueprints'
@@ -67,7 +67,7 @@ const MESSAGES = {
     '되풀이해 묻지 말고 사용자에게 그렇게 알리세요.',
   checked:
     '미리 돌려 보기만 했고 아무것도 보내지 않았어요. ok가 false인 op는 help의 그 코드 풀이대로 고치거나 빼고 propose_changes로 보내세요. ' +
-    '노트나 제목의 실제 길이처럼 모양에 없는 것 때문에 앱에서 조금 다를 수 있어요.',
+    '노트나 글의 정확한 길이처럼 모양에 없는 것 때문에 앱에서 조금 다를 수 있어요.',
   internal: '처리하지 못했어요. 한 번만 다시 해 보고, 또 안 되면 Framo를 껐다 켜 달라고 사용자에게 알리세요.',
 } as const
 
@@ -89,6 +89,9 @@ const CODE_HELP: Record<Exclude<OpCode, 'applied'> | 'invalid', string> = {
   look_clash: '한 장에는 면 한 가지만 써요: 들여 쓰기(card)끼리, 또는 강조(bold) 하나와 바탕 없는(plain) 부품들. 혼자 장 너비를 다 쓰는 부품은 바탕 없이 그려져요.',
   link_clash: '이음표가 잇는 두 부품의 갈래(blocks[].kind)가 맞지 않아요. 더하기와 견주기는 같은 갈래끼리, 결과는 숫자나 한마디로 맺을 때만 써요.',
   scene_unfit: '이 장에 맞지 않는 장면이에요. 카탈로그 scenes[].layouts와 blocks를 보고 맞는 장면을 고르거나 빼세요.',
+  private:
+    '사람이 AI에게 숨긴 장이나 부품(get_shape의 private)을 바꾸거나 옮기게 돼요. 숨긴 장은 가리키지 말고(그 뒤에 장을 넣거나 옮기는 것은 돼요), ' +
+    '숨긴 부품이 있는 장에서는 그 자리, 크기, 나오는 차례가 바뀌지 않는 op만 보내세요(다른 부품의 바탕, 움직임, 모양은 돼요).',
   invalid: '꼴이 맞지 않아요: 그 op에 없는 키, 목록에 없는 값, 빠진 값, 너무 긴 글. key가 있으면 그 키를 고치세요. 이런 op가 하나라도 있으면 propose_changes는 제안을 통째로 받지 않아요.',
 }
 /** 빠진 op들의 코드마다 풀이 하나씩. op마다 붙이면 같은 글이 되풀이되어 AI가 읽을 것만 늘었다 */
@@ -101,7 +104,12 @@ const PROTOCOL_WORDS = [
   // 모양 파일
   SHAPE_FORMAT, 'format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides',
   'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'pane', 'contain', 'place', 'variant', 'variants', 'base',
-  'empty', 'filled', 'long',
+  // 칸의 상태: 비었는지, 글자 수 구간(여러 줄로 쓰는 칸은 줄 수 구간까지), 이미지 칸은 있는지
+  ...TEXT_STATES, 'filled',
+  // 편집기가 그린 장에서 글이 넘친 장과 부품
+  'over',
+  // 사람이 AI에게 숨긴 장과 부품 (자리만 보인다)
+  'private',
   // 장면 (장의 options.scene). id는 카탈로그에도 있지만 모양의 값이라 여기에도 적어 둔다
   'scene', ...SCENE_IDS,
   // 배경 (장의 backdrop). 장면과 같은 까닭으로 값도 적어 둔다
@@ -110,7 +118,7 @@ const PROTOCOL_WORDS = [
   'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'reveal', 'each', 'all', 'from', 'order', 'link', 'linkBelow',
   // 목록과 결과
   'decks', 'slideCount', 'visibleSlides', 'request', 'status', 'results', 'ok', 'code', 'message', 'pending', 'applied', 'rejected', 'invalid', 'unknown',
-  'no_slide', 'has_content', 'out_of_range', 'not_for_layout', 'last_slide', 'unknown_role', 'no_change', 'not_reviewed', 'no_block', 'no_room', 'look_clash', 'link_clash', 'scene_unfit',
+  'no_slide', 'has_content', 'out_of_range', 'not_for_layout', 'last_slide', 'unknown_role', 'no_change', 'not_reviewed', 'no_block', 'no_room', 'look_clash', 'link_clash', 'scene_unfit', 'private',
   ...OP_NAMES,
   ...Object.values(MESSAGES),
   // 미리 돌려 보기(check_changes)와 결과의 풀이
@@ -235,7 +243,7 @@ const TOOLS = [
     name: 'list_decks',
     description:
       '사용자가 앱에서 AI 공유를 켠 발표 목록. 제목은 없고 해시 id(d로 시작)로 구분한다. 발표 종류, 장 수, 듣는 사람, 시간이 나온다. ' +
-      '최근에 고친 순서라서, 여러 개면 맨 앞이 지금 고치고 있는 발표일 가능성이 크다. 목록이 비었으면 Framo 편집 화면 위쪽 ‘AI 다듬기’를 열고 아래 ‘보이는 것, 직접 연결’에서 ‘이 발표를 AI에게 보여 주기’를 켜 달라고 안내한다.',
+      '최근에 고친 순서라서, 여러 개면 맨 앞이 지금 고치고 있는 발표일 가능성이 크다. 목록이 비었으면 Framo 편집 화면 위쪽 ‘AI 도움받기’를 열고 아래 ‘보이는 것, 직접 연결’에서 ‘이 발표를 AI에게 보여 주기’를 켜 달라고 안내한다.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
@@ -261,12 +269,16 @@ const TOOLS = [
   {
     name: 'get_shape',
     description:
-      '발표 하나의 모양: 장 순서, 장마다 레이아웃과 역할, 숨김 여부, 칸마다 비었는지(empty)/채웠는지(filled)/길어서 넘칠 수 있는지(long), 항목 수, 옵션, 테마. ' +
+      '발표 하나의 모양: 장 순서, 장마다 레이아웃과 역할, 숨김 여부, 칸마다 글의 길이, 항목 수, 옵션, 테마. ' +
+        '칸의 길이는 글자 수가 아니라 구간이다: empty(빈칸), 1-10, 11-20, 21-40, 41-80, 81-140, 141-280, 281+(글자). 여러 줄로 쓰는 칸에 두 줄 넘게 썼으면 줄 수 구간이 붙는다(예: "81-140, 3-4 lines"는 81~140자를 3~4줄로). 이미지 칸은 있으면 filled. ' +
+        '장과 부품의 over: true는 사용자의 앱 화면에서 글이 넘친 것이다(넘치지 않았거나 앱이 재지 못했으면 빠진다). ' +
+        '긴 글이 든 칸과 넘친 곳은 넓은 자리, 글을 더 담는 레이아웃이나 부품, 장 나누기를 생각하고, 짧은 글만 있는 칸은 크게 보이는 레이아웃이 어울린다. ' +
       '부품 장(layout compose)은 가로 12칸, 세로 12칸의 판을 부품들이 빈틈없이 나눠 덮은 장으로, blocks에 부품마다 id(b로 시작), 종류, 자리(x, y는 왼쪽 위 칸, w, h는 너비와 높이의 칸 수), 모양, 바탕, 움직임, 이음표(link는 오른쪽 선, linkBelow는 아래 선), 칸 상태가 읽는 차례로 나온다. ' +
         '부품의 when/speed/reveal/from은 기본값이 아닐 때만 나오고, 장의 options.order는 부품이 나오는 차례를 정했을 때만 나온다. ' +
         '장의 options.scene은 골라 둔 장면(카탈로그 scenes)이고, 그 장에 맞을 때만 나온다. ' +
         '장의 backdrop은 골라 둔 배경(카탈로그 backdrops)의 id와 자리(장 전체를 12×12칸으로 나눈 x, y, w, h), 짙기(보통이면 빠진다)이고, 골랐을 때만 나온다. ' +
-      '사람이 적은 글은 이 서버에 없다. 글의 내용을 추측하거나 사용자에게 붙여 달라고 하지 말고 모양만으로 판단한다.',
+      'private: true인 장과 부품은 사람이 AI에게 숨긴 것이라 자리만 보인다(장은 id와 hidden, 부품은 판의 자리 x, y, w, h). 무엇인지 추측하지 말고 그대로 둔다: 숨긴 장을 바꾸거나 옮기는 op, 숨긴 부품의 자리, 크기, 나오는 차례가 바뀌는 op는 건너뛴다(private). ' +
+        '사람이 적은 글은 이 서버에 없다. 글의 내용을 추측하거나 사용자에게 붙여 달라고 하지 말고 모양만으로 판단한다.',
     inputSchema: {
       type: 'object',
       properties: { deck: { type: 'string', description: 'list_decks의 deck (d로 시작하는 9글자)' } },
@@ -281,7 +293,7 @@ const TOOLS = [
       'propose_changes와 같은 인자를 받아 미리 돌려 보기만 한다. 아무것도 보내지 않고 사용자에게도 보이지 않는다. ' +
       'op마다 앱에서 적용하면 어떻게 될지(ok, code)가 나오고, 안 되는 op에는 까닭이 된 키(key)가 붙는다. help에는 나온 코드마다 무엇을 고치면 되는지 나온다. ' +
       'ops는 차례로, 앞의 op가 적용된 위에서 본다(add_slide, add_block의 as 이름도 쓸 수 있다). code가 invalid인 op가 있으면 propose_changes가 제안을 통째로 받지 않으니(accepted가 false) 고치거나 뺀다. ' +
-      'propose_changes를 부르기 전에 한 번 부르고, ok가 false인 op를 고치거나 빼서 보낸다. 모양에 없는 것(노트, 제목의 실제 길이) 때문에 앱의 결과와 조금 다를 수 있다.',
+      'propose_changes를 부르기 전에 한 번 부르고, ok가 false인 op를 고치거나 빼서 보낸다. 모양에 없는 것(노트, 글의 정확한 길이) 때문에 앱의 결과와 조금 다를 수 있다.',
     inputSchema: CHANGES_SCHEMA,
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
@@ -472,7 +484,7 @@ type Message = { jsonrpc?: unknown; id?: unknown; method?: unknown; params?: unk
 
 const INSTRUCTIONS =
   'Framo(gyeol)는 보고, 제안, 지식 공유 같은 발표를 만드는 앱이다. 이 서버로는 발표의 모양(장 구성, 레이아웃, 테마, 안내 문구)만 보고 바꾸자고 제안할 수 있다. ' +
-  '사람이 적은 글은 보안 때문에 이 서버에 없고, 사용자에게 붙여 달라고 하지도 않는다. ' +
+  '사람이 적은 글은 보안 때문에 이 서버에 없고, 사용자에게 붙여 달라고 하지도 않는다. 사람이 AI에게 숨긴 장과 부품(private)은 자리만 보이고 바꿀 수 없다. ' +
   '순서: list_decks → get_shape → get_catalog(deck을 주고, 부품 장이 없으면 blocks: false) → check_changes(미리 돌려 보고 고치기) → propose_changes → (사용자가 앱에서 적용) → get_result.'
 
 function toolText(value: unknown, isError = false) {

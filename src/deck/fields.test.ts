@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deckBlanks, dropIndex, isBlankItem, missingFields, optionalBlanks, presentable, shownOnly, unshownCount } from './fields'
+import { deckBlanks, dropIndex, isBlankItem, missingFields, optionalBlanks, presentable, shownChars, shownOnly, unshownCount } from './fields'
 import { createDeck, emptyItem, makeSlide } from './generate'
 import { BLOCKS, withLayout } from './blocks'
 import { labelIn, LAYOUT_ORDER, LAYOUTS } from './layouts'
@@ -131,6 +131,35 @@ describe('그리는 칸만 남긴 장 (shownOnly)', () => {
     const meta = createDeck({ type: 'weekly', audience: 'practitioner', minutes: 10, method: 'live', title: '주간 업무 보고', org: '', presenter: '', theme: 'white' }).meta
     expect(missingFields(blank, meta).some((m) => m.key === 'title')).toBe(false)
     expect(optionalBlanks(blank, meta).some((m) => m.key === 'lead' || m.key === 'source')).toBe(false)
+  })
+})
+
+describe('장에 보이는 글자 수 (shownChars)', () => {
+  const meta = createDeck({ type: 'weekly', audience: 'practitioner', minutes: 10, method: 'live', title: '', org: '영업 2팀', presenter: '', theme: 'white' }).meta
+
+  it('보이는 칸과 항목의 글자를 빈칸 빼고 센다. 노트는 듣는 분께 보이지 않아 세지 않는다', () => {
+    const slide = { ...makeSlide('points'), fields: { title: '세 가지 바꿀 점' }, items: [{ ...item('회의 줄이기'), body: '진행 공유는 보드로' }, item('')], notes: '말할 내용' }
+    expect(shownChars(slide, meta)).toBe('세가지바꿀점'.length + '회의줄이기'.length + '진행공유는보드로'.length)
+  })
+
+  it('이미지, 숨긴 제목, 최대 수 너머의 항목, 레이아웃이 그리지 않는 칸은 세지 않는다', () => {
+    const max = LAYOUTS.points.items!.max
+    const items = [...Array.from({ length: max }, () => item('가')), item('숨긴 항목')]
+    const slide = { ...makeSlide('points'), fields: { title: '제목', nope: '그리지 않는 칸' }, items, options: { hideHead: true } }
+    expect(shownChars(slide, meta)).toBe(max)
+    const image = { ...makeSlide('kpi'), fields: {}, items: [{ ...emptyItem(), value: '4시간', image: 'data:image/png;base64,AA' }] }
+    expect(shownChars(image, meta)).toBe('4시간'.length)
+  })
+
+  it('표지의 소속처럼 발표 전체의 값은 발표에 적힌 값으로 센다', () => {
+    const cover = { ...makeSlide('cover'), fields: { title: '제목' } }
+    expect(shownChars(cover, { ...meta, date: '' })).toBe('제목'.length + '영업2팀'.length)
+    expect(shownChars(cover, { ...meta, date: '2026. 11. 8.' })).toBe('제목'.length + '영업2팀'.length + '2026.11.8.'.length)
+  })
+
+  it('컴포넌트 장은 컴포넌트마다 그리는 칸을 센다', () => {
+    const slide = withLayout({ ...makeSlide('points'), fields: { title: '제목' }, items: [item('하나'), item('둘')] }, 'compose')
+    expect(shownChars(slide, meta)).toBe('제목하나둘'.length)
   })
 })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createDeck } from '../deck/generate'
-import { barRoom, endSlideId, startIndex } from './Present'
+import { barRoom, endSlideId, recordBox, startIndex } from './Present'
 
 describe('발표를 시작할 장', () => {
   const deck = createDeck({ type: 'report', audience: 'mixed', minutes: 20, method: 'live', title: '', org: '', presenter: '', theme: 'white' })
@@ -53,5 +53,38 @@ describe('발표 막대의 자리', () => {
   it('여백이 모자란 16:9 전체 화면에서는 장 위에 겹친다', () => {
     expect(barRoom(1920, 1080)).toBe('over')
     expect(barRoom(1280, 720)).toBe('over')
+  })
+})
+
+describe('녹화하는 동안 슬라이드 상자의 자리 (recordBox)', () => {
+  it('위 띠(36px) 아래에 16:9로 둔다: 1280×600 창은 992×558, 1920×1080 전체 화면은 1856×1044', () => {
+    expect(recordBox(1280, 600, 1)).toEqual({ left: 144, top: 39, width: 992, height: 558 })
+    expect(recordBox(1920, 1080, 1)).toEqual({ left: 32, top: 36, width: 1856, height: 1044 })
+  })
+
+  it('크기는 기기 픽셀로 짝수, 자리는 기기 픽셀에 딱 맞게: 영상 가장자리에 검은 줄이 들지 않게', () => {
+    for (const [w, h] of [
+      [1280, 600],
+      [1366, 650],
+      [1536, 730],
+      [1280, 720],
+      [1920, 1080],
+    ])
+      // 브라우저 배율은 float32로 온다: 110%, 90%, 120%, 133% 확대
+      for (const dpr of [1, 1.25, 1.5, 2, 1.100000023841858, 0.8999999761581421, 1.2000000476837158, 1.3333333730697632]) {
+        const b = recordBox(w, h, dpr)
+        const dev = (x: number) => Math.round(x * dpr * 100) / 100
+        expect(dev(b.width) % 2, `${w}×${h}@${dpr}`).toBe(0)
+        expect(dev(b.height) % 2, `${w}×${h}@${dpr}`).toBe(0)
+        expect(Number.isInteger(dev(b.left)) && Number.isInteger(dev(b.top)), `${w}×${h}@${dpr}`).toBe(true)
+        // 맞는 크기를 찾느라 장이 작아지지 않는다: 기기 픽셀로 32 안쪽 (110% 확대에서 320×180으로 작아졌다)
+        expect(Math.min(w, ((h - 36) * 16) / 9) * dpr - b.width * dpr, `${w}×${h}@${dpr}`).toBeLessThan(32)
+        expect(b.width / b.height).toBeCloseTo(16 / 9)
+        expect(b.top).toBeGreaterThanOrEqual(36)
+        expect(b.top + b.height).toBeLessThanOrEqual(h)
+      }
+    // 150% 배율의 1280×600 창은 1504×846 영상
+    const b = recordBox(1280, 600, 1.5)
+    expect([b.width * 1.5, b.height * 1.5]).toEqual([1504, 846])
   })
 })

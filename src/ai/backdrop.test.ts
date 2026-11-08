@@ -4,26 +4,28 @@ import { createSampleDeck } from '../deck/sample'
 import type { Deck, Slide } from '../deck/types'
 import { applyOps, parseOp, type Op } from './ops'
 import { secretDeck, SECRET } from './secretDeck'
-import { catalog, checkShape, onlyKnownStrings, shapeSlideId, toShape } from './share'
+import { catalog, checkShape, onlyKnownStrings, shapeSlideId, TEXT_STATES, toShape } from './share'
 
 // 배경: AI는 모양(고른 배경 id, 자리, 짙기)만 보고, 고르는 값만 바꾼다
 
 const deck: Deck = createSampleDeck()
 const cover = deck.slides.findIndex((s) => s.layout === 'cover')
+/** 모양의 장 하나의 배경 (AI에게 숨긴 장이면 배경이 없다) */
+const bdOf = (s: unknown) => (s as { backdrop?: unknown }).backdrop
 const withBackdrop = (d: Deck, i: number, backdrop: Slide['backdrop']): Deck => ({ ...d, slides: d.slides.map((s, j) => (j === i ? { ...s, backdrop } : s)) })
 
 describe('배경의 모양', () => {
   it('고른 배경은 id, 자리, 짙기(보통이 아닐 때)만 나가고 모양 확인을 지난다', () => {
     const shape = toShape(withBackdrop(deck, cover, { kind: 'diffuse', at: { x: 0, y: 0, w: 8, h: 8 }, strength: 'strong' }))
-    expect(shape.slides[cover].backdrop).toEqual({ id: 'diffuse', x: 0, y: 0, w: 8, h: 8, strength: 'strong' })
+    expect(bdOf(shape.slides[cover])).toEqual({ id: 'diffuse', x: 0, y: 0, w: 8, h: 8, strength: 'strong' })
     expect(checkShape(shape)).toBe(true)
     // 자리를 고르지 않았으면 장 전체, 보통이면 짙기는 빠진다
-    expect(toShape(withBackdrop(deck, cover, { kind: 'flow' })).slides[cover].backdrop).toEqual({ id: 'flow', x: 0, y: 0, w: 12, h: 12 })
+    expect(bdOf(toShape(withBackdrop(deck, cover, { kind: 'flow' })).slides[cover])).toEqual({ id: 'flow', x: 0, y: 0, w: 12, h: 12 })
   })
 
   it('이 버전이 모르는 배경(더 새 버전의 것)은 모양에 나가지 않는다', () => {
     const shape = toShape(withBackdrop(deck, cover, { kind: 'aurora' as never }))
-    expect(shape.slides[cover].backdrop).toBeUndefined()
+    expect(bdOf(shape.slides[cover])).toBeUndefined()
     expect(checkShape(shape)).toBe(true)
   })
 
@@ -47,9 +49,9 @@ describe('배경의 모양', () => {
     expect(JSON.stringify(shape)).not.toContain(SECRET)
     expect(checkShape(shape)).toBe(true)
     // 표지(아는 배경, 비밀이 든 자리와 짙기)는 장 전체, 보통으로 그려지고 그대로 나간다
-    expect(shape.slides[0].backdrop).toEqual({ id: 'diffuse', x: 0, y: 0, w: 12, h: 12 })
-    expect(shape.slides[1].backdrop).toBeUndefined()
-    expect(onlyKnownStrings(shape, ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'empty', 'filled', 'long', 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene', 'backdrop', 'strength'])).toBe(true)
+    expect(bdOf(shape.slides[0])).toEqual({ id: 'diffuse', x: 0, y: 0, w: 12, h: 12 })
+    expect(bdOf(shape.slides[1])).toBeUndefined()
+    expect(onlyKnownStrings(shape, ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene', 'over', 'backdrop', 'strength'])).toBe(true)
   })
 
   it('카탈로그에 배경 일곱과 짙기, 자주 쓰는 자리가 있다', () => {

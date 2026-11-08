@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { aiHiddenIds } from '../deck/aiHidden'
 import { createDeck, emptyItem, makeSlide } from '../deck/generate'
 import { sampleBlock } from '../deck/blockSamples'
 import { autoArranged, autoPlace, boardAreaH, boardSig, boardTight, moveAt, playOrder, rearrangeBlocks, removeBlock } from '../deck/blocks'
@@ -370,12 +371,14 @@ describe('항목 빼기와 복제, 장 복제', () => {
   it('장을 복제하면 정해 둔 컴포넌트 나오는 차례도 복제한 장의 컴포넌트를 따른다', () => {
     const places = [{ x: 0, y: 0, w: 4, h: 12 }, { x: 4, y: 0, w: 4, h: 12 }, { x: 8, y: 0, w: 4, h: 12 }]
     const blocks = (['number', 'message', 'quote'] as const).map((type, i) => ({ ...sampleBlock(type), id: `b${i}`, at: places[i] }))
-    const id = open({ ...makeSlide('compose'), blocks, options: { order: ['b2', 'b0'] } })
+    const id = open({ ...makeSlide('compose'), blocks, options: { order: ['b2', 'b0'], aiHiddenBlocks: ['b1'] } })
     useDeck.getState().duplicateSlide(id)
     const [source, copy] = [slide(1), slide(2)]
     expect(copy.blocks!.map((b) => b.id).some((b) => source.blocks!.some((s) => s.id === b))).toBe(false)
     expect(playOrder(copy).map((b) => b.type)).toEqual(['quote', 'number', 'message'])
     expect(playOrder(source).map((b) => b.type)).toEqual(['quote', 'number', 'message'])
+    // AI에게 숨긴 컴포넌트도 복제한 장에서 숨긴 채다 (옛 id를 두면 복제한 장에서는 AI에게 보였다)
+    expect([...aiHiddenIds(copy)].map((id) => copy.blocks!.find((b) => b.id === id)!.type)).toEqual(['message'])
   })
 })
 
