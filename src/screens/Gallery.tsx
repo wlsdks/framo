@@ -36,6 +36,7 @@ import { cines } from '../slides/blocks/Cine'
 // &metas=사내 포털,결재 시스템 처럼 항목의 설명(meta)도 같다. &head=장 제목 은 set=blocks의 장에 제목을 단다(부제 대신, 제목 아래 빈 곳을 볼 때).
 // &flip=1 은 두 판으로 나뉜 장(표지, 사례, 이미지와 설명, 결정 요청)의 옆 판을 반대쪽으로, &side=3 처럼 숫자면 옆 판의 너비(고를 수 있는 값일 때만).
 // &hideHead=1, &hideFoot=1 은 제목·부제와 아래 표시를 각각 숨긴 슬라이드를 점검한다. &blankHead=1 은 제목과 부제를 비운다. &lead=부제 는 모든 장에 그 부제를 단다.
+// &title=장 제목 은 모든 장의 제목을 그 글로(제목이 길어 작아질 때 부품의 글이 따라 작아지는지 볼 때. set=stress의 부제는 그대로).
 // set=edge 는 차트 장이 무너지기 쉬운 값(음수, 빈 값, 많은 항목, 같은 값)만 모아 본다.
 // set=review 는 부품 장의 대표 조합 몇 장 (reviewSlides.ts, 고치기 전과 후를 견줄 때). &reflow=1은 같은 장을 자동 재배치한 결과다.
 // &w=1920 이면 장을 줄이지 않고 그린다.
@@ -301,7 +302,11 @@ export function Gallery() {
     slides: slides.map((s) => ({
       ...withBackdrop(s, params.get('bd'), params.get('bdat'), params.get('bds')),
       ...withTexts(withCount(s, Number(params.get('count')) || 0), params.get('names')?.split(','), params.get('values')?.split(','), params.get('metas')?.split(',')),
-      ...(params.get('blankHead') === '1' ? { fields: { ...s.fields, title: '', lead: '' } } : params.get('lead') ? { fields: { ...s.fields, lead: params.get('lead')! } } : {}),
+      ...(params.get('blankHead') === '1'
+        ? { fields: { ...s.fields, title: '', lead: '' } }
+        : params.get('lead') || params.get('title')
+          ? { fields: { ...s.fields, ...(params.get('lead') ? { lead: params.get('lead')! } : {}), ...(params.get('title') ? { title: params.get('title')! } : {}) } }
+          : {}),
       options: {
         ...s.options,
         ...(tone ? { tone } : {}),
