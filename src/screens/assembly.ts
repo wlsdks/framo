@@ -684,7 +684,7 @@ const SIDE_EMPTY = 0.25
 /**
  * 가로 리듬(docs/VISUAL-RULES.md 6): 컴포넌트가 둘 이하인 장에서 본문의 한쪽이 SIDE_EMPTY 넘게 빈 것(둘이 왼쪽 70% 안에 붙고 오른쪽이
  * 통째로 빈 장), 그리고 한 컴포넌트 안에서 같은 높이의 글과 덧붙임 사이가 본문 너비의 절반 넘게 빈 것(날짜가 한 줄을 다 쓸 때 왼쪽 글과
- * 맨 오른쪽 덧붙임으로 찢어진 것). 글 하나뿐인 장은 글 폭(--measure)이 일부러 줄을 꺾어 오른쪽이 비는 것이라 보지 않는다
+ * 맨 오른쪽 덧붙임으로 찢어진 것). 글 부품만 있는 장은 글 폭(--measure)이 일부러 줄을 꺾어 오른쪽이 비는 것이라 보지 않는다
  */
 function sides(area: HTMLElement, k: number): string[] {
   const out: string[] = []
@@ -695,7 +695,8 @@ function sides(area: HTMLElement, k: number): string[] {
     const x = withRules(cell, inkX(cell))
     if (x && (x.r > a.right + 2 * k || x.l < a.left - 2 * k)) out.push(`${cell.dataset.type}: 그려진 것이 본문 옆으로 ${Math.round(Math.max(x.r - a.right, a.left - x.l) / k)}px 나가요`)
   }
-  const lone = cells.length === 1 && TEXT_TYPES.has(cells[0].dataset.type ?? '') && cells[0].dataset.type !== 'heading'
+  // 글 부품만 있는 장(하나든 둘이든)은 글 폭(--measure)이 일부러 줄을 꺾어 오른쪽이 빈다: 결정 요청(강조 상자) 옆 점 목록처럼
+  const lone = cells.length > 0 && cells.every((c) => TEXT_TYPES.has(c.dataset.type ?? '') && c.dataset.type !== 'heading')
   if (cells.length <= 2 && !lone) {
     const xs = cells.map(inkX).filter((x): x is { l: number; r: number } => !!x)
     if (xs.length) {
