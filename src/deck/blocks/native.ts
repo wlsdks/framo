@@ -170,7 +170,7 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
   facts: {
     name: '개요',
     description: '기간, 예산, 담당처럼 항목과 내용을 짝지어',
-    motion: '줄마다 선이 그어지며 들어와요',
+    motion: '줄마다 차례로 들어와요',
     fields: [{ key: 'heading', label: '소제목', hint: '예: 과제 개요', optional: true }],
     items: {
       label: '줄',
