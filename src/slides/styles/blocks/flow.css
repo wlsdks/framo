@@ -449,3 +449,10 @@
 .bk-fw-link .bk-fw-wire {
   right: 16px;
 }
+
+/* 단계 사이의 선을 옮김(translate) 없이 제 자리에 긋는다: 반 픽셀 옮긴 선은 흐리게 그려져, 번호 뒤의 선(제 자리)과 맞닿은 곳에서
+   두 짙기, 한 픽셀 어긋난 두 토막으로 보였다(검수: 끝난 그림에서 흰 206 대 158) */
+.bk-fw-link .bk-fw-wire {
+  top: calc(50% - var(--rule-hair) / 2);
+  translate: none;
+}
