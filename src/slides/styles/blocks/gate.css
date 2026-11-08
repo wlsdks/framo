@@ -242,6 +242,11 @@
   padding-right: var(--bk-col-gap);
 }
 
+/* 강조색은 고른 관문(거르는 관문) 하나만: 나가는 것까지 강조색이면 답이 두 곳으로 갈렸다(검수). 나가는 것은 글자색 */
+.bk-gw-out {
+  color: var(--ink);
+}
+
 /* 검은 바탕에서는 통로가 바탕에 묻혀서 한 단계 짙게 */
 .is-dark .bk-gw::before {
   background: color-mix(in srgb, var(--ink-3) 80%, var(--bg));
