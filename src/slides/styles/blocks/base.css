@@ -77,6 +77,16 @@
   /* 한 줄로 줄이는 글(.one-line의 100cqi)이 칸이 아니라 안쪽 여백을 뺀 너비에 맞게. 칸 크기 단계(@container bk)와 cqh는 그대로 칸을 본다 */
   container-type: inline-size;
   height: 100%;
+  /* 꺾인 글의 끝 줄에 낱말 하나만 남기지 않는다(물려받는 값이라 컴포넌트마다 balance 같은 다른 값을 줄 수 있다): 흐름의 단계 설명처럼
+     좁은 단에서 두 줄로 꺾이는 그림의 이름표가 '담당자가 한 번 더 / 확인'으로 갈렸다 */
+  text-wrap-style: pretty;
+}
+
+/* 그림의 이름표(흐름, 연결도 같은)는 좁은 단에서 두세 줄로 꺾이는 짧은 글이라 줄 길이를 고르게: pretty는 끝 줄이 아주 짧을 때만
+   고쳐서 '결과를 시스템에 / 기록'은 그대로 두었다. 줄 수는 그대로라 잰 높이(blockHeights.ts)도 그대로다.
+   목록은 screens/assembly.ts의 FIGURE_TYPES와 같다 */
+.bk:is([data-type='flow'], [data-type='network'], [data-type='merge'], [data-type='split'], [data-type='tiles'], [data-type='hub'], [data-type='gather'], [data-type='search'], [data-type='layers'], [data-type='gate'], [data-type='dupes'], [data-type='aliases'], [data-type='adoption'], [data-type='spread']) > .bk-in {
+  text-wrap-style: balance;
 }
 
 /* 칸이 좁거나 낮으면 글자를 글자 크기 비율(1.2)의 단계로 작게: 반 칸, 3분의 1 칸이나 300px 밑은 한 단계(0.84),
