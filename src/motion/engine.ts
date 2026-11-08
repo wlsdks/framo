@@ -1789,6 +1789,24 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'decision': {
+          // 생동감: 질문에서 조각이 괄호 줄기를 타고 갈래마다 번갈아 들어가고, 닿는 갈래의 조건이 잠깐 강조색이 된다.
+          // 조각의 길은 움직임을 걸기 전에 잰다: 올라오기(rise)는 걸자마자 시작 자리(아래로 밀린 자리)에 서서, 뒤에 재면 길이 선에서
+          // 비켜 났다(발표 화면에서 조각이 선 아래로 지나갔다). 선은 CSS가 그린다(decision.css): 질문에서 오는 가로선은 목록 높이의
+          // 가운데, 줄기는 목록 왼쪽 끝, 갈래는 줄 위에서 0.75em
+          const root = one('.bk-dc')
+          const list = one('.bk-dc-list')
+          const rows = $('.bk-dc-row')
+          const ways: { path: [number, number][]; cond: HTMLElement | null }[] = []
+          if (root && list && rows.length) {
+            const l = spot(list, root)
+            const gap = parseFloat(getComputedStyle(root).getPropertyValue('--bk-col-gap')) || 48
+            const ly = (l.t + l.b) / 2
+            rows.forEach((row) => {
+              const r = spot(row, root)
+              const y = r.t + 0.75 * (parseFloat(getComputedStyle(row).fontSize) || 30)
+              ways.push({ path: [[l.l - gap, ly], [l.l, ly], [l.l, y], [l.l + 24, y]], cond: row.querySelector('.bk-dc-condition') })
+            })
+          }
           fade(one('.bk-dc-label'), 40, 400)
           rise(one('.bk-dc-question'), 100, L.y * 0.5)
           let last = 240
@@ -1796,27 +1814,12 @@ export function motionEngine(): MotionEngine {
             rise(el, at, L.y * 0.4)
             last = Math.max(last, at)
           })
-          // 생동감: 질문에서 조각이 괄호 줄기를 타고 갈래마다 번갈아 들어가고, 닿는 갈래의 조건이 잠깐 강조색이 된다.
-          // '조건에 따라 길이 갈린다'는 것을 계속 보여 준다
-          const root = one('.bk-dc')
-          const question = one('.bk-dc-question')
-          const list = one('.bk-dc-list')
-          const rows = $('.bk-dc-row')
-          if (root && question && list && rows.length) {
-            const l = spot(list, root)
+          if (root && ways.length) {
             const accent = getComputedStyle(root).getPropertyValue('--accent').trim()
-            // 선은 CSS가 그린다(decision.css): 질문에서 오는 가로선은 목록 높이의 가운데, 줄기는 목록 왼쪽 끝, 갈래는 줄 위에서 0.75em.
-            // 조각은 그 선을 그대로 탄다
-            const gap = parseFloat(getComputedStyle(root).getPropertyValue('--bk-col-gap')) || 48
-            const ly = (l.t + l.b) / 2
             const period = d(2400)
-            rows.forEach((row, k) => {
-              const cond = row.querySelector('.bk-dc-condition') as HTMLElement | null
-              const r = spot(row, root)
-              const y = r.t + 0.75 * (parseFloat(getComputedStyle(row).fontSize) || 30)
-              const path: [number, number][] = [[l.l - gap, ly], [l.l, ly], [l.l, y], [l.l + 24, y]]
-              const ink = cond ? getComputedStyle(cond).color : ''
-              stream(root, path, last + 700, period, (k * period) / rows.length, cond ? { el: cond, off: { color: ink }, on: { color: accent } } : undefined)
+            ways.forEach((w, k) => {
+              const ink = w.cond ? getComputedStyle(w.cond).color : ''
+              stream(root, w.path, last + 700, period, (k * period) / ways.length, w.cond ? { el: w.cond, off: { color: ink }, on: { color: accent } } : undefined)
             })
           }
           break
@@ -1827,6 +1830,18 @@ export function motionEngine(): MotionEngine {
           // 맺힌다(답). 단이 많아도 1.6초 안에 근본 원인까지 닿게
           lines(one('.bk-h'), 60)
           const steps = $('.bk-wy-step')
+          // 생동감에서 계속 흐를 조각의 길은 움직임을 걸기 전에 잰다(조건별 흐름과 같은 까닭: 올라오는 글이 시작 자리에 서 있다)
+          const wyList = one('.bk-wy-list')
+          const wyLabels = steps.map((st) => st.querySelector('.bk-wy-k') as HTMLElement | null)
+          const wyPath: [number, number][] = []
+          if (wyList && wyLabels.length > 1 && wyLabels.every(Boolean)) {
+            wyLabels.forEach((lb, n) => {
+              const r = spot(lb!, wyList)
+              const p: [number, number] = [r.l - 8, (r.t + r.b) / 2]
+              if (n > 0) wyPath.push([wyPath[wyPath.length - 1][0], p[1]])
+              wyPath.push(p)
+            })
+          }
           const hop = Math.min(levelName === 'lively' ? 560 : 480, 1600 / Math.max(1, steps.length - 1))
           const seg = hop * 0.8
           steps.forEach((step, n) => {
@@ -1862,22 +1877,13 @@ export function motionEngine(): MotionEngine {
           })
           // 생동감: 그 뒤로는 조각이 문제에서 이름표를 따라 한 단씩 내려가 근본 원인에 닿고, 닿을 때 근본 원인의 글이 잠깐 밝아진다.
           // 캐 들어가는 차례를 계속 보여 준다. 길은 이름표마다의 왼쪽 가운데를 계단(꺾임)으로 잇는다
-          const list = one('.bk-wy-list')
-          const labels = steps.map((st) => st.querySelector('.bk-wy-k') as HTMLElement | null)
-          if (list && labels.length > 1 && labels.every(Boolean)) {
-            const pts: [number, number][] = []
-            labels.forEach((lb, n) => {
-              const r = spot(lb!, list)
-              const p: [number, number] = [r.l - 8, (r.t + r.b) / 2]
-              if (n > 0) pts.push([pts[pts.length - 1][0], p[1]])
-              pts.push(p)
-            })
+          if (wyList && wyPath.length > 1) {
             // 근본 원인의 이름표는 이미 강조색이라, 닿을 때 밝아지는 것은 근본 원인의 글이다
             const rootText = steps[steps.length - 1].querySelector('.bk-wy-t') as HTMLElement | null
-            const accent = getComputedStyle(list).getPropertyValue('--accent').trim()
+            const accent = getComputedStyle(wyList).getPropertyValue('--accent').trim()
             const ink = rootText ? getComputedStyle(rootText).color : ''
             const end = 120 + (steps.length - 1) * hop + seg + 600
-            stream(list, pts, end, d(2600), 0, rootText ? { el: rootText, off: { color: ink }, on: { color: accent } } : undefined)
+            stream(wyList, wyPath, end, d(2600), 0, rootText ? { el: rootText, off: { color: ink }, on: { color: accent } } : undefined)
           }
           break
         }
