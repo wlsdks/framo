@@ -1,8 +1,9 @@
 // 내보낸 HTML 파일 안에서 쓰는 보기 화면. 열면 모든 장이 세로로 보이고, "발표 시작"으로 슬라이드쇼가 된다.
 // 발표할 때의 움직임은 앱의 발표 화면과 같은 엔진(motion/engine.ts)을 쓴다. 엔진은 소스를 그대로 넣는다.
-// 부품 장에서 넘치는 부품 맞추기(slides/fitBlocks.ts의 blockFitter)도 같다. 처음에는 모든 장이 보이므로 열 때 한 번, 폰트가 오면 한 번 더.
+// 부품 장에서 넘치는 부품 맞추기(slides/fitBlocks.ts의 blockFitter)와 장의 배경(motion/backdrop.ts)도 같다. 처음에는 모든 장이 보이므로 열 때 한 번, 폰트가 오면 한 번 더.
 
 import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
+import { backdropMotion } from '../motion/backdrop'
 import { motionEngine } from '../motion/engine'
 import { blockFitter } from '../slides/fitBlocks'
 
@@ -52,6 +53,8 @@ body.is-present .v-blank.is-white{background:#fff}
 
 export const VIEWER_JS = `(function(){
 var engine=(${motionEngine.toString()})();
+// 장의 배경: 엔진이 장을 움직일 때 알리면(mo-backdrop) 같은 그림을 캔버스로 움직이고, 장을 떠나면 끝 모습(SVG)으로 돌아온다
+(${backdropMotion.toString()})().listen(document);
 var fitBlocks=(${blockFitter.toString()})().fit;
 var presentKey=(${presentKey.toString()}),presentAction=(${presentAction.toString()}),slideNumber=(${slideNumber.toString()}),num=slideNumber();
 var slides=[].slice.call(document.querySelectorAll('.v-slide'));

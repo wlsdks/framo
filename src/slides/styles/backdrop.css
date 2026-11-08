@@ -1,0 +1,34 @@
+/* ---------- 배경 (slides/Backdrop.tsx, motion/backdrop.ts) ----------
+   장의 글과 컴포넌트 뒤에 깐다: 장(.slide)이 쌓임 맥락이라 z-index -1은 장의 바탕 바로 위, 모든 글과 면 아래다.
+   색은 장의 글자색(currentColor)과 강조색뿐이고 짙기는 그림이 정한다(글이 그 위에서 읽혀야 해서 옅게). 누르는 것을 가로막지 않는다 */
+
+.slide:has(> .s-bd) {
+  isolation: isolate;
+}
+
+.s-bd {
+  --bd-accent: var(--accent);
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  /* 움직이는 캔버스는 장 밖으로 넘치지 않는다 (마스크가 없는 쪽도) */
+  overflow: clip;
+}
+
+.s-bd > svg,
+.s-bd > .bd-cv {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.s-bd .bd-a {
+  color: var(--bd-accent);
+}
+
+/* 짙은 면이 장 전체인 장(색 면 단락, 색 면 마지막 장, 색 면 표지): 글자색은 면 위의 글자색을 물려받고, 강조는 면 위의 강조색 */
+.slide:is(.l-section.va-bold, .l-closing.va-bold, .l-cover.va-full) > .s-bd {
+  --bd-accent: var(--bold-accent);
+}

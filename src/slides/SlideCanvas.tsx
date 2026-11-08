@@ -5,6 +5,7 @@ import { presentable, type PageInfo } from '../deck/fields'
 import { sceneOf } from '../deck/scenes'
 import type { Deck, Slide } from '../deck/types'
 import { cx } from '../lib/cx'
+import { Backdrop } from './Backdrop'
 import { Compose } from './blocks'
 import { fitBlocks } from './fitBlocks'
 import { T } from './fields'
@@ -226,6 +227,8 @@ export const SlideCanvas = memo(function SlideCanvas({
         // 장면도 슬라이드에 남겨 내보낸 파일의 뷰어가 같은 컷으로 움직이게 한다. 지금 레이아웃에 맞을 때만(sceneOf)
         data-scene={sceneOf(slide) ?? undefined}
       >
+        {/* 배경: 글과 컴포넌트 뒤의 그래픽 (Backdrop.tsx). 컴포넌트 하나만 그릴 때는 없다 */}
+        {!solo && <Backdrop value={slide.backdrop} />}
         <View />
         {mode === 'edit' && spec.panes && !solo && <PaneTools />}
         {!solo && slide.options.hideFoot !== true && (source || mark) && (

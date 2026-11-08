@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { BACKDROPS } from '../deck/backdrops'
 import { BLOCK_GROUPS, BLOCK_LINKS, BLOCK_TYPES, BLOCKS } from '../deck/blocks'
 import { BLUEPRINTS, DECK_TYPES } from '../deck/blueprints'
 import { pageInfo } from '../deck/fields'
@@ -14,6 +15,7 @@ import { motionEngine } from '../motion/engine'
 import type { SlideMode } from '../slides/context'
 import { pageProps, ScaledSlide, SlideCanvas } from '../slides/SlideCanvas'
 import { BlockThumb, LinkThumb } from './editor/BlockLibrary'
+import { SystemBackdrops } from './SystemBackdrops'
 import type { Look } from './editor/look'
 import { BackIcon, Brand, CheckIcon, Segmented } from './ui'
 
@@ -133,6 +135,7 @@ export function System() {
       { id: 'sys-tokens', name: '색과 글자' },
       ...LAYOUT_GROUPS.map((g, i) => ({ id: `sys-g${i}`, name: g.name, count: g.layouts.length })),
       { id: 'sys-parts', name: '컴포넌트', count: BLOCK_TYPES.length },
+      { id: 'sys-backdrops', name: '배경 모션', count: BACKDROPS.length },
     ],
     [],
   )
@@ -372,6 +375,14 @@ export function System() {
                 </div>
               </div>
             )}
+          </section>
+
+          <section id="sys-backdrops" className="sys-group">
+            <h2 className="sys-h2">배경 모션</h2>
+            <p className="sys-group-desc">
+              글과 컴포넌트 뒤에 까는 잔잔한 그래픽이에요. 슬라이드의 말에 맞는 분위기를 골라요. 발표할 때 슬라이드와 함께 한 번 들어오고 가라앉아요. 마우스를 올리면 들어오는 모습을 보여 줘요.
+            </p>
+            {thumbW > 0 && <SystemBackdrops deck={deck} examples={examples} mode={mode} width={thumbW} cols={cols} gap={gap} />}
           </section>
         </main>
       </div>

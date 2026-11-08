@@ -1,0 +1,232 @@
+/* ---------- 배경 모션: 이 장 설정의 고르기(BackdropPicker)와 무대 위 자리 틀(BackdropFrame) ---------- */
+
+.bdp-h {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 지금 배경: 이름과 어울리는 슬라이드 한 줄, 오른쪽에 바꾸기. 테 상자 없이(레이아웃 줄과 같은 말투) */
+.bdp-cur {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'name go' 'fits go';
+  align-items: center;
+  column-gap: 12px;
+  width: calc(100% + 16px);
+  margin: -6px -8px 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r);
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bdp-cur:hover {
+  background: var(--hover);
+}
+
+.bdp-cur-n {
+  grid-area: name;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.bdp-cur-f {
+  grid-area: fits;
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bdp-cur .ins-cur-go {
+  grid-area: go;
+}
+
+.bdp-note {
+  margin: 8px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.bdp-grid {
+  margin-top: 12px;
+}
+
+/* 카드 아래의 어울리는 슬라이드: 이름보다 한 단계 옅고 작게, 두 줄까지 */
+.bdp-fits {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  margin-top: -3px;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: center;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* 자리 일곱은 한 줄에 넣으면 이름이 잘려서 네 칸씩 두 줄로 */
+.seg.bdp-places {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bdp-places .seg-btn {
+  min-width: 0;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.bdp-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.bdp-move {
+  align-self: flex-start;
+}
+
+.bdp-move.is-on {
+  color: var(--sel);
+}
+
+/* ---------- 무대 위 자리 틀: 장(1920×1080)의 좌표로 그리고, 선과 손잡이는 장을 줄인 만큼 키운다(--vs) ---------- */
+
+.bdf {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  --k: calc(1px / var(--vs, 1));
+}
+
+/* 칸에 맞춰 붙는다는 것을 보이는 옅은 12×12 눈금 (장 위에만, 끄는 동안) */
+.bdf-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgb(43 79 192 / 0.16) var(--k), transparent var(--k)),
+    linear-gradient(to bottom, rgb(43 79 192 / 0.16) var(--k), transparent var(--k));
+  background-size: 160px 90px;
+  pointer-events: none;
+}
+
+.bdf-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: calc(2 * var(--k)) solid var(--sel);
+  background: rgb(43 79 192 / 0.04);
+  cursor: grab;
+  touch-action: none;
+}
+
+.bdf-box:active {
+  cursor: grabbing;
+}
+
+.bdf-label {
+  position: absolute;
+  top: calc(8 * var(--k));
+  left: calc(8 * var(--k));
+  padding: calc(3 * var(--k)) calc(8 * var(--k));
+  border-radius: calc(4 * var(--k));
+  background: var(--sel);
+  color: #fff;
+  font: 600 calc(13 * var(--k)) / 1.4 'Pretendard Variable', Pretendard, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.bdf-grip {
+  position: absolute;
+  width: calc(14 * var(--k));
+  height: calc(14 * var(--k));
+  margin: calc(-7 * var(--k));
+  box-sizing: border-box;
+  border: calc(2 * var(--k)) solid var(--sel);
+  border-radius: 50%;
+  background: #fff;
+  touch-action: none;
+}
+
+.bdf-grip.is-nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.bdf-grip.is-n {
+  top: 0;
+  left: 50%;
+  cursor: ns-resize;
+}
+
+.bdf-grip.is-ne {
+  top: 0;
+  left: 100%;
+  cursor: nesw-resize;
+}
+
+.bdf-grip.is-e {
+  top: 50%;
+  left: 100%;
+  cursor: ew-resize;
+}
+
+.bdf-grip.is-se {
+  top: 100%;
+  left: 100%;
+  cursor: nwse-resize;
+}
+
+.bdf-grip.is-s {
+  top: 100%;
+  left: 50%;
+  cursor: ns-resize;
+}
+
+.bdf-grip.is-sw {
+  top: 100%;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+.bdf-grip.is-w {
+  top: 50%;
+  left: 0;
+  cursor: ew-resize;
+}
+
+/* 도움말과 끝내기: 장 아래쪽 가운데에 뜬 작은 막대 */
+.bdf-bar {
+  position: absolute;
+  bottom: calc(16 * var(--k));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: calc(12 * var(--k));
+  padding: calc(8 * var(--k)) calc(8 * var(--k)) calc(8 * var(--k)) calc(14 * var(--k));
+  border-radius: calc(8 * var(--k));
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+  color: var(--ink-2);
+  font: 500 calc(13 * var(--k)) / 1.4 'Pretendard Variable', Pretendard, sans-serif;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.bdf-bar .btn {
+  font-size: calc(13 * var(--k));
+  padding: calc(6 * var(--k)) calc(12 * var(--k));
+}

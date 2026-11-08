@@ -79,6 +79,25 @@ export type Transition = 'auto' | 'none' | 'fade' | 'slide' | 'zoom' | 'morph'
 export type SceneId = 'opening' | 'answer' | 'numbers' | 'flow' | 'compare' | 'time' | 'picture' | 'closing'
 /** 장의 바탕. invert는 테마의 반대(밝은 테마면 어둡게), accent는 강조색 면 */
 export type Tone = 'base' | 'invert' | 'accent'
+/**
+ * 배경: 장의 글과 컴포넌트 뒤에서 잔잔히 움직이는 그래픽. 분위기마다 하나(docs/MOTION.md 9절의 일곱: 확산, 모여 시작, 흐름, 깊이, 구조, 여운, 연결).
+ * 목록과 이름은 deck/backdrops.ts, 그리기와 움직임은 motion/backdrop.ts
+ */
+export type BackdropId = 'diffuse' | 'gather' | 'flow' | 'depth' | 'structure' | 'linger' | 'link'
+/** 배경의 짙기 */
+export type BackdropStrength = 'soft' | 'base' | 'strong'
+
+/**
+ * 장의 배경. 글이 없는 고르는 값뿐이라 예전 버전은 이 값을 모른 채 그대로 두고(장을 고쳐 저장해도 남는다) 배경 없이 그린다.
+ * 이 버전이 모르는 kind(더 새 버전의 배경)도 같다: 그리지 않고 값은 지우지 않는다(backdrops.ts의 backdropOf)
+ */
+export interface Backdrop {
+  kind: BackdropId
+  /** 장 전체(1920×1080)를 가로 12칸, 세로 12칸으로 나눈 자리. 없으면 장 전체 */
+  at?: BlockAt
+  /** 없으면 base */
+  strength?: BackdropStrength
+}
 /** 제목 덩어리의 자리 (표지, 섹션). 값 목록은 themes.ts의 PLACES */
 export type Place = 'top' | 'middle' | 'bottom'
 
@@ -306,6 +325,8 @@ export interface Slide {
    * 거기서 옮긴 판은 자리가 달라져 사람이 짠 판이 된다. 그래서 저장 형식의 version은 그대로다
    */
   arranged?: string
+  /** 장의 배경(글과 컴포넌트 뒤의 움직이는 그래픽). 레이아웃을 바꿔도 남는다 */
+  backdrop?: Backdrop
 }
 
 export interface DeckMeta {

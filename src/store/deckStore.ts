@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { asCompose, boardSig, cleanDeckBlocks, copyBlocks, mapBlock, settleDeck, tidyLinks, withLayout } from '../deck/blocks'
+import { tidyBackdrop } from '../deck/backdrops'
 import { unknownParts } from '../deck/compat'
 import { pastedItems, withOneMore } from '../deck/edits'
 import { makeSlide, uid } from '../deck/generate'
@@ -7,7 +8,7 @@ import { dropIndex, followIndex, isMetaKey, moveIn } from '../deck/fields'
 import { LAYOUTS, variantOf } from '../deck/layouts'
 import { migrateDeck } from '../deck/migrate'
 import { GESTURE_KEY } from '../lib/pointerSession'
-import type { Block, Deck, DeckTheme, ItemKey, LayoutId, MetaKey, Motion, Slide, SlideOptions, ThemeId } from '../deck/types'
+import type { Backdrop, Block, Deck, DeckTheme, ItemKey, LayoutId, MetaKey, Motion, Slide, SlideOptions, ThemeId } from '../deck/types'
 
 const HISTORY_LIMIT = 100
 /** 같은 칸을 이 시간 안에 이어서 고치면 되돌리기 한 단계로 묶는다 */
@@ -49,6 +50,8 @@ interface DeckState {
   moveItem(slideId: string, from: number, to: number, key?: string): void
   setNotes(slideId: string, notes: string): void
   setOptions(slideId: string, options: SlideOptions, key?: string): void
+  /** 장의 배경. 없으면 뺀다. key가 같으면(자리를 끄는 동안) 되돌리기 한 단계로 */
+  setBackdrop(slideId: string, backdrop: Backdrop | undefined, key?: string): void
   setHidden(slideId: string, hidden: boolean): void
   changeLayout(slideId: string, layout: LayoutId): void
   setVariant(slideId: string, variant: string, key?: string): void
@@ -323,6 +326,9 @@ export const useDeck = create<DeckState>((set, get) => {
     },
     setOptions(slideId, options, key) {
       commit((d) => mapSlide(d, slideId, (s) => ({ ...s, options: { ...s.options, ...options } })), key)
+    },
+    setBackdrop(slideId, backdrop, key) {
+      commit((d) => mapSlide(d, slideId, ({ backdrop: _, ...s }) => (backdrop ? { ...s, backdrop: tidyBackdrop(backdrop) } : s)), key)
     },
     setHidden(slideId, hidden) {
       commit((d) => mapSlide(d, slideId, (s) => ({ ...s, hidden })))

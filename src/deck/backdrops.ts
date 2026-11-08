@@ -1,0 +1,112 @@
+// 배경: 장의 글과 컴포넌트 뒤에서 잔잔히 움직이는 그래픽. 분위기마다 하나라서 장의 말에 맞는 것을 고른다(docs/MOTION.md 9절, 12절).
+// 여기의 목록이 고르는 값의 한 곳이다: 편집기, 장 모음, AI 카탈로그(backdrops), 모양 파일(backdrop), 제안(set_backdrop)이 같이 쓴다.
+// 그림과 움직임은 motion/backdrop.ts. 값은 장의 backdrop(종류, 자리, 짙기)에 남는다.
+
+import { BOARD_COLS, BOARD_ROWS, isArea, sameArea } from './blocks'
+import { sideOf } from './layouts'
+import type { Backdrop, BackdropId, BackdropStrength, BlockAt, LayoutId, Slide } from './types'
+
+interface BackdropSpec {
+  id: BackdropId
+  name: string
+  /** 무엇이 어떻게 움직이는지 한 줄 */
+  description: string
+  /** 어울리는 장. 고르는 곳과 AI 카탈로그에 그대로 보인다 */
+  fits: string
+  /** 한 점(씨앗, 원)이 있는 그림: 처음 고를 때 글이 적은 쪽에 놓는다. 아니면 장 전체에 고르게 깔린다 */
+  focal: boolean
+  /** 장 모음과 갤러리에서 이 배경을 깔아 보이는 장 (어울리는 장 하나) */
+  showOn: LayoutId
+}
+
+/**
+ * 고를 수 있는 배경. 이름은 docs/MOTION.md 9절의 분위기 이름 그대로이고, fits는 12절 '맥락에 맞는 움직임'의 바탕 칸을 따른다.
+ * 차례가 곧 고르는 곳의 차례다
+ */
+export const BACKDROPS: readonly BackdropSpec[] = [
+  { id: 'diffuse', name: '확산', description: '한 점에서 시작한 짙음이 바깥으로 번져 나가요.', fits: '표지, 출시와 도입, 커지는 숫자, 퍼지는 이야기', focal: true, showOn: 'cover' },
+  { id: 'gather', name: '모여 시작', description: '여러 곳에서 온 선이 한 원으로 모였다가 고요해져요.', fits: '표지, 창단과 착수, 결론 한 줄, 통합과 합계', focal: true, showOn: 'statement' },
+  { id: 'flow', name: '흐름', description: '가는 선들이 한쪽으로 흐르며 한 곳을 지나가요.', fits: '과정, 일정, 추이, 변화', focal: false, showOn: 'process' },
+  { id: 'depth', name: '깊이', description: '등고선의 층이 어긋나 있다가 겹겹이 맞춰져요.', fits: '원인 캐기, 분석, 사례, 이미지', focal: false, showOn: 'case' },
+  { id: 'structure', name: '구조', description: '고른 점의 판 위에 칸 묶음이 하나씩 맞춰져요.', fits: '표와 비교, 매트릭스, 구성, 시스템', focal: false, showOn: 'kpi' },
+  { id: 'linger', name: '여운', description: '선 띠가 펼쳐졌다가 아주 느리게 가라앉아요.', fits: '섹션, 인용, 맺음, 결정 요청', focal: false, showOn: 'section' },
+  { id: 'link', name: '연결', description: '양쪽의 점들이 활 모양의 선으로 하나씩 이어져요.', fits: '연결도, 관계, 사람과 팀, 협업', focal: false, showOn: 'compare' },
+]
+
+export const BACKDROP_IDS: readonly BackdropId[] = BACKDROPS.map((b) => b.id)
+
+export const BACKDROP_STRENGTHS: { id: BackdropStrength; name: string; description: string }[] = [
+  { id: 'soft', name: '옅게', description: '글이 많은 슬라이드에 써요. 배경이 더 뒤로 물러나요.' },
+  { id: 'base', name: '보통', description: '글이 그 위에서 편하게 읽히는 짙기예요.' },
+  { id: 'strong', name: '또렷하게', description: '글이 적은 표지나 단락 슬라이드에 써요.' },
+]
+
+/** 자주 쓰는 자리. 장 전체를 12×12칸으로 나눈 칸 수다(세로 한 칸은 90px, 가로 한 칸은 160px) */
+export const BACKDROP_PLACES: { id: string; name: string; at: BlockAt }[] = [
+  { id: 'full', name: '전체', at: { x: 0, y: 0, w: BOARD_COLS, h: BOARD_ROWS } },
+  { id: 'right', name: '오른쪽', at: { x: 5, y: 0, w: 7, h: 12 } },
+  { id: 'left', name: '왼쪽', at: { x: 0, y: 0, w: 7, h: 12 } },
+  { id: 'top', name: '위', at: { x: 0, y: 0, w: 12, h: 7 } },
+  { id: 'bottom', name: '아래', at: { x: 0, y: 5, w: 12, h: 7 } },
+  { id: 'center', name: '가운데', at: { x: 2, y: 2, w: 8, h: 8 } },
+  { id: 'corner', name: '오른쪽 아래', at: { x: 6, y: 5, w: 6, h: 7 } },
+]
+
+export const WHOLE_SLIDE: BlockAt = BACKDROP_PLACES[0].at
+/** 배경 자리의 한 칸 크기(장 px) */
+export const BACKDROP_CELL = { w: 1920 / BOARD_COLS, h: 1080 / BOARD_ROWS }
+/** 배경 자리의 가장 작은 크기(칸 수). 이보다 작으면 그림이 뜻을 잃는다 */
+export const BACKDROP_MIN = { w: 3, h: 3 }
+
+export const isBackdropKind = (v: unknown): v is BackdropId => typeof v === 'string' && (BACKDROP_IDS as readonly string[]).includes(v)
+export const isBackdropStrength = (v: unknown): v is BackdropStrength => BACKDROP_STRENGTHS.some((s) => s.id === v)
+/** 배경을 놓을 수 있는 자리: 장 안의 칸이고 가장 작은 크기보다 크다 */
+export const isBackdropArea = (v: unknown): v is BlockAt => isArea(v) && v.w >= BACKDROP_MIN.w && v.h >= BACKDROP_MIN.h
+
+export const backdropSpec = (id: BackdropId) => BACKDROPS.find((b) => b.id === id)!
+
+/**
+ * 그릴 배경. 값이 없거나 이 버전이 모르는 배경(더 새 버전에서 고른 것)이면 null: 그리지 않고 값은 장에 그대로 둔다.
+ * 가져온 파일일 수 있어서 자리와 짙기도 확인하고, 맞지 않으면 기본값으로 그린다(값은 고치지 않는다)
+ */
+export function backdropOf(slide: Pick<Slide, 'backdrop'>): Required<Backdrop> | null {
+  const b = slide.backdrop
+  if (!b || typeof b !== 'object' || !isBackdropKind(b.kind)) return null
+  return { kind: b.kind, at: isBackdropArea(b.at) ? b.at : WHOLE_SLIDE, strength: isBackdropStrength(b.strength) ? b.strength : 'base' }
+}
+
+/** 자리가 자주 쓰는 자리 중 하나면 그 id */
+export const placeOfArea = (at: BlockAt) => BACKDROP_PLACES.find((p) => sameArea(p.at, at))?.id ?? null
+
+/**
+ * 표지와 단락 장은 제목이 왼쪽 아래에 있어서 위쪽이 비고, 한 문장 장은 글이 위에서 장 너비를 다 써서 오른쪽 아래가 빈다.
+ * 다른 장은 글이 왼쪽부터 놓인다.
+ * 한 점이 있는 배경은 그 빈 쪽에 놓아 글 뒤에 씨앗이나 원이 오지 않게 한다
+ */
+const FOCAL_PLACE: Partial<Record<LayoutId, string>> = { cover: 'top', section: 'top', closing: 'top', statement: 'corner' }
+
+/** 배경을 처음 고를 때의 값: 장 전체에 고르게 깔리는 그림은 전체, 한 점이 있는 그림은 글이 적은 쪽 */
+export function baseBackdrop(slide: Pick<Slide, 'layout' | 'variant' | 'options'>, kind: BackdropId): Backdrop {
+  if (!backdropSpec(kind).focal) return { kind }
+  // 옆 면이 있는 표지: 옆 면 밖(제목이 있는 판)의 위쪽. 옆 면이 씨앗을 가리지 않게
+  const side = slide.layout === 'cover' ? sideOf(slide) : null
+  if (side !== null) return { kind, at: { x: slide.options.flip ? side : 0, y: 0, w: BOARD_COLS - side, h: 8 } }
+  const place = BACKDROP_PLACES.find((p) => p.id === (FOCAL_PLACE[slide.layout] ?? 'right'))!
+  return { kind, at: place.at }
+}
+
+/** 배경을 바꿀 때: 자리와 짙기는 그대로 두고 종류만. 자리를 고른 적 없으면 그 배경의 처음 자리 */
+export function withBackdropKind(slide: Pick<Slide, 'layout' | 'variant' | 'options' | 'backdrop'>, kind: BackdropId): Backdrop {
+  const now = slide.backdrop
+  if (!now || !now.at) return { ...baseBackdrop(slide, kind), ...(now?.strength ? { strength: now.strength } : {}) }
+  return { ...now, kind }
+}
+
+/** 저장할 꼴: 기본값(장 전체, 보통)은 빼고 적는다 */
+export function tidyBackdrop(b: Backdrop): Backdrop {
+  return {
+    kind: b.kind,
+    ...(b.at && !sameArea(b.at, WHOLE_SLIDE) ? { at: { x: b.at.x, y: b.at.y, w: b.at.w, h: b.at.h } } : {}),
+    ...(b.strength && b.strength !== 'base' ? { strength: b.strength } : {}),
+  }
+}

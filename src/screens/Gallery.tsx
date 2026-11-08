@@ -21,6 +21,7 @@ import { reviewSlides } from './reviewSlides'
 import { scenarioSlides } from './scenarioSlides'
 import { checkStress, stressSlides } from './stress'
 import { dirSlides } from './dirSlides'
+import { BackdropSheet, backdropSlides, withBackdrop } from './backdropSlides'
 
 // 개발용: 모든 레이아웃을 한 화면에 늘어놓고 디자인을 점검한다. #/gallery?theme=navy&mode=preview&set=blank&type=deal
 // &set=blocks 는 부품마다 넓은 칸과 좁은 칸에 넣어 본 부품 장. &types=ring,ratio 처럼 부품을 고르고, &bv=list 처럼 부품의 모양을 고를 수 있다.
@@ -41,6 +42,7 @@ import { dirSlides } from './dirSlides'
 // set=dirs 는 컴포넌트의 모양을 고칠 때 전과 후를 견줄 장(dirSlides.ts: 빽빽한 장, 듬성한 장, 지표 줄, 단계, 비교, 인용, 이음표).
 // set=combos&seed=1&n=60 은 규칙이 받아들인 부품 조합을 seed마다 정해진 차례로 만들어 본다 (combos.ts의 checkCombos).
 // &blank=1이면 부품마다 반쯤은 첫 항목만 채운 채로 발표하는 모습(빈 항목이 빠진다).
+// set=backdrops 는 배경마다 어울리는 장 하나(backdropSlides.ts). &bd=diffuse 는 어느 갤러리든 모든 장에 그 배경을, &bdat=right &bds=soft 는 자리와 짙기를.
 
 /** set=edge: 차트 장이 무너지기 쉬운 값들 (음수, 빈 값, 많은 항목, 모두 같은 값, 긴 이름) */
 function edgeSlides(): Slide[] {
@@ -211,6 +213,7 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
   }
   if (set === 'scenarios') return { ...deck, title: '가상의 발표 예시', theme: { id: theme }, slides: scenarioSlides(look) }
   if (set === 'dirs') return { ...deck, theme: { id: theme }, slides: dirSlides(look) }
+  if (set === 'backdrops' || set === 'bdsheet') return { ...deck, theme: { id: theme }, slides: backdropSlides(params) }
   if (set === 'combos') return { ...deck, theme: { id: theme }, slides: comboSlides(Number(params.get('seed')) || 1, Number(params.get('n')) || 40, look, params.get('mode') === 'edit', params.get('blank') === '1').map((c) => c.slide) }
   return { ...deck, theme: { id: theme }, slides: [...deck.slides, ...extraSlides()] }
 }
@@ -290,6 +293,7 @@ export function Gallery() {
     ...base,
     theme: { ...base.theme, ...look },
     slides: slides.map((s) => ({
+      ...withBackdrop(s, params.get('bd'), params.get('bdat'), params.get('bds')),
       ...withTexts(withCount(s, Number(params.get('count')) || 0), params.get('names')?.split(','), params.get('values')?.split(','), params.get('metas')?.split(',')),
       ...(params.get('blankHead') === '1' ? { fields: { ...s.fields, title: '', lead: '' } } : {}),
       options: {
@@ -305,6 +309,7 @@ export function Gallery() {
   }
   const deck = ['hideHead', 'hideFoot', 'blankHead'].some((key) => params.get(key) === '1') ? settleDeck(raw) : raw
   const info = pageInfo(picked)
+  if (params.get('set') === 'bdsheet') return <BackdropSheet deck={deck} params={params} />
   return (
     <div className="gallery" style={params.get('w') ? { gridTemplateColumns: `${params.get('w')}px` } : undefined}>
       {deck.slides.map((slide) => (
