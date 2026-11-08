@@ -233,10 +233,10 @@
   --scale: 1.2;
 }
 
-/* 한 줄로 줄이는 글: 칸 너비(100cqi)에 맞게 줄이되, 칸 크기로 줄일 때는 다른 글자 칸처럼 --fs-min 밑으로 가지 않는다.
-   바닥이 없으면 같은 줄의 다른 글자(바닥에서 멈춘다)보다 이 글만 작아진다 ('단위: 억 원'의 '억 원') */
+/* 한 줄로 줄이는 글: 칸 너비(100cqi, 한 단을 다 쓰지 않는 글은 --line-room)에 맞게 줄이되, 칸 크기로 줄일 때는 다른 글자 칸처럼
+   --fs-min 밑으로 가지 않는다. 바닥이 없으면 같은 줄의 다른 글자(바닥에서 멈춘다)보다 이 글만 작아진다 ('단위: 억 원'의 '억 원') */
 .slide .one-line {
-  font-size: min(max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))), calc(100cqi / (var(--units, 1) * var(--glyph-k, 1))));
+  font-size: min(max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))), calc(var(--line-room, 100cqi) / (var(--units, 1) * var(--glyph-k, 1))));
   white-space: nowrap;
 }
 

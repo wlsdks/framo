@@ -16,9 +16,12 @@
   padding-bottom: 40px;
 }
 
+/* 시기는 한 줄로 두고 길면 제 단의 너비에 맞게 줄인다(Timeline.tsx의 oneLine, .one-line의 100cqi). 시기 줄은 높이가 정해져 축과
+   점이 그 아래에 서서, 줄을 바꾸면 축을 지나 아래 이름 위에 겹쳤고(편집 화면), 발표 화면에서는 한 줄 그대로 옆 단으로 넘어갔다 */
 .tl-item {
   position: relative;
   padding-right: 8px;
+  container-type: inline-size;
 }
 
 .tl-item::before {
@@ -247,6 +250,8 @@
 }
 
 .va-steps .tl-item {
+  /* 줄이 칸을 같이 쓰는 subgrid라 담지 않는다(시기의 단은 가장 긴 시기만큼) */
+  container-type: normal;
   --tl-line: calc(1.25 * max(var(--fs-min, 0px), calc(var(--tl-fs) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
   display: grid;
   grid-column: 1 / -1;
