@@ -127,6 +127,11 @@ interface TextProps {
    * 강점 칸(SWOT)처럼 한 항목 안에 여러 줄을 쓰는 칸은 Enter가 줄바꿈이다
    */
   enterNext?: boolean
+  /**
+   * 괄호 묶음('(공사 1.6억, 이사 0.8억)')을 줄 끝에서 가르지 않는다: 꺾여야 하면 괄호 앞에서 통째로 다음 줄로. 짧은 값을 늘어놓는 칸(개요의
+   * 내용)에서 괄호 안이 갈리면 '2.4억 원 (공사 1.6억, / 이사 0.8억)'처럼 끊겨 읽혔고, 단마다 높이가 들쭉날쭉했다
+   */
+  keepParens?: boolean
 }
 
 function oneLineProps(text: string, oneLine?: boolean, units?: number, numeral?: boolean) {
@@ -140,10 +145,12 @@ function oneLineProps(text: string, oneLine?: boolean, units?: number, numeral?:
  * 좁은 칸이나 크게, 명조에서 '본부 평균 18% / 보다 높아요'처럼 숫자와 조사가 두 줄로 갈렸다
  */
 const GLUED = /[^\s]*[%‰℃℉°][가-힣]+/g
+/** 괄호 묶음까지(keepParens): 스물네 글자까지의 괄호와 거기 붙은 글. 더 길면 칸보다 넓어질 수 있어 묶지 않는다 */
+const GLUED_PARENS = /\([^()\n]{1,24}\)[^\s]*|[^\s]*[%‰℃℉°][가-힣]+/g
 
 /** 글을 그대로 둔 채 묶을 낱말만 떼어 낸 조각들. 묶을 것이 없으면 null */
-export function gluedParts(text: string): (string | { nb: string })[] | null {
-  const found = [...text.matchAll(GLUED)]
+export function gluedParts(text: string, parens = false): (string | { nb: string })[] | null {
+  const found = [...text.matchAll(parens ? GLUED_PARENS : GLUED)]
   if (!found.length) return null
   const out: (string | { nb: string })[] = []
   let at = 0
@@ -157,17 +164,17 @@ export function gluedParts(text: string): (string | { nb: string })[] | null {
 }
 
 /** 묶을 낱말은 줄을 꺾지 않는 조각(.nb)에. 글자는 하나도 바꾸지 않는다 */
-function Glued({ text }: { text: string }) {
-  const parts = gluedParts(text)
+function Glued({ text, parens }: { text: string; parens?: boolean }) {
+  const parts = gluedParts(text, parens)
   if (!parts) return <>{text}</>
   return <>{parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="nb">{p.nb}</span>))}</>
 }
 
 /** 발표 화면의 글: 빼기 기호를 바로 쓰고, 큰 숫자면 단위를 작은 글자로 떼어 낸다 */
-function Shown({ text, numeral }: { text: string; numeral?: boolean }) {
+function Shown({ text, numeral, parens }: { text: string; numeral?: boolean; parens?: boolean }) {
   const t = minusSigns(text)
   const parts = numeral ? numberRuns(t) : null
-  if (!parts) return <Glued text={t} />
+  if (!parts) return <Glued text={t} parens={parens} />
   return (
     <>
       {parts.pre && <span className="u u-pre">{parts.pre}</span>}
@@ -196,10 +203,10 @@ function numberNodes(parts: { pre?: string; runs: NumberRun[] }): (Node | string
  * 편집 칸에 글을 넣는다. 큰 숫자면 단위를 작은 글자(span)로 떼어 발표 화면과 같은 꼴로 보인다.
  * 글자는 하나도 바꾸지 않아서(빼기 기호도 그대로) 칸의 innerText가 적은 글과 같다
  */
-function paint(el: HTMLElement, value: string, numeral?: boolean) {
+function paint(el: HTMLElement, value: string, numeral?: boolean, parens?: boolean) {
   const parts = numeral ? numberRuns(value) : null
   // 숫자와 조사를 묶을 낱말이 있으면 발표 화면처럼 줄을 꺾지 않는 조각(.nb)에 (Glued)
-  const glued = parts ? null : gluedParts(value)
+  const glued = parts ? null : gluedParts(value, parens)
   if (glued) {
     const next = glued.map((p) => {
       if (typeof p === 'string') return p
@@ -269,7 +276,7 @@ function clean(text: string, multiline?: boolean): string {
   return multiline ? t : t.replace(/\s*\n\s*/g, ' ')
 }
 
-function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional, onPasteLines }: FieldProps) {
+function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional, onPasteLines, keepParens }: FieldProps) {
   const { mode } = useSlide()
   if (mode === 'final') {
     const text = value.trim()
@@ -277,7 +284,7 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
     const one = oneLineProps(text, oneLine, units, numeral)
     return (
       <Tag className={cx(className, fitClass(fitText ?? text, fit), one.cls)} style={one.style}>
-        <Shown text={text} numeral={numeral} />
+        <Shown text={text} numeral={numeral} parens={keepParens} />
       </Tag>
     )
   }
@@ -288,7 +295,7 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
   if (mode === 'preview' || !onChange) {
     return (
       <Tag className={cx(className, fitClass(fitText ?? shown, fit), one.cls, !value && 'is-hint')} style={one.style}>
-        <Shown text={shown} numeral={numeral} />
+        <Shown text={shown} numeral={numeral} parens={keepParens} />
       </Tag>
     )
   }
@@ -307,6 +314,7 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
       enterNext={enterNext}
       optional={optional}
       onPasteLines={onPasteLines}
+      keepParens={keepParens}
     />
   )
 }
@@ -325,6 +333,7 @@ function Editable({
   enterNext,
   optional,
   onPasteLines,
+  keepParens,
 }: FieldProps & { style?: CSSProperties }) {
   const ref = useRef<HTMLSpanElement>(null)
   // 이 칸이 마지막으로 저장소에 보낸 값. 쓰는 동안 값이 이것과 다르게 바뀌면 바깥에서 바꾼 것이다(쓰다가 누른 되돌리기)
@@ -338,18 +347,18 @@ function Editable({
     if (!el) return
     if (document.activeElement !== el) {
       sent.current = value
-      paint(el, value, numeral)
+      paint(el, value, numeral, keepParens)
       return
     }
     if (value === sent.current) return
     sent.current = value
     const was = clean(el.innerText, multiline)
     const keep = !numeral && value && was.startsWith(value) ? /^[ \n]*/.exec(was.slice(value.length))![0] : ''
-    paint(el, value + keep, numeral)
+    paint(el, value + keep, numeral, keepParens)
     const sel = getSelection()
     sel?.selectAllChildren(el)
     sel?.collapseToEnd()
-  }, [value, numeral, multiline])
+  }, [value, numeral, multiline, keepParens])
 
   return (
     <Tag className={cx(className, 'ed', !value && 'is-empty', optional && 'is-optional')} style={style}>
@@ -389,7 +398,7 @@ function Editable({
             onChange!(v)
           }
           // 쓰는 동안 단위 칸(span) 안팎으로 들어간 글자를 다시 나눈다
-          paint(el, v, numeral)
+          paint(el, v, numeral, keepParens)
           // 쓰는 동안 고르게 나누지 않던 줄이 다시 나뉘는 한 번은 겹쳐 바뀌게 (edit.css의 .ed-input:focus)
           liveRewrap(el)
           // 쓰기를 끝내면 칸 안의 커서와 고른 글을 놓는다. 그대로 두면 쓰지 않는 글 위에 파란 칠이 남고, 이어 친 글자가 초점 없는
