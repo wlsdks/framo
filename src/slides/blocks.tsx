@@ -227,11 +227,9 @@ export function LinkGlyph({ link }: { link: BlockLink }) {
   if (link === 'versus') return <span className="bk-link-vs">vs</span>
   return (
     <svg viewBox="0 0 48 48">
+      {/* 잇기는 가는 줄기 하나(arrow.tsx의 ArrowMark와 같은 말): 끝의 세로 눈금(—|)은 기호처럼 보였다 */}
       {link === 'arrow' ? (
-        <>
-          <path d="M6 24H38" strokeOpacity="0.6" strokeWidth="1.5" />
-          <path d="M39 15V33" />
-        </>
+        <path d="M8 24H40" strokeOpacity="0.6" strokeWidth="1.5" />
       ) : link === 'plus' ? <path d="M24 15v18M15 24h18" /> : <path d="M15 20h18M15 28h18" />}
     </svg>
   )

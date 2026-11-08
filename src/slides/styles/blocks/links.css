@@ -66,7 +66,7 @@
   stroke-width: 2.5;
 }
 
-/* 잇는 표시의 줄기는 더 가늘고 옅게: 방향은 끝의 세로 눈금이 말한다(ArrowMark) */
+/* 잇는 표시는 가는 줄기 하나(ArrowMark): 더하기, 같음보다 가늘고 옅게 */
 .bk-link.is-arrow svg path:first-child {
   stroke-width: 1.5;
 }
@@ -75,8 +75,8 @@
   rotate: 90deg;
 }
 
-/* 잇는 표시는 방향이 한눈에 읽혀야 한다(docs/VISUAL-RULES.md 5): 옅은 꺾쇠(›, ⌄)는 무엇인지 구분되지 않았다. 가는 줄기와 끝의
-   세로 눈금을 버금 글자색(--ink-2)으로 */
+/* 잇는 표시(docs/VISUAL-RULES.md 5): 옅은 꺾쇠(›, ⌄)는 무엇인지 구분되지 않았고, 끝의 세로 눈금(—|)은 기호처럼 보였다.
+   가는 줄기 하나를 버금 글자색(--ink-2)으로. 차례는 읽는 방향이 말한다 */
 .bk-link.is-arrow {
   color: var(--ink-2);
 }
