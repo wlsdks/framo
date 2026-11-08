@@ -341,9 +341,10 @@ function EditorBody({ deck }: { deck: Deck }) {
           toast={toast}
         />
       )}
-      <PresentDialogs launch={launch} onGoTo={goToSlide} />
+      <PresentDialogs deck={deck} launch={launch} onGoTo={goToSlide} />
       {exporting.confirm && (
         <CheckDialog
+          deck={deck}
           check={exporting.confirm}
           what="파일"
           proceed="그대로 내보내기"

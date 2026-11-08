@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { slideName } from '../../deck/blocks'
 import { deckBlanks, pageInfo, type Missing } from '../../deck/fields'
 import type { Deck } from '../../deck/types'
 import { slideOverflow } from '../../slides/overflow'
+import { ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
 import { enterFullscreen, findPlacement, hasSecondScreen, openPresenterWindow, presenterAuto, screensPermission, type Placement } from '../../present/link'
 import type { VersionReason } from '../../store/versions'
 import { Modal, type Toast } from '../ui'
@@ -159,6 +160,9 @@ export function presentCheck(deck: Deck): PresentCheck {
   return { rows, missing: rows.reduce((n, r) => n + r.missing.length, 0), over: rows.filter((r) => r.over).length }
 }
 
+/** 바둑판의 작은 슬라이드 너비. 창 600px에 셋 */
+const PCK_THUMB = 172
+
 function checkTitle({ missing, over }: PresentCheck): string {
   if (missing && over) return `빈칸 ${missing}곳, 글이 넘친 슬라이드 ${over}장이 있어요`
   if (over) return `글이 넘친 슬라이드가 ${over}장 있어요`
@@ -170,6 +174,7 @@ function checkTitle({ missing, over }: PresentCheck): string {
  * what: 빈칸이 나오지 않는 곳 ('발표 화면', '파일')
  */
 export function CheckDialog({
+  deck,
   check,
   what,
   proceed,
@@ -177,6 +182,7 @@ export function CheckDialog({
   onClose,
   onGoTo,
 }: {
+  deck: Deck
   check: PresentCheck
   what: string
   proceed: string
@@ -185,6 +191,8 @@ export function CheckDialog({
   onGoTo: (slideId: string, m?: Missing) => void
 }) {
   const first = check.rows[0]
+  const info = useMemo(() => pageInfo(deck.slides), [deck.slides])
+  const byId = useMemo(() => new Map(deck.slides.map((s) => [s.id, s])), [deck.slides])
   if (!first) return null
   return (
     // 초점은 창 자체에 둔다. 검은 '그대로 …' 단추에 두면 그 위에 파란 초점 테가 둘려 테가 두 겹으로 보였고,
@@ -193,6 +201,7 @@ export function CheckDialog({
       title={checkTitle(check)}
       onClose={onClose}
       focusSelf
+      className="pck"
       actions={
         <>
           <button type="button" className="btn btn-ghost" onClick={() => onGoTo(first.id, first.missing[0])}>
@@ -204,36 +213,55 @@ export function CheckDialog({
         </>
       }
     >
+      {/*
+        줄 목록(번호, 이름, 노란 점, '빈칸 5곳')만 늘어놓던 때는 어느 슬라이드인지 이름으로만 알아봐야 했고, 같은 점이 줄마다 되풀이됐다.
+        지금은 그 슬라이드가 듣는 분께 실제로 보일 모습(빈칸은 빠진)을 작게 그려 바둑판으로 둔다: 비어 보이는 장이 한눈에 보인다
+      */}
       <p>
         {check.missing ? `빈칸은 ${what}에 나오지 않아요. ` : ''}
-        {check.over ? '넘친 글은 잘려 보일 수 있어요. ' : ''}슬라이드를 누르면 그 자리로 가요.
+        {check.over ? '넘친 글은 잘려 보일 수 있어요. ' : ''}누르면 그 슬라이드로 가요.
       </p>
-      <ul className="pck-list">
-        {check.rows.map((r) => (
-          <li key={r.id}>
-            <button type="button" className="pck-row" onClick={() => onGoTo(r.id, r.missing[0])}>
-              <span className="pck-n">{r.page}</span>
-              <span className="pck-name">{r.name}</span>
-              <span className="pck-what">
-                {r.over && <span className="pck-over">글이 넘쳤어요</span>}
-                {r.missing.length > 0 && <span className="pck-blank">빈칸 {r.missing.length}곳</span>}
-              </span>
-            </button>
-          </li>
-        ))}
+      <ul className="pck-grid">
+        {check.rows.map((r) => {
+          const s = byId.get(r.id)
+          return (
+            <li key={r.id}>
+              <button
+                type="button"
+                className="pck-card"
+                aria-label={`슬라이드 ${r.page}, ${r.name}${r.missing.length ? `, 빈칸 ${r.missing.length}곳` : ''}${r.over ? ', 글이 넘침' : ''}`}
+                onClick={() => onGoTo(r.id, r.missing[0])}
+              >
+                <ScaledSlide width={PCK_THUMB} decorative>
+                  {s && <SlideCanvas deck={deck} slide={s} mode="final" page={r.page} total={info.page.size} />}
+                </ScaledSlide>
+                <span className="pck-name" aria-hidden="true">
+                  <span className="pck-n">{r.page}</span>
+                  {r.name}
+                </span>
+                <span className="pck-what" aria-hidden="true">
+                  {r.missing.length > 0 && `빈칸 ${r.missing.length}곳`}
+                  {r.missing.length > 0 && r.over && ' · '}
+                  {r.over && <span className="pck-over">글이 넘쳤어요</span>}
+                </span>
+              </button>
+            </li>
+          )
+        })}
       </ul>
     </Modal>
   )
 }
 
 /** 발표를 시작하기 전에 묻는 창: 남은 빈칸, 발표자 화면의 허락 */
-export function PresentDialogs({ launch, onGoTo }: { launch: PresentLaunch; onGoTo: (slideId: string, m?: Missing) => void }) {
+export function PresentDialogs({ deck, launch, onGoTo }: { deck: Deck; launch: PresentLaunch; onGoTo: (slideId: string, m?: Missing) => void }) {
   const { confirm, askScreens } = launch
   const check = confirm?.check
   return (
     <>
       {confirm && check && (
         <CheckDialog
+          deck={deck}
           check={check}
           what="발표 화면"
           proceed="그대로 발표하기"
