@@ -159,10 +159,11 @@ export function Cycle() {
     const typed = (slide.items[i]?.[k] ?? '').trim()
     return typed || mode === 'final' ? typed : hintFor(slide.layout, slide.hints, k, k, i)
   }
-  // 단계가 짝수면 12시가 아니라 반 칸 돈 곳(넷이면 1시 반)에서 시작한다: 12시와 6시에 이름표가 서면 위아래 이름표의 높이가 고리 지름에
+  // 단계가 짝수면 12시가 아니라 반 칸 앞(넷이면 10시 반)에서 시작한다: 12시와 6시에 이름표가 서면 위아래 이름표의 높이가 고리 지름에
   // 더해져, 판을 혼자 써도 고리가 높이에 묶여 본문 너비의 절반만 쓰고 작았다(사용자). 비스듬히 서면 이름표가 고리 옆으로 비켜서
-  // 같은 높이에 고리가 1.4배쯤 커진다. 홀수는 맨 위 하나가 아래 둘과 짝을 이뤄 그대로 12시에서
-  const { spots, arcs } = cycleRing(shown.length, shown.length % 2 === 0 ? 180 / shown.length : 0)
+  // 같은 높이에 고리가 1.4배쯤 커진다. 첫 단계는 왼쪽 위: 반 칸 뒤(1시 반)에서 시작하면 01이 오른쪽 위, 04가 왼쪽 위라 04부터
+  // 읽혔다(검수). 홀수는 맨 위 하나가 아래 둘과 짝을 이뤄 그대로 12시에서
+  const { spots, arcs } = cycleRing(shown.length, shown.length % 2 === 0 ? -180 / shown.length : 0)
   const labels = shown.map(({ i }) => ({ title: seen('title', i), meta: opened || slide.items[i]?.meta.trim() ? seen('meta', i) : '' }))
   const fit = cycleFit(spots, cycleLabelBoxes(labels))
   const center = mode !== 'final' || !!readField(slide, meta, 'center').trim()
