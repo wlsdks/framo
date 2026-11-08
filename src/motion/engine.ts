@@ -1803,18 +1803,18 @@ export function motionEngine(): MotionEngine {
           const list = one('.bk-dc-list')
           const rows = $('.bk-dc-row')
           if (root && question && list && rows.length) {
-            const q = spot(question, root)
             const l = spot(list, root)
             const accent = getComputedStyle(root).getPropertyValue('--accent').trim()
-            const qy = (q.t + q.b) / 2
-            const x0 = q.r + 10
-            const trunk = Math.max(x0 + 12, l.l - 14)
+            // 선은 CSS가 그린다(decision.css): 질문에서 오는 가로선은 목록 높이의 가운데, 줄기는 목록 왼쪽 끝, 갈래는 줄 위에서 0.75em.
+            // 조각은 그 선을 그대로 탄다
+            const gap = parseFloat(getComputedStyle(root).getPropertyValue('--bk-col-gap')) || 48
+            const ly = (l.t + l.b) / 2
             const period = d(2400)
             rows.forEach((row, k) => {
               const cond = row.querySelector('.bk-dc-condition') as HTMLElement | null
-              const c = spot(cond ?? row, root)
-              const y = (c.t + c.b) / 2
-              const path: [number, number][] = [[x0, qy], [trunk, qy], [trunk, y], [c.l - 10, y]]
+              const r = spot(row, root)
+              const y = r.t + 0.75 * (parseFloat(getComputedStyle(row).fontSize) || 30)
+              const path: [number, number][] = [[l.l - gap, ly], [l.l, ly], [l.l, y], [l.l + 24, y]]
               const ink = cond ? getComputedStyle(cond).color : ''
               stream(root, path, last + 700, period, (k * period) / rows.length, cond ? { el: cond, off: { color: ink }, on: { color: accent } } : undefined)
             })
