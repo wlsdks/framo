@@ -26,6 +26,7 @@ npm run typecheck && npm test
 | 레이아웃 | 모든 모양(`&variants=1`)을 두 테마와 명조로 | `npm run look -- frame --only <레이아웃 id>` |
 | 모션(`src/motion/`) | 바꾼 장의 필름 띠: `npm run look -- film "<갤러리 주소>" --slide N --level lively`, 차분하게도. 내보낸 HTML에서도 한 번 | `npx vitest run src/motion` |
 | 화면(`src/screens/`, `src/styles/`) | 1280×600, 1366×650, 1536×730(`--scrollbars`), 1920×1080. 처음 쓰는 사람의 흐름을 끝까지 | 가로 스크롤 없음 |
+| 내보내기(PDF, `print.css`, 내보낸 HTML의 인쇄) | 쪽마다 그림(`--pages`)을 열어 모든 장이 끝난 모습인지(세는 숫자는 마지막 값, 누르면 나오는 것까지), 두 테마로 | `npm run look -- pdf`(예시 발표), `npm run look -- pdf --deck <작업 파일>`: 쪽 수 = 장 수, 16:9 한 가지, 글꼴이 들었는지 |
 | 저장, 버전 | 만들다 탭을 닫고 다시 열기, 버전 되돌리기를 직접 | `npx vitest run src/store` |
 | AI 공유, 제안, MCP | AI가 보는 모양에 사람이 쓴 글이 없는지 | `npx vitest run src/ai mcp` (빌드 후 MCP 서버를 실제로 띄운다) |
 | 배포, 의존성 | — | `npm run build`, `npm run licenses`, 배포본은 `/framo-release` |
