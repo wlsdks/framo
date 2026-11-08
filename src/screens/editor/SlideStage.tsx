@@ -16,6 +16,7 @@ import { FitSlide, pageProps, SlideCanvas } from '../../slides/SlideCanvas'
 import { sharedScales } from '../../slides/sharedScale'
 import { useDeck } from '../../store/deckStore'
 import { useEscape } from '../ui'
+import { BackdropFrame } from './BackdropFrame'
 import type { BlockEditing } from './BlockEditor'
 import { PREVIEW_MOTION } from './DeckMenus'
 import { layoutPreview } from './Inspector'
@@ -185,6 +186,8 @@ export function SlideStage({
                 {...pageProps(info, slide.id)}
               />
             </BlockEditContext.Provider>
+            {/* 배경 자리를 슬라이드 위에서 끌어 고칠 때의 틀 (이 장 설정의 '슬라이드에서 끌어 옮기기') */}
+            {!peek && !preview && !peekSlide && <BackdropFrame slide={slide} />}
           </div>
         </FitSlide>
         {blocks.ghost}

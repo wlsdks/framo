@@ -17,6 +17,7 @@ import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { pageInfo } from '../deck/fields'
 import type { Deck, Slide } from '../deck/types'
+import { hideForPrint } from '../slides/Backdrop'
 import { fitBlocks } from '../slides/fitBlocks'
 import { pageProps, SLIDE_H, SLIDE_W, SlideCanvas } from '../slides/SlideCanvas'
 import slidesCss from '../slides/slides.css?inline'
@@ -190,6 +191,7 @@ export function createSlideRasterizer(deck: Deck, { scale = 1 }: { scale?: numbe
       // 뒤로 간 탭에서는 ResizeObserver가 오지 않는다. 그래서 한 박자 쉰 뒤 여기서 직접 맞춘다(몇 번 맞춰도 결과는 같다)
       await yieldTask()
       fitBlocks(el)
+      hideForPrint(el)
       const css = `${await embedFonts(text, families)}\n${SLIDE_CSS}`
       return toPng(svgOf(el, css), getComputedStyle(el).backgroundColor || '#fff', scale)
     },

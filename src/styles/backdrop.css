@@ -1,0 +1,260 @@
+/* ---------- 배경 모션: 이 장 설정의 고르기(BackdropPicker)와 무대 위 자리 틀(BackdropFrame) ---------- */
+
+.bdp-h {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 지금 배경: 이름과 어울리는 슬라이드 한 줄, 오른쪽에 바꾸기. 테 상자 없이(레이아웃 줄과 같은 말투) */
+.bdp-cur {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'name go' 'fits go';
+  align-items: center;
+  column-gap: 12px;
+  width: calc(100% + 16px);
+  margin: -6px -8px 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r);
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bdp-cur:hover {
+  background: var(--hover);
+}
+
+.bdp-cur-n {
+  grid-area: name;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.bdp-cur-f {
+  grid-area: fits;
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bdp-cur .ins-cur-go {
+  grid-area: go;
+}
+
+/* 펼치는 단추: 닫혀 있으면 아래, 펼쳐 있으면(접기) 위를 본다 */
+.bdp-cur .ins-cur-go .icon {
+  transform: rotate(90deg);
+}
+
+.bdp-cur[aria-expanded='true'] .ins-cur-go .icon {
+  transform: rotate(-90deg);
+}
+
+.bdp-move-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bdp-note {
+  margin: 8px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.bdp-grid {
+  margin-top: 12px;
+}
+
+/* 카드의 작은 그림: 장을 15분의 1로 줄여 1px 선이 0.07px이 되어 사라졌다(검수: '없음'과 구분되지 않는다). 선만 화면 0.6px로
+   그린다(--mo-line: 화면 0.6px이 장의 몇 px인지, BackdropPicker. 1px로는 실제보다 촘촘하고 진해 보였다. 움직이는 캔버스도 같은 값을 읽는다, motion/draw.ts). 발표 화면에서도
+   선은 화면의 1px 남짓이라 이쪽이 실제로 보이는 모습에 가깝다. 점은 그대로 줄인다(망점이 뭉치지 않게). 줄인 배율이 CSS transform이라
+   vector-effect로는 되지 않는다 */
+.bdp-grid .s-bd path[stroke-linejoin] {
+  stroke-width: var(--mo-line);
+}
+
+/* 점(이음이 없는 길이 0의 선)은 화면 1.1px 넘게(--mo-dot): 입자의 물결이 카드에서 사라지지 않게 */
+.bdp-grid .s-bd path:not([stroke-linejoin]) {
+  stroke-width: var(--mo-dot);
+}
+
+/* 카드 아래의 어울리는 슬라이드: 이름보다 한 단계 옅고 작게, 두 줄까지 */
+.bdp-fits {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  margin-top: -3px;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: center;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* 자리: 맨 위 '전체', 그 아래 3×3(장의 자리 그대로) */
+.seg.bdp-places {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bdp-places .seg-btn:first-child {
+  grid-column: 1 / -1;
+}
+
+.bdp-places .seg-btn {
+  min-width: 0;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.bdp-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.bdp-move {
+  align-self: flex-start;
+}
+
+.bdp-move.is-on {
+  color: var(--sel);
+}
+
+.bdp-help {
+  margin: -2px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 자리 이름 옆: 자주 쓰는 자리가 아니면 '직접 옮긴 자리' */
+.bdp-own {
+  margin-left: 6px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+/* ---------- 무대 위 자리 틀: 장(1920×1080)의 좌표로 그리고, 선과 손잡이는 장을 줄인 만큼 키운다(--vs) ---------- */
+
+.bdf {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  --k: calc(1px / var(--vs, 1));
+}
+
+/* 칸에 맞춰 붙는다는 것을 보이는 옅은 12×12 눈금: 끄는 동안만 */
+.bdf-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgb(43 79 192 / 0.14) var(--k), transparent var(--k)),
+    linear-gradient(to bottom, rgb(43 79 192 / 0.14) var(--k), transparent var(--k));
+  background-size: 160px 90px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t) var(--ease-out);
+}
+
+.bdf.is-dragging .bdf-grid {
+  opacity: 1;
+}
+
+.bdf-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: calc(2 * var(--k)) solid var(--sel);
+  cursor: grab;
+  touch-action: none;
+}
+
+.bdf-box:active {
+  cursor: grabbing;
+}
+
+.bdf-label {
+  position: absolute;
+  top: calc(8 * var(--k));
+  left: calc(8 * var(--k));
+  padding: calc(3 * var(--k)) calc(8 * var(--k));
+  border-radius: calc(4 * var(--k));
+  background: var(--sel);
+  color: #fff;
+  font: 600 calc(13 * var(--k)) / 1.4 'Pretendard Variable', Pretendard, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.bdf-grip {
+  position: absolute;
+  width: calc(14 * var(--k));
+  height: calc(14 * var(--k));
+  margin: calc(-7 * var(--k));
+  box-sizing: border-box;
+  border: calc(2 * var(--k)) solid var(--sel);
+  border-radius: 50%;
+  background: #fff;
+  touch-action: none;
+}
+
+.bdf-grip.is-nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.bdf-grip.is-n {
+  top: 0;
+  left: 50%;
+  cursor: ns-resize;
+}
+
+.bdf-grip.is-ne {
+  top: 0;
+  left: 100%;
+  cursor: nesw-resize;
+}
+
+.bdf-grip.is-e {
+  top: 50%;
+  left: 100%;
+  cursor: ew-resize;
+}
+
+.bdf-grip.is-se {
+  top: 100%;
+  left: 100%;
+  cursor: nwse-resize;
+}
+
+.bdf-grip.is-s {
+  top: 100%;
+  left: 50%;
+  cursor: ns-resize;
+}
+
+.bdf-grip.is-sw {
+  top: 100%;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+.bdf-grip.is-w {
+  top: 50%;
+  left: 0;
+  cursor: ew-resize;
+}

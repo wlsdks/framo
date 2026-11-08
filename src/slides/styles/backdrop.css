@@ -1,0 +1,44 @@
+/* ---------- 배경 (slides/Backdrop.tsx, motion/backdrop.ts) ----------
+   장의 글과 컴포넌트 뒤에 깐다: 장(.slide)이 쌓임 맥락이라 z-index -1은 장의 바탕 바로 위, 모든 글과 면 아래다.
+   색은 장의 글자색(currentColor) 하나이고 짙기는 그림이 정한다(글이 그 위에서 읽혀야 해서 옅게). 짙은 면 장에서는 면 위의 글자색을
+   물려받는다. 누르는 것을 가로막지 않는다 */
+
+.slide:has(> .s-bd) {
+  isolation: isolate;
+}
+
+.s-bd {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  /* 움직이는 캔버스는 장 밖으로 넘치지 않는다 (마스크가 없는 쪽도) */
+  overflow: clip;
+}
+
+.s-bd > svg,
+.s-bd > .bd-cv {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 움직이는 캔버스의 마스크: 구멍과 가장자리의 옅어짐(--bd-mask, motion/backdrop.ts의 maskUrl). 끝 모습의 SVG는 같은 마스크를 안에
+   갖는다(장을 SVG 그림으로 옮겨 그리는 곳에서는 CSS 마스크가 먹지 않는다) */
+.s-bd > .bd-cv {
+  -webkit-mask-image: var(--bd-mask, none);
+  mask-image: var(--bd-mask, none);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* PDF(인쇄)에는 배경을 넣지 않는다: 움직이는 동안에만 뜻이 서는 몸짓이라 멈춘 출력에는 꾸밈만 남는다(결정).
+   PPT 그림은 Backdrop.tsx의 hideForPrint가 뺀다 */
+@media print {
+  .s-bd {
+    display: none;
+  }
+}

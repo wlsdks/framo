@@ -3724,7 +3724,8 @@ export function motionEngine(): MotionEngine {
 
       // 장 바로 아래의 것들. 장 가장자리에 닿는 면(표지의 옆 면, 색 면)은 무대라서 카메라가 움직이지 않는다
       // (작게 당기면 가장자리가 비어 보인다). 아래 띠도 제자리 (장을 바꿀 때와 같은 까닭)
-      const top = Array.prototype.slice.call(host.children) as HTMLElement[]
+      // 배경(.s-bd)은 카메라 밖: 글이 다가오는 동안 뒤에 머물러 깊이가 생긴다
+      const top = (Array.prototype.slice.call(host.children) as HTMLElement[]).filter((el) => !el.classList.contains('s-bd'))
       const touches = (el: HTMLElement) => el.offsetLeft <= 1 || el.offsetTop <= 1 || el.offsetLeft + el.offsetWidth >= W - 1 || el.offsetTop + el.offsetHeight >= H - 1
       const foot = top.filter((el) => el.classList.contains('s-foot'))
       const stage = top.filter((el) => !foot.includes(el) && touches(el))
@@ -4185,8 +4186,13 @@ export function motionEngine(): MotionEngine {
       Promise.all([...mine.anims.map((a) => a.finished.catch(() => {})), ...waits]).then(restore)
     }
 
+    // 배경이 늦출 때(장 바꾸기의 기다림). 아래 묶음 안의 lead(이끄는 차트)와 이름이 겹쳐 밖에서 받아 둔다
+    const backdropAt = lead
     batch(() => {
       if (cellOnly) return block(cellOnly as HTMLElement, 0)
+      // 장의 배경(motion/backdrop.ts)은 엔진 밖에서 움직인다: 장이 나오는 때와 단계를 알리고, 장을 떠날 때 거둘 것(stops)과
+      // 들어오기가 끝나는 약속(waits: 이 묶음의 끝 mo-end가 배경이 가라앉을 때까지 기다린다)을 받는다
+      slide.querySelector(':scope > .s-bd')?.dispatchEvent(new CustomEvent('mo-backdrop', { bubbles: true, detail: { level: quiet ? 'none' : levelName, at: backdropAt, stops, waits } }))
       // 장면: 움직이기 전에 자리를 재 두고(prepare), 레이아웃의 연출을 건 뒤 그 움직임을 다시 짜고 층을 얹는다
       const after = sceneName && !still ? scene(sceneName) : null
       choreo(layout, slideVariant)

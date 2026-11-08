@@ -9,6 +9,7 @@ import { cx } from '../../lib/cx'
 import { BOLD_LAYOUTS } from '../../slides/layouts'
 import { sideName } from '../../slides/panes'
 import { ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
+import { BackdropSection } from './BackdropPicker'
 import { useAfterPaint, useLook, type Look } from './look'
 import { BackIcon, CheckIcon, ChevronIcon, EyeOffIcon, Info, Segmented, Toggle, useEscape } from '../ui'
 import { useDeck } from '../../store/deckStore'
@@ -117,6 +118,7 @@ export function Inspector({
       <ArrangeSection deck={deck} slide={slide} areaHeight={areaHeight} />
       <ShapeSection slide={slide} shown={shown} look={look} />
       <LookSection deck={deck} slide={slide} />
+      <BackdropSection deck={deck} slide={slide} />
       <FrameSection slide={slide} />
     </div>
   )

@@ -39,12 +39,13 @@ import {
   BLOCK_REVEALS,
 } from '../deck/blocks'
 import { aiHiddenIds, slideAiHidden } from '../deck/aiHidden'
+import { BACKDROP_MIN, BACKDROP_PLACES, BACKDROP_STRENGTHS, BACKDROPS, backdropOf, isBackdropArea, isBackdropKind, isBackdropStrength } from '../deck/backdrops'
 import { AUDIENCES, BLUEPRINTS, DECK_TYPES, DURATIONS, METHODS } from '../deck/blueprints'
 import { readField, visibleItems } from '../deck/fields'
 import { LAYOUTS, LAYOUT_ORDER, placeOf, variantIds, variantOf } from '../deck/layouts'
 import { isScene, SCENES, sceneFits, sceneOf } from '../deck/scenes'
 import { ACCENT_COMBOS, FONTS, FOOTERS, footerOf, MOTIONS, PLACES, TEXT_SIZES, THEMES, THEME_ORDER, TONES, TRANSITIONS } from '../deck/themes'
-import type { Audience, Block, BlockEffect, BlockFrom, BlockLink, BlockLook, BlockSpeed, BlockType, BlockWhen, Deck, DeckType, FontId, FooterMode, LayoutId, Method, Motion, Place, SceneId, Slide, TextSize, ThemeId, Tone, Transition, BlockReveal } from '../deck/types'
+import type { Audience, BackdropId, BackdropStrength, Block, BlockEffect, BlockFrom, BlockLink, BlockLook, BlockSpeed, BlockType, BlockWhen, Deck, DeckType, FontId, FooterMode, LayoutId, Method, Motion, Place, SceneId, Slide, TextSize, ThemeId, Tone, Transition, BlockReveal } from '../deck/types'
 import { hasKey, HEX, isInt, isObj, isOneOf, onlyKeys } from './guards'
 import { HIGHLIGHT_MAX, HIGHLIGHT_MIN, OPAQUE_ID, REQUEST_ID, SHAPE_FORMAT, SHAPE_VERSION } from './protocol'
 
@@ -95,6 +96,20 @@ export interface ShapeSlide {
   blocks?: (ShapeBlock | ShapePrivateBlock)[]
   /** 편집기가 그린 이 장에서 글이 넘쳤으면 true (편집기의 '글이 넘쳤어요'와 같은 잣대). 넘치지 않았거나 재지 못했으면 빠진다 */
   over?: true
+  /**
+   * 장의 배경(카탈로그 backdrops)을 골랐을 때만: id, 장 전체를 12×12칸으로 나눈 자리, 짙기(보통이면 빠진다).
+   * 이 앱이 아는 배경일 때만 나온다(더 새 버전의 배경은 그리지 않아서 AI가 헷갈린다)
+   */
+  backdrop?: ShapeBackdrop
+}
+
+interface ShapeBackdrop {
+  id: BackdropId
+  x: number
+  y: number
+  w: number
+  h: number
+  strength?: BackdropStrength
 }
 
 /**
@@ -296,6 +311,12 @@ export function catalog() {
     // 장면: 장 하나를 처음부터 끝까지 한 번에 짠 움직임. 맞는 장에만 고를 수 있다: layouts의 장, 또는 부품 장(compose)에 blocks의 부품이 하나라도 있을 때
     // (비교 드러내기는 나란히 선 두 부품뿐인 부품 장에도 맞는다)
     scenes: SCENES.map((m) => ({ id: m.id, name: m.name, description: m.description, layouts: [...m.layouts], blocks: [...m.blocks] })),
+    // 배경: 장의 글과 부품 뒤에서 잔잔히 움직이는 그래픽. 분위기마다 하나이고 fits가 어울리는 장의 말이다(set_backdrop).
+    // 자리는 장 전체를 가로 12칸, 세로 12칸으로 나눈 칸 수(backdropRules)이고 자주 쓰는 자리가 backdropPlaces다
+    backdrops: BACKDROPS.map((b) => ({ id: b.id, name: b.name, description: b.description, fits: b.fits })),
+    backdropStrengths: BACKDROP_STRENGTHS.map((m) => ({ id: m.id, name: m.name, description: m.description })),
+    backdropPlaces: BACKDROP_PLACES.map((p) => ({ id: p.id, name: p.name, ...p.at })),
+    backdropRules: { cols: BOARD_COLS, rows: BOARD_ROWS, minW: BACKDROP_MIN.w, minH: BACKDROP_MIN.h },
   }
 }
 
@@ -434,6 +455,8 @@ function shapeSlide(deck: Deck, slide: Slide, over: ShapeOver): ShapeSlide {
     options,
     variant: variantOf(slide),
   }
+  const bd = backdropOf(slide)
+  if (bd) out.backdrop = { id: bd.kind, x: bd.at.x, y: bd.at.y, w: bd.at.w, h: bd.at.h, ...(bd.strength !== 'base' ? { strength: bd.strength } : {}) }
   if (blocks) {
     // 가져온 파일일 수 있어서 꼴부터 맞춘다 (모르는 부품, 넘치는 개수는 빼고, 판을 덮지 않는 자리는 다시 나눈다)
     out.blocks = blocks.map((b) => (shut.has(b.id) ? { private: true as const, ...b.at! } : shapeBlock(b, over)))
@@ -508,13 +531,21 @@ function checkBlock(v: unknown): boolean {
   return v.items.every((it) => checkStates(it, spec.items?.fields ?? []))
 }
 
+/** 배경: 아는 id, 장 안의 자리(가장 작은 크기 넘게), 짙기는 보통이 아닐 때만 */
+function checkBackdrop(v: unknown): boolean {
+  if (!isObj(v) || !onlyKeys(v, ['id', 'x', 'y', 'w', 'h', 'strength'])) return false
+  if (!isBackdropKind(v.id) || !isBackdropArea({ x: v.x, y: v.y, w: v.w, h: v.h })) return false
+  return v.strength === undefined || (isBackdropStrength(v.strength) && v.strength !== 'base')
+}
+
 function checkSlide(v: unknown): boolean {
   if (!isObj(v)) return false
   // AI에게 숨긴 장: 해시 id와 발표에서 뺐는지만
   if (v.private !== undefined)
     return v.private === true && onlyKeys(v, ['id', 'private', 'hidden']) && typeof v.id === 'string' && OPAQUE_ID.test(v.id) && v.id[0] === 's' && typeof v.hidden === 'boolean'
-  if (!onlyKeys(v, ['id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'variant', 'blocks', 'over'])) return false
+  if (!onlyKeys(v, ['id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'variant', 'blocks', 'over', 'backdrop'])) return false
   if (v.over !== undefined && v.over !== true) return false
+  if (v.backdrop !== undefined && !checkBackdrop(v.backdrop)) return false
   // 보이는 부품(종류가 있는 것). 장면이 맞는지는 이것으로 본다 (toShape도 숨긴 부품을 빼고 본다)
   let shown: Block[] = []
   if (v.blocks !== undefined) {

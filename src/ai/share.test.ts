@@ -16,7 +16,7 @@ type OpenShape = Omit<ShapeDeck, 'slides'> & { slides: (Omit<ShapeSlide, 'blocks
 const toShape = (...a: Parameters<typeof shapeOf>) => shapeOf(...a) as unknown as OpenShape
 
 /** 모양 파일의 키와 정해진 값 (MCP 서버의 PROTOCOL_WORDS 가운데 모양에 나오는 것) */
-const SHAPE_WORDS = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene', 'over']
+const SHAPE_WORDS = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene', 'over', 'backdrop', 'strength']
 
 describe('모양만 고르기', () => {
   it('적은 글, 제목, 이름, 노트, 이미지, 원래 id가 하나도 들어가지 않는다', () => {

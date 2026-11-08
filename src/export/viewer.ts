@@ -1,8 +1,10 @@
 // 내보낸 HTML 파일 안에서 쓰는 보기 화면. 열면 모든 장이 세로로 보이고, "발표 시작"으로 슬라이드쇼가 된다.
 // 발표할 때의 움직임은 앱의 발표 화면과 같은 엔진(motion/engine.ts)을 쓴다. 엔진은 소스를 그대로 넣는다.
-// 부품 장에서 넘치는 부품 맞추기(slides/fitBlocks.ts의 blockFitter)도 같다. 처음에는 모든 장이 보이므로 열 때 한 번, 폰트가 오면 한 번 더.
+// 부품 장에서 넘치는 부품 맞추기(slides/fitBlocks.ts의 blockFitter)와 장의 배경(motion/backdrop.ts)도 같다. 처음에는 모든 장이 보이므로 열 때 한 번, 폰트가 오면 한 번 더.
 
 import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
+import { backdropMotion } from '../motion/backdrop'
+import { drawKit } from '../motion/draw'
 import { motionEngine } from '../motion/engine'
 import { blockFitter } from '../slides/fitBlocks'
 
@@ -56,6 +58,10 @@ body.is-present .v-blank.is-white{background:#fff}
 
 export const VIEWER_JS = `(function(){
 var engine=(${motionEngine.toString()})();
+// 장의 배경: 엔진이 장을 움직일 때 알리면(mo-backdrop) 같은 그림을 캔버스로 움직이고, 장을 떠나면 끝 모습(SVG)으로 돌아온다
+var backdrops=(${backdropMotion.toString()})((${drawKit.toString()})());backdrops.listen(document);
+// 배경은 글 둘레를 비킨다: 글이 놓인 자리는 그려 봐야 알아서 열 때와 글꼴이 온 뒤에 잰다(앱은 그릴 때마다)
+function clearBackdrops(){[].forEach.call(document.querySelectorAll('.slide'),function(s){backdrops.clear(s)})}
 var fitBlocks=(${blockFitter.toString()})().fit;
 var presentKey=(${presentKey.toString()}),presentAction=(${presentAction.toString()}),slideNumber=(${slideNumber.toString()}),num=slideNumber();
 var slides=[].slice.call(document.querySelectorAll('.v-slide'));
@@ -132,6 +138,6 @@ document.addEventListener('keydown',function(e){
   if(a.kind==='blank')setBlank(a.blank);else if(a.kind==='go'&&a.index===i+1&&!a.jump)forwardOne();else if(a.kind==='go')show(a.index);else stop();
 });
 addEventListener('resize',function(){fit();if(presenting()&&!roomy()){clearTimeout(timer);body.classList.remove('is-awake')}});
-fit();fitBlocks(document);
-if(document.fonts)document.fonts.ready.then(function(){fit();fitBlocks(document)});
+fit();fitBlocks(document);clearBackdrops();
+if(document.fonts)document.fonts.ready.then(function(){fit();fitBlocks(document);clearBackdrops()});
 })();`

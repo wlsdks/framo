@@ -10,6 +10,7 @@
 @import './styles/editor.css';
 @import './styles/deck-settings.css';
 @import './styles/motion-panel.css';
+@import './styles/backdrop.css';
 @import './styles/motion-studio.css';
 @import './styles/present.css';
 @import './styles/present-button.css';
