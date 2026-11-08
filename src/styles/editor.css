@@ -114,7 +114,7 @@
   font-weight: 600;
 }
 
-/* 저장 상태와 그 옆의 할 일 하나 (보관 폴더 정하기). 칠하지 않은 글자 단추: 늘 보이지만 편집보다 먼저 눈에 띄지 않게 */
+/* 저장 상태와 그 옆의 할 일 하나 (보관 폴더 고르기). 칠하지 않은 글자 단추: 늘 보이지만 편집보다 먼저 눈에 띄지 않게 */
 .save-wrap {
   position: relative;
   display: flex;
@@ -219,6 +219,9 @@
   color: var(--ink-3);
   font-size: 12px;
   line-height: 1.5;
+  /* 두 줄이 되면 낱말 사이에서만 고르게 나눈다: 한 낱말만 남거나 ‘새 폴더’와 '를'이 갈라지지 않게 */
+  text-wrap: balance;
+  word-break: keep-all;
 }
 
 .save-pop-foot {

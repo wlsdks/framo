@@ -49,7 +49,7 @@ function isTypingIn(el: Element | null): boolean {
 
 /**
  * 편집기 위쪽의 저장 상태. 누르면 어디에 저장되는지와 할 일을 알려 준다.
- * 보관 폴더를 정하지 않았으면 옆에 '보관 폴더 정하기'를 두고, 이 발표를 처음 고친 뒤 손이 멈춘 때 까닭과 함께 묻는다(답하면 다시 묻지 않는다).
+ * 보관 폴더를 정하지 않았으면 옆에 '보관 폴더 고르기'를 두고, 이 발표를 처음 고친 뒤 손이 멈춘 때 까닭과 함께 묻는다(답하면 다시 묻지 않는다).
  * 예전에는 노란 꼬리표(이 브라우저에만 저장됨)가 편집하는 내내 떠 있어 겁만 주고 무엇을 하면 되는지 알기 어려웠다
  */
 export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersions: () => void }) {
@@ -82,7 +82,7 @@ export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersion
     markFolderAsked()
     setAsking(false)
   }
-  // 바깥을 누르면 접기만 한다 (머리줄의 '보관 폴더 정하기'는 남는다). 다른 일을 하다 무심코 누른 것일 수 있어 답으로 치지 않는다.
+  // 바깥을 누르면 접기만 한다 (머리줄의 '보관 폴더 고르기'는 남는다). 다른 일을 하다 무심코 누른 것일 수 있어 답으로 치지 않는다.
   // 누를 때까지 떠 있으면 장 목록의 첫 장을 가렸다
   const askRef = useRef<HTMLDivElement>(null)
   // 글 칸에서 누른 Esc는 쓰기를 마치는 키라서 답으로 치지 않는다
@@ -141,7 +141,7 @@ export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersion
       </p>
       {fix === 'pick' && (
         <button type="button" className="save-fix" onClick={() => void pick()}>
-          보관 폴더 정하기
+          보관 폴더 고르기
         </button>
       )}
       {fix === 'allow' && folder?.kind === 'locked' && (
@@ -151,7 +151,7 @@ export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersion
       )}
       {asking && (
         // 쓰는 중에 뜨므로 초점을 가져가지 않는다. 화면 읽기 프로그램에는 한 번 읽어 준다
-        <div ref={askRef} className="save-ask" role="region" aria-label="보관 폴더 정하기">
+        <div ref={askRef} className="save-ask" role="region" aria-label="보관 폴더 고르기">
           <p className="save-pop-h" aria-live="polite">
             <FolderIcon />
             PC 폴더에도 저장해 둘까요?
