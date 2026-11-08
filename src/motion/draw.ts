@@ -42,8 +42,8 @@ interface PlayerOptions {
   strength: number
   /** 캔버스에 붙일 class */
   className: string
-  /** 강조색을 읽을 요소의 class (그림 안에서 강조색을 쓰는 class와 같게) */
-  accentClass: string
+  /** 강조색을 읽을 요소의 class (그림 안에서 강조색을 쓰는 class와 같게). 없으면 글자색 하나로 그린다 */
+  accentClass?: string
   /** 들어오기가 끝나거나 멈출 때 */
   onSettled?: () => void
 }
@@ -74,7 +74,7 @@ export interface DrawKit {
   rng(seed: number): () => number
   /** 타원(또는 원, 그 일부)을 선으로 */
   ellipse(P: Paint, cx: number, cy: number, rx: number, ry: number, from: number, to: number, width: number, tone: number, a: number): void
-  /** 끝 모습의 SVG 안쪽(path들). m은 짙기 배율, accentClass는 강조색 path의 class(기본 bd-a: 배경) */
+  /** 끝 모습의 SVG 안쪽(path들). m은 짙기 배율, accentClass는 강조색 path의 class(기본 mo-a) */
   svgPaint(m: number, accentClass?: string): Paint & { markup(): string }
   /** 캔버스에 그리기. colors는 [글자색, 강조색] */
   canvasPaint(ctx: CanvasRenderingContext2D, colors: string[], m: number): Paint & { flush(): void }
@@ -167,7 +167,7 @@ export function drawKit(): DrawKit {
   const Q = 100
   const num = (v: number) => String(Math.round(v * 10) / 10)
 
-  function svgPaint(m: number, accentClass = 'bd-a'): Paint & { markup(): string } {
+  function svgPaint(m: number, accentClass = 'mo-a'): Paint & { markup(): string } {
     const dots = new Map<number, string[]>()
     const strokes = new Map<number, string[]>()
     const pts: number[] = []
@@ -176,9 +176,9 @@ export function drawKit(): DrawKit {
       dot(x, y, r, tone, a) {
         const q = Math.round(Math.min(0.95, a * m) * Q)
         if (q <= 0 || r <= 0.05) return
-        // 점은 길이 없는 선의 둥근 끝으로, 자리는 정수로, 크기는 0.25px 단계로: 원 경로보다 다섯 배쯤 짧아 장 그림(목록, 내보낸 HTML)이
-        // 가볍다(망점 수천 개도 50KB 안). 0.5px 안의 차이는 장을 줄여 그리는 화면에서 보이지 않는다
-        bucket(dots, tone * 1e6 + q * 1000 + Math.min(999, Math.round(r * 4) * 5)).push(`M${Math.round(x)} ${Math.round(y)}h0`)
+        // 점은 길이 없는 선의 둥근 끝으로, 크기는 0.25px 단계로: 원 경로보다 다섯 배쯤 짧아 장 그림(목록, 내보낸 HTML)이 가볍다
+        // (망점 수천 개도 50KB 안). 캔버스도 같은 단계로 그려서, 움직임이 끝나 캔버스를 걷고 이 그림으로 돌아올 때 점이 튀지 않는다
+        bucket(dots, tone * 1e6 + q * 1000 + Math.min(999, Math.round(r * 4) * 5)).push(`M${num(x)} ${num(y)}h0`)
       },
       to(x, y) {
         pts.push(x, y)
@@ -212,9 +212,12 @@ export function drawKit(): DrawKit {
       dot(x, y, r, tone, a) {
         const q = Math.round(Math.min(0.95, a * m) * Q)
         if (q <= 0 || r <= 0.05) return
+        // 크기는 끝 모습(SVG)과 같은 0.25px 단계
+        const rr = Math.round(r * 4) / 4
+        if (rr <= 0) return
         const p = bucket(fills, tone * 1000 + q)
-        p.moveTo(x + r, y)
-        p.arc(x, y, r, 0, TAU)
+        p.moveTo(x + rr, y)
+        p.arc(x, y, rr, 0, TAU)
       },
       to(x, y) {
         pts.push(x, y)
@@ -277,12 +280,16 @@ export function drawKit(): DrawKit {
       el.appendChild(cv)
       ctx = cv.getContext('2d')
       if (!ctx) return false
-      // 강조색은 장마다 달라서(어두운 면, 강조색 바탕) 그려진 색을 읽는다
-      const probe = document.createElement('i')
-      probe.className = o.accentClass
-      el.appendChild(probe)
-      const colors = [getComputedStyle(el).color, getComputedStyle(probe).color]
-      probe.remove()
+      // 강조색은 장마다 달라서(어두운 면, 강조색 바탕) 그려진 색을 읽는다. 강조색을 쓰지 않는 그림(배경)은 글자색 하나
+      const ink = getComputedStyle(el).color
+      const colors = [ink, ink]
+      if (o.accentClass) {
+        const probe = document.createElement('i')
+        probe.className = o.accentClass
+        el.appendChild(probe)
+        colors[1] = getComputedStyle(probe).color
+        probe.remove()
+      }
       fitCanvas()
       P = canvasPaint(ctx, colors, o.strength)
       return true

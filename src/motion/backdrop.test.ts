@@ -35,13 +35,12 @@ describe('배경의 그림과 움직임', () => {
       }
   })
 
-  it('색은 글자색과 강조색(bd-a) 둘뿐이고 옅다', () => {
+  it('색은 글자색 하나이고 옅다 (강조색은 장의 답에만 쓴다)', () => {
     for (const kind of bd.kinds) {
-      const svg = bd.still(kind, 1920, 1080)
-      expect(svg).not.toMatch(/#[0-9a-f]{3,6}|rgb\(/i)
-      expect(svg.match(/class="([^"]+)"/g)?.every((c) => c === 'class="bd-a"') ?? true).toBe(true)
-      // 글자색은 0.45보다 옅게(점과 가는 선). 강조색은 씨앗, 닫는 점 같은 한 곳이라 짙어도 된다
-      const ink = [...svg.matchAll(/<path (?!class)[^>]*stroke-opacity="([\d.]+)"/g)].map((m) => Number(m[1]))
+      const svg = bd.still(kind, 1920, 1080, 'strong')
+      expect(svg).not.toMatch(/#[0-9a-f]{3,6}|rgb\(|class=/i)
+      // 점과 가는 선이라 또렷하게로도 0.45보다 옅게
+      const ink = [...svg.matchAll(/stroke-opacity="([\d.]+)"/g)].map((m) => Number(m[1]))
       expect(Math.max(...ink), kind).toBeLessThanOrEqual(0.45)
     }
   })
@@ -63,12 +62,12 @@ describe('배경의 그림과 움직임', () => {
     }
   })
 
-  it('들어오기는 3초 남짓에 끝난다(장 전체가 3초 안에 자리 잡는다, docs/MOTION.md 4절)', () => {
+  it('들어오기는 2초 남짓에 끝난다(장의 글보다 늦게 끝나 마지막 박자를 가져가지 않게, docs/MOTION.md 4절과 9절)', () => {
     for (const kind of bd.kinds)
       for (const [w, h] of SIZES) {
         const end = bd.endOf(kind, w, h)
-        expect(end, `${kind} ${w}×${h}`).toBeGreaterThan(1500)
-        expect(end, `${kind} ${w}×${h}`).toBeLessThanOrEqual(3300)
+        expect(end, `${kind} ${w}×${h}`).toBeGreaterThan(900)
+        expect(end, `${kind} ${w}×${h}`).toBeLessThanOrEqual(2200)
       }
   })
 

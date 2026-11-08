@@ -24,13 +24,13 @@ interface BackdropSpec {
  * 차례가 곧 고르는 곳의 차례다
  */
 export const BACKDROPS: readonly BackdropSpec[] = [
-  { id: 'diffuse', name: '확산', description: '한 점에서 시작한 짙음이 바깥으로 번져 나가요.', fits: '표지, 출시와 도입, 커지는 숫자, 퍼지는 이야기', focal: true, showOn: 'cover' },
-  { id: 'gather', name: '모여 시작', description: '여러 곳에서 온 선이 한 원으로 모였다가 고요해져요.', fits: '표지, 창단과 착수, 결론 한 줄, 통합과 합계', focal: true, showOn: 'statement' },
+  { id: 'diffuse', name: '확산', description: '한 점에 모인 짙음이 바깥으로 번져 나가요.', fits: '표지, 출시와 도입, 커지는 숫자, 퍼지는 이야기', focal: true, showOn: 'cover' },
+  { id: 'gather', name: '모여 시작', description: '여러 곳에서 온 가는 선이 한 줄기로 모여 뻗어 나가요.', fits: '표지, 창단과 착수, 결론 한 줄, 통합과 합계', focal: true, showOn: 'statement' },
   { id: 'flow', name: '흐름', description: '가는 선들이 한쪽으로 흐르며 한 곳을 지나가요.', fits: '과정, 일정, 추이, 변화', focal: false, showOn: 'process' },
   { id: 'depth', name: '깊이', description: '등고선의 층이 어긋나 있다가 겹겹이 맞춰져요.', fits: '원인 캐기, 분석, 사례, 이미지', focal: false, showOn: 'case' },
-  { id: 'structure', name: '구조', description: '고른 점의 판 위에 칸 묶음이 하나씩 맞춰져요.', fits: '표와 비교, 매트릭스, 구성, 시스템', focal: false, showOn: 'kpi' },
-  { id: 'linger', name: '여운', description: '선 띠가 펼쳐졌다가 아주 느리게 가라앉아요.', fits: '섹션, 인용, 맺음, 결정 요청', focal: true, showOn: 'section' },
-  { id: 'link', name: '연결', description: '양쪽의 점들이 활 모양의 선으로 하나씩 이어져요.', fits: '연결도, 관계, 사람과 팀, 협업', focal: false, showOn: 'compare' },
+  { id: 'structure', name: '구조', description: '어긋나 있던 점들이 고른 격자로 맞춰져요.', fits: '표와 비교, 매트릭스, 구성, 시스템', focal: false, showOn: 'kpi' },
+  { id: 'linger', name: '여운', description: '가는 결이 천천히 내려앉으며 옅어져요.', fits: '섹션, 인용, 맺음, 결정 요청', focal: true, showOn: 'section' },
+  { id: 'link', name: '연결', description: '양쪽의 점들이 낮은 활 모양 선으로 하나씩 이어져요.', fits: '연결도, 관계, 사람과 팀, 협업', focal: false, showOn: 'compare' },
 ]
 
 export const BACKDROP_IDS: readonly BackdropId[] = BACKDROPS.map((b) => b.id)
