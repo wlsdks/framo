@@ -817,19 +817,26 @@ export function motionEngine(): MotionEngine {
      * 값 이어 움직이기: 이어 움직이기로 짝이 된 것(el) 안의 값을 앞 장의 값(was)에서 지금 값으로 옮긴다. 숫자가 든 글은 앞 값에서 새 값까지
      * 세고(숫자 밖의 글이 같은 것만: '42%'에서 '58%'로. 단위나 꼴이 바뀌면 그대로 둔다), 값 변수와 그림의 좌표는 사이 값으로 옮긴다.
      *
-     * 눈금(축): 차트는 장마다 제 값에 맞춘 눈금으로 그린다(막대는 가장 큰 값을 끝까지, 추이는 값의 범위를 위아래 끝까지). 길이를 그대로
-     * 사이 값으로 옮기면 두 장의 눈금이 섞여, 3.5에서 5.0으로 오르는 막대가 그대로 있고 2.5에서 3.0으로 오르는 막대는 줄어들었다
-     * (감성 검수). 그래서 값 변수마다 그 요소 안의 숫자와 길이를 맞대어 눈금(길이 = α + β·값)을 두 장에서 각각 찾고, 찾으면 단계를 나눈다
-     * (Heer & Robertson 2007의 '눈금을 먼저, 값은 그다음'): ① 앞 장의 눈금에서 두 장을 다 담는 눈금으로(모든 막대가 같은 비율로 줄어든다),
-     * ② 그 한 눈금 위에서 값이 바뀌고(막대와 숫자가 같은 쪽으로 같이), ③ 필요하면 새 장의 눈금으로. 숫자가 없는 것(목표선)도 같은 눈금을
-     * 따라가서, 값이 같은 목표선은 값이 바뀌는 동안 가만히 있다. 눈금을 찾지 못한 값은 예전처럼 사이 값으로 옮긴다.
+     * 눈금(축): 차트는 장마다 제 값에 맞춘 눈금으로 그린다(추이는 값의 범위를 위아래 끝까지). 길이를 그대로 사이 값으로 옮기면 두 장의
+     * 눈금이 섞인다. 그래서 값 변수마다 그 요소 안의 숫자와 길이를 맞대어 눈금(길이 = α + β·값)을 두 장에서 각각 찾고, 찾으면 눈금과
+     * 값을 같은 진행으로 함께 옮긴다(앞 눈금의 범위에서 새 눈금의 범위로, 앞 값에서 새 값으로): 차트가 한 번의 부드러운 모양 바뀜으로
+     * 새 모습이 된다. 숫자가 없는 것(목표선)도 같은 눈금을 따라간다. 눈금을 찾지 못한 값은 사이 값으로 옮긴다.
+     * 막대처럼 0에서 시작하는 차트는 이어 움직이는 두 장을 처음부터 한 잣대로 그리므로(slides/sharedScale.ts) 두 장의 눈금이 같아서
+     * 막대는 바뀐 만큼만 움직이고 그대로인 값은 가만히 있다. 예전에는 '눈금 먼저, 값은 그다음'으로 단계를 나눴는데, 화면에 축이 없어
+     * 모든 막대가 먼저 짧아지는 것으로만 보였고 그대로인 값이 줄어든 채 끝나 '줄었다'로 읽혔다(감성 검수).
      *
-     * 시계는 아무것도 바꾸지 않는 움직임 하나(곡선 없이 흐르는 진행)이고, 단계마다 '들어와 자리 잡기' 곡선(EASE.out: 빨리 떠나 천천히 멈춘다)을
-     * 입힌다. 누르고 0.06초에 떠난다: 0.3초 넘게 가만히 있던 때는 발표하는 사람이 넘어가지 않은 줄 알고 한 번 더 눌렀다(감성 검수).
-     * 짝의 앞 모습은 그 사이(motion.css의 0.14초)에 거의 다 옅어져 두 겹으로 보이지 않는다. 끝나면 글과 값을 원래 문자열 그대로 돌려 둔다
+     * 시계는 아무것도 바꾸지 않는 움직임 하나(곡선 없이 흐르는 진행)이고, '들어와 자리 잡기' 곡선(EASE.out: 빨리 떠나 천천히 멈춘다)을
+     * 엔진이 셈해 입힌다. 누르고 0.06초에 떠난다: 0.3초 넘게 가만히 있던 때는 발표하는 사람이 넘어가지 않은 줄 알고 한 번 더 눌렀다(감성 검수).
+     * 값이 옮겨 가는 짝은 앞 모습과 새 모습을 겹쳐 흐리지 않고 바로 바꿔 낀다(swap의 instant): 새 모습이 처음에 앞 값 그대로라 같은 그림이고,
+     * 넘어가는 일은 값의 움직임이 맡는다. 겹쳐 흐리던 때는 생동감에서 넘긴 직후 옛 선과 옛 숫자가 옅게 남았다. 끝나면 글과 값을 원래 문자열 그대로 돌려 둔다
      */
     const carry = (el: HTMLElement, was: Values) => {
-      if (still) return
+      // 값을 옮기지 않으면 짝은 예전처럼 겹쳐 바꿔 낀다(바로 바꿔 끼울 까닭이 없다)
+      const keep = () => {
+        const i = instant.indexOf(el.style.getPropertyValue('view-transition-name'))
+        if (i >= 0) instant.splice(i, 1)
+      }
+      if (still) return keep()
       type Tick = { v: number; at: (group: string, u: number) => number | null }
       const sets: ((t: Tick) => void)[] = []
       const undo: (() => void)[] = []
@@ -917,7 +924,7 @@ export function motionEngine(): MotionEngine {
         if (!(be > 0) || !Number.isFinite(al)) return null
         return use.every((p) => Math.abs(al + be * p.u - p.q) <= 1) ? { al, be } : null
       }
-      const axes: Record<string, { a0: Fit; a1: Fit; d0: [number, number]; d1: [number, number]; u: [number, number] }> = {}
+      const axes: Record<string, { a0: Fit; a1: Fit; d0: [number, number]; d1: [number, number] }> = {}
       const groups = Array.from(new Set(vars.map((x) => x.group)))
       for (const g of groups) {
         const own = vars.filter((x) => x.group === g)
@@ -932,14 +939,11 @@ export function motionEngine(): MotionEngine {
         const a0 = fit(p0)
         const a1 = fit(p1)
         if (!a0 || !a1) continue
-        // 눈금이 담는 값의 범위(길이 0과 100에 놓이는 값)와, 두 장을 다 담는 범위
+        // 눈금이 담는 값의 범위(길이 0과 100에 놓이는 값)
         const d0: [number, number] = [-a0.al / a0.be, (100 - a0.al) / a0.be]
         const d1: [number, number] = [-a1.al / a1.be, (100 - a1.al) / a1.be]
-        axes[g] = { a0, a1, d0, d1, u: [Math.min(d0[0], d1[0]), Math.max(d0[1], d1[1])] }
+        axes[g] = { a0, a1, d0, d1 }
       }
-      const same = (a: [number, number], b: [number, number]) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) <= 0.002 * (b[1] - b[0])
-      const first = Object.keys(axes).some((g) => !same(axes[g].d0, axes[g].u))
-      const last = Object.keys(axes).some((g) => !same(axes[g].d1, axes[g].u))
 
       // ---- 바뀌는 값 ----
       for (const t of nums) {
@@ -957,8 +961,8 @@ export function motionEngine(): MotionEngine {
       }
       for (const x of vars) {
         const ax = axes[x.group]
-        // 눈금이 같고 길이도 같으면 옮길 것이 없다(값이 같은 막대). 눈금이 바뀌면 값이 같아도 눈금을 따라간다
-        if (x.before.trim() === x.now.trim() && (!ax || (same(ax.d0, ax.u) && same(ax.d1, ax.u)))) continue
+        // 길이가 같으면 옮길 것이 없다(한 잣대에서 값이 같은 막대)
+        if (x.before.trim() === x.now.trim()) continue
         const u0 = ax ? (x.q0 - ax.a0.al) / ax.a0.be : 0
         const u1 = ax ? (x.q1 - ax.a1.al) / ax.a1.be : 0
         sets.push((t) => {
@@ -995,29 +999,20 @@ export function motionEngine(): MotionEngine {
           labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
         })
       })
-      if (!sets.length) return
+      if (!sets.length) return keep()
 
-      // ---- 시계와 단계: ① 앞 눈금 → 두 장을 다 담는 눈금, ② 값, ③ 새 눈금. 없는 단계는 건너뛴다 ----
+      // ---- 시계: 눈금과 값이 같은 진행으로 함께 간다(한 번의 모양 바뀜) ----
       const ease = curve(EASE.out)
-      // 단계는 조금씩 겹친다: 곡선이 빨리 떠나 천천히 멈춰서, 앞 단계가 거의 다 왔을 때(남은 것이 눈에 띄지 않을 때) 다음 단계가 떠난다.
-      // 겹치지 않던 때는 눈금이 다 바뀐 뒤 0.2초 남짓 아무것도 움직이지 않다가 값이 떠났다(필름)
-      const a1 = first ? 0.3 : 0
-      const v0 = first ? 0.16 : 0
-      const v1 = last ? 0.82 : 1
-      const a3 = last ? 0.6 : 1
-      const clamp = (x: number) => Math.max(0, Math.min(1, x))
       const tick = (raw: number): Tick => {
-        const e1 = first ? ease(clamp(raw / a1)) : 1
-        const e3 = last ? ease(clamp((raw - a3) / (1 - a3))) : 0
-        const v = raw >= 1 ? 1 : ease(clamp((raw - v0) / (v1 - v0)))
+        const v = raw >= 1 ? 1 : ease(Math.max(0, Math.min(1, raw)))
         return {
           v,
           at: (g, u) => {
             const ax = axes[g]
             if (!ax) return null
-            const lerp = (a: [number, number], b: [number, number], k: number): [number, number] => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]
-            const dom = e3 > 0 ? lerp(ax.u, ax.d1, e3) : lerp(ax.d0, ax.u, e1)
-            return ((u - dom[0]) / (dom[1] - dom[0])) * 100
+            const lo = ax.d0[0] + (ax.d1[0] - ax.d0[0]) * v
+            const hi = ax.d0[1] + (ax.d1[1] - ax.d0[1]) * v
+            return ((u - lo) / (hi - lo)) * 100
           },
         }
       }
@@ -4081,6 +4076,12 @@ export function motionEngine(): MotionEngine {
   let morphValues: Map<string, Values> | null = null
   /** 다음 장에서 짝이 된 것 → 앞 장의 값. 다음 장의 play가 값을 옮기고 비운다(움직이지 않는 장은 swap이 비운다) */
   const carried = new Map<HTMLElement, Values>()
+  /**
+   * 값이 옮겨 가는 짝의 이름. 앞 모습과 새 모습을 겹쳐 흐리지 않고 바로 바꿔 낀다(swap): 새 모습이 처음에 앞 값 그대로라 같은 그림이고,
+   * 넘어가는 일은 값의 움직임이 맡는다. 겹쳐 흐리던 때는 생동감에서 넘긴 직후 0.1~0.16초에 옛 선과 옛 숫자, 막대 끝의 옅은 꼬리가
+   * 남아 두 겹으로 보였다(감성 검수, 흰 테마에서 더)
+   */
+  const instant: string[] = []
   /** 장마다 그 장의 움직임을 끝 모습으로 보내는 것(play가 적는다). 이어 움직이기가 앞 장의 값을 읽기 전에 부른다 */
   const settling = new WeakMap<Element, () => void>()
 
@@ -4257,6 +4258,7 @@ export function motionEngine(): MotionEngine {
     morphFrom = null
     morphValues = null
     carried.clear()
+    instant.length = 0
     if (!from) return
     // 앞 장은 이미 찍혔다. 앞 장이 그대로 남는 곳(내보낸 HTML은 모든 장이 문서에 있다)에서 이름이 겹치지 않게 앞 장의 이름을 뗀다
     for (const el of named.splice(0)) el.style.removeProperty('view-transition-name')
@@ -4276,7 +4278,10 @@ export function motionEngine(): MotionEngine {
         // 막대가 0.1초 남짓 흐려 보였다). 값은 바깥 짝 하나가 옮긴다: 본문의 carry가 그 안의 항목까지 함께 옮긴다
         const was = values && values.get(name)
         const inside = Array.from(carried.keys()).some((c) => c.contains(el) || el.contains(c))
-        if (was && was.size && !inside && !el.matches(NOT_VALUES)) carried.set(el, was)
+        if (was && was.size && !inside && !el.matches(NOT_VALUES)) {
+          carried.set(el, was)
+          instant.push(name)
+        }
       }
     }
   }
@@ -4320,10 +4325,13 @@ export function motionEngine(): MotionEngine {
         update()
         // 다음 장을 움직이지 않으면(앞 장으로 돌아갈 때) play가 짝을 맞추지 않았으니 여기서
         const fresh = morphFrom && document.querySelector(CURRENT + ' .slide')
-        if (fresh) pairUp(fresh)
+        if (fresh) {
+          pairUp(fresh)
+          // 움직이지 않는 장(뒤로 갈 때)은 값을 옮기지 않는다: 다 보인 채로 오고, 짝은 예전처럼 겹쳐 바꿔 낀다
+          carried.clear()
+          instant.length = 0
+        }
         morphFrom = null
-        // 움직이지 않는 장(뒤로 갈 때)은 값을 옮기지 않는다: 다 보인 채로 온다
-        carried.clear()
         // 두 장이 함께 옅어지는 동안 뒤로 비치는 바탕을 다음 장의 바탕색으로 (motion.css의 ::view-transition-group(root)).
         // 비워 두면 장 뒤의 바탕이 비쳐서, 장끼리 넘길 때 화면이 잠깐 회색으로 번쩍였다
         const next = document.querySelector(':is(.present-slide, .v-slide.is-current) .slide')
@@ -4338,7 +4346,15 @@ export function motionEngine(): MotionEngine {
         stillSwap = null
       })
       // 빨리 연달아 넘기면 앞의 전환은 건너뛴다. 그때 나는 거절은 정상이라 조용히 받는다.
-      t.ready.catch(() => {})
+      // 값이 옮겨 가는 짝은 앞 모습을 바로 감추고 새 모습을 바로 보인다(instant). motion.css의 흐리게보다 나중에 건 움직임이라 그 위에 선다
+      t.ready.then(() => {
+        for (const n of instant.splice(0))
+          for (const [side, o] of [
+            ['old', 0],
+            ['new', 1],
+          ] as const)
+            html.animate([{ opacity: o }, { opacity: o }], { duration: 1000, fill: 'both', pseudoElement: `::view-transition-${side}(${n})` })
+      }, () => {})
       t.updateCallbackDone.catch(() => {})
       t.finished.then(done, done)
     } catch {
@@ -4369,6 +4385,7 @@ export function motionEngine(): MotionEngine {
     morphFrom = null
     morphValues = null
     carried.clear()
+    instant.length = 0
     for (const el of named.splice(0)) {
       el.style.removeProperty('view-transition-name')
       el.removeAttribute('data-mo-keep')
