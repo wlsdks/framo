@@ -1,16 +1,19 @@
 /* ---------- 단계 표시 ----------
-   지금 몇 번째 단계인지 한눈에: 이름(이름표 크기, --ink-2) 아래 지금 단계의 번호(강조색, 숫자 한 줄의 숫자와 같은 크기)와 '/ 전체',
-   그 아래 단계마다 점 하나를 한 줄 위에. 지난 단계는 글자색으로 채운 점과 글자색 선, 지금 단계는 강조색의 큰 점, 남은 단계는 빈 고리와
-   옅은 선. 번호를 동그라미에 넣어 잇는 흔한 서식(단계 흐름의 머리말 참고)이 아니라 작은 점이라, 좁은 칸에 쌓아도 한 줄 높이다.
+   지금 몇 번째 단계인지 한눈에: 이름(이름표 크기, --ink-2) 아래 지금 단계의 번호와 '/ 전체', 그 아래 자(ruler)처럼 가는 기준선 위에
+   단계마다 눈금 하나. 지난 구간은 강조색 농담의 띠로 칠하고, 지난 단계의 눈금은 글자색, 남은 단계는 옅은 눈금, 지금 단계는 높이 선
+   강조색 눈금. 점과 고리를 선으로 잇던 모양은 흔한 진행 표시처럼 보였다(사용자). 눈금은 모이고 퍼지기의 끝점, 잇는 표시(—|)와 같은 말투다.
 
-   점은 줄의 양 끝에 닿는다: 단계마다 같은 너비의 칸(틈 포함)을 두고, 칸 안에서 점을 제 차례의 비율(--f = i / (n - 1))만큼 민다.
+   눈금은 줄의 양 끝에 닿는다: 단계마다 같은 너비의 칸(틈 포함)을 두고, 칸 안에서 점을 제 차례의 비율(--f = i / (n - 1))만큼 민다.
    그러면 점의 가운데가 줄 전체의 f × (너비 - 점) + 점/2 에 서서 첫 점은 왼쪽 끝, 마지막 점은 오른쪽 끝에 닿고 사이는 고르다.
    선은 그 식 그대로 줄에 긋는다(::before 옅은 선, ::after 지난 단계까지 글자색).
    칸이 넓으면(안쪽 640 이상) 단계 이름을 점 아래에 같은 비율로 둔다(첫 이름은 왼쪽 끝, 마지막은 오른쪽 끝). 좁으면 지금 단계 이름만 번호 옆에 */
 
 .bk-stp {
-  --stp-d: 14px;
-  --stp-now: 26px;
+  /* 눈금의 굵기, 보통 눈금의 높이, 지금 단계 눈금의 높이(곧 눈금 줄의 높이), 지난 구간 띠의 두께 */
+  --stp-d: 4px;
+  --stp-tick: 16px;
+  --stp-now: 40px;
+  --stp-band: 6px;
   --stp-fh: calc(var(--hl) / (var(--n) - 1));
   display: flex;
   flex-direction: column;
@@ -81,25 +84,27 @@
   list-style: none;
 }
 
-/* 선은 점 줄의 가운데 높이에, 첫 점의 가운데에서 마지막 점의 가운데까지 */
+/* 기준선은 눈금 줄의 가운데 높이에, 첫 눈금에서 마지막 눈금까지. 지난 구간은 그 위에 띠로(데이터 막대처럼 강조색 농담) */
 .bk-stp-list::before,
 .bk-stp-list::after {
   position: absolute;
-  top: calc(var(--stp-now) / 2 - var(--rule-hair) / 2);
   left: calc(var(--stp-d) / 2);
-  height: var(--rule-hair);
   content: '';
 }
 
 .bk-stp-list::before {
+  top: calc(var(--stp-now) / 2 - var(--rule-hair) / 2);
   right: calc(var(--stp-d) / 2);
-  background: var(--line);
+  height: var(--rule-hair);
+  background: var(--line-strong);
 }
 
-/* 지난 단계까지의 선: 지금 단계 점의 가운데까지(그 점이 끝을 덮는다) */
+/* 지난 구간의 띠: 첫 눈금에서 지금 단계 눈금까지 */
 .bk-stp-list::after {
-  width: calc((100% - var(--stp-now)) * var(--stp-fh) + var(--stp-now) / 2 - var(--stp-d) / 2);
-  background: var(--ink);
+  top: calc(var(--stp-now) / 2 - var(--stp-band) / 2);
+  width: calc((100% - var(--stp-d)) * var(--stp-fh));
+  height: var(--stp-band);
+  background: color-mix(in srgb, var(--accent) 45%, var(--bg));
 }
 
 .bk-stp.is-free .bk-stp-list::after {
@@ -116,27 +121,20 @@
 .bk-stp-dot {
   position: relative;
   z-index: 1;
-  box-sizing: border-box;
   align-self: center;
   justify-self: start;
   width: var(--stp-d);
-  height: var(--stp-d);
+  height: var(--stp-tick);
   margin-left: calc((100% - var(--stp-d)) * var(--f));
-  border: 2px solid var(--ink-3);
-  border-radius: 50%;
-  background: var(--bg);
+  background: var(--ink-3);
 }
 
 .bk-stp-it.is-done > .bk-stp-dot {
-  border-color: var(--ink);
   background: var(--ink);
 }
 
 .bk-stp-it.is-now > .bk-stp-dot {
-  width: var(--stp-now);
   height: var(--stp-now);
-  margin-left: calc((100% - var(--stp-now)) * var(--f));
-  border: 0;
   background: var(--accent);
 }
 
@@ -155,7 +153,7 @@
     display: none;
   }
 
-  /* 이름의 같은 비율 자리가 점의 자리에 선다: 칸 안에서 f만큼 밀고 제 너비의 f만큼 당긴다 */
+  /* 이름의 같은 비율 자리가 눈금의 자리에 선다: 칸 안에서 f만큼 밀고 제 너비의 f만큼 당긴다 */
   .bk-stp-t {
     position: relative;
     left: calc(100% * var(--f));

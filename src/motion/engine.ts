@@ -2468,10 +2468,20 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-ss-m'), 420, 500)
           break
         case 'steps': {
-          // 옅은 선이 왼쪽부터 그어지고, 선이 닿는 차례로 점이 맺힌다. 지난 단계의 글자색 선이 뒤따라 지금 단계까지 가면 그 점이 커지며
-          // 들어오고 번호가 굴러 맞춰진다. 단계 이름은 제 점이 맺힌 뒤에
-          fade(one('.bk-stp-l'), 0, 500)
+          // 기준선이 왼쪽부터 그어지고, 선이 닿는 차례로 눈금이 아래위로 선다. 지난 구간의 띠가 뒤따라 지금 단계까지 차오르면 그 눈금이
+          // 높이 솟고 번호가 굴러 맞춰진다. 단계 이름은 제 눈금이 선 뒤에
           const list = one('.bk-stp-list')
+          // 생동감에서 계속 흐를 조각의 길(지난 구간의 띠: 첫 눈금에서 지금 단계 눈금까지)은 움직임을 걸기 전에 잰다(조건별 흐름과 같은 까닭)
+          const nowTick = one('.bk-stp-it.is-now > .bk-stp-dot')
+          const firstTick = one('.bk-stp-dot')
+          let band: [number, number][] = []
+          if (list && nowTick && firstTick && nowTick !== firstTick) {
+            const a = spot(firstTick, list)
+            const b = spot(nowTick, list)
+            const y = (b.t + b.b) / 2
+            band = [[(a.l + a.r) / 2, y], [(b.l + b.r) / 2, y]]
+          }
+          fade(one('.bk-stp-l'), 0, 500)
           const span = levelName === 'lively' ? 900 : 760
           draw(list, 60, span, 'left center', '::before')
           const dots = $('.bk-stp-dot')
@@ -2480,14 +2490,19 @@ export function motionEngine(): MotionEngine {
           dots.forEach((dot, i) => {
             const at = 60 + (i / last) * span * 0.75
             if (i === now) return
-            run(anims, dot, [{ opacity: 0, scale: '0.5' }], s(at), { easing: OUT, duration: d(320) })
+            run(anims, dot, [{ opacity: 0, scale: '1 0' }], s(at), { easing: OUT, duration: d(320) })
           })
           const reach = now < 0 ? 0 : (now / last) * span
           if (now > 0) draw(list, 180, Math.max(reach, 300), 'left center', '::after')
-          if (now >= 0) pop(dots[now], 180 + reach * 0.85)
+          // 지금 단계의 눈금은 띠가 닿을 때 기준선에서 위아래로 솟는다(크기 키우기가 아니라 높이만: 눈금이 뭉툭해지지 않게)
+          if (now >= 0) run(anims, dots[now], [{ opacity: 0, scale: '1 0.1' }], s(180 + Math.max(reach, 300) * 0.9), { easing: OUT, duration: d(420) })
           rise(one('.bk-stp-now'), 120, L.y * 0.4)
           count(one('.bk-stp-k'), 140)
           $('.bk-stp-t').forEach((t, i) => fade(t, 160 + (i / last) * span * 0.75, 400))
+          // 생동감: 지나온 길을 따라 조각이 쉬지 않고 지금 단계로 흘러들고, 닿을 때 그 눈금이 잠깐 솟는다('여기까지 왔다')
+          if (band.length && nowTick) {
+            stream(list, band, 180 + Math.max(reach, 300) + 900, d(2400), 0, { el: nowTick, off: { scale: '1 1' }, on: { scale: '1 1.3' } })
+          }
           break
         }
         case 'date':
