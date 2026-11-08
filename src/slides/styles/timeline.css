@@ -448,7 +448,10 @@
   translate: -50% -50%;
 }
 
-:is(.tl-item:is(.is-done, .is-now) .tl-dot, .va-steps .tl-item:is(.is-done, .is-now) .tl-dot) {
+/* 지나온 단계와 지금 단계의 눈금은 강조색(지금 단계는 날짜와 같은 색). 위의 눈금 규칙(:is)은 가장 구체적인 항목(.va-steps .tl.has-now …,
+   여섯 단계)의 구체성을 모두에게 주어서, 이 규칙이 그보다 낮으면 늘 져서 지금 단계도 날짜만 강조색이고 눈금은 글자색이었다(검수).
+   같은 구체성의 항목을 넣어 이긴다(이 규칙이 뒤에 온다) */
+:is(.tl-item:is(.is-done, .is-now) .tl-dot, .va-steps .tl.has-now .tl-item:is(.is-done, .is-now) .tl-dot) {
   --tl-c: var(--accent);
 }
 
