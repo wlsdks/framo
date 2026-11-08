@@ -233,7 +233,7 @@ export const SlideCanvas = memo(function SlideCanvas({
         data-scene={sceneOf(slide) ?? undefined}
       >
         {/* 배경: 글과 컴포넌트 뒤의 그래픽 (Backdrop.tsx). 컴포넌트 하나만 그릴 때는 없다 */}
-        {!solo && <Backdrop value={slide.backdrop} />}
+        {!solo && <Backdrop value={slide.backdrop} dark={isDarkLook(deck.theme, tone)} />}
         <View />
         {mode === 'edit' && spec.panes && !solo && <PaneTools />}
         {!solo && slide.options.hideFoot !== true && (source || mark) && (

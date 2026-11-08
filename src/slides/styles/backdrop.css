@@ -23,3 +23,15 @@
   width: 100%;
   height: 100%;
 }
+
+/* 움직이는 캔버스의 마스크: 구멍과 가장자리의 옅어짐(--bd-mask, motion/backdrop.ts의 maskUrl). 끝 모습의 SVG는 같은 마스크를 안에
+   갖는다: PPT 그림(장을 SVG 그림으로 옮겨 그린다)에서는 CSS 마스크가 먹지 않아 배경이 화면의 두 배로 진했다(검수) */
+.s-bd > .bd-cv {
+  -webkit-mask-image: var(--bd-mask, none);
+  mask-image: var(--bd-mask, none);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+

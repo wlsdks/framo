@@ -31,9 +31,7 @@ function Moment({ deck, slide, t, width }: { deck: Deck; slide: Slide; t: number
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const el = ref.current?.querySelector<HTMLElement>('.s-bd')
-    const svg = el?.querySelector('svg')
-    if (!el || !svg) return
-    svg.innerHTML = backdrops.still(el.dataset.bd!, Number(el.dataset.w), Number(el.dataset.h), el.dataset.strength, { e: t })
+    if (el) backdrops.frame(el, t)
   })
   return (
     <figure ref={ref} style={{ margin: 0 }}>
