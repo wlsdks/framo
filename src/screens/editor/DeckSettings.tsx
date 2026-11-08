@@ -5,8 +5,9 @@ import type { Deck, FooterMode, Motion, Slide, Transition } from '../../deck/typ
 import { cx } from '../../lib/cx'
 import { pageProps } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
-import { DeckIcon, Info, Popover } from '../ui'
+import { DeckIcon, Info, Popover, type Toast } from '../ui'
 import { PREVIEW_MOTION } from './DeckMenus'
+import { SceneAll } from './ScenePicker'
 import { SHORTCUT } from './shortcuts'
 import { keys } from '../../lib/keys'
 
@@ -15,7 +16,7 @@ import { keys } from '../../lib/keys'
 // 테마 메뉴가 복잡해 보였다. 생김새는 테마에, 발표하는 방식은 여기에 나누고, 고르는 것마다 바뀌는 모습을 작게 같이 보인다.
 // 처음 값(섹션 이름, 차분하게, 자동)이 대부분의 발표에 맞아서 대개는 열 일이 없다
 
-export function DeckSettings({ deck, slide }: { deck: Deck; slide?: Slide }) {
+export function DeckSettings({ deck, slide, toast }: { deck: Deck; slide?: Slide; toast?: Toast }) {
   const setMotion = useDeck((s) => s.setMotion)
   const setLook = useDeck((s) => s.setLook)
   const footer = footerOf(deck)
@@ -82,6 +83,8 @@ export function DeckSettings({ deck, slide }: { deck: Deck; slide?: Slide }) {
                 </DemoCard>
               ))}
             </div>
+            {/* 발표 전체의 일이라 여기에: 모션 편집의 오른쪽 칸 맨 아래에 있을 때는 이 슬라이드의 일과 섞여 범위가 헷갈렸다 */}
+            <SceneAll deck={deck} toast={toast} />
           </section>
 
           <section className="ds-sec" aria-labelledby="ds-tr">

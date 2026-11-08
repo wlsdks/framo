@@ -52,7 +52,9 @@ export function MotionPanel({ deck, slide, onOpenStudio }: { deck: Deck; slide: 
       ? '슬라이드 모양에 맞춘 차례로'
       : !order.length
         ? '컴포넌트를 넣으면 정할 수 있어요'
-        : `${listed.join(' → ')}${order.length > NAMES ? ` 외 ${order.length - NAMES}개` : ''}`
+        : order.length === 1
+          ? `${listed[0]} 하나`
+          : `${listed.join(' → ')}${order.length > NAMES ? ` 외 ${order.length - NAMES}개` : ''}`
 
   // 그림에 마우스를 올리거나 키보드로 오면 이 장이 발표할 때처럼 한 번 움직인다(움직이는 중에 다시 올려도 처음부터 다시 하지 않는다)
   const thumbRef = useRef<HTMLButtonElement>(null)
@@ -122,7 +124,7 @@ export function MotionPanel({ deck, slide, onOpenStudio }: { deck: Deck; slide: 
             </dd>
           </div>
         </dl>
-        <button type="button" className="btn btn-primary mp-open" title={`모션 편집 열기 (${keys(SHORTCUT.studio)})`} onClick={onOpenStudio}>
+        <button type="button" className="btn btn-ghost mp-open" title={`모션 편집 열기 (${keys(SHORTCUT.studio)})`} onClick={onOpenStudio}>
           <MotionIcon />
           모션 편집 열기
           <ChevronIcon />

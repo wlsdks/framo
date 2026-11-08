@@ -329,7 +329,7 @@ function EditorBody({ deck }: { deck: Deck }) {
           <span className="ed-top-sep" aria-hidden="true" />
           <AiMenu deck={deck} ai={ai} ask={ask} />
           <ThemeMenu deck={deck} />
-          <DeckSettings deck={deck} slide={slide} />
+          <DeckSettings deck={deck} slide={slide} toast={toast} />
           <ExportMenu
             onHtml={() => void exporting.exportHtml()}
             onPdf={() => exporting.printPdf()}

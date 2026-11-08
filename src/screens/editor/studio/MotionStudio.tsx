@@ -34,7 +34,7 @@ import { DemoCard, MotionDemo, TransitionDemo } from '../DeckSettings'
 import { Opt } from '../Inspector'
 import { useLook, type Look } from '../look'
 import { FROM_SHORT, INHERIT, nameOf, SLIDE_TRANSITIONS } from '../MotionPanel'
-import { SceneAll, SceneOverride, ScenePicker } from '../ScenePicker'
+import { SceneOverride, ScenePicker } from '../ScenePicker'
 import { usePlayer, useReducedMotion } from './player'
 import { MotionCopy } from './MotionCopy'
 import { Timeline } from './Timeline'
@@ -43,7 +43,8 @@ import { keys } from '../../../lib/keys'
 
 // 움직임 편집: 한 장의 움직임을 크게 보며 고치는 곳. 편집기 안에서 슬라이드 자리(가운데)와 오른쪽 칸을 바꿔 쓴다:
 // 가운데에 발표 화면과 똑같이 움직이는 장과 그 아래 컴포넌트마다 움직이는 동안을 그린 시간표, 오른쪽 칸에는 지금 고른 것의 값만.
-// 아무것도 고르지 않으면 슬라이드 전체(움직이는 방식, 나오는 차례, 이 슬라이드만 다르게), 컴포넌트를 고르면 그 컴포넌트의 값이다.
+// 아무것도 고르지 않으면 이 슬라이드 전체(움직이는 방식, 나오는 차례, 이 슬라이드만 다르게), 컴포넌트를 고르면 그 컴포넌트의 값이다.
+// 이 칸은 이 슬라이드의 일만 다룬다: 발표 전체의 일(장면 알아서 고르기)은 발표 설정에 둔다
 // 예전에는 편집기 위에 덮는 화면이라 왼쪽 슬라이드 목록이 가려졌고, 오른쪽 칸에는 장면부터 컴포넌트 값까지 한꺼번에 늘어서 있었다.
 // 시간을 손으로 그리지 않는다(고르는 방식): 나오는 차례 하나로 장 전체의 차례와 때를 정하고, 컴포넌트마다 움직임, 언제, 쪽, 빠르기를 고른다.
 // 값은 부품의 effect·when·from·speed, 장의 options.order·motion·transition·scene에 적는다
@@ -258,12 +259,12 @@ export function MotionStudio({
       <aside className="side ms-side" aria-label="모션 고르기">
         <div className="ms-side-h">
           {block ? (
-            <button type="button" className="ms-up" onClick={() => setSelected(null)} title="슬라이드 전체의 모션으로">
+            <button type="button" className="ms-up" onClick={() => setSelected(null)} title="이 슬라이드 전체의 모션으로">
               <BackIcon />
-              슬라이드 전체
+              이 슬라이드 전체
             </button>
           ) : (
-            <h2 className="ms-side-t">슬라이드 전체</h2>
+            <h2 className="ms-side-t">이 슬라이드 전체</h2>
           )}
         </div>
         <div className="ms-side-body">
@@ -294,10 +295,6 @@ export function MotionStudio({
               )}
               <SlideMotion deck={deck} slide={slide} onTransition={enter} />
               <MotionCopy deck={deck} slide={slide} prefer={prefer} toast={toast} />
-              <section className="ms-sec">
-                <h2 className="ms-h">발표 전체</h2>
-                <SceneAll deck={deck} toast={toast} />
-              </section>
             </>
           )}
         </div>
@@ -469,7 +466,7 @@ function BlockMotion({
         <h2 className="ms-h">{name}</h2>
         <button type="button" className="btn btn-ghost btn-sm ms-one" disabled={disabled || effect === 'none'} title="이 컴포넌트만 한 번 움직여요" onClick={onPlay}>
           <PlayIcon />
-          이것만
+          이것만 보기
         </button>
       </div>
       <Opt label="언제" wide>

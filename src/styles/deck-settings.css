@@ -33,6 +33,23 @@
   font-size: 12px;
 }
 
+/* 중요한 슬라이드에 장면 넣기: 모션 그림 아래의 글자 단추 (누르면 어느 슬라이드에 무엇을 넣는지 먼저 보인다) */
+.ds .sp-all {
+  justify-self: start;
+  width: auto;
+  height: auto;
+  margin: 2px 0 0;
+  padding: 0;
+  color: var(--sel);
+  font-size: 12px;
+}
+
+.ds .sp-all:hover:not(:disabled) {
+  background: none;
+  color: var(--sel);
+  text-decoration: underline;
+}
+
 /* ---------- 슬라이드 아래쪽: 한 줄에 이름과 그 모습 ---------- */
 
 .ds-foots {

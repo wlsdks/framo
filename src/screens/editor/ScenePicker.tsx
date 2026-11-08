@@ -99,7 +99,7 @@ const SceneCard = memo(function SceneCard({
 })
 
 /**
- * 장면 알아서 고르기. 힘줄 장(처음, 결론, 숫자, 마지막 같은)에만 장면마다 한 번씩 넣는다(planScenes).
+ * 중요한 슬라이드에 장면 넣기(예전 이름 '장면 알아서 고르기'). 발표 설정의 모션 아래. 힘줄 장(처음, 결론, 숫자, 마지막 같은)에만 장면마다 한 번씩 넣는다(planScenes).
  * 누르면 어느 장에 무엇을 넣는지 먼저 보이고, '적용하기'로 한 번에 넣는다(되돌리기 한 번에 돌아온다).
  * 예전 이름 '발표 전체에 장면 입히기'는 모든 장에 넣는 것처럼 들려서 무엇을 하는지 알기 어려웠다.
  * 이미 장면을 골라 둔 장은 그대로 두고, 처음부터 다시 고를지 따로 묻는다
@@ -113,7 +113,7 @@ export function SceneAll({ deck, toast }: { deck: Deck; toast?: Toast }) {
   if (!open) {
     return (
       <button type="button" className="btn btn-ghost btn-sm sp-all" onClick={() => setOpen(true)}>
-        장면 알아서 고르기
+        중요한 슬라이드에 장면 넣기…
       </button>
     )
   }
@@ -124,7 +124,7 @@ export function SceneAll({ deck, toast }: { deck: Deck; toast?: Toast }) {
     toast?.show(`${rows.length}장에 장면을 넣었어요.`, undoAction(toast))
   }
   return (
-    <div className="sp-plan" role="group" aria-label="장면 알아서 고르기">
+    <div className="sp-plan" role="group" aria-label="중요한 슬라이드에 장면 넣기">
       <p className="sp-plan-h">{rows.length ? `중요한 슬라이드 ${rows.length}장에 장면을 넣어요` : '새로 넣을 슬라이드가 없어요'}</p>
       <p className="sp-plan-p">처음, 결론, 숫자, 마지막처럼 힘을 줄 슬라이드에만 넣고 나머지는 차분하게 둬요.</p>
       {rows.length > 0 && (
