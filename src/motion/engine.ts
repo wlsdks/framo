@@ -2906,8 +2906,8 @@ export function motionEngine(): MotionEngine {
           if (now > 0) draw(list, 180, Math.max(reach, 300), 'left center', '::after')
           // 지금 단계의 눈금은 띠가 닿을 때 기준선에서 위아래로 솟는다(크기 키우기가 아니라 높이만: 눈금이 뭉툭해지지 않게)
           if (now >= 0) run(anims, dots[now], [{ opacity: 0, scale: '1 0.1' }], s(180 + Math.max(reach, 300) * 0.9), { easing: OUT, duration: d(420) })
+          // 단계 번호는 굴리지 않는다: 세는 수가 아니라 차례라서 굴리면 다른 단계(4 / 6, 1 / 6)를 거쳐 가는 것처럼 보였다
           rise(one('.bk-stp-now'), 120, L.y * 0.4)
-          count(one('.bk-stp-k'), 140)
           $('.bk-stp-t').forEach((t, i) => fade(t, 160 + (i / last) * span * 0.75, 400))
           // 생동감: 지나온 길을 따라 조각이 쉬지 않고 지금 단계로 흘러들고, 닿을 때 그 눈금이 잠깐 솟는다('여기까지 왔다')
           if (band.length && nowTick) {
