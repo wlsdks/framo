@@ -1984,6 +1984,75 @@ export function motionEngine(): MotionEngine {
           if (hl && links.length) run(anims, hl, [{ transform: 'scale(1)' }, { transform: 'scale(1.03)' }, { transform: 'scale(1)' }], s(again - 60), { easing: 'ease-in-out', duration: d(480) })
           break
         }
+        case 'hub': {
+          // 모이고 퍼지기(모션 그래픽 장면). 모이기는 곳들이 먼저 나오고 선이 가운데로 그어진 뒤 가운데가 서고, 퍼지기는 가운데가 먼저
+          // 서고 선이 곳들로 뻗는다. 다 서면 빛나는 데이터 조각이 꼬리를 끌며 길을 따라 쉬지 않고 흐르고, 가운데가 숨 쉬듯 빛나며
+          // 둘레의 고리가 돈다. 흐름은 이 장을 떠날 때(stops)까지 이어진다: 이 컴포넌트는 '살아 있는 그림'이라서 다른 컴포넌트와 달리
+          // 되풀이한다. 끝맺음(묶음이 끝났는지)을 기다리는 목록(anims)에는 넣지 않아 장의 다른 움직임 차례를 붙잡지 않는다
+          const root = one('.bk-hb')
+          if (!root) break
+          const out = root.classList.contains('is-out')
+          const lines = $('.bk-hb-line')
+          const dots = $('.bk-hb-dot')
+          const rings = $('.bk-hb-ring-s')
+          const nodes = $('.bk-hb-node')
+          const core = one('.bk-hb-core')
+          const halo = one('.bk-hb-halo')
+          const hubText = one('.bk-hb-hub')
+          const orbits = $('.bk-hb-orbit')
+          const n = Math.max(1, lines.length)
+          const step = Math.min(levelName === 'lively' ? 170 : 150, 800 / n)
+          const lineDur = d(levelName === 'lively' ? 700 : 620)
+          const grow = (el: Element | null, at: number) => {
+            if (el) run(anims, el, [{ opacity: 0, scale: '0.4' }], s(at), L.pop)
+          }
+          const stroke = (el: Element, at: number) =>
+            run(anims, el, [{ strokeDasharray: '100 100', strokeDashoffset: out ? 100 : 100 }, { strokeDasharray: '100 100', strokeDashoffset: 0 }], s(at), { easing: OUT, duration: lineDur })
+          const coreAt = out ? 60 : 200 + (n - 1) * step + 420
+          grow(halo, coreAt)
+          grow(core, coreAt)
+          rise(hubText, coreAt + 120, L.y * 0.5)
+          orbits.forEach((o, k) => fade(o, coreAt + 300 + k * 120, 700))
+          lines.forEach((line, k) => {
+            const at = out ? coreAt + 260 + k * step : 60 + k * step
+            if (out) {
+              stroke(line, at)
+              grow(dots[k], at + 380)
+              grow(rings[k], at + 440)
+              rise(nodes[k], at + 400, L.y * 0.5)
+            } else {
+              grow(dots[k], at)
+              grow(rings[k], at + 60)
+              rise(nodes[k], at + 40, L.y * 0.5)
+              stroke(line, at + 160)
+            }
+          })
+          if (quiet || still) break
+          // 살아 있는 흐름: 장의 움직임이 다 선 뒤부터
+          const start = s(out ? coreAt + 260 + (n - 1) * step + 700 : coreAt + 500)
+          const loops: Animation[] = []
+          const fast = levelName === 'lively' ? 0.85 : 1
+          const heads = $('.bk-hb-pk')
+          const tails = $('.bk-hb-tail')
+          heads.forEach((head, k) => {
+            // 조각은 길마다 둘(Hub.tsx): 같은 길의 둘째는 반 주기 늦게
+            const way = Math.floor(k / 2)
+            const period = (1700 + (way % 3) * 260) * fast
+            const delay = start + ((way * 380) % 1300) + (k % 2) * (period / 2)
+            const timing = { duration: period, delay, iterations: Infinity, easing: 'cubic-bezier(0.45, 0, 0.55, 1)' }
+            const fadeIn = [{ opacity: 0, offset: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.84 }, { opacity: 0, offset: 1 }]
+            loops.push(head.animate(fadeIn.map((f, i) => ({ ...f, strokeDashoffset: [0.4, -9.6, -84, -99.6][i] })), timing))
+            const tail = tails[k]
+            if (tail) loops.push(tail.animate(fadeIn.map((f, i) => ({ ...f, opacity: f.opacity * 0.55, strokeDashoffset: [12, 2, -72, -88][i] })), timing))
+          })
+          // 고리는 아주 느리게(한 바퀴 24초, 36초) 돈다. 가운데가 숨 쉬듯 커졌다 작아지는 움직임은 넣지 않는다: 5초 안팎으로
+          // 되풀이하는 흔들림은 오래 보면 어지럽고(Apple HIG의 모션), 계속 움직이는 것은 데이터 흐름 하나로 족하다(docs/MOTION.md)
+          orbits.forEach((o, k) =>
+            loops.push(o.animate([{ rotate: '0deg' }, { rotate: k ? '-360deg' : '360deg' }], { duration: k ? 36000 : 24000, delay: start, iterations: Infinity })),
+          )
+          stops.push(() => loops.forEach((a) => a.cancel()))
+          break
+        }
         case 'network': {
           // 가운데가 먼저 서고, 선이 가운데에서 하나씩 뻗어 나가 닿는 상자가 나타난다. 다 이어지면 데이터 조각이 상자마다 선을 따라
           // 가운데로 모여든다(차분하게 한 번, 생동감 두 번). 되풀이하지 않는다

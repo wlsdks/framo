@@ -132,6 +132,7 @@ const FOLD_USES: Partial<Record<BlockType, Record<string, string>>> = {
   whys: { 'items.meta': '원인마다 그 아래에 적는 확인한 사실 (예: 12개 부서 중 9곳)' },
   cycle: { center: '고리 가운데에 적는 이 순환의 이름 (예: 한 달 주기)', 'items.meta': '단계마다 이름 아래에 적는 짧은 설명 (예: 목표와 방법을 정해요)' },
   sparks: { period: '흐름을 본 기간 (예: 4월~9월)', 'items.meta': '지표마다 지금 값 뒤에 붙는 단위' },
+  hub: { note: '가운데 아래에 짧은 한 줄 (예: 한 곳에서 찾아요)', 'items.meta': '곳마다 무엇이 오가는지 (예: 주문과 결제)' },
   flow: { what: '무엇이 오가는지 맨 위에 한 줄 (예: 신청 데이터)', 'items.meta': '단계마다 어느 시스템, 누가 맡는지', 'items.value': '단계마다 오가는 양 (예: 320건)' },
   decision: { label: '질문 위에 확인할 기준을 짧게 적어요' },
   network: { 'items.meta': '이어진 것마다 무엇을 주고받는지 (예: 결재선)' },

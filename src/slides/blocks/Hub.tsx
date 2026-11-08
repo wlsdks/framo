@@ -1,0 +1,117 @@
+// 부품: 모이고 퍼지기 (hub). 모양은 styles/blocks/hub.css, 움직임은 motion/engine.ts의 nativeAuto
+
+import type { CSSProperties } from 'react'
+import { BLOCKS } from '../../deck/blocks'
+import { isBlankItem } from '../../deck/fields'
+import { cx } from '../../lib/cx'
+import { useSlide } from '../context'
+import { IT, ItemTools, T } from '../fields'
+
+/**
+ * 선을 긋는 좌표계(SVG viewBox). 무대는 칸을 가득 채우고 이 좌표계는 무대 크기대로 늘어난다(preserveAspectRatio="none"):
+ * 비율을 고정하면 넓고 낮은 칸이나 옆에 다른 컴포넌트가 선 칸에서 그림이 가운데에 작게 떠 한쪽이 25% 넘게 비었다(checkAssembly).
+ * 늘어나도 선 굵기는 그대로(vector-effect)이고, 둥글어야 하는 것(점, 가운데 원, 빛)은 SVG가 아니라 HTML로 얹어 찌그러지지 않는다
+ */
+export const HUB_W = 1000
+export const HUB_H = 560
+
+export interface HubSpot {
+  x: number
+  y: number
+  /** 이 곳에서 가운데로(모이기), 가운데에서 이 곳으로(퍼지기) 흐르는 길. 데이터 조각이 이 길을 따라간다 */
+  d: string
+}
+
+const r = (v: number) => Math.round(v * 10) / 10
+
+/**
+ * 곳들의 자리와 길. 모이기는 곳들을 왼쪽 호에, 가운데를 오른쪽에 두고, 퍼지기는 거꾸로. 곳의 이름이 점 바깥쪽에 붙어 그림의
+ * 무게가 그쪽으로 넓어서, 이름까지 셈해 가운데가 맞게 가운데 원은 3/4쯤, 곳들은 1/3쯤에 둔다. 호는 가운데 쪽으로 불룩하다.
+ * 길은 곳에서 가로로 나와 가운데로 부드럽게 휘어 든다(2차 곡선). 끝은 가운데 원 밑으로 들어가 원이 덮는다
+ */
+export function hubSpots(n: number, out: boolean): { center: { x: number; y: number }; spots: HubSpot[] } {
+  const center = { x: out ? 240 : 760, y: HUB_H / 2 }
+  const top = 56
+  const span = HUB_H - top * 2
+  const spots = Array.from({ length: n }, (_, i) => {
+    const f = n === 1 ? 0.5 : i / (n - 1)
+    const bulge = Math.sin(Math.PI * f) * 70
+    const x = out ? 670 - bulge : 330 + bulge
+    const y = top + span * f
+    const mid = (x + center.x) / 2
+    const from = out ? center : { x, y }
+    const to = out ? { x, y } : center
+    return { x, y, d: `M ${r(from.x)} ${r(from.y)} Q ${r(mid)} ${r(y)} ${r(to.x)} ${r(to.y)}` }
+  })
+  return { center, spots }
+}
+
+const pct = (v: number, of: number) => `${r((v / of) * 100)}%`
+
+/**
+ * 모이고 퍼지기: 여러 곳의 것이 가운데로 모여들거나(모이기), 가운데에서 여러 곳으로 퍼져 나간다(퍼지기).
+ * 선과 흐르는 조각은 SVG, 점과 가운데 원과 빛은 HTML, 글은 그 위의 HTML(글자 크기 단계를 그대로 쓰려고).
+ * 발표할 때 선이 그어진 뒤 빛나는 데이터 조각이 쉬지 않고 흐르고 둘레의 고리가 천천히 돈다(engine.ts).
+ * 멈춰 있는 그림(편집, PDF, PPT)에서는 조각을 감춘다
+ */
+export function Hub() {
+  const { slide, mode } = useSlide()
+  const out = slide.variant === 'out'
+  const shown = slide.items
+    .slice(0, BLOCKS.hub.items!.max)
+    .map((it, i) => ({ it, i }))
+    .filter(({ it }) => mode !== 'final' || !isBlankItem(it))
+  const { center, spots } = hubSpots(shown.length, out)
+  const at = (p: { x: number; y: number }) => ({ left: pct(p.x, HUB_W), top: pct(p.y, HUB_H) })
+  return (
+    <div className={cx('bk-hb', out ? 'is-out' : 'is-in')} data-n={shown.length}>
+      <div className="bk-hb-stage">
+        <span className="bk-hb-halo" style={at(center)} aria-hidden="true" />
+        <svg className="bk-hb-svg" viewBox={`0 0 ${HUB_W} ${HUB_H}`} preserveAspectRatio="none" aria-hidden="true">
+          {spots.map((p, k) => (
+            <g key={shown[k].it.id} className="bk-hb-way">
+              <path className="bk-hb-line" d={p.d} pathLength={100} />
+              {/* 길마다 조각 둘(머리와 꼬리): 반 주기 엇갈려 흘러 길이 늘 무엇인가 나르고 있는 것처럼 보인다 */}
+              {[0, 1].map((j) => (
+                <g key={j} className="bk-hb-bit">
+                  <path className="bk-hb-tail" d={p.d} pathLength={100} />
+                  <path className="bk-hb-pk" d={p.d} pathLength={100} />
+                </g>
+              ))}
+            </g>
+          ))}
+        </svg>
+        {spots.map((p, k) => (
+          <span key={shown[k].it.id} className="bk-hb-spot" style={at(p)} aria-hidden="true">
+            <span className="bk-hb-ring-s" />
+            <span className="bk-hb-dot" />
+          </span>
+        ))}
+        <div className="bk-hb-core" style={at(center)}>
+          <svg className="bk-hb-orbits" viewBox="0 0 100 100" aria-hidden="true">
+            <circle className="bk-hb-orbit is-a" cx="50" cy="50" r="58" pathLength={100} />
+            <circle className="bk-hb-orbit is-b" cx="50" cy="50" r="66" pathLength={100} />
+          </svg>
+          <div className="bk-hb-hub">
+            <T k="center" as="p" className="bk-hb-c" />
+            <T k="note" as="p" className="bk-hb-n" />
+          </div>
+        </div>
+        {shown.map(({ it, i }, k) => {
+          const p = spots[k]
+          return (
+            <div
+              key={it.id}
+              className="it bk-hb-node"
+              style={{ top: pct(p.y, HUB_H), ...(out ? { left: `calc(${pct(p.x, HUB_W)} + 34px)` } : { right: `calc(${pct(HUB_W - p.x, HUB_W)} + 34px)` }) } as CSSProperties}
+            >
+              <IT i={i} k="title" className="bk-hb-t" />
+              <IT i={i} k="meta" className="bk-hb-m" />
+              <ItemTools i={i} />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

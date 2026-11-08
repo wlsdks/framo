@@ -35,7 +35,7 @@ const ORPHAN = 0.22
 const TEXT_TYPES = new Set(['message', 'text', 'quote', 'callout', 'bullets', 'note', 'faq', 'heading'])
 
 /** 글이 문장이 아니라 그림의 이름표인 부품 (흐름, 연결도, 나누기, 모으기, 칸 조립) */
-const FIGURE_TYPES = new Set(['flow', 'network', 'merge', 'split', 'tiles'])
+const FIGURE_TYPES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub'])
 
 type Span = { t: number; b: number }
 
@@ -779,6 +779,8 @@ function rowRhythm(area: HTMLElement, k: number): string[] {
   for (const cell of area.querySelectorAll<HTMLElement>(':scope > .bk')) {
     const inner = cell.querySelector<HTMLElement>(':scope > .bk-in')
     if (!inner) continue
+    // 모이고 퍼지기의 곳 이름은 줄이 아니라 그림 위의 이름표다: 칸 높이에 맞춰 호를 따라 벌어지는 것이 그림의 짜임이다
+    if (cell.dataset.type === 'hub') continue
     const lines = blockTextLines(inner)
     const lists = new Set<Element>()
     for (const it of inner.querySelectorAll('.it')) if (it.parentElement) lists.add(it.parentElement)
@@ -872,6 +874,8 @@ function paintedBoxes(area: HTMLElement, k: number): string[] {
     if (!bg || bg === 'transparent' || bg === slideBg || /rgba\(.*,\s*0(?:\.0\d*)?\)$/.test(bg)) continue
     const r = el.getBoundingClientRect()
     if (r.width < 120 * k || r.height < 60 * k) continue
+    // 그림의 둥근 마디(모이고 퍼지기의 가운데 원)는 글 상자가 아니라 그림이다: 짙은 면 위에 이름 하나를 얹은 기호
+    if (s.borderRadius === '50%') continue
     const text = (el.textContent || '').replace(/\s/g, '')
     if ((text.match(/[가-힣]/g) || []).length < 4) continue
     const cell = el.closest<HTMLElement>('.bk')

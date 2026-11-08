@@ -1,0 +1,197 @@
+/* ---------- 모이고 퍼지기 ----------
+   모션 그래픽 장면: 여러 곳에서 가운데로 데이터가 모여들거나(모이기), 가운데에서 여러 곳으로 퍼져 나간다(퍼지기).
+   무대는 칸을 가득 채운다: 다른 그림 컴포넌트처럼 내용 크기로 줄이면 큰 장 가운데에 작게 떠서 심심했다(사용자).
+   선은 칸 크기대로 늘어난 좌표계(Hub.tsx)에 굵기를 지켜 긋고, 둥근 것(점, 가운데 원, 빛)은 HTML이라 찌그러지지 않는다.
+   선과 점은 강조색, 가운데는 짙은 면(--bold-bg). 빛(번짐)은 가운데와 흐르는 조각에만.
+   흐르는 조각과 도는 고리의 움직임은 발표할 때만(engine.ts). 멈춘 그림에서는 조각을 감추고 고리는 제자리에 둔다.
+   움직임의 원칙(계속 움직이는 것은 하나, 5초 안팎으로 흔들리는 반복은 쓰지 않음)은 docs/MOTION.md */
+
+.bk-hb {
+  /* 가운데 원의 지름: 무대 높이의 44%, 좁은 칸에서는 너비의 24%까지. 낮은 칸에서도 가운데 이름 두 줄이 들어가게 230px 아래로는 줄이지 않는다 */
+  --hb-core: max(230px, min(44cqh, 24cqw));
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  container-type: size;
+}
+
+.bk-hb-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.bk-hb-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.bk-hb-line {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 38%, transparent);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------- 둥근 것: 점, 가운데 원, 빛 (자리는 Hub.tsx가 %로) ---------- */
+:is(.bk-hb-spot, .bk-hb-core, .bk-hb-halo) {
+  position: absolute;
+  translate: -50% -50%;
+}
+
+.bk-hb-spot {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+}
+
+.bk-hb-spot > * {
+  grid-area: 1 / 1;
+  border-radius: 50%;
+}
+
+.bk-hb-dot {
+  width: 22px;
+  height: 22px;
+  background: var(--accent);
+}
+
+.bk-hb-ring-s {
+  width: 44px;
+  height: 44px;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.bk-hb-core {
+  display: grid;
+  place-items: center;
+  width: var(--hb-core);
+  height: var(--hb-core);
+  border-radius: 50%;
+  background: var(--bold-bg);
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.bk-hb-halo {
+  /* 빛은 원 둘레만큼: 넓게 퍼뜨리면 가운데가 칸 오른쪽(퍼지기는 왼쪽) 끝에 가까워 칸 밖으로 번졌다 */
+  width: calc(var(--hb-core) * 1.8);
+  height: calc(var(--hb-core) * 1.8);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 14%, transparent), transparent);
+}
+
+/* 어두운 바탕에서는 빛이 번짐으로 보인다. 밝은 바탕에서 같은 농도면 가운데 둘레가 탁한 회색 얼룩이 되었다 */
+.is-dark .bk-hb-halo {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 34%, transparent), transparent);
+}
+
+/* 둘레의 고리: 원 위의 짧은 호. 발표할 때 서로 반대로 천천히 돈다 */
+.bk-hb-orbits {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.bk-hb-orbit {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-width: 2.4;
+  opacity: 0.55;
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+
+.bk-hb-orbit.is-a {
+  stroke-dasharray: 22 78;
+}
+
+.bk-hb-orbit.is-b {
+  stroke-dasharray: 10 90;
+  stroke-dashoffset: 40;
+  opacity: 0.35;
+}
+
+/* ---------- 흐르는 데이터 조각 ----------
+   머리(둥근 끝의 짧은 획)와 꼬리(옅고 긴 획). 길이를 100으로 맞춘 길(pathLength) 위의 획이라 획의 자리(stroke-dashoffset)를
+   옮기면 길을 따라간다 */
+:is(.bk-hb-pk, .bk-hb-tail) {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+}
+
+.bk-hb-pk {
+  stroke-width: 13;
+  stroke-dasharray: 0.4 99.6;
+  filter: drop-shadow(0 0 10px var(--accent)) drop-shadow(0 0 3px var(--accent));
+}
+
+.bk-hb-tail {
+  stroke-width: 6;
+  stroke-dasharray: 12 88;
+}
+
+/* ---------- 글 ---------- */
+.bk-hb-hub {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 12%;
+  text-align: center;
+}
+
+.bk-hb-c {
+  --fs: var(--t-h);
+  color: var(--bold-ink);
+  font-weight: 800;
+  line-height: 1.15;
+  word-break: keep-all;
+}
+
+.bk-hb-n {
+  --fs: var(--t-source);
+  margin-top: 6px;
+  color: color-mix(in srgb, var(--bold-ink) 70%, transparent);
+  line-height: 1.3;
+}
+
+/* 곳의 이름: 점 옆, 글이 선을 향한다(모이기는 점 왼쪽에 오른쪽 끝을 맞추고, 퍼지기는 점 오른쪽에) */
+/* 편집할 때 항목(.it)에 도구를 붙이려고 position: relative를 주는 규칙보다 앞서야 이름표가 제자리(점 옆)에 선다 */
+.slide .bk-hb .bk-hb-stage > .bk-hb-node {
+  position: absolute;
+  max-width: 30%;
+  translate: 0 -50%;
+}
+
+.is-in .bk-hb-node {
+  text-align: right;
+}
+
+.bk-hb-t {
+  --fs: var(--t-body);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.bk-hb-m {
+  --fs: var(--t-small);
+  margin-top: 4px;
+  color: var(--ink-2);
+  line-height: 1.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.bk-hb-pk, .bk-hb-tail) {
+    display: none;
+  }
+}

@@ -169,6 +169,7 @@ export type NativeBlockType =
   | 'whys'
   | 'cycle'
   | 'network'
+  | 'hub'
   | 'split'
   | 'merge'
   | 'tiles'

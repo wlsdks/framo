@@ -828,6 +828,42 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  hub: {
+    name: '모이고 퍼지기',
+    description: '여러 곳의 것이 한가운데로 모여들거나, 한가운데에서 여러 곳으로 퍼져 나가는 모습. 데이터가 계속 흘러요',
+    motion: '선이 그어지고 빛나는 데이터 조각이 꼬리를 끌며 선을 따라 쉬지 않고 흘러요. 가운데는 숨 쉬듯 빛나고 둘레의 고리가 돌아요',
+    variants: [
+      { id: 'in', name: '모이기' },
+      { id: 'out', name: '퍼지기' },
+    ],
+    fields: [
+      { key: 'center', label: '가운데', hint: '가운데 둘 것 (예: 공통 고객 정보)' },
+      { key: 'note', label: '가운데 설명', hint: '가운데 아래 짧은 한 줄', optional: true },
+    ],
+    items: {
+      label: '곳',
+      // 둘이면 모이는 그림이 아니라 잇는 선이다. 일곱부터는 한쪽 호에 이름이 빽빽해 서로 닿는다
+      min: 3,
+      max: 6,
+      default: 4,
+      fields: [
+        { key: 'title', label: '이름', hint: '모이거나 퍼지는 곳', hints: ['주문 시스템', '상담 기록', '회원 정보', '배송 현황', '정산 시스템', '리뷰'] },
+        { key: 'meta', label: '설명', hint: '오가는 것', hints: ['주문과 결제', '문의와 답변', '가입과 등급', '출고와 도착', '매출과 수수료', '별점과 후기'], optional: true },
+      ],
+    },
+    // 너비 6칸에 곳이 다섯 넘으면 호 위의 이름끼리 닿는다(갤러리에서 잰 높이 표가 999)
+    minSpan: 8,
+    prefSpan: 12,
+    sample: {
+      fields: { center: '공통 고객 정보', note: '한 곳에서 찾아요' },
+      items: [
+        { title: '주문 시스템', meta: '주문과 결제' },
+        { title: '상담 기록', meta: '문의와 답변' },
+        { title: '회원 정보', meta: '가입과 등급' },
+        { title: '배송 현황', meta: '출고와 도착' },
+      ],
+    },
+  },
   network: {
     name: '연결도',
     description: '가운데 하나에 여러 시스템이나 팀이 이어진 모습',

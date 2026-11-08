@@ -22,6 +22,7 @@ import { Cycle } from './blocks/Cycle'
 import { Diverge } from './blocks/Diverge'
 import { Facts } from './blocks/Facts'
 import { Flow } from './blocks/Flow'
+import { Hub } from './blocks/Hub'
 import { Network } from './blocks/Network'
 import { Merge } from './blocks/Merge'
 import { Split } from './blocks/Split'
@@ -91,6 +92,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   heat: Heat,
   sparks: Sparks,
   flow: Flow,
+  hub: Hub,
   decision: Decision,
   whys: Whys,
   cycle: Cycle,
