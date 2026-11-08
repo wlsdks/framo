@@ -134,3 +134,9 @@
     margin-top: calc(var(--t-body) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1) * 0.2);
   }
 }
+
+/* 걱정과 대책 사이의 표시는 그리지 않는다(자리는 둔다): 두 단 사이에 홀로 뜬 표시가 어색하고 AI가 만든 서식처럼 보였다(사용자, 비교와 같다).
+   짝은 같은 줄과 머리말(걱정되는 점 · 대책)이 말한다 */
+.bk-rk-arrow {
+  visibility: hidden;
+}
