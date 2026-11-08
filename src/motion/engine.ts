@@ -2182,11 +2182,11 @@ export function motionEngine(): MotionEngine {
           turns.forEach((turn, k) => {
             const say = turn.querySelector<HTMLElement>('.bk-ch-say')
             const len = [...(say?.textContent ?? '')].length
-            const ms = Math.max(360, Math.min(1200, len * 45))
+            const ms = Math.max(320, Math.min(1000, len * 32))
             fade(turn.querySelector('.bk-ch-who'), at, 300)
             run(anims, turn, [{ opacity: 0 }, { opacity: 1 }], s(at), { easing: OUT, duration: d(120) })
             typeOut(say, at + 120, ms, k === turns.length - 1)
-            at += 120 + ms + 320
+            at += 120 + ms + 260
           })
           break
         }
