@@ -1,5 +1,7 @@
 /* 조건 하나에서 갈라지는 두세 가지 경로. 선은 조건과 결과의 관계만 보여 준다. */
 .bk-dc {
+  /* 생동감에서 질문에서 갈래로 조각이 계속 흐른다(engine.ts의 stream): 조각을 이 안에 얹는다 */
+  position: relative;
   display: grid;
   grid-template-columns: fit-content(40%) minmax(0, 1fr);
   gap: var(--bk-col-gap);

@@ -22,6 +22,8 @@
 }
 
 .bk-wy-list {
+  /* 생동감에서 문제에서 근본 원인까지 조각이 계단을 따라 계속 내려간다(engine.ts의 stream): 조각을 이 안에 얹는다 */
+  position: relative;
   display: flex;
   flex-direction: column;
 }

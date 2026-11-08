@@ -1788,11 +1788,39 @@ export function motionEngine(): MotionEngine {
           lines(one('.bk-img-c'), 600)
           break
         }
-        case 'decision':
+        case 'decision': {
           fade(one('.bk-dc-label'), 40, 400)
           rise(one('.bk-dc-question'), 100, L.y * 0.5)
-          items('.bk-dc-row', 240, (el, at) => rise(el, at, L.y * 0.4))
+          let last = 240
+          items('.bk-dc-row', 240, (el, at) => {
+            rise(el, at, L.y * 0.4)
+            last = Math.max(last, at)
+          })
+          // 생동감: 질문에서 조각이 괄호 줄기를 타고 갈래마다 번갈아 들어가고, 닿는 갈래의 조건이 잠깐 강조색이 된다.
+          // '조건에 따라 길이 갈린다'는 것을 계속 보여 준다
+          const root = one('.bk-dc')
+          const question = one('.bk-dc-question')
+          const list = one('.bk-dc-list')
+          const rows = $('.bk-dc-row')
+          if (root && question && list && rows.length) {
+            const q = spot(question, root)
+            const l = spot(list, root)
+            const accent = getComputedStyle(root).getPropertyValue('--accent').trim()
+            const qy = (q.t + q.b) / 2
+            const x0 = q.r + 10
+            const trunk = Math.max(x0 + 12, l.l - 14)
+            const period = d(2400)
+            rows.forEach((row, k) => {
+              const cond = row.querySelector('.bk-dc-condition') as HTMLElement | null
+              const c = spot(cond ?? row, root)
+              const y = (c.t + c.b) / 2
+              const path: [number, number][] = [[x0, qy], [trunk, qy], [trunk, y], [c.l - 10, y]]
+              const ink = cond ? getComputedStyle(cond).color : ''
+              stream(root, path, last + 700, period, (k * period) / rows.length, cond ? { el: cond, off: { color: ink }, on: { color: accent } } : undefined)
+            })
+          }
           break
+        }
         case 'whys': {
           // 문제가 먼저 서고, 단마다 앞 단의 이름표 아래에서 선이 내려와 꺾여 들어오면(└) 그 끝에 '왜?'가 닿고 원인이 올라온다.
           // 계단을 한 단씩 내려가는 차례가 캐 들어가는 차례다. 마지막 근본 원인은 강조색 갈고리가 닿을 때 흐릿하던 글이 또렷하게
@@ -1832,6 +1860,25 @@ export function motionEngine(): MotionEngine {
             } else rise(text, at + seg * 0.75, L.y * 0.4)
             rise(note, at + seg * 0.75 + 90, L.y * 0.3)
           })
+          // 생동감: 그 뒤로는 조각이 문제에서 이름표를 따라 한 단씩 내려가 근본 원인에 닿고, 닿을 때 근본 원인의 글이 잠깐 밝아진다.
+          // 캐 들어가는 차례를 계속 보여 준다. 길은 이름표마다의 왼쪽 가운데를 계단(꺾임)으로 잇는다
+          const list = one('.bk-wy-list')
+          const labels = steps.map((st) => st.querySelector('.bk-wy-k') as HTMLElement | null)
+          if (list && labels.length > 1 && labels.every(Boolean)) {
+            const pts: [number, number][] = []
+            labels.forEach((lb, n) => {
+              const r = spot(lb!, list)
+              const p: [number, number] = [r.l - 8, (r.t + r.b) / 2]
+              if (n > 0) pts.push([pts[pts.length - 1][0], p[1]])
+              pts.push(p)
+            })
+            // 근본 원인의 이름표는 이미 강조색이라, 닿을 때 밝아지는 것은 근본 원인의 글이다
+            const rootText = steps[steps.length - 1].querySelector('.bk-wy-t') as HTMLElement | null
+            const accent = getComputedStyle(list).getPropertyValue('--accent').trim()
+            const ink = rootText ? getComputedStyle(rootText).color : ''
+            const end = 120 + (steps.length - 1) * hop + seg + 600
+            stream(list, pts, end, d(2600), 0, rootText ? { el: rootText, off: { color: ink }, on: { color: accent } } : undefined)
+          }
           break
         }
         case 'cycle': {
