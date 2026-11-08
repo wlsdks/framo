@@ -140,3 +140,40 @@
 .bk-rk-arrow {
   visibility: hidden;
 }
+
+/* ---------- 넓은 칸: 두 단으로 ----------
+   꺾쇠를 감춘 뒤에도 꺾쇠 열(56px)과 그 양옆 사이(48px씩)가 남아 걱정과 대책 사이가 150px 넘게 비었고, 대책 열이 좁아 두 줄로
+   꺾였다(사용자: 표가 보기 힘들다). 꺾쇠 열을 빼고 걱정 1 : 대책 1.4로 나눈다. 머리말은 이름표보다 또렷하게, 대책은 덜 무겁게(500) */
+@container bk (min-width: 981px) {
+  .bk-rk-head,
+  .bk-rk-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    column-gap: 72px;
+  }
+
+  .bk-rk-arrow {
+    display: none;
+  }
+
+  /* 대책 열이 넓어져 줄이 한 줄로 서니 위아래 여백을 줄인다(줄 사이가 내용 높이의 두 배를 넘었다) */
+  .bk-rk-row {
+    padding: calc(14px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
+  }
+
+  .bk-rk-list[data-n='4'] .bk-rk-row {
+    padding: calc(11px * var(--bk-fit, 1) + var(--bk-air, 0px) / 2) 0;
+  }
+
+  .bk-rk-b,
+  .bk-rk-hk.is-fix {
+    grid-column: 2;
+  }
+}
+
+.bk-rk-hk {
+  color: var(--ink-2);
+}
+
+.bk-rk-b {
+  font-weight: 500;
+}
