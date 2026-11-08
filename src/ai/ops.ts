@@ -691,7 +691,12 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
       const next = { ...theme }
       if (op.theme) next.id = op.theme
       if (op.accent !== undefined) next.accent = op.accent === null ? undefined : op.accent.toLowerCase()
-      if (op.font !== undefined) next.font = op.font ?? undefined
+      // 글꼴을 고르면 사람이 고른 이 PC 글꼴은 거둔다: 남겨 두면 제안을 적용해도 그 글꼴이 앞에 서서 바뀐 것이 보이지 않았다.
+      // AI는 이 PC 글꼴의 이름을 모른다(모양에 넣지 않는다). 거두기 전 상태는 적용 전 버전에 남는다
+      if (op.font !== undefined) {
+        next.font = op.font ?? undefined
+        delete next.localFont
+      }
       if (op.size) next.size = op.size
       if (op.footer) next.footer = op.footer
       if (op.transition) next.transition = op.transition

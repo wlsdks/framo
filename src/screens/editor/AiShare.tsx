@@ -10,7 +10,7 @@ import { BLOCK_EFFECTS, BLOCK_FROMS, BLOCK_LINKS, BLOCK_LOOKS, BLOCK_SPEEDS, BLO
 import { pageInfo } from '../../deck/fields'
 import { LAYOUTS } from '../../deck/layouts'
 import { sceneOf, sceneSpec } from '../../deck/scenes'
-import { motionOf, MOTIONS, THEMES, TONES, TRANSITIONS } from '../../deck/themes'
+import { FONTS, FOOTERS, motionOf, MOTIONS, TEXT_SIZES, THEMES, TONES, TRANSITIONS } from '../../deck/themes'
 import type { Deck, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { josa } from '../../lib/josa'
@@ -20,6 +20,7 @@ import { pageProps, ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
 import { sideName } from '../../slides/panes'
 import { useDeck } from '../../store/deckStore'
 import { AskIcon, BackIcon, CheckIcon, ChevronIcon, CopyIcon, Info, Popover, Toggle, useDialog } from '../ui'
+import { SHORTCUT } from './shortcuts'
 import { measureOver } from './aiOver'
 
 const SKIP_REASON: Record<Exclude<OpCode, 'applied'>, string> = {
@@ -246,7 +247,7 @@ function AskList({
   )
 }
 
-/** 슬라이드 아래의 'AI 다듬기'. 이 장 하나를 맡긴다 (위쪽 'AI 다듬기'와 같은 이름, 맡기는 범위만 다르다) */
+/** 슬라이드 아래의 'AI 도움받기'. 이 장 하나를 맡긴다 (위쪽 'AI 도움받기'와 같은 이름, 맡기는 범위만 다르다) */
 export function SlideAsk({ deck, slide, ai, ask }: { deck: Deck; slide: Slide; ai: AiShare; ask: AiAsk }) {
   if (!ai.status) return null
   const busy = ask.job?.state === 'running'
@@ -263,7 +264,7 @@ export function SlideAsk({ deck, slide, ai, ask }: { deck: Deck; slide: Slide; a
           onClick={toggle}
         >
           <AskIcon />
-          {busy ? 'AI가 보는 중' : 'AI 다듬기'}
+          {busy ? 'AI가 보는 중' : 'AI 도움받기'}
         </button>
       )}
     >
@@ -329,18 +330,18 @@ export function AskStatus({ deck, job, onCancel }: { deck: Deck; job: AskJob; on
   )
 }
 
-// ---------- 위쪽 'AI 다듬기' 단추 ----------
+// ---------- 위쪽 'AI 도움받기' 단추 ----------
 
 export function AiMenu({ deck, ai, ask }: { deck: Deck; ai: AiShare; ask: AiAsk }) {
   return (
     <Popover
       className="pop-ai"
       button={({ toggle, open }) => (
-        // 'AI' 한 낱말은 누르면 무엇이 되는지 말하지 않았다. 장 아래의 'AI 다듬기'와 같은 이름으로, 이쪽은 발표 전체를 다듬는다.
+        // 'AI' 한 낱말은 누르면 무엇이 되는지 말하지 않았다. 장 아래의 'AI 도움받기'와 같은 이름으로, 이쪽은 발표 전체를 맡긴다. 예전 이름 'AI 다듬기'는 무엇을 하는지 어색하게 들렸다.
         // 사용법, README, MCP 안내도 이 이름으로 부른다
-        <button type="button" className="btn btn-ghost ai-btn" title="AI에게 발표 전체의 구성과 모양을 제안받아요" aria-expanded={open} onClick={toggle}>
+        <button type="button" className="btn btn-ghost ai-btn" title={`AI에게 발표 전체의 구성과 모양을 제안받아요 (${keys(SHORTCUT.ai)})`} data-shortcut="ai" aria-expanded={open} onClick={toggle}>
           <AskIcon />
-          AI 다듬기
+          AI 도움받기
           {deck.aiShare && ai.status && <span className="ai-dot" aria-label="AI에게 공유 중" />}
         </button>
       )}
@@ -419,7 +420,7 @@ function AiHead({ title, ai, ask, compact }: { title: string; ai: AiShare; ask: 
     <header className="ai-head">
       <p className="ai-head-h">
         {title}
-        <Info label="AI 다듬기 설명">고르면 AI가 발표의 모양을 살펴보고 바꿀 것을 제안해요. 바뀌는 모습을 미리 보고 적용할지 정해요. 적용한 뒤에도 되돌릴 수 있어요.</Info>
+        <Info label="AI 도움받기 설명">고르면 AI가 발표의 모양을 살펴보고 바꿀 것을 제안해요. 바뀌는 모습을 미리 보고 적용할지 정해요. 적용한 뒤에도 되돌릴 수 있어요.</Info>
       </p>
       <AiConn ai={ai} ask={ask} compact={compact} />
     </header>
@@ -642,7 +643,7 @@ function describe(deck: Deck, op: Op, named: Map<string, string>, applied: Appli
       return { text: `${name(op.slide)} 레이아웃 바꾸기`, detail: `${slide ? LAYOUTS[slide.layout].name : '?'} → ${to}` }
     }
     case 'set_hidden':
-      return { text: `${name(op.slide)} ${op.hidden ? '발표에서 빼기' : '발표에 다시 넣기'}` }
+      return { text: `${name(op.slide)} ${op.hidden ? '발표에서 숨기기' : '발표에 다시 보이기'}` }
     case 'set_item_count': {
       const spec = slide && LAYOUTS[slide.layout].items
       return { text: `${name(op.slide)} ${spec?.label ?? '항목'} 수 바꾸기`, detail: `${slide ? Math.min(slide.items.length, spec?.max ?? 0) : '?'}개 → ${op.count}개` }
@@ -672,8 +673,15 @@ function describe(deck: Deck, op: Op, named: Map<string, string>, applied: Appli
       const parts: string[] = []
       if (op.theme) parts.push(`테마: ${THEMES[deck.theme.id].name} → ${THEMES[op.theme].name}`)
       if (op.accent !== undefined) parts.push(op.accent === null ? '강조색: 테마 기본색' : `강조색: ${op.accent}`)
-      if (op.motion) parts.push(`모션 세기: ${MOTIONS.find((m) => m.id === (deck.motion ?? 'calm'))?.name} → ${MOTIONS.find((m) => m.id === op.motion)?.name}`)
-      return { text: op.theme || op.accent !== undefined ? '테마 바꾸기' : '모션 세기 바꾸기', detail: parts.join(', ') }
+      if (op.font !== undefined) parts.push(`글꼴: ${op.font === null ? '테마 글꼴' : FONTS.find((f) => f.id === op.font)?.name}`)
+      if (op.size) parts.push(`글자 크기: ${TEXT_SIZES.find((x) => x.id === op.size)?.name}`)
+      if (op.motion) parts.push(`모션: ${MOTIONS.find((m) => m.id === (deck.motion ?? 'calm'))?.name} → ${MOTIONS.find((m) => m.id === op.motion)?.name}`)
+      if (op.footer) parts.push(`슬라이드 아래쪽: ${FOOTERS.find((x) => x.id === op.footer)?.name}`)
+      if (op.transition) parts.push(`화면 전환: ${TRANSITIONS.find((t) => t.id === op.transition)?.name}`)
+      // 생김새(테마 메뉴)를 바꾸는지, 발표하는 방식(발표 설정)만 바꾸는지를 화면의 두 단추 이름대로. 예전에는 글꼴이나 글자 크기만 바꿔도
+      // '모션 세기 바꾸기'로 보였다
+      const look = !!op.theme || op.accent !== undefined || op.font !== undefined || !!op.size
+      return { text: look ? '테마 바꾸기' : '발표 설정 바꾸기', detail: parts.join(', ') }
     }
     case 'set_guide':
       return { text: `${name(op.slide)}의 안내 바꾸기`, detail: op.text }
@@ -683,7 +691,7 @@ function describe(deck: Deck, op: Op, named: Map<string, string>, applied: Appli
       return { text: `${name(op.slide)}에 빈 ${label} 넣기`, detail: placeText(op) }
     }
     case 'remove_block':
-      return { text: `${name(op.slide)}에서 ${blockName(op.block)} 빼기`, detail: '빈 컴포넌트만 빼요' }
+      return { text: `${name(op.slide)}에서 ${blockName(op.block)} 지우기`, detail: '빈 컴포넌트만 지워요' }
     case 'move_block':
       return { text: `${name(op.slide)}의 ${blockName(op.block)} 옮기기`, detail: placeText(op) }
     case 'set_block': {
@@ -706,7 +714,7 @@ function describe(deck: Deck, op: Op, named: Map<string, string>, applied: Appli
     case 'set_link': {
       const where = op.side === 'right' ? `${blockName(op.block)}와 오른쪽 컴포넌트 사이` : `${blockName(op.block)}와 아래 컴포넌트 사이`
       const kind = BLOCK_LINKS.find((l) => l.id === op.link)?.name
-      return op.link ? { text: `${name(op.slide)}에 연결 기호 ‘${kind}’ 넣기`, detail: where } : { text: `${name(op.slide)}에서 연결 기호 빼기`, detail: where }
+      return op.link ? { text: `${name(op.slide)}에 연결 기호 ‘${kind}’ 넣기`, detail: where } : { text: `${name(op.slide)}에서 연결 기호 지우기`, detail: where }
     }
     case 'set_order':
       return { text: `${name(op.slide)}의 컴포넌트 나오는 차례 바꾸기`, detail: op.order.length ? op.order.map(blockName).join(' → ') : '놓인 차례대로' }

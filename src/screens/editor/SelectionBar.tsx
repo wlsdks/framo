@@ -15,7 +15,7 @@ import { moving, useTrackRect } from './useTrackRect'
 /**
  * 장 위에서 고른 것과 그 도구. 레이아웃 장에서 칸을 누르면 그 칸이 든 항목(카드, 줄, 단계)이나 옆 판, 제목 덩어리를 고른다.
  * 고른 것에는 옅은 면 하나만 깔고(쓰는 칸의 실선이 유일한 테), 할 수 있는 일은 장 아래 도구 줄에 이름과 함께 보인다:
- * 앞뒤로, 강조, 복제, 빼기 / 반대쪽으로, 좁게·넓게, 아래로 / 제목 자리. 끌어 옮기기는 항목 왼쪽 여백의 손잡이로 한다.
+ * 앞뒤로, 강조, 복제, 지우기 / 반대쪽으로, 좁게·넓게, 아래로 / 제목 자리. 끌어 옮기기는 항목 왼쪽 여백의 손잡이로 한다.
  *
  * 예전에는 고른 것 바로 위에 막대를 띄웠다. 줄 사이가 막대보다 좁아 막대가 윗줄이나 아랫줄의 글을 덮었고, 고른 항목의 테와
  * 쓰는 칸의 테가 두 겹으로 둘렀다. 부품 장(.bk)의 도구는 BlockTools가 만들고 같은 자리에 그린다(StageSlot).
@@ -282,7 +282,7 @@ export function SelectionBar({ slide, canvasRef }: { slide: Slide; canvasRef: Re
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              title={n <= spec.items.min ? `${josa(spec.items.label, '은', '는')} ${spec.items.min}개 아래로 줄일 수 없어요` : `이 ${josa(spec.items.label, '을', '를')} 빼요`}
+              title={n <= spec.items.min ? `${josa(spec.items.label, '은', '는')} ${spec.items.min}개 아래로 줄일 수 없어요` : `이 ${josa(spec.items.label, '을', '를')} 지워요`}
               disabled={n <= spec.items.min}
               onClick={() => {
                 store.removeItem(slide.id, i)
@@ -290,7 +290,7 @@ export function SelectionBar({ slide, canvasRef }: { slide: Slide; canvasRef: Re
               }}
             >
               <TrashIcon />
-              <span className="btn-t">빼기</span>
+              <span className="btn-t">지우기</span>
             </button>
           </>,
         )}

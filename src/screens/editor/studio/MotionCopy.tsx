@@ -37,7 +37,7 @@ export function MotionCopy({ deck, slide, prefer, toast }: { deck: Deck; slide: 
         <h2 className="ms-h">
           다른 슬라이드에도
           <Info label="다른 슬라이드에도 옮기는 것">
-            이 슬라이드의 장면, 화면 전환, 모션 세기를 다른 슬라이드에 그대로 옮겨요. 컴포넌트 슬라이드끼리는 연출과 같은 종류 컴포넌트의 모션도 옮겨요. 글은 바뀌지 않아요.
+            이 슬라이드의 움직이는 방식(장면), 화면 전환, 모션을 다른 슬라이드에 그대로 옮겨요. 컴포넌트 슬라이드끼리는 나오는 차례와 같은 종류 컴포넌트의 모션도 옮겨요. 글은 바뀌지 않아요.
           </Info>
         </h2>
         <button
@@ -59,10 +59,10 @@ export function MotionCopy({ deck, slide, prefer, toast }: { deck: Deck; slide: 
   const scene = sceneOf(slide)
   const preset = slide.layout === 'compose' ? currentPreset(slide, prefer) : null
   const what = [
-    `장면 ${scene ? sceneSpec(scene).name : '없음'}`,
+    `움직이는 방식 ${scene ? sceneSpec(scene).name : '자동'}`,
     `화면 전환 ${nameOf(SLIDE_TRANSITIONS, slide.options.transition ?? undefined)}`,
-    `모션 세기 ${slide.options.motion ? nameOf(MOTIONS, slide.options.motion) : INHERIT}`,
-    preset && `연출 ${nameOf(MOTION_PRESETS, preset)}`,
+    `모션 ${slide.options.motion ? nameOf(MOTIONS, slide.options.motion) : INHERIT}`,
+    preset && `나오는 차례 ${nameOf(MOTION_PRESETS, preset)}`,
   ].filter(Boolean)
   const toggle = (id: string) =>
     setPicked((p) => {

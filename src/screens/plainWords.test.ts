@@ -32,4 +32,15 @@ describe('화면 문구', () => {
           for (const word of AVOID) if (text.includes(word)) found.push(`${p}: '${word}' — ${text.trim().slice(0, 60)}`)
     expect(found).toEqual([])
   })
+
+  it("'빼기'와 예전 이름 'AI 다듬기'는 화면에 쓰지 않는다", () => {
+    // 쓰는 사람: “빼기라는 단어 자체를 안 쓰는 게 좋음”(무언가를 잃는 말처럼 들린다). 지우는 것은 '지우기', 발표에서 건너뛰는 것은 '숨기기'.
+    // 'AI 다듬기'는 무엇을 하는지 어색하게 들려 'AI 도움받기'로 바꿨다
+    const found: string[] = []
+    for (const root of ROOTS)
+      for (const p of files(root))
+        for (const text of screenText(readFileSync(p, 'utf8')))
+          for (const word of ['빼기', 'AI 다듬기']) if (text.includes(word)) found.push(`${p}: '${word}' — ${text.trim().slice(0, 60)}`)
+    expect(found).toEqual([])
+  })
 })

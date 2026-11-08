@@ -29,7 +29,7 @@
   justify-content: flex-end;
 }
 
-/* 위 막대에서 테를 두른 것은 '발표하기' 하나. AI 다듬기, 테마, 내보내기까지 모두 테 상자면 상자 넷이 나란히 서서
+/* 위 막대에서 테를 두른 것은 '발표하기' 하나. AI 도움받기, 테마, 내보내기까지 모두 테 상자면 상자 넷이 나란히 서서
    흔한 도구 막대처럼 보였고, 어디가 할 일의 끝(발표)인지도 덜 보였다. 나머지는 되돌리기 아이콘처럼 올리면 옅은 면만 */
 .ed-top-r .btn-ghost {
   border-color: transparent;
@@ -114,7 +114,7 @@
   font-weight: 600;
 }
 
-/* 저장 상태와 그 옆의 할 일 하나 (보관 폴더 정하기). 칠하지 않은 글자 단추: 늘 보이지만 편집보다 먼저 눈에 띄지 않게 */
+/* 저장 상태와 그 옆의 할 일 하나 (보관 폴더 고르기). 칠하지 않은 글자 단추: 늘 보이지만 편집보다 먼저 눈에 띄지 않게 */
 .save-wrap {
   position: relative;
   display: flex;
@@ -211,6 +211,17 @@
   gap: 14px;
   margin-top: 14px;
   font-size: 13px;
+}
+
+/* 고르기 단추 바로 아래: 단추를 누르면 열리는 창에서 할 일 (ui.tsx의 FOLDER_TIP). 할 일이라 본문(.save-pop-p)과 같은 크기와 색.
+   작고 옅은 글로 두었더니 창에서 가장 안 읽히는 글이 되었다 */
+.save-pop-tip {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+  /* 끝 줄에 한 낱말만 남지 않게 */
+  text-wrap: pretty;
 }
 
 .save-pop-foot {

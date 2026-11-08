@@ -236,7 +236,7 @@ const TOOLS = [
     name: 'list_decks',
     description:
       '사용자가 앱에서 AI 공유를 켠 발표 목록. 제목은 없고 해시 id(d로 시작)로 구분한다. 발표 종류, 장 수, 듣는 사람, 시간이 나온다. ' +
-      '최근에 고친 순서라서, 여러 개면 맨 앞이 지금 고치고 있는 발표일 가능성이 크다. 목록이 비었으면 Framo 편집 화면 위쪽 ‘AI 다듬기’를 열고 아래 ‘보이는 것, 직접 연결’에서 ‘이 발표를 AI에게 보여 주기’를 켜 달라고 안내한다.',
+      '최근에 고친 순서라서, 여러 개면 맨 앞이 지금 고치고 있는 발표일 가능성이 크다. 목록이 비었으면 Framo 편집 화면 위쪽 ‘AI 도움받기’를 열고 아래 ‘보이는 것, 직접 연결’에서 ‘이 발표를 AI에게 보여 주기’를 켜 달라고 안내한다.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },

@@ -163,6 +163,22 @@ export function shownOnly(slide: Slide): Slide {
   return { ...shown, fields, blocks: slide.layout === 'compose' ? slide.blocks?.map((b) => within(b, BLOCKS[b.type])) : undefined }
 }
 
+/**
+ * 장에 보이는 글의 글자 수(빈칸 빼고). 레이아웃이나 부품이 그리는 칸과 항목만 세고, 이미지와 가려 둔 칸은 세지 않는다.
+ * 영상으로 저장할 때 장을 읽을 만큼 머무는 시간을 이것으로 정한다(present/pace.ts)
+ */
+export function shownChars(slide: Slide, meta: DeckMeta): number {
+  const shown = shownOnly(slide)
+  const count = (s: string) => s.replace(/\s+/g, '').length
+  const cells = (specs: { key: string; image?: boolean }[], fields: Record<string, string>, items: Item[]) =>
+    specs.reduce((n, f) => n + (f.image ? 0 : count(isMetaKey(f.key) ? (meta[f.key.slice(1) as MetaKey] ?? '') : (fields[f.key] ?? ''))), 0) +
+    items.reduce((n, it) => n + ITEM_TEXT.reduce((m, key) => m + (key === 'image' ? 0 : count(it[key])), 0), 0)
+  return (
+    cells(LAYOUTS[slide.layout].fields, shown.fields, shown.items) +
+    (shown.blocks ?? []).reduce((n, b) => n + cells(BLOCKS[b.type].fields, b.fields, b.items), 0)
+  )
+}
+
 const META_KEYS: MetaKey[] = ['org', 'presenter', 'date', 'contact', 'logo']
 
 /**

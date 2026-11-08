@@ -40,6 +40,19 @@
   .ed-body.has-versions {
     grid-template-columns: 196px minmax(0, 1fr) 320px;
   }
+
+  /* 모션 편집은 오른쪽 칸(고른 것의 값)이 있어야 쓸 수 있어 접지 않는다. 대신 슬라이드 목록을 접어 무대 자리를 지킨다 */
+  .ed-body.is-studio {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+
+  .ed-body.is-studio .sl {
+    display: none;
+  }
+
+  .ed-body.is-studio .side {
+    display: flex;
+  }
 }
 
 @media (max-width: 860px) {

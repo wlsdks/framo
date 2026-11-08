@@ -23,8 +23,8 @@ describe('끌어 옮기는 목록의 화면 읽기 안내', () => {
       const text = readFileSync(file, 'utf8')
       return [...text.matchAll(/<DndContext\b[\s\S]*?<SortableContext/g)].map((m) => ({ file: file.slice(SRC.length + 1), props: m[0] }))
     })
-    // 장 목록, 나오는 차례, 움직임 편집의 시간표
-    expect(lists.length).toBeGreaterThanOrEqual(3)
+    // 장 목록, 움직임 편집의 시간표 (오른쪽 칸 '모션'의 나오는 차례 목록은 움직임 편집의 시간표로 합쳤다)
+    expect(lists.length).toBeGreaterThanOrEqual(2)
     expect(lists.filter((l) => !/\baccessibility=\{/.test(l.props)).map((l) => l.file)).toEqual([])
   })
 
@@ -65,7 +65,7 @@ describe('끌어 옮기는 목록의 화면 읽기 안내', () => {
       const text = readFileSync(f, 'utf8')
       return /e\.altKey/.test(text) && text.includes("'ArrowUp'")
     })
-    expect(keyed.length).toBeGreaterThanOrEqual(3)
+    expect(keyed.length).toBeGreaterThanOrEqual(2)
     const bad = keyed.filter((f) => {
       const text = readFileSync(f, 'utf8')
       return !text.includes('movedSay(') || !/aria-live="polite"/.test(text)

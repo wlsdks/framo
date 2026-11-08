@@ -11,6 +11,8 @@ import { cx } from '../../lib/cx'
 import { onMenuKeys } from '../../lib/menuKeys'
 import { useDeck } from '../../store/deckStore'
 import { AlertIcon, BlocksIcon, MoreIcon, PlayIcon, PlusIcon, Popover, ScreenIcon, SlidersIcon } from '../ui'
+import { keys } from '../../lib/keys'
+import { SHORTCUT } from './shortcuts'
 import { SlideAsk } from './AiShare'
 import { SlideMenuItems } from './SlideMenu'
 import { openLayoutPicker } from './Inspector'
@@ -140,7 +142,7 @@ function OverflowNote({ slide, overflow, side }: { slide: Slide; overflow: Overf
             ) : (
               <>
                 <p className="warn-pop-h">컴포넌트가 들어갈 높이가 모자라요</p>
-                <p className="warn-pop-p">컴포넌트를 줄여서 보이고 있어요. 제목이나 부제를 줄이거나 컴포넌트를 하나 빼 주세요.</p>
+                <p className="warn-pop-p">컴포넌트를 줄여서 보이고 있어요. 제목이나 부제를 줄이거나 컴포넌트를 하나 지워 주세요.</p>
               </>
             )}
             <div className="warn-pop-acts">
@@ -181,7 +183,7 @@ function OverflowNote({ slide, overflow, side }: { slide: Slide; overflow: Overf
 }
 
 /**
- * 슬라이드 아래 단추줄: 왼쪽은 이 장에 넣고 바꾸는 일, 오른쪽은 이 장 미리 보기와 '더 보기'(복제, 빼기, 지우기).
+ * 슬라이드 아래 단추줄: 왼쪽은 이 장에 넣고 바꾸는 일, 오른쪽은 이 장 미리 보기와 '더 보기'(복제, 숨기기, 지우기).
  * 예전에는 '모양'과 '지금 장부터 발표'도 여기 있었다. 모양은 오른쪽 '이 장 설정'에, 지금 장부터 발표는 위 '발표하기' 옆 메뉴(Shift+F5)에
  * 같은 일이 있어서, 무엇이 다른지 헷갈리고 1280 너비에서는 단추가 그림만 남았다
  */
@@ -251,7 +253,7 @@ export function StageTools({
             type="button"
             className={cx('btn btn-sm stage-blocks', blocks.libraryOpen ? 'is-on' : 'btn-ghost')}
             aria-pressed={blocks.libraryOpen}
-            title="컴포넌트를 골라 이 슬라이드에 넣어요"
+            title={`컴포넌트를 골라 이 슬라이드에 넣어요 (${keys(SHORTCUT.library)})`}
             onClick={side.toggleLibrary}
           >
             <BlocksIcon />
@@ -298,8 +300,8 @@ export function StageTools({
           <ScreenIcon />
           <span className="btn-t">{peek ? '편집으로' : '이 슬라이드 미리 보기'}</span>
         </button>
-        {/* 복제, 빼기, 지우기는 덜 쓰는 일이라 '더 보기'에 이름과 함께 둔다. 예전에는 그림만 남은 단추 셋이 나란히 있어서
-            빗금 친 눈이 '발표에서 빼기'인지 알기 어려웠다(1280 너비에서는 늘 그림만 보였다) */}
+        {/* 복제, 숨기기, 지우기는 덜 쓰는 일이라 '더 보기'에 이름과 함께 둔다. 예전에는 그림만 남은 단추 셋이 나란히 있어서
+            빗금 친 눈이 '발표에서 숨기기'인지 알기 어려웠다(1280 너비에서는 늘 그림만 보였다) */}
         <Popover
           flip
           button={({ open, toggle }) => (
@@ -309,7 +311,7 @@ export function StageTools({
               aria-label="이 슬라이드 더 보기"
               aria-expanded={open}
               aria-haspopup="menu"
-              title="복제, 발표에서 빼기, 지우기"
+              title="복제, 발표에서 숨기기, 지우기"
               onClick={toggle}
             >
               <MoreIcon />

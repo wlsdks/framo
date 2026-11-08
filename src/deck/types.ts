@@ -86,6 +86,11 @@ export interface DeckTheme {
   id: ThemeId
   accent?: string
   font?: FontId
+  /**
+   * 이 PC에 깔린 글꼴의 이름(테마 메뉴의 '내 PC 글꼴'). 있으면 제목과 본문을 이 글꼴로 그리고, 없는 PC에서는 font의 글꼴로 그린다.
+   * 글꼴 파일은 발표에 넣지 않는다(글꼴마다 나눠 주기를 막는 라이선스가 있다). AI에게 보이는 모양에도 넣지 않는다(사람이 고른 이름)
+   */
+  localFont?: string
   size?: TextSize
   footer?: FooterMode
   transition?: Transition

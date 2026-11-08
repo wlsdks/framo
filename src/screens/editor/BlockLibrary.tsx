@@ -1,6 +1,6 @@
-import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { blockPrefH, BLOCK_COL_GAP, BLOCK_GROUPS, BLOCK_LINKS, BLOCKS, canCompose, linkTargets, makeBlock, MAX_BLOCKS, type NoRoom } from '../../deck/blocks'
+import { blockPrefH, BLOCK_COL_GAP, BLOCK_GROUPS, BLOCK_LINKS, BLOCKS, canCompose, findBlocks, linkTargets, makeBlock, MAX_BLOCKS, suggestBlocks, type NoRoom } from '../../deck/blocks'
 import { sampleBlock } from '../../deck/blockSamples'
 import { emptyItem } from '../../deck/generate'
 import { motionOf } from '../../deck/themes'
@@ -14,13 +14,15 @@ import { useDeck } from '../../store/deckStore'
 import { loadSaved, useSaved } from '../../store/saved'
 import { soloSlide, type BlockEditing } from './BlockEditor'
 import { COL_W } from './canvas'
-import { dialogOpen, isTyping, LockIcon, type Toast } from '../ui'
+import { CloseIcon, dialogOpen, isTyping, NewSlideIcon, type Toast } from '../ui'
 import { useLook, type Look } from './look'
 import { noRoomText } from './noRoom'
 import { SavedParts } from './SavedParts'
 
 // 부품 고르기: 부품마다 예시 내용을 넣은 작은 그림을 보여 주고, 마우스를 올리면 발표할 때의 움직임을 한 번 보여 준다.
 // 카드를 슬라이드로 끌어다 놓거나, 누르면 알맞은 자리에 넣는다.
+// 맨 위의 찾기 칸('무엇을 보여 줄까요?')과 '이 슬라이드에 어울리는 것'(장에 적힌 글로 고른 넷)이 먼저다: 예순 개 넘는 카드를
+// 묶음 칩으로만 고르던 때는 무엇을 보여 줄지는 알아도 그것이 어느 묶음에 있는지 몰라 끝까지 굴려 봐야 했다
 
 const THUMB_RATIO = 1.5
 /**
@@ -235,6 +237,10 @@ function useIdleIssues(slide: Slide, areaH: number | undefined, issueFor: (t: Bl
 
 export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide: Slide; blocks: BlockEditing; toast: Toast }) {
   const [group, setGroup] = useState<string | null>(null)
+  // 찾는 말. 있으면 묶음 칩과 어울리는 것 대신 찾은 카드만
+  const [query, setQuery] = useState('')
+  const found = useMemo(() => findBlocks(query), [query])
+  const searching = query.trim().length > 0
   // 이 장에 넣을 수 없는 카드를 눌렀을 때 그 까닭을 보여 줄 부품
   const [why, setWhy] = useState<{ type: BlockType; card: HTMLElement } | null>(null)
   const look = useLook(deck)
@@ -252,7 +258,14 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.body.classList.contains('is-block-dragging')) return
-      if (isTyping(e)) return
+      // 찾기 칸의 Esc는 찾는 말부터 지운다 (비어 있으면 아래처럼 닫는다)
+      if ((e.target as Element).closest?.('.lib-find')) {
+        if (query) {
+          e.preventDefault()
+          setQuery('')
+          return
+        }
+      } else if (isTyping(e)) return
       // 대화 창을 닫는 Esc로 컴포넌트 고르기까지 닫지 않는다
       if (e.defaultPrevented || dialogOpen()) return
       // 까닭을 펼쳐 두었으면 그것만 닫는다
@@ -261,7 +274,7 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [blocks, why])
+  }, [blocks, why, query])
 
   // 까닭 창은 목록 아래에 붙어 목록을 줄인다. 누른 카드가 줄어든 목록 밖으로 밀려나지 않게 보이는 자리까지 굴린다
   // (1280×600에서 둘째 줄 카드를 누르면 창이 뜨며 그 카드가 가려져, 무엇에 대한 설명인지 알 수 없었다).
@@ -304,7 +317,7 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
   })
   // 어느 부품도 들어가지 않으면(개수가 찼거나 높이가 모자라) 위에 한 번 더 알린다. 카드마다의 잠금 표시는 그대로 둔다
   const full = counted || (slide.layout === 'compose' && TYPES.every((t) => issues.get(t)))
-  // 넣기 전부터 장 높이를 넘은 장: '하나를 빼면 더 넣을 수 있어요'라고 했는데 작은 것을 빼면 그대로 잠겨 있었다
+  // 넣기 전부터 장 높이를 넘은 장: '하나를 지우면 더 넣을 수 있어요'라고 했는데 작은 것을 빼면 그대로 잠겨 있었다
   const over = TYPES.some((t) => {
     const why = issues.get(t)
     return why?.kind === 'height' && why.already
@@ -319,16 +332,20 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
     : slide.layout === 'compose'
       ? full
         ? counted
-          ? `슬라이드 하나에는 ${MAX_BLOCKS}개까지 넣어요. 하나를 빼면 더 넣을 수 있어요`
+          ? `슬라이드 하나에는 ${MAX_BLOCKS}개까지 넣어요. 하나를 지우면 더 넣을 수 있어요`
           : noBody
             ? '본문을 넣을 높이가 없어요. 제목이나 부제를 줄여 주세요'
           : over
             ? '이 슬라이드는 이미 넘쳤어요. 항목이나 컴포넌트를 줄이면 더 넣을 수 있어요'
-            : '이 슬라이드는 자리가 다 찼어요. 하나를 빼면 더 넣을 수 있어요'
+            : '이 슬라이드는 자리가 다 찼어요. 하나를 지우면 더 넣을 수 있어요'
         : null
       : '넣으면 컴포넌트 슬라이드가 돼요'
-  const groups = group ? BLOCK_GROUPS.filter((g) => g.name === group) : BLOCK_GROUPS
-  const showLinks = !group || group === LINK_GROUP.name
+  const groups = searching ? [] : group ? BLOCK_GROUPS.filter((g) => g.name === group) : BLOCK_GROUPS
+  const showLinks = !searching && (!group || group === LINK_GROUP.name)
+  // 이 장에 어울리는 것: 장에 적힌 글로 고른 넷(넣을 수 없는 것은 빼고). 표지와 섹션처럼 컴포넌트를 넣지 않는 장에는 두지 않는다
+  const suggested = useMemo(() => (closed || full ? [] : suggestBlocks(slide, 4, (t) => !!issues.get(t))), [slide, issues, closed, full])
+  // 찾은 연결 기호 (이름과 설명에 찾는 말이 다 들어 있으면)
+  const foundLinks = searching ? BLOCK_LINKS.filter((l) => query.trim().split(/\s+/).every((w) => `${l.name} ${l.description} ${LINK_GROUP.name}`.includes(w))) : []
   const chips: { id: string | null; name: string; title?: string }[] = [
     { id: null, name: '전체' },
     ...BLOCK_GROUPS.map((g) => ({ id: g.name, name: g.short, title: `${g.name}: ${g.description}` })),
@@ -348,19 +365,99 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
         ? { ...why, text: noRoomText(issues.get(why.type)!, why.type, 'slide') }
         : null
 
+  /** 컴포넌트 카드 하나 (묶음, 어울리는 것, 찾은 것이 같이 쓴다) */
+  const card = (type: BlockType) => {
+    const spec = BLOCKS[type]
+    const issue = issues.get(type)
+    // 이 장에 넣을 수 없는 부품은 잠가 둔다: 눌러도 넣지 않고 까닭을 보여 준다 (끌어다 놓아도 넣지 않는다)
+    const marked = closed || !!issue
+    const tap = (el: HTMLElement) => (marked ? setWhy(why?.type === type ? null : { type, card: el }) : blocks.insert(type, el))
+    return (
+      <button
+        key={type}
+        type="button"
+        className={cx('lib-card', marked && 'is-blocked', why?.type === type && 'is-why')}
+        // 카드의 설명은 두 줄에서 자르므로 다 읽을 곳은 여기. 예전에는 움직임만 적어서 잘린 설명을 어디서도 볼 수 없었다
+        title={`${spec.name}: ${spec.description}\n${marked ? `${closed ? '이 슬라이드에는 넣지 않아요' : '이 슬라이드에는 자리가 없어요'}. 눌러서 이유를 보고 새 슬라이드에 넣을 수 있어요` : `모션: ${spec.motion}`}`}
+        onPointerDown={(e) => {
+          const el = e.currentTarget
+          blocks.pressCard(e, type, () => tap(el))
+        }}
+        // 키보드로 누를 때만 (마우스는 위의 누르기에서 끌기와 나눠 다룬다)
+        onClick={(e) => e.detail === 0 && tap(e.currentTarget)}
+        onPointerEnter={(e) => preview(e.currentTarget)}
+        onFocus={(e) => preview(e.currentTarget)}
+      >
+        <BlockThumb deck={look} type={type} lazy />
+        <span className="lib-name">{spec.name}</span>
+        <span className="lib-desc">{spec.description}</span>
+        {/* 슬라이드 전체에 넣을 수 없으면(표지와 섹션, 자리가 다 찬 슬라이드) 위 알림 한 줄로 말하고 카드는 옅게만 둔다:
+            카드마다 같은 문구가 되풀이되어 목록이 어수선했다. 카드 몇 개만 못 넣을 때만 그 카드에 할 수 있는 길을 적는다.
+            예전의 자물쇠와 '함께 넣을 수 없어요'는 돈을 내야 쓰는 기능처럼 읽혔고, 이제 자물쇠는 'AI에게 숨기기'의 표시다 */}
+        {marked && !closed && !full && (
+          <span className="lib-no">
+            <NewSlideIcon />
+            새 슬라이드에 넣을 수 있어요
+          </span>
+        )}
+      </button>
+    )
+  }
+
+  /** 연결 기호 카드 하나 */
+  const linkCard = (l: (typeof BLOCK_LINKS)[number]) => {
+    // 끼울 사이가 없는 이음표도 누르면 까닭을 알린다(LinkEditor의 insert가 알림으로)
+    const shut = linkable && !linkOpen.get(l.id)
+    return (
+      <button
+        key={l.id}
+        type="button"
+        className={cx('lib-card', (!linkable || shut) && 'is-blocked')}
+        title={`${l.name}: ${l.description}${shut ? '\n이 슬라이드에 끼울 자리가 없어요. 눌러서 이유를 보세요' : ''}`}
+        onPointerDown={(e) => blocks.pressLinkCard(e, l.id)}
+        onClick={(e) => e.detail === 0 && blocks.insertLink(l.id)}
+      >
+        <LinkThumb deck={look} link={l.id} lazy />
+        <span className="lib-name">{l.name}</span>
+        <span className="lib-desc">{l.description}</span>
+        {shut && <span className="lib-no">끼울 컴포넌트 사이가 없어요</span>}
+      </button>
+    )
+  }
+
   return (
     <div className="lib" role="tabpanel" aria-label="컴포넌트">
+      {/* 찾기: 보여 주고 싶은 것을 낱말로. 이름과 설명, 묶음, 비슷한 말(순서 → 단계, 흐름)로 찾는다 */}
+      <div className="lib-find-w">
+        <input
+          className="input lib-find"
+          type="search"
+          placeholder="무엇을 보여 줄까요? 숫자, 순서, 비교…"
+          aria-label="컴포넌트 찾기"
+          value={query}
+          onChange={(e) => {
+            setWhy(null)
+            setQuery(e.target.value)
+            if (mine) blocks.setLibraryView('base')
+          }}
+        />
+        {searching && (
+          <button type="button" className="icon-btn lib-find-x" aria-label="찾는 말 지우기" title="찾는 말 지우기 (Esc)" onClick={() => setQuery('')}>
+            <CloseIcon />
+          </button>
+        )}
+      </div>
       {/* 묶음은 글자 칩. 한 줄에 다 들지 않아 두 줄로 반씩 나누고, 줄마다 칩이 너비를 똑같이 나눠 끝까지 채운다
           (넘친 칩 하나가 아랫줄에 홀로 남지 않게). 긴 이름과 설명은 목록의 묶음 제목에.
           내 컴포넌트도 칩 하나로 둔다: 예전에는 그 위에 '기본/내 컴포넌트' 고르기 줄이 따로 있어서, 1280×600에서
           고르는 줄만 140px를 차지해 카드가 한 줄 반만 보였다 */}
-      <div className="lib-tabs" role="group" aria-label="컴포넌트 묶음">
-        {chips.map((c, i) => {
-          const on = c.id === MINE ? mine : !mine && group === c.id
-          return (
-            <Fragment key={c.id ?? '전체'}>
-              {i === Math.ceil(chips.length / 2) && <span className="lib-tabs-br" aria-hidden="true" />}
+      {!searching && (
+        <div className="lib-tabs" role="group" aria-label="컴포넌트 묶음">
+          {chips.map((c) => {
+            const on = c.id === MINE ? mine : !mine && group === c.id
+            return (
               <button
+                key={c.id ?? '전체'}
                 type="button"
                 className={cx('lib-tab', on && 'is-on', c.id === MINE && 'is-mine')}
                 aria-pressed={on}
@@ -374,10 +471,10 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
               >
                 {c.name}
               </button>
-            </Fragment>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
       {note && (
         <div className="lib-note">
           <p className="lib-note-t">{note}</p>
@@ -399,6 +496,31 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
       {!mine && (
         <>
           <div className="lib-list">
+            {searching ? (
+              <section className="lib-sec">
+                <h3 className="lib-group">
+                  찾은 것<span className="lib-group-n">{found.length + foundLinks.length}</span>
+                </h3>
+                {found.length + foundLinks.length === 0 ? (
+                  <p className="lib-group-d">‘{query.trim()}’에 맞는 컴포넌트가 없어요. 막대, 순서, 사람처럼 다른 말로 찾아보세요.</p>
+                ) : (
+                  <div className="lib-grid is-found">
+                    {/* 이 슬라이드에 넣을 수 있는 것을 먼저: 찾자마자 맨 앞에 잠긴 카드가 서면 찾은 것이 없는 것처럼 보였다 */}
+                    {[...found.filter((t) => !issues.get(t)), ...found.filter((t) => issues.get(t))].map(card)}
+                    {foundLinks.map(linkCard)}
+                  </div>
+                )}
+              </section>
+            ) : (
+              !group &&
+              suggested.length > 0 && (
+                <section className="lib-sec lib-suggest">
+                  <h3 className="lib-group">이 슬라이드에 어울리는 것</h3>
+                  <p className="lib-group-d">슬라이드에 적힌 글을 보고 골랐어요</p>
+                  <div className="lib-grid">{suggested.map(card)}</div>
+                </section>
+              )
+            )}
             {groups.map((g) => (
               <section key={g.name} className="lib-sec">
                 <h3 className="lib-group">
@@ -406,44 +528,7 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
                   <span className="lib-group-n">{g.types.length}</span>
                 </h3>
                 <p className="lib-group-d">{g.description}</p>
-                <div className="lib-grid">
-                  {g.types.map((type) => {
-                    const spec = BLOCKS[type]
-                    const issue = issues.get(type)
-                    // 이 장에 넣을 수 없는 부품은 잠가 둔다: 눌러도 넣지 않고 까닭을 보여 준다 (끌어다 놓아도 넣지 않는다)
-                    const marked = closed || !!issue
-                    const tap = (card: HTMLElement) => (marked ? setWhy(why?.type === type ? null : { type, card }) : blocks.insert(type, card))
-                    return (
-                      <button
-                        key={type}
-                        type="button"
-                        className={cx('lib-card', marked && 'is-blocked', why?.type === type && 'is-why')}
-                        // 카드의 설명은 두 줄에서 자르므로 다 읽을 곳은 여기. 예전에는 움직임만 적어서 잘린 설명을 어디서도 볼 수 없었다
-                        title={`${spec.name}: ${spec.description}\n${marked ? `${closed ? '이 슬라이드에는 넣지 않아요' : '이 슬라이드에 함께 넣을 수 없어요'}. 눌러서 이유를 보세요` : `모션: ${spec.motion}`}`}
-                        onPointerDown={(e) => {
-                          const card = e.currentTarget
-                          blocks.pressCard(e, type, () => tap(card))
-                        }}
-                        // 키보드로 누를 때만 (마우스는 위의 누르기에서 끌기와 나눠 다룬다)
-                        onClick={(e) => e.detail === 0 && tap(e.currentTarget)}
-                        onPointerEnter={(e) => preview(e.currentTarget)}
-                        onFocus={(e) => preview(e.currentTarget)}
-                      >
-                        <BlockThumb deck={look} type={type} lazy />
-                        <span className="lib-name">{spec.name}</span>
-                        <span className="lib-desc">{spec.description}</span>
-                        {/* 슬라이드 전체에 넣을 수 없으면(표지와 섹션, 자리가 다 찬 슬라이드) 위 알림 한 줄로 말하고 카드는 옅게만 둔다:
-                            카드마다 같은 잠금 문구가 되풀이되어 목록이 어수선했다. 카드 몇 개만 못 넣을 때만 그 카드에 적는다 */}
-                        {marked && !closed && !full && (
-                          <span className="lib-no">
-                            <LockIcon />
-                            이 슬라이드에 함께 넣을 수 없어요
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
+                <div className="lib-grid">{g.types.map(card)}</div>
               </section>
             ))}
             {showLinks && (
@@ -453,32 +538,7 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
                   <span className="lib-group-n">{BLOCK_LINKS.length}</span>
                 </h3>
                 <p className="lib-group-d">{linkable ? `${LINK_GROUP.description}. 끌어서 컴포넌트 사이에 놓아요.` : '컴포넌트 슬라이드에 컴포넌트를 둘 이상 넣으면 그 사이에 끼울 수 있어요.'}</p>
-                <div className="lib-grid">
-                  {BLOCK_LINKS.map((l) => {
-                    // 끼울 사이가 없는 이음표도 누르면 까닭을 알린다(LinkEditor의 insert가 알림으로)
-                    const shut = linkable && !linkOpen.get(l.id)
-                    return (
-                      <button
-                        key={l.id}
-                        type="button"
-                        className={cx('lib-card', (!linkable || shut) && 'is-blocked')}
-                        title={`${l.name}: ${l.description}${shut ? '\n이 슬라이드에 끼울 자리가 없어요. 눌러서 이유를 보세요' : ''}`}
-                        onPointerDown={(e) => blocks.pressLinkCard(e, l.id)}
-                        onClick={(e) => e.detail === 0 && blocks.insertLink(l.id)}
-                      >
-                        <LinkThumb deck={look} link={l.id} lazy />
-                        <span className="lib-name">{l.name}</span>
-                        <span className="lib-desc">{l.description}</span>
-                        {shut && (
-                          <span className="lib-no">
-                            <LockIcon />
-                            이 슬라이드에 끼울 자리가 없어요
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
+                <div className="lib-grid">{BLOCK_LINKS.map(linkCard)}</div>
               </section>
             )}
           </div>
