@@ -4047,6 +4047,17 @@ export function motionEngine(): MotionEngine {
         b.restore()
       }
     }
+    // 이어 움직이기로 넘길 때 swap이 앞 장의 값을 읽기 전에 부른다: 움직이던 것을 끝 모습으로 보내 나눈 글자와 굴리던 숫자를 원래 글로
+    // 돌려 둔다. 생동감에서 숫자가 아직 구르는 동안 넘기면 숫자가 글자마다 나뉘어 있어서 값을 읽지 못했고, 막대 옆 숫자가 처음에 툭
+    // 새 값으로 바뀌었다(필름). '누르면' 나오는 묶음은 감춘 그대로 둔다(떠나는 장이라 보일 까닭이 없다)
+    if (!cellOnly && slide)
+      settling.set(slide, () => {
+        for (const b of batches) {
+          b.anims.forEach((a) => a.finish())
+          b.stops.forEach((f) => f())
+          b.restore()
+        }
+      })
     return Object.assign(finish, { next, left: () => waiting.length + steppers.reduce((n, st) => n + st.marks.length - st.i, 0) })
   }
 
@@ -4070,6 +4081,8 @@ export function motionEngine(): MotionEngine {
   let morphValues: Map<string, Values> | null = null
   /** 다음 장에서 짝이 된 것 → 앞 장의 값. 다음 장의 play가 값을 옮기고 비운다(움직이지 않는 장은 swap이 비운다) */
   const carried = new Map<HTMLElement, Values>()
+  /** 장마다 그 장의 움직임을 끝 모습으로 보내는 것(play가 적는다). 이어 움직이기가 앞 장의 값을 읽기 전에 부른다 */
+  const settling = new WeakMap<Element, () => void>()
 
   // ---------- 값 이어 움직이기 ----------
   // 짝이 된 숫자나 차트의 값이 두 장에서 다르면, 다음 장의 것이 앞 장의 값에서 새 값으로 바뀌어 간다(Keynote의 Magic Move를 데이터에:
@@ -4287,7 +4300,10 @@ export function motionEngine(): MotionEngine {
     html.dataset.moDir = direction > 0 ? 'next' : 'prev'
     if (name === 'morph') {
       const old = document.querySelector(CURRENT + ' .slide')
-      if (old) nameFrom(old)
+      if (old) {
+        settling.get(old)?.()
+        nameFrom(old)
+      }
     }
     // 빨리 연달아 넘기면 앞 전환은 건너뛰어지고, 그 끝맺음(finished)은 다음 전환이 시작된 뒤에 온다.
     // 그때 표시를 떼면 다음 전환이 motion.css의 규칙을 잃고 브라우저 기본 흐리게(250ms)로, 다음 장의 움직임은 SWAP_LEAD 없이
