@@ -51,6 +51,10 @@ export function Flow() {
             )}
             <div className={cx('it bk-fw-node', i === hl && 'is-hl')}>
               <div className="bk-fw-text">
+                {/* 단계 번호: 차례는 화살표 머리가 아니라 번호로 읽는다 */}
+                <span className="bk-fw-i" aria-hidden="true">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
                 <IT i={i} k="title" className="bk-fw-t" />
                 <IT i={i} k="meta" className="bk-fw-m" />
               </div>

@@ -240,3 +240,53 @@
     translate: -50% 0;
   }
 }
+
+/* ---------- 잇는 선 다시 짜기 ----------
+   점(포트)과 삼각형 머리를 걷는다: 점·선·머리를 붙인 화살표는 흔한 순서도처럼 보였다(사용자). 상자 사이는 머리 없는 가는 선 하나로
+   잇고, 차례는 상자 위의 단계 번호(01, 02 …)와 발표할 때 흐르는 조각이 보인다. 범례의 화살표 그림도 걷고 '오가는 것'은 글로만 */
+:is(.bk-fw-kg, .bk-fw-link)::before,
+:is(.bk-fw-kg, .bk-fw-link)::after {
+  content: none;
+}
+
+.bk-fw-kg {
+  display: none;
+}
+
+.bk-fw-key {
+  color: var(--ink-3);
+}
+
+.bk-fw-link .bk-fw-wire {
+  right: 0;
+  height: var(--rule-hair);
+  background: var(--ink-3);
+  opacity: 0.7;
+}
+
+.bk-fw-i {
+  --fs: var(--t-source);
+  display: block;
+  margin-bottom: 14px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.bk-fw-node.is-hl .bk-fw-i {
+  color: var(--accent);
+}
+
+@container style(--fw-stack: 1) {
+  .bk-fw-link .bk-fw-wire {
+    bottom: 0;
+    width: var(--rule-hair);
+  }
+
+  .bk-fw-i {
+    display: inline;
+    margin: 0 4px 0 0;
+  }
+}
