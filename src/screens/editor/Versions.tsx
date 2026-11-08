@@ -364,7 +364,7 @@ function VersionPreview({
   onClose: () => void
   onRestore: () => void
 }) {
-  const info = pageInfo(deck.slides)
+  const info = pageInfo(deck.slides, deck)
   const now = new Map(current.slides.map((s) => [s.id, JSON.stringify(s)]))
   const diff = (s: Deck['slides'][number]) => (!now.has(s.id) ? '지금은 없는 슬라이드' : now.get(s.id) !== JSON.stringify(s) ? '지금과 달라요' : null)
   const visible = deck.slides.filter((s) => !s.hidden)

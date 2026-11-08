@@ -348,13 +348,15 @@ export function lineRuns<T>(points: readonly (T | null)[]): T[][] {
  * 값이 모두 0 이상이고 0에서 멀면(가장 작은 값이 오르내림 폭의 1.2배보다 크면) 바닥을 0이 아니라 가장 작은 값의
  * 폭 절반 아래로 잡는다. 0부터 그리면 110, 114, 118 같은 흐름이 위쪽에 납작한 선이 된다. 0보다 작은 값이 있으면
  * 바닥을 조금 더 아래로(0 선이 보이게), 천장은 가장 큰 값의 점과 숫자가 위 끝에 붙지 않게 조금 위로.
- * 두 레이아웃이 같은 축을 써야 장을 넘겨도 같은 값이 같은 높이로 보인다
+ * 두 레이아웃이 같은 축을 써야 장을 넘겨도 같은 값이 같은 높이로 보인다.
+ * shared: 이어 움직이는 장끼리 같이 쓰는 잣대(slides/sharedScale.ts). 두 장의 값 범위에 여유만 두고 0으로 내리지 않는다(0 아래로는
+ * 가지 않는다): 0부터 그리면 오르내림 폭이 큰 이웃 장 때문에 값이 낮은 장의 선이 높이의 16%만 쓰며 가운데 떠 납작해졌다(5차 감성 검수)
  */
-export function lineAxis(values: number[], n: number): { floor: number; ceil: number; y: (v: number) => number; x: (i: number) => number } {
+export function lineAxis(values: number[], n: number, shared = false): { floor: number; ceil: number; y: (v: number) => number; x: (i: number) => number } {
   const lo = values.length ? Math.min(...values) : 0
   const hi = values.length ? Math.max(...values) : 1
   const span = hi - lo || Math.abs(hi) || 1
-  const floor = lo >= 0 ? (lo - span * 1.2 > 0 ? lo - span * 0.5 : 0) : lo - span * 0.12
+  const floor = shared ? (lo >= 0 ? Math.max(0, lo - span * 0.12) : lo - span * 0.12) : lo >= 0 ? (lo - span * 1.2 > 0 ? lo - span * 0.5 : 0) : lo - span * 0.12
   const ceil = hi + span * 0.06
   return { floor, ceil, y: (v) => ((v - floor) / (ceil - floor || 1)) * 100, x: (i) => ((i + 0.5) / n) * 100 }
 }

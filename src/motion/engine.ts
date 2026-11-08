@@ -91,6 +91,29 @@ export function motionEngine(): MotionEngine {
   } as const
   const OUT = EASE.out
 
+  /**
+   * 곡선(cubic-bezier) 하나를 JS에서 셈한다(EASE의 이름 그대로). 시계 하나를 여러 단계로 나누고 단계마다 같은 곡선을 입힐 때 쓴다
+   * (값 이어 움직이기). x(t)가 늘기만 하는 곡선이라 t를 반씩 좁혀 찾는다
+   */
+  function curve(css: string) {
+    const m = /cubic-bezier\(([^)]+)\)/.exec(css)
+    const [x1, y1, x2, y2] = m ? m[1].split(',').map(Number) : [0, 0, 1, 1]
+    const at = (a: number, b: number, t: number) => 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t
+    return (x: number) => {
+      if (x <= 0) return 0
+      if (x >= 1) return 1
+      let lo = 0
+      let hi = 1
+      let t = x
+      for (let i = 0; i < 24; i++) {
+        t = (lo + hi) / 2
+        if (at(x1, x2, t) < x) lo = t
+        else hi = t
+      }
+      return at(y1, y2, t)
+    }
+  }
+
   const LEVELS = {
     calm: { span: 480, y: 20, step: 60, word: 30, ink: 0, scale: 0.98, move: SPRINGS.quick, grow: SPRINGS.glide, pop: SPRINGS.quick, speed: 0.8 },
     lively: { span: 720, y: 44, step: 100, word: 50, ink: 5, scale: 0.96, move: SPRINGS.settle, grow: SPRINGS.settle, pop: SPRINGS.firm, speed: 1.1 },
@@ -791,6 +814,408 @@ export function motionEngine(): MotionEngine {
       count(el, at)
     }
     /**
+     * 값 이어 움직이기: 이어 움직이기로 짝이 된 것(el) 안의 값을 앞 장의 값(was)에서 지금 값으로 옮긴다. 숫자가 든 글은 앞 값에서 새 값까지
+     * 세고(숫자 밖의 글이 같은 것만: '42%'에서 '58%'로. 단위나 꼴이 바뀌면 그대로 둔다), 값 변수와 그림의 좌표는 사이 값으로 옮긴다.
+     *
+     * 눈금(축): 차트는 장마다 제 값에 맞춘 눈금으로 그린다(추이는 값의 범위를 위아래 끝까지). 길이를 그대로 사이 값으로 옮기면 두 장의
+     * 눈금이 섞인다. 그래서 값 변수마다 그 요소 안의 숫자와 길이를 맞대어 눈금(길이 = α + β·값)을 두 장에서 각각 찾고, 찾으면 눈금과
+     * 값을 같은 진행으로 함께 옮긴다(앞 눈금의 범위에서 새 눈금의 범위로, 앞 값에서 새 값으로): 차트가 한 번의 부드러운 모양 바뀜으로
+     * 새 모습이 된다. 숫자가 없는 것(목표선)도 같은 눈금을 따라간다. 눈금을 찾지 못한 값은 사이 값으로 옮긴다.
+     * 막대처럼 0에서 시작하는 차트는 이어 움직이는 두 장을 처음부터 한 잣대로 그리므로(slides/sharedScale.ts) 두 장의 눈금이 같아서
+     * 막대는 바뀐 만큼만 움직이고 그대로인 값은 가만히 있다. 예전에는 '눈금 먼저, 값은 그다음'으로 단계를 나눴는데, 화면에 축이 없어
+     * 모든 막대가 먼저 짧아지는 것으로만 보였고 그대로인 값이 줄어든 채 끝나 '줄었다'로 읽혔다(감성 검수).
+     *
+     * 시계는 아무것도 바꾸지 않는 움직임 하나(곡선 없이 흐르는 진행)이고, '들어와 자리 잡기' 곡선(EASE.out: 빨리 떠나 천천히 멈춘다)을
+     * 엔진이 셈해 입힌다. 누르고 0.06초에 떠난다: 0.3초 넘게 가만히 있던 때는 발표하는 사람이 넘어가지 않은 줄 알고 한 번 더 눌렀다(감성 검수).
+     * 값이 옮겨 가는 짝은 앞 모습과 새 모습을 겹쳐 흐리지 않고 바로 바꿔 낀다(swap의 instant): 새 모습이 처음에 앞 값 그대로라 같은 그림이고,
+     * 넘어가는 일은 값의 움직임이 맡는다. 겹쳐 흐리던 때는 생동감에서 넘긴 직후 옛 선과 옛 숫자가 옅게 남았다. 끝나면 글과 값을 원래 문자열 그대로 돌려 둔다
+     */
+    const carry = (el: HTMLElement, was: Values, lag = 0) => {
+      // 값을 옮기지 않으면 짝은 예전처럼 겹쳐 바꿔 낀다(바로 바꿔 끼울 까닭이 없다)
+      const keep = () => {
+        const i = instant.indexOf(el.style.getPropertyValue('view-transition-name'))
+        if (i >= 0) instant.splice(i, 1)
+      }
+      if (still) return keep()
+      /**
+       * v: 값의 진행(곡선을 입힌), at: 눈금 위의 값 → 길이. side: 점 숫자가 새 쪽으로 옮겨 가는 진행(처음 0.1초 남짓에 다 간다).
+       * beats: 다시 자라는 차트(regrow)의 두 박자 [앞 박자, 뒤 박자, 값(숫자)의 진행]. wider: 새 잣대가 더 넓다(값이 크게 늘었다)
+       */
+      type Tick = { v: number; raw: number; side: number; beats: (wider: boolean) => [number, number, number]; at: (group: string, u: number) => number | null }
+      const sets: ((t: Tick) => void)[] = []
+      const undo: (() => void)[] = []
+      const NUM = /^(\D*)(\d[\d,]*)(\.\d+)?(\D*)$/
+      const plain = /^\s*-?(?:\d+\.?\d*|\.\d+)\s*$/
+      const NUMS = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi
+      /** 켜짐이 바뀐 몫 표시(칸 조립의 칸, 비율의 막대) */
+      const flips: { el: Element; to: boolean }[] = []
+      /** 점 숫자가 서는 쪽이 바뀐 것 */
+      const sides: { el: Element; before: string[]; after: string[] }[] = []
+      /** 숫자가 든 글(바뀌지 않은 것도: 눈금을 찾는 데 쓴다) */
+      const nums: { node: Text; old: string; now: string; from: number; to: number; m: RegExpExecArray }[] = []
+      /** 값 변수 */
+      const vars: { n: HTMLElement; name: string; group: string; before: string; now: string; q0: number; q1: number; prio: string }[] = []
+      walkPaths(el, (n, path) => {
+        const w = was.get(path)
+        const on = n.classList.contains('is-on')
+        if (on !== !!(w && w.on)) flips.push({ el: n, to: on })
+        if (!w) return
+        const side = sideOf(n)
+        // 쪽이 바뀐 점 숫자, 그리고 추이의 작은 점 숫자는 모두(쪽이 그대로여도 움직이는 동안 선과 겹칠 수 있다).
+        // 강조한 점의 큰 숫자는 답이라 자리를 지킨다: 잠깐 비켰다 돌아오면 답이 두 번 뛴다
+        if (side !== (w.side || '') || (n.classList.contains('tn-pt') && !n.classList.contains('is-hl'))) sides.push({ el: n, before: (w.side || '').split(' '), after: side.split(' ') })
+        let k = 0
+        for (const c of Array.prototype.slice.call(n.childNodes) as Node[]) {
+          if (c.nodeType !== 3) continue
+          const old = w.texts[k++]
+          const node = c as Text
+          const now = node.nodeValue || ''
+          const a = old ? NUM.exec(old) : null
+          const b = NUM.exec(now)
+          if (!old || !a || !b || a[1] !== b[1] || a[4] !== b[4] || (a[2] + b[2]).length > 30) continue
+          const from = parseFloat((a[2] + (a[3] || '')).replace(/,/g, ''))
+          const to = parseFloat((b[2] + (b[3] || '')).replace(/,/g, ''))
+          if (Number.isFinite(from) && Number.isFinite(to)) nums.push({ node, old, now, from, to, m: b })
+        }
+        const st = (n as HTMLElement).style
+        for (const name in w.vars) {
+          const before = w.vars[name]
+          const now = st ? st.getPropertyValue(name) : ''
+          if (!now || !plain.test(now) || !plain.test(before)) continue
+          if (SOFT_VARS.indexOf(name) >= 0 && now.indexOf('.') < 0) continue
+          // 목표선의 높이(--ty)는 점의 높이(--y)와 같은 눈금이다
+          vars.push({ n: n as HTMLElement, name, group: name === '--ty' ? '--y' : name, before, now, q0: parseFloat(before), q1: parseFloat(now), prio: st.getPropertyPriority(name) })
+        }
+        for (const name in w.attrs) {
+          const before = w.attrs[name]
+          const now = n.getAttribute(name)
+          // 추이의 선과 면(0~100 그림, 위가 0)은 점과 같은 눈금으로: 짝수 자리는 가로, 홀수 자리는 세로(100 - 높이).
+          // 모양이 같아도 둔다: 잣대가 크게 달라 다시 자라는 추이(아래 regrow)는 같은 모양도 바닥에서 다시 선다
+          const line = name === 'points' && !!n.closest('.tn-svg')
+          if (!now || (now === before && !line) || before.replace(NUMS, '#') !== now.replace(NUMS, '#')) continue
+          const a = (before.match(NUMS) || []).map(Number)
+          const b = (now.match(NUMS) || []).map(Number)
+          const parts = now.split(NUMS)
+          if (a.length !== b.length || parts.length !== b.length + 1) continue
+          const text = (vals: number[]) => parts.map((part, i) => part + (i < vals.length ? String(Math.round(vals[i] * 100) / 100) : '')).join('')
+          sets.push((t) => {
+            if (t.v >= 1 && !line) return n.setAttribute(name, now)
+            // 모양이 같은 선은 다시 자랄 때만 움직인다(점의 높이도 같으면 가만히 있으니, 선만 눈금을 따라 흔들리지 않게)
+            const ay = axes['--y']
+            if (now === before && !(ay && ay.regrow)) return
+            const vals = b.map((y, i) => {
+              const x = a[i] + (y - a[i]) * t.v
+              if (!line || i % 2 === 0) return x
+              // 바닥(면의 아래 끝)은 늘 바닥이다. 값이 아니라 그림의 가장자리라서 눈금을 따라 뜨지 않게
+              if (a[i] === 100 && y === 100) return 100
+              // 다시 자라는 추이: 점과 같은 두 박자로(아래 regrowAt)
+              if (ay && ay.regrow) return 100 - regrowAt(ay, 100 - a[i], 100 - y, t)
+              const u0 = axes['--y'] ? (100 - a[i] - axes['--y'].a0.al) / axes['--y'].a0.be : NaN
+              const u1 = axes['--y'] ? (100 - y - axes['--y'].a1.al) / axes['--y'].a1.be : NaN
+              const q = t.at('--y', u0 + (u1 - u0) * t.v)
+              return q === null ? x : 100 - q
+            })
+            n.setAttribute(name, text(vals))
+          })
+          undo.push(() => n.setAttribute(name, now))
+        }
+      })
+
+      // ---- 눈금 찾기: 값 변수마다, 그 요소 안에 숫자가 하나뿐인 것들로 길이 = α + β·값을 두 장에서 각각 맞춘다 ----
+      type Fit = { al: number; be: number }
+      const fit = (pts: { u: number; q: number }[]): Fit | null => {
+        // 막대는 아주 작은 값을 2%로 올려 그린다(Bars.tsx): 그 바닥에 걸린 점은 눈금을 맞출 때 뺀다
+        const use = pts.filter((p) => p.q > 2.5).length >= 2 ? pts.filter((p) => p.q > 2.5) : pts
+        if (!use.length) return null
+        const mu = use.reduce((x, p) => x + p.u, 0) / use.length
+        const mq = use.reduce((x, p) => x + p.q, 0) / use.length
+        const vu = use.reduce((x, p) => x + (p.u - mu) * (p.u - mu), 0)
+        // 값이 하나뿐이면 0에서 시작하는 눈금으로 본다(막대 하나)
+        const be = vu > 1e-9 ? use.reduce((x, p) => x + (p.u - mu) * (p.q - mq), 0) / vu : mu ? mq / mu : 0
+        const al = vu > 1e-9 ? mq - be * mu : 0
+        if (!(be > 0) || !Number.isFinite(al)) return null
+        return use.every((p) => Math.abs(al + be * p.u - p.q) <= 1) ? { al, be } : null
+      }
+      type Axis = { a0: Fit; a1: Fit; d0: [number, number]; d1: [number, number]; regrow: boolean; wider: boolean }
+      const axes: Record<string, Axis> = {}
+      const groups = Array.from(new Set(vars.map((x) => x.group)))
+      for (const g of groups) {
+        const own = vars.filter((x) => x.group === g)
+        const p0: { u: number; q: number }[] = []
+        const p1: { u: number; q: number }[] = []
+        for (const x of own) {
+          const inside = nums.filter((t) => x.n.contains(t.node))
+          if (inside.length !== 1) continue
+          p0.push({ u: inside[0].from, q: x.q0 })
+          p1.push({ u: inside[0].to, q: x.q1 })
+        }
+        const a0 = fit(p0)
+        const a1 = fit(p1)
+        if (!a0 || !a1) continue
+        // 눈금이 담는 값의 범위(길이 0과 100에 놓이는 값)
+        const d0: [number, number] = [-a0.al / a0.be, (100 - a0.al) / a0.be]
+        const d1: [number, number] = [-a1.al / a1.be, (100 - a1.al) / a1.be]
+        // 크게 뛰어 이웃 장과 잣대를 같이 쓰지 않는 짝(slides/sharedScale.ts의 문턱, 같은 40%): 두 잣대가 담는 폭이 2.5배 넘게 다르다.
+        // 두 잣대 사이를 한 번에 옮기면 장마다 제 잣대를 채워 그려서 1에서 10으로 뛴 막대가 거의 움직이지 않았다(가장 큰 변화가 가장 작은
+        // 움직임, 4차 감성 검수). 그런 짝은 두 박자로 다시 자란다(아래 regrowAt)
+        const s0 = d0[1] - d0[0]
+        const s1 = d1[1] - d1[0]
+        axes[g] = { a0, a1, d0, d1, regrow: Math.min(s0, s1) < 0.4 * Math.max(s0, s1), wider: s1 > s0 }
+      }
+      /**
+       * 다시 자라는 값의 길이(0~100). 늘 때(새 잣대가 넓다)는 잣대 먼저: 앞 값이 그대로인 채 새 잣대의 제자리로 짧게 옮겨 가고(숫자는 앞 값,
+       * 그동안 막대와 숫자가 같은 말), 이어서 그 자리에서 새 값까지 자라며 숫자도 함께 센다. 줄 때는 거꾸로 값 먼저(앞 잣대 위에서 새 값까지
+       * 줄며 세고) 다음에 잣대(새 잣대로 짧게). 거꾸로 하면 늘 때 앞 값이, 줄 때 새 값이 잣대 밖으로 넘친다. 바닥(0)까지 내렸다가 다시 자라던
+       * 때는 0.17초 동안 막대가 모두 0이 되어 장이 통째로 비고, 숫자는 앞 값이라 막대와 다른 말을 했으며, 같은 차트가 사라졌다 나타나
+       * 새 차트로 읽혔다(5차 감성 검수)
+       */
+      const regrowAt = (ax: Axis, q0: number, q1: number, t: Tick) => {
+        const u0 = (q0 - ax.a0.al) / ax.a0.be
+        const u1 = (q1 - ax.a1.al) / ax.a1.be
+        const m = Math.max(0, Math.min(100, ax.wider ? ax.a1.al + ax.a1.be * u0 : ax.a0.al + ax.a0.be * u1))
+        const [first, second] = t.beats(ax.wider)
+        return q0 + (m - q0) * first + (q1 - m) * second
+      }
+
+      // ---- 바뀌는 값 ----
+      for (const t of nums) {
+        if (t.old === t.now || t.from === t.to) continue
+        const { node, old, now, from, to, m: b } = t
+        // 새 값의 꼴로 센다(소수 자리, 세 자리 쉼표). 앞 값이나 새 값에 쉼표가 있으면 세는 동안에도 쉼표를 둔다
+        const decimals = b[3] ? b[3].length - 1 : 0
+        // 앞 값의 소수 자리가 더 많으면(0.4에서 4로) 세기 시작한 앞쪽 절반은 앞 값의 자리로 센다: 새 값의 꼴로만 세면 막대가 거의 그대로인데
+        // 0.4가 곧바로 1로 뛰었다
+        const was = NUM.exec(old)
+        const before = was && was[3] ? was[3].length - 1 : 0
+        const grouped = (old + now).indexOf(',') >= 0
+        const format = (v: number, k: number) => {
+          const [whole, frac] = v.toFixed(k < 0.5 ? Math.max(before, decimals) : decimals).split('.')
+          return b[1] + (grouped ? whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : whole) + (frac ? '.' + frac : '') + b[4]
+        }
+        // 다시 자라는 막대와 점의 숫자는 값의 박자대로 센다(잣대를 옮기는 동안은 그대로): 막대와 숫자가 늘 같은 말을 하게
+        const own = vars.find((x) => !!axes[x.group] && axes[x.group].regrow && x.n.contains(node))
+        const grow = own ? axes[own.group] : null
+        sets.push((k) => {
+          const v = grow ? k.beats(grow.wider)[2] : k.v
+          node.nodeValue = v <= 0 ? old : v >= 1 ? now : format(from + (to - from) * v, v)
+        })
+        undo.push(() => (node.nodeValue = now))
+      }
+      for (const x of vars) {
+        const ax = axes[x.group]
+        // 길이가 같으면 옮길 것이 없다(한 잣대에서 값이 같은 막대). 다시 자라는 짝은 길이가 같아도(장마다 제 잣대를 채운 막대) 바닥에서 다시 선다
+        if (x.before.trim() === x.now.trim() && !(ax && ax.regrow)) continue
+        const u0 = ax ? (x.q0 - ax.a0.al) / ax.a0.be : 0
+        const u1 = ax ? (x.q1 - ax.a1.al) / ax.a1.be : 0
+        sets.push((t) => {
+          const q = ax && ax.regrow ? regrowAt(ax, x.q0, x.q1, t) : ax ? t.at(x.group, u0 + (u1 - u0) * t.v) : null
+          x.n.style.setProperty(x.name, String(Math.round((q === null ? x.q0 + (x.q1 - x.q0) * t.v : q) * 1000) / 1000), x.prio)
+        })
+        undo.push(() => x.n.style.setProperty(x.name, x.now, x.prio))
+      }
+      // 몫을 칸마다 칠한 표시는 숫자가 세는 대로 하나씩 켜지고(늘 때는 앞에서부터) 꺼진다(줄 때는 뒤에서부터). 그대로 두면 새 몫의 칸이
+      // 처음 0.26초에 한꺼번에 바뀌고 숫자만 혼자 세었다
+      const ups = flips.filter((f) => f.to)
+      const downs = flips.filter((f) => !f.to).reverse()
+      for (const list of [ups, downs])
+        list.forEach((f, k) => {
+          const at = (k + 1) / (list.length + 1)
+          sets.push((t) => f.el.classList.toggle('is-on', t.v >= at ? f.to : !f.to))
+          undo.push(() => f.el.classList.toggle('is-on', f.to))
+        })
+      // 점 숫자가 서는 쪽이 바뀌었으면(점이 오르내려 선과 부딪히는 쪽이 달라졌다) 앞 장의 쪽에서 시작해 새 쪽에서 끝난다. 숫자는 내내 진하다:
+      // 가운데에서 잠깐 옅어졌다가 새 쪽에 서던 때는 셈하는 도중 답 숫자가 한 프레임 거의 투명해져 깜빡임으로 보였다(3차 감성 검수).
+      // 추이는 프레임마다 숫자가 선이나 목표 점선과 겹치는지 보고 자리를 옮긴다. 옮길 때는 미끄러지지 않고 한 번에 옮긴다: 위아래를 바꾸는
+      // 숫자는 어떤 길로 가도 점을 지나는 선을 가로지른다(값과 같은 진행으로 미끄러지던 때는 0.16~0.32초에, 짧게 미끄러져도 끝 무렵에 선을
+      // 뚫고 지나갔다. 4·5차 감성 검수). 지금 자리가 겹치면 새 쪽, 앞 쪽, 위아래를 바꾼 자리 가운데 비어 있는 곳으로 바로 가고, 겹치지
+      // 않으면 선이 새 모양에 가까워진 뒤(값의 60%) 새 쪽이 넉넉히 비었을 때 새 쪽으로 간다. 한 번 옮기면 잠깐(시계의 12%) 그 자리를
+      // 지킨다(두 자리 사이를 오가며 깜빡이지 않게).
+      // 끝 무렵(시계의 90%)에는 새 쪽으로 간다(끝 모습과 같게). 쪽마다의 자리는 점에서 글자 상자까지로 처음에 한 번 잰다(장을 줄여 그려도 장의 px로)
+      if (sides.length) {
+        const box = el.getBoundingClientRect()
+        const zoom = el.offsetWidth ? box.width / el.offsetWidth : 1
+        const labelsOf = (n: Element) => (Array.prototype.slice.call(n.children) as HTMLElement[]).filter((c) => (c.textContent || '').trim())
+        // 추이의 숫자 글자. 숫자 칸(.tn-val)은 목표선을 비키는 여백까지 품어 글자보다 훨씬 크다
+        const numOf = (c: HTMLElement) => c.querySelector('.tn-num') as HTMLElement | null
+        // 목표선 비키기(trend.css의 .tn-num 여백)는 움직이는 동안 css 대신 아래 lift로 센다: css는 지금 쪽의 것만 알려 줘서, 옮겨 갈 다른 쪽에서
+        // 비켜 설 자리를 알 수 없었다(처음에 잰 자리로 보면 앞 장에서 목표선 위로 비켜 있던 숫자가 넘기자마자 점선 위에 내려앉았다)
+        const nums = sides.map((sd) => labelsOf(sd.el).map(numOf))
+        const numStyles = nums.map((list) => list.map((n) => (n ? n.getAttribute('style') : null)))
+        nums.forEach((list) => list.forEach((n) => n && (n.style.margin = '0px')))
+        const offsets = () =>
+          sides.map((sd) => {
+            const p = sd.el.getBoundingClientRect()
+            return labelsOf(sd.el).map((c) => {
+              const r = (numOf(c) || c).getBoundingClientRect()
+              return [(r.left - p.left) / zoom, (r.top - p.top) / zoom, r.width / zoom, r.height / zoom]
+            })
+          })
+        const toSide = (sd: (typeof sides)[number], list: string[]) => {
+          for (const c of SIDES) sd.el.classList.toggle(c, list.indexOf(c) >= 0)
+        }
+        // 비켜설 자리: 새 쪽에서 위아래만 바꾼 자리(쪽이 그대로인 숫자도 겹치면 잠깐 이리로)
+        const flip = (sd: (typeof sides)[number]) => (sd.after.indexOf('is-below') >= 0 ? sd.after.filter((c) => c !== 'is-below') : [...sd.after, 'is-below'])
+        const now = offsets()
+        sides.forEach((sd) => toSide(sd, sd.before))
+        const then = offsets()
+        sides.forEach((sd) => toSide(sd, flip(sd)))
+        const away = offsets()
+        sides.forEach((sd) => toSide(sd, sd.after))
+        // 자리 0: 앞 장의 쪽, 1: 새 쪽, 2: 새 쪽에서 위아래를 바꾼 자리
+        const spots = [then, now, away]
+        /** 숫자가 목표선에 걸칠 때 비켜 서는 만큼(px, 위로는 음수). trend.css의 .tn-num 여백과 같은 셈: 점에서 목표선까지(d)가 숫자 자리
+            (점에서 up 위, 글 높이 em) 둘레 10px 안이면 숫자 끝을 목표선에서 10px 띄운다. 그림이 낮으면(200px 이하) 골짜기 숫자도 위에 선다 */
+        const lift = (list: string[], hl: boolean, y: number, ty: number, h: number, em: number) => {
+          if (!Number.isFinite(ty) || !Number.isFinite(y) || list.indexOf('is-mid') >= 0) return 0
+          const below = list.indexOf('is-below') >= 0 && h > 200
+          const d = ((below ? y - ty : ty - y) * h) / 100
+          const up = hl ? 40 : 24
+          const by = d - up + 10 > 0 && d - up - em - 10 <= 0 ? d + 10 - up : 0
+          return below ? by : -by
+        }
+        sides.forEach((sd, k) => {
+          const labels = labelsOf(sd.el)
+          const styles = labels.map((c) => c.getAttribute('style'))
+          const lists = [sd.before, sd.after, flip(sd)]
+          const hl = sd.el.classList.contains('is-hl')
+          const em = nums[k].map((n) => (n ? parseFloat(getComputedStyle(n).fontSize) * 1.1 : 0))
+          // 추이의 그림 상자와 선: 숫자가 겹치는지 볼 곳
+          const canvas = sd.el.closest('.tn-canvas') as HTMLElement | null
+          const polys = canvas ? (Array.prototype.slice.call(canvas.querySelectorAll('.tn-line')) as SVGPolylineElement[]) : []
+          // 숫자마다 지금 자리와 그 자리로 옮긴 때(처음에는 앞 장의 쪽)
+          const state = labels.map(() => ({ side: 0, at: -1 }))
+          const restore = () => {
+            labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
+            nums[k].forEach((n, i) => n && (numStyles[k][i] === null ? n.removeAttribute('style') : n.setAttribute('style', numStyles[k][i]!)))
+          }
+          sets.push((t) => {
+            if (t.v >= 1) return restore()
+            const w = canvas ? canvas.offsetWidth : 0
+            const h = canvas ? canvas.offsetHeight : 0
+            const px = (parseFloat((sd.el as HTMLElement).style.getPropertyValue('--x')) * w) / 100
+            const y = parseFloat((sd.el as HTMLElement).style.getPropertyValue('--y'))
+            const ty = canvas ? parseFloat(canvas.style.getPropertyValue('--ty')) : NaN
+            const py = h - (y * h) / 100
+            const pts = polys.map((pl) => (pl.getAttribute('points') || '').trim().split(/[\s,]+/).map(Number))
+            /** 쪽(side)의 글자 자리: 점에서 글자 상자의 왼쪽 위까지(목표선 비키기 더함) */
+            const spot = (side: number, i: number) => {
+              const o = spots[side][k][i] || now[k][i]
+              return [o[0], o[1] + (nums[k][i] ? lift(lists[side], hl, y, ty, h, em[i]) : 0)]
+            }
+            /** 쪽(side)에 선 숫자가 선이나 목표 점선과 겹치는지(그림 상자의 px). 숫자의 잉크는 글자 상자(줄 높이 1.1em)의 가운데쯤이라
+                위아래를 조금 덜고, 둘레(pad)를 넉넉히 본다 */
+            const hits = (side: number, i: number, pad = 3) => {
+              const o = spots[side][k][i]
+              if (!canvas || !o || !Number.isFinite(px) || !Number.isFinite(py)) return false
+              const at = spot(side, i)
+              const l = px + at[0] - pad
+              const r = l + o[2] + pad * 2
+              const top = py + at[1] + o[3] * 0.12 - pad
+              const b = top + o[3] * 0.76 + pad * 2
+              if (Number.isFinite(ty) && top < (1 - ty / 100) * h && (1 - ty / 100) * h < b) return true
+              for (const list of pts)
+                for (let j = 0; j + 3 < list.length; j += 2) {
+                  const x0 = (list[j] / 100) * w
+                  const y0 = (list[j + 1] / 100) * h
+                  const x1 = (list[j + 2] / 100) * w
+                  const y1 = (list[j + 3] / 100) * h
+                  // 선분이 상자와 만나는지: 선분을 촘촘히 짚어 본다(숫자 상자보다 짧은 걸음)
+                  const steps = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 6) + 1
+                  for (let q = 0; q <= steps; q++) {
+                    const x = x0 + ((x1 - x0) * q) / steps
+                    const yy = y0 + ((y1 - y0) * q) / steps
+                    if (x > l && x < r && yy > top && yy < b) return true
+                  }
+                }
+              return false
+            }
+            labels.forEach((c, i) => {
+              const a = then[k][i]
+              const b = now[k][i]
+              const st = state[i]
+              if (!a || !b) return
+              let want = st.side
+              if (!canvas || t.raw >= 0.9) want = 1
+              // 지금 자리가 겹치면 새 쪽, 앞 쪽, 비켜설 자리 차례로 비어 있는 곳으로(둘레가 넉넉한 곳 먼저)
+              else if (hits(st.side, i)) {
+                const others = [1, 0, 2].filter((x) => x !== st.side)
+                want = others.find((x) => !hits(x, i, 8)) ?? others.find((x) => !hits(x, i)) ?? st.side
+              }
+              // 선이 새 모양에 가까워졌고(값의 60%) 새 쪽이 넉넉히 비었으면 새 쪽으로. 값이 움직이기 시작하자마자 옮기던 때는 아직 앞 모양인
+              // 선의 V 사이에 숫자가 한 프레임 끼어 보였다(5차 감성 검수)
+              else if (st.side !== 1 && t.v >= 0.6 && (st.at < 0 || t.raw - st.at >= 0.12) && !hits(1, i, 8)) want = 1
+              if (want !== st.side) {
+                st.side = want
+                st.at = t.raw
+              }
+              const at = canvas ? spot(st.side, i) : [a[0] + (b[0] - a[0]) * t.side, a[1] + (b[1] - a[1]) * t.side]
+              const dx = at[0] - b[0]
+              const dy = at[1] - b[1]
+              c.style.transform = Math.abs(dx) + Math.abs(dy) < 0.01 ? '' : `translate(${dx}px, ${dy}px)`
+            })
+          })
+          undo.push(restore)
+        })
+      }
+      if (!sets.length) return keep()
+
+      // ---- 시계: 눈금과 값이 같은 진행으로 함께 간다(한 번의 모양 바뀜) ----
+      const ease = curve(EASE.out)
+      // 다시 자라기의 긴 박자(막대 자라기, 숫자 굴리기)
+      const grow = curve(EASE.reveal)
+      const clamp = (x: number) => Math.max(0, Math.min(1, x))
+      const tick = (raw: number): Tick => {
+        const v = raw >= 1 ? 1 : ease(clamp(raw))
+        return {
+          v,
+          raw,
+          // 추이가 아닌 점 숫자(겹침을 볼 선이 없다)는 선이 가장 빨리 움직이는 처음(시계의 12%)에 새 쪽으로 옮겨 간다
+          side: raw >= 1 ? 1 : ease(clamp(raw / 0.12)),
+          // 다시 자라기의 두 박자: 짧은 박자(시계의 25%, 차분하게 0.22초·생동감 0.3초)는 자리 잡기 곡선, 긴 박자는 자라기 곡선(EASE.reveal).
+          // 두 박자를 겹쳐(늘 때 15%부터, 줄 때 75%부터) 사이에 멈추지 않는다
+          beats: (wider) => {
+            if (raw >= 1) return [1, 1, 1]
+            if (wider) {
+              const value = grow(clamp((raw - 0.15) / 0.85))
+              return [ease(clamp(raw / 0.25)), value, value]
+            }
+            const value = grow(clamp(raw / 0.85))
+            return [value, ease(clamp((raw - 0.75) / 0.25)), value]
+          },
+          at: (g, u) => {
+            const ax = axes[g]
+            if (!ax) return null
+            const lo = ax.d0[0] + (ax.d1[0] - ax.d0[0]) * v
+            const hi = ax.d0[1] + (ax.d1[1] - ax.d0[1]) * v
+            return ((u - lo) / (hi - lo)) * 100
+          },
+        }
+      }
+      const clock = el.animate([], { duration: d(1100), delay: 60 + lag, easing: 'linear' })
+      anims.push(clock)
+      const apply = (raw: number) => {
+        const t = tick(raw)
+        sets.forEach((f) => f(t))
+      }
+      apply(0)
+      let frame = 0
+      let done = () => {}
+      waits.push(new Promise<void>((r) => (done = r)))
+      const end = () => {
+        cancelAnimationFrame(frame)
+        undo.forEach((f) => f())
+        done()
+      }
+      const step = () => {
+        if (clock.playState === 'finished' || clock.playState === 'idle') return end()
+        const p = clock.effect ? clock.effect.getComputedTiming().progress : null
+        apply(typeof p === 'number' ? p : 0)
+        frame = requestAnimationFrame(step)
+      }
+      frame = requestAnimationFrame(step)
+      stops.push(end)
+    }
+    /**
      * 차례로 나오는 n개의 사이(Motion Canvas의 sequence, anime.js의 stagger와 같은 생각을 우리 말로).
      * 기본 사이로 늘어놓되, 첫 것부터 마지막 것이 나오기 시작할 때까지가 span을 넘지 않게 좁힌다: 항목이 열둘인 목록도
      * 넷인 목록과 거의 같은 때에 다 나와서, 듣는 사람이 마지막 줄을 기다리지 않는다
@@ -1422,7 +1847,8 @@ export function motionEngine(): MotionEngine {
      */
     /** easing: 조각이 길을 타는 빠르기. 선이 곡선 없이(linear) 그어지는 길에서는 조각도 linear여야 선 끝과 함께 간다 */
     const packet = (host: Element | null, path: [number, number][], at: number, duration: number, easing: string = CARRY) => {
-      if (!host || path.length < 2) return
+      // 한 번 건너가는 조각은 나오는 연출이라, 이어 움직이기로 이미 제자리에 와 있는 컴포넌트에서는 띄우지 않는다
+      if (!host || path.length < 2 || host.closest('[data-mo-keep]')) return
       const p = document.createElement('span')
       p.className = 'mo-pk'
       p.setAttribute('aria-hidden', 'true')
@@ -1529,7 +1955,8 @@ export function motionEngine(): MotionEngine {
      * 움직이지 않는 때(still)에는 올리지 않는다: 제 시계로 도는 것이라 움직임 없음에서도 합계가 0부터 올라갔다
      */
     const tally = (el: Element | null, marks: { at: number; upto: number }[]) => {
-      if (!el || still || el.closest('.m-edit') || !marks.length || digitTexts(el) > 1) return
+      // 옮겨 온 숫자(이어 움직이기)는 0으로 되돌리지 않는다: 값이 바뀌었으면 carry가 앞 값에서 옮긴다
+      if (!el || still || el.closest('.m-edit, [data-mo-keep]') || !marks.length || digitTexts(el) > 1) return
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
       let node = walker.nextNode() as Text | null
       while (node && !/\d/.test(node.nodeValue || '')) node = walker.nextNode() as Text | null
@@ -3766,6 +4193,18 @@ export function motionEngine(): MotionEngine {
       // 장면은 모아 둔 쓰기를 한 뒤에 다시 짠다: 나눈 낱말이 장 안에 있어야 어느 묶음의 움직임인지 안다
       flushJobs()
       if (after) after()
+      // 이어 움직이기로 옮겨 온 짝: 값이 바뀌었으면 앞 장의 값에서 새 값으로. 값이 바뀌는 차트가 둘 넘으면 이끄는 차트(강조한 것이 있는 것,
+      // 없으면 읽는 차례로 첫 것)가 먼저 떠나고, 나머지는 한 박자(0.1~0.15초) 뒤에: 같이 떠나면 막대와 선이 같은 무게로 눈을 나눠 가졌다
+      // (5차 감성 검수, MOTION.md 기준 2 '초점은 한 번에 하나')
+      const mine = Array.from(carried).filter(([el]) => slide.contains(el))
+      const charts = mine
+        .filter(([, was]) => Array.from(was.values()).some((v) => Object.keys(v.vars).length > 0 || Object.keys(v.attrs).length > 0))
+        .map(([el]) => ({ el, r: el.getBoundingClientRect() }))
+        .sort((a, b) => Math.round(a.r.top / 40) - Math.round(b.r.top / 40) || a.r.left - b.r.left)
+        .map((c) => c.el)
+      const lead = charts.find((el) => el.querySelector('.is-hl')) ?? charts[0]
+      mine.forEach(([el, was]) => carry(el, was, charts.length > 1 && el !== lead && charts.indexOf(el) >= 0 ? d(135) : 0))
+      carried.clear()
     })
 
     /** 누르면: 다음 묶음을 보이고 그 자리에서 움직인다. 장 바꾸기의 기다림 없이 바로 */
@@ -3807,13 +4246,25 @@ export function motionEngine(): MotionEngine {
         b.restore()
       }
     }
+    // 이어 움직이기로 넘길 때 swap이 앞 장의 값을 읽기 전에 부른다: 움직이던 것을 끝 모습으로 보내 나눈 글자와 굴리던 숫자를 원래 글로
+    // 돌려 둔다. 생동감에서 숫자가 아직 구르는 동안 넘기면 숫자가 글자마다 나뉘어 있어서 값을 읽지 못했고, 막대 옆 숫자가 처음에 툭
+    // 새 값으로 바뀌었다(필름). '누르면' 나오는 묶음은 감춘 그대로 둔다(떠나는 장이라 보일 까닭이 없다)
+    if (!cellOnly && slide)
+      settling.set(slide, () => {
+        for (const b of batches) {
+          b.anims.forEach((a) => a.finish())
+          b.stops.forEach((f) => f())
+          b.restore()
+        }
+      })
     return Object.assign(finish, { next, left: () => waiting.length + steppers.reduce((n, st) => n + st.marks.length - st.i, 0) })
   }
 
   // ---------- 이어 움직이기 ----------
   // 앞 장과 다음 장에 같은 것이 있으면 사라졌다 나타나지 않고 새 자리와 크기로 옮겨 간다(View Transitions의 이름 붙인 요소).
-  // 같은 것: 글이 같은 제목(표지 제목이 다음 장의 제목이 되는 것도), 글이 같은 컴포넌트, 두 장에 하나씩뿐인 같은 종류의 컴포넌트
-  // (숫자만 바뀐 차트가 제자리에서 바뀌게). 복제한 장은 id가 새로 나와서 id가 아니라 내용으로 짝을 맞춘다
+  // 같은 것: 글이 같은 제목(표지 제목이 다음 장의 제목이 되는 것도), 글이 같은 컴포넌트, 숫자만 다른 컴포넌트, 두 장에 하나씩뿐인 같은
+  // 종류의 컴포넌트(숫자만 바뀐 차트가 제자리에서 바뀌게). 복제한 장은 id가 새로 나와서 id가 아니라 내용으로 짝을 맞춘다.
+  // 짝의 값이 바뀌었으면 앞 장의 값에서 새 값으로 바뀌어 간다(아래 '값 이어 움직이기', play의 carry)
 
   /** 발표 화면과 내보낸 HTML에서 지금 보이는 장 */
   const CURRENT = ':is(.present-slide, .v-slide.is-current)'
@@ -3825,19 +4276,132 @@ export function motionEngine(): MotionEngine {
   let turn = 0
   /** 장을 바꾸는 중에 움직이지 않고(움직임 없음) 그린 다음 장. swap이 그 장의 글을 늦게 들인다 */
   let stillSwap: Element | null = null
+  /** 앞 장에서 이름을 붙인 것의 값: 이름 → 값. 다음 장의 짝을 맞출 때 짝에게 넘긴다 */
+  let morphValues: Map<string, Values> | null = null
+  /** 다음 장에서 짝이 된 것 → 앞 장의 값. 다음 장의 play가 값을 옮기고 비운다(움직이지 않는 장은 swap이 비운다) */
+  const carried = new Map<HTMLElement, Values>()
+  /**
+   * 값이 옮겨 가는 짝의 이름. 앞 모습과 새 모습을 겹쳐 흐리지 않고 바로 바꿔 낀다(swap): 새 모습이 처음에 앞 값 그대로라 같은 그림이고,
+   * 넘어가는 일은 값의 움직임이 맡는다. 겹쳐 흐리던 때는 생동감에서 넘긴 직후 0.1~0.16초에 옛 선과 옛 숫자, 막대 끝의 옅은 꼬리가
+   * 남아 두 겹으로 보였다(감성 검수, 흰 테마에서 더)
+   */
+  const instant: string[] = []
+  /** 장마다 그 장의 움직임을 끝 모습으로 보내는 것(play가 적는다). 이어 움직이기가 앞 장의 값을 읽기 전에 부른다 */
+  const settling = new WeakMap<Element, () => void>()
+
+  // ---------- 값 이어 움직이기 ----------
+  // 짝이 된 숫자나 차트의 값이 두 장에서 다르면, 다음 장의 것이 앞 장의 값에서 새 값으로 바뀌어 간다(Keynote의 Magic Move를 데이터에:
+  // 같은 대상이 바뀌는 것으로 보이게, Heer & Robertson 2007). 차트는 값을 CSS 변수(--p, --x, --y 같은)와 그림(svg)의 좌표로 그리므로,
+  // 그 값을 한 시계로 앞 값에서 새 값까지 옮기면 차트가 그 사이의 모든 값으로 다시 그려진다: 막대는 앞 길이에서 새 길이로, 고리는 앞 몫에서
+  // 새 몫으로, 선은 앞 모양에서 새 모양으로, 막대 끝의 숫자와 선 위의 점이 같이 따라간다. 숫자는 앞 값에서 새 값까지 센다.
+  // 짝의 새 모습(View Transitions의 new)은 살아 있는 그림이라 바뀌어 가는 값이 그대로 보인다.
+
+  /** 값을 옮길 CSS 변수. 차례나 개수(--n, --i, --k, --cols)는 사이 값이 없어 판이 깨지므로 넣지 않는다 */
+  const VALUE_VARS = ['--p', '--t', '--g', '--m', '--a', '--b', '--w', '--pw', '--x', '--y', '--ty', '--lo', '--hi', '--link', '--l', '--s', '--o', 'flex-grow']
+  /** 같은 이름이 칸 번호(정수)로도 쓰이는 변수: 소수로 적힌 값만 옮긴다(설문 결과의 --s는 몫, 일정표의 --s는 칸 번호) */
+  const SOFT_VARS = ['--s', '--o']
+  /** 옮길 그림의 좌표. 숫자를 뺀 꼴이 같을 때만(점과 마디의 수가 같을 때만) 옮긴다 */
+  const SVG_VALUES = ['d', 'points', 'cx', 'cy', 'r', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height']
+  /** 날짜는 세는 수가 아니라서 옮기지 않는다(11월 28일에서 12월 3일로 가며 날을 거꾸로 센다) */
+  const NOT_VALUES = '[data-type="date"]'
+  /** 점 숫자가 점의 어느 쪽에 서는지(추이, 두 값 비교: slides/fitBlocks.ts가 그려진 자리를 보고 고른다) */
+  const SIDES = ['is-below', 'is-after', 'is-before', 'is-mid']
+  /**
+   * on: 센 몫을 칸마다 칠해 보이는 표시(칸 조립의 칸, 비율의 막대)가 켜져 있었는지(is-on).
+   * side: 점 숫자가 섰던 쪽(SIDES)
+   */
+  type Values = Map<string, { texts: (string | null)[]; vars: Record<string, string>; attrs: Record<string, string>; on?: boolean; side?: string }>
+  const sideOf = (el: Element) => SIDES.filter((c) => el.classList.contains(c)).join(' ')
+
+  /** 숫자를 지운 글: 숫자만 바뀐 것끼리 짝을 맞추는 열쇠 */
+  const numless = (t: string) => t.replace(/\d[\d,]*(\.\d+)?/g, '#')
+
+  /**
+   * 요소 안의 요소마다 자리 이름(꼴과, 같은 꼴 형제 사이의 차례)을 붙여 돈다. 두 장의 같은 컴포넌트는 같은 코드가 그려서 자리 이름이
+   * 같다. 상태 class(is-, has-: 강조, 넘음 같은)와 엔진이 붙인 것(mo-)은 꼴에서 뺀다: 값이 바뀌면 상태도 바뀔 수 있다
+   */
+  function walkPaths(root: Element, visit: (el: Element, path: string) => void) {
+    const step = (el: Element, path: string) => {
+      visit(el, path)
+      const seen: Record<string, number> = {}
+      for (const c of Array.prototype.slice.call(el.children) as Element[]) {
+        const sig = c.tagName + '.' + Array.prototype.filter.call(c.classList, (k: string) => !/^(is|has|mo)-/.test(k)).join('.')
+        seen[sig] = (seen[sig] ?? -1) + 1
+        step(c, path + '/' + sig + '#' + seen[sig])
+      }
+    }
+    step(root, '')
+  }
+
+  /** 앞 장의 것에서 옮길 수 있는 값을 읽어 둔다: 숫자가 든 글, 값 변수, 그림의 좌표 */
+  function readValues(root: Element): Values {
+    const out: Values = new Map()
+    if (root.matches(NOT_VALUES)) return out
+    walkPaths(root, (el, path) => {
+      const texts: (string | null)[] = []
+      let any = false
+      for (const c of Array.prototype.slice.call(el.childNodes) as Node[]) {
+        if (c.nodeType !== 3) continue
+        const v = /\d/.test(c.nodeValue || '') ? c.nodeValue : null
+        texts.push(v)
+        if (v) any = true
+      }
+      const vars: Record<string, string> = {}
+      const st = (el as HTMLElement).style
+      // 부품 칸(.bk)의 --x, --y, --w, --h는 판의 자리다. 칸째 옮기는 것은 View Transitions가 한다
+      if (st && !el.classList.contains('bk'))
+        for (const k of VALUE_VARS) {
+          const v = st.getPropertyValue(k)
+          if (v) {
+            vars[k] = v
+            any = true
+          }
+        }
+      const attrs: Record<string, string> = {}
+      if (el instanceof SVGElement)
+        for (const k of SVG_VALUES) {
+          const v = el.getAttribute(k)
+          if (v) {
+            attrs[k] = v
+            any = true
+          }
+        }
+      const on = el.classList.contains('is-on')
+      const side = sideOf(el)
+      if (any || on || side) out.set(path, { texts, vars, attrs, on, side })
+    })
+    return out
+  }
 
   /** 요소마다 짝을 찾을 열쇠들 (앞의 것일수록 먼저 맞춘다) */
   function morphKeys(slide: Element): { el: HTMLElement; keys: string[] }[] {
     const text = (el: Element) => (el.textContent || '').replace(/\s+/g, ' ').trim()
     const out: { el: HTMLElement; keys: string[] }[] = []
     const titles = Array.prototype.slice.call(slide.querySelectorAll(':scope > .s-head .s-title, .cv-title, .sc-title, .st-title')) as HTMLElement[]
-    for (const el of titles) if (text(el)) out.push({ el, keys: ['title:' + text(el)] })
+    // 장 머리의 제목은 글이 달라도 장 머리끼리 짝이 된다(두 번째 열쇠): 제자리에서 바꿔 끼우고, 사라졌다가 늦게 다시 나오지 않게(감성 검수)
+    for (const el of titles) if (text(el)) out.push({ el, keys: ['title:' + text(el), el.matches('.s-head .s-title') ? 'title*' : ''] })
+    // 장 머리의 부제와 아래 띠의 출처도: 글이 같으면 가만히 있고, 다르면 제자리에서 바뀐다. 짝이 없던 때는 두 장에 똑같은 부제와 출처가
+    // 앞 장과 함께 사라졌다가 다음 장의 움직임으로 다시 나와 깜빡였다(감성 검수)
+    for (const [sel, role] of [
+      [':scope > .s-head .s-lead', 'lead'],
+      [':scope > .s-foot .s-source', 'src'],
+    ]) {
+      const el = slide.querySelector(sel) as HTMLElement | null
+      if (el && text(el)) out.push({ el, keys: [role + ':' + text(el), role + '*'] })
+    }
     const cells = Array.prototype.slice.call(slide.querySelectorAll('.bk-area > .bk')) as HTMLElement[]
     const count: Record<string, number> = {}
     for (const el of cells) count[el.dataset.type || ''] = (count[el.dataset.type || ''] || 0) + 1
+    // 글이 같은 것 → 숫자만 다른 것(그 종류 안에서 그 글이 하나뿐일 때) → 그 종류가 하나뿐인 것 차례로 맞춘다
+    const nums: Record<string, number> = {}
+    for (const el of cells) {
+      const k = (el.dataset.type || '') + ':' + numless(text(el))
+      nums[k] = (nums[k] || 0) + 1
+    }
     for (const el of cells) {
       const type = el.dataset.type || ''
-      const keys = ['bk:' + type + ':' + text(el)]
+      const loose = type + ':' + numless(text(el))
+      const keys = ['bk:' + type + ':' + text(el), nums[loose] === 1 ? 'bkn:' + loose : '']
       if (count[type] === 1) keys.push('bk1:' + type)
       out.push({ el, keys })
     }
@@ -3845,14 +4409,34 @@ export function motionEngine(): MotionEngine {
     // 크게 다시 쓰는 장에서 항목이 사라졌다 나타나지 않고 새 자리로 옮겨 간다. 부품 장은 부품째로 맞추므로 넣지 않는다.
     // 한 장에 같은 글이 둘 이상이면 어느 것이 짝인지 알 수 없어 넣지 않는다
     if (!cells.length) {
+      // 같은 레이아웃, 같은 모양에 숫자만 다른 본문(같은 차트의 값만 바꾼 장)은 본문째 짝이 된다: 추이의 선과 점처럼 항목 밖에 그린 것까지
+      // 앞 값에서 새 값으로 바뀌어 간다. 그 안의 항목도 항목끼리 짝을 짓고, 값은 본문이 함께 옮긴다(pairUp). 항목이 늘거나 준 장은
+      // 본문의 글이 달라 예전처럼 항목마다 맞춘다
+      const body = slide.querySelector(':scope > .s-body') as HTMLElement | null
+      const layout = (/\bl-([a-zA-Z]+)/.exec(slide.className) || [])[1] || ''
+      const variant = (/\bva-([a-zA-Z]+)/.exec(slide.className) || [])[1] || 'base'
+      if (body && text(body)) out.push({ el: body, keys: ['body:' + layout + ':' + variant + ':' + numless(text(body))] })
       const seen: Record<string, HTMLElement | null> = {}
       const add = (key: string, el: HTMLElement) => (seen[key] = key in seen ? null : el)
       const its = Array.prototype.slice.call(slide.querySelectorAll(':scope > .s-body .it')) as HTMLElement[]
-      for (const el of its) if (text(el) && !el.parentElement?.closest('.it')) add('it:' + text(el), el)
+      for (const el of its)
+        if (text(el) && !el.parentElement?.closest('.it')) {
+          add('it:' + text(el), el)
+          add('itn:' + numless(text(el)), el)
+        }
       const imgs = Array.prototype.slice.call(slide.querySelectorAll(':scope > .s-body img, :scope > .ix img')) as HTMLImageElement[]
       // 그림은 data: 주소라 길다: 길이와 앞뒤 조각으로 가린다(같은 그림이면 같고, 다른 그림이 우연히 같을 일은 없다)
       for (const el of imgs) if (el.src) add('img:' + el.src.length + el.src.slice(0, 48) + el.src.slice(-48), el)
-      for (const key in seen) if (seen[key]) out.push({ el: seen[key]!, keys: [key] })
+      // 항목은 열쇠 둘(글이 같은 것, 숫자만 다른 것)을 차례로. 그 장에 하나뿐인 열쇠만
+      const byEl = new Map<HTMLElement, string[]>()
+      for (const key in seen) {
+        const el = seen[key]
+        if (!el) continue
+        const keys = byEl.get(el) || ['', '']
+        keys[key.indexOf('itn:') === 0 ? 1 : 0] = key
+        byEl.set(el, keys)
+      }
+      byEl.forEach((keys, el) => out.push({ el, keys }))
     }
     return out
   }
@@ -3860,25 +4444,32 @@ export function motionEngine(): MotionEngine {
   /** 앞 장의 것에 이름을 붙인다 (전환이 앞 장을 찍기 전에) */
   function nameFrom(slide: Element) {
     morphFrom = new Map()
+    morphValues = new Map()
     morphKeys(slide).forEach(({ el, keys }, i) => {
       const name = 'mo-k' + i
       el.style.setProperty('view-transition-name', name)
       named.push(el)
-      for (const k of keys) if (!morphFrom!.has(k)) morphFrom!.set(k, name)
+      for (const k of keys) if (k && !morphFrom!.has(k)) morphFrom!.set(k, name)
+      // 값은 앞 장이 사라지기 전에 읽어 둔다(제목은 글이 같아야 짝이라 옮길 값이 없다)
+      if (!keys.some((k) => k.indexOf('title:') === 0)) morphValues!.set(name, readValues(el))
     })
   }
 
   /** 다음 장에서 짝이 있는 것에 같은 이름을 붙이고, 다시 들이지 않게 표시한다. 글이 같은 짝을 먼저, 종류만 같은 짝은 그다음 */
   function pairUp(slide: Element) {
     const from = morphFrom
+    const values = morphValues
     morphFrom = null
+    morphValues = null
+    carried.clear()
+    instant.length = 0
     if (!from) return
     // 앞 장은 이미 찍혔다. 앞 장이 그대로 남는 곳(내보낸 HTML은 모든 장이 문서에 있다)에서 이름이 겹치지 않게 앞 장의 이름을 뗀다
     for (const el of named.splice(0)) el.style.removeProperty('view-transition-name')
     const used = new Set<string>()
     const fresh = morphKeys(slide)
     const taken = new Set<HTMLElement>()
-    for (const pass of [0, 1]) {
+    for (const pass of [0, 1, 2]) {
       for (const { el, keys } of fresh) {
         const name = keys[pass] && from.get(keys[pass])
         if (!name || used.has(name) || taken.has(el)) continue
@@ -3887,6 +4478,14 @@ export function motionEngine(): MotionEngine {
         el.style.setProperty('view-transition-name', name)
         el.setAttribute('data-mo-keep', '')
         named.push(el)
+        // 본문째 짝이 되어도 그 안의 항목은 항목끼리 짝을 짓는다(앞 장이 항목마다 따로 찍혀서, 짝이 없으면 항목이 본문보다 먼저 옅어져
+        // 막대가 0.1초 남짓 흐려 보였다). 값은 바깥 짝 하나가 옮긴다: 본문의 carry가 그 안의 항목까지 함께 옮긴다
+        const was = values && values.get(name)
+        const inside = Array.from(carried.keys()).some((c) => c.contains(el) || el.contains(c))
+        if (was && was.size && !inside && !el.matches(NOT_VALUES)) {
+          carried.set(el, was)
+          instant.push(name)
+        }
       }
     }
   }
@@ -3910,7 +4509,10 @@ export function motionEngine(): MotionEngine {
     html.dataset.moDir = direction > 0 ? 'next' : 'prev'
     if (name === 'morph') {
       const old = document.querySelector(CURRENT + ' .slide')
-      if (old) nameFrom(old)
+      if (old) {
+        settling.get(old)?.()
+        nameFrom(old)
+      }
     }
     // 빨리 연달아 넘기면 앞 전환은 건너뛰어지고, 그 끝맺음(finished)은 다음 전환이 시작된 뒤에 온다.
     // 그때 표시를 떼면 다음 전환이 motion.css의 규칙을 잃고 브라우저 기본 흐리게(250ms)로, 다음 장의 움직임은 SWAP_LEAD 없이
@@ -3927,7 +4529,12 @@ export function motionEngine(): MotionEngine {
         update()
         // 다음 장을 움직이지 않으면(앞 장으로 돌아갈 때) play가 짝을 맞추지 않았으니 여기서
         const fresh = morphFrom && document.querySelector(CURRENT + ' .slide')
-        if (fresh) pairUp(fresh)
+        if (fresh) {
+          pairUp(fresh)
+          // 움직이지 않는 장(뒤로 갈 때)은 값을 옮기지 않는다: 다 보인 채로 오고, 짝은 예전처럼 겹쳐 바꿔 낀다
+          carried.clear()
+          instant.length = 0
+        }
         morphFrom = null
         // 두 장이 함께 옅어지는 동안 뒤로 비치는 바탕을 다음 장의 바탕색으로 (motion.css의 ::view-transition-group(root)).
         // 비워 두면 장 뒤의 바탕이 비쳐서, 장끼리 넘길 때 화면이 잠깐 회색으로 번쩍였다
@@ -3943,7 +4550,15 @@ export function motionEngine(): MotionEngine {
         stillSwap = null
       })
       // 빨리 연달아 넘기면 앞의 전환은 건너뛴다. 그때 나는 거절은 정상이라 조용히 받는다.
-      t.ready.catch(() => {})
+      // 값이 옮겨 가는 짝은 앞 모습을 바로 감추고 새 모습을 바로 보인다(instant). motion.css의 흐리게보다 나중에 건 움직임이라 그 위에 선다
+      t.ready.then(() => {
+        for (const n of instant.splice(0))
+          for (const [side, o] of [
+            ['old', 0],
+            ['new', 1],
+          ] as const)
+            html.animate([{ opacity: o }, { opacity: o }], { duration: 1000, fill: 'both', pseudoElement: `::view-transition-${side}(${n})` })
+      }, () => {})
       t.updateCallbackDone.catch(() => {})
       t.finished.then(done, done)
     } catch {
@@ -3972,6 +4587,9 @@ export function motionEngine(): MotionEngine {
 
   function unname() {
     morphFrom = null
+    morphValues = null
+    carried.clear()
+    instant.length = 0
     for (const el of named.splice(0)) {
       el.style.removeProperty('view-transition-name')
       el.removeAttribute('data-mo-keep')

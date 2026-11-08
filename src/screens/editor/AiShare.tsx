@@ -779,8 +779,8 @@ export function AiReview({
   }, [deck, request, applied])
   const okCount = applied.results.filter((r) => r.ok).length
   const before = new Set(deck.slides.map((s) => s.id))
-  const info = pageInfo(applied.deck.slides)
-  const beforeInfo = pageInfo(deck.slides)
+  const info = pageInfo(applied.deck.slides, applied.deck)
+  const beforeInfo = pageInfo(deck.slides, deck)
   // 장 몇 개만 바뀌면 (장 하나를 부탁했을 때처럼) 그 장의 지금과 바꾼 뒤를 맨 위에 나란히 보여 준다
   const changed = applied.deck.slides.filter((s) => before.has(s.id) && applied.touched.has(s.id))
   const pairs = changed.length > 0 && changed.length <= 3 ? changed : []

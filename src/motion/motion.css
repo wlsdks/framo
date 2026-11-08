@@ -267,10 +267,12 @@
   }
 
   /* 짝의 앞 모습과 새 모습은 옮겨 가는 처음에 짧게 바꿔 낀다. 그룹의 시간(720ms)을 그대로 물려받으면, 줄 사이나 칸 높이가 달라진
-     컴포넌트는 옮겨 가는 내내 두 모습이 겹쳐 글이 두 겹으로 어긋나 보였다(녹화: 0.5초 넘게 줄마다 잔상) */
+     컴포넌트는 옮겨 가는 내내 두 모습이 겹쳐 글이 두 겹으로 어긋나 보였다(녹화: 0.5초 넘게 줄마다 잔상). 0.14초: 값이 바뀐 짝은 누르고
+     0.06초에 값이 떠나므로(engine.ts의 carry) 곧바로 앞 모습이 거의 다 옅어져야 숫자가 두 겹으로 보이지 않는다(0.26초이던 때는
+     떠나는 값 위에 앞 값이 비쳤다) */
   html[data-mo-swap='morph']::view-transition-old(*),
   html[data-mo-swap='morph']::view-transition-new(*) {
-    animation-duration: 260ms;
+    animation-duration: 140ms;
     animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
   }
 

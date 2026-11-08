@@ -24,7 +24,7 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
   const moveSlide = useDeck((s) => s.moveSlide)
   const addSlide = useDeck((s) => s.addSlide)
   const look = useLook(deck)
-  const info = pageInfo(deck.slides)
+  const info = pageInfo(deck.slides, deck)
   const sections = useStableSections(info)
   // 목록을 처음 그린 뒤에 생긴 목록 그림(새로 더하거나 복제한 장)은 고치는 장이 먼저 보이게 그 뒤에 그린다 (Thumb)
   const later = useRef(false)

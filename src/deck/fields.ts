@@ -218,9 +218,15 @@ export interface PageInfo {
   sections: string[]
   /** 장마다 속한 단락 순번 (0부터). 첫 단락 앞의 표지, 목차 같은 장은 없다. */
   sectionOf: Map<string, number>
+  /**
+   * 발표하는 차례의 장(숨긴 장 빼고)과 장 넘기기를 고르는 발표 전체의 값. 이어 움직이기로 넘어가는 이웃 장끼리 차트의 잣대를 같이
+   * 쓸지 정할 때 쓴다(slides/sharedScale.ts). look이 없으면 장마다 고른 장 넘기기만 본다
+   */
+  visible: Slide[]
+  look?: Pick<Deck, 'theme' | 'motion'>
 }
 
-export function pageInfo(slides: Slide[]): PageInfo {
+export function pageInfo(slides: Slide[], look?: Pick<Deck, 'theme' | 'motion'>): PageInfo {
   const visible = slides.filter((s) => !s.hidden)
   const page = new Map<string, number>()
   visible.forEach((s, i) => page.set(s.id, i + 1))
@@ -242,5 +248,5 @@ export function pageInfo(slides: Slide[]): PageInfo {
       sectionOf.set(s.id, i)
     }
   }
-  return { page, total: visible.length, sections, sectionOf }
+  return { page, total: visible.length, sections, sectionOf, visible, look }
 }

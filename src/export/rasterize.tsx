@@ -167,7 +167,7 @@ interface SlideRasterizer {
  * scale: 1이면 1920×1080. 2면 3840×2160 (파일이 네 배쯤 커진다)
  */
 export function createSlideRasterizer(deck: Deck, { scale = 1 }: { scale?: number } = {}): SlideRasterizer {
-  const info = pageInfo(deck.slides)
+  const info = pageInfo(deck.slides, deck)
   const families = fontFamiliesOf(deck.theme)
   const host = document.createElement('div')
   host.setAttribute('aria-hidden', 'true')
