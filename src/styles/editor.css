@@ -213,15 +213,15 @@
   font-size: 13px;
 }
 
-/* 고르기 단추 바로 아래의 작은 한 줄: 단추를 누르면 열리는 창에서 할 일 (ui.tsx의 FOLDER_TIP) */
+/* 고르기 단추 바로 아래: 단추를 누르면 열리는 창에서 할 일 (ui.tsx의 FOLDER_TIP). 할 일이라 본문(.save-pop-p)과 같은 크기와 색.
+   작고 옅은 글로 두었더니 창에서 가장 안 읽히는 글이 되었다 */
 .save-pop-tip {
-  margin: 8px 0 0;
-  color: var(--ink-3);
-  font-size: 12px;
-  line-height: 1.5;
-  /* 두 줄이 되면 낱말 사이에서만 고르게 나눈다: 한 낱말만 남거나 ‘새 폴더’와 '를'이 갈라지지 않게 */
-  text-wrap: balance;
-  word-break: keep-all;
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+  /* 끝 줄에 한 낱말만 남지 않게 */
+  text-wrap: pretty;
 }
 
 .save-pop-foot {
