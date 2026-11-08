@@ -187,6 +187,23 @@
   background: #e5484d;
 }
 
+/* 큰 화면(1920 전체 화면)에서는 한 단계 크게: 13px는 큰 화면에서 12px 남짓으로 읽혀 '녹화 중'과 멈추는 법이 잘 보이지 않았다.
+   띠(36px) 안에 들도록 높이는 30px까지 */
+@media (min-width: 1600px) {
+  .present-rec {
+    top: calc((var(--rec-top) - 30px) / 2);
+    gap: 10px;
+    height: 30px;
+    padding: 0 14px;
+    font-size: 15px;
+  }
+
+  .present-rec-dot {
+    width: 8px;
+    height: 8px;
+  }
+}
+
 /* 녹화할지 묻는 창: 끝 줄에 낱말 하나('Framo예요.')만 남지 않게 */
 .rec-intro .modal-body p {
   text-wrap: pretty;
