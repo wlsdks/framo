@@ -8,6 +8,7 @@ import v052 from './fixtures/deck-v0.5.2.json'
 import v053 from './fixtures/deck-v0.5.3.json'
 import v054 from './fixtures/deck-v0.5.4.json'
 import v055 from './fixtures/deck-v0.5.5.json'
+import v060 from './fixtures/deck-v0.6.0.json'
 import { migrateDeck } from './migrate'
 import type { Deck } from './types'
 
@@ -15,7 +16,9 @@ import type { Deck } from './types'
 // 컴포넌트마다 한 장, 발표 종류마다 프레임 잡기가 만든 발표)를 지금 버전이 그대로 연다. 글은 모두 지어낸 것이고 이미지는 1px로 바꿔 두었다.
 // v0.4.0은 컴포넌트 장이 줄(rows)이던 판 전, v0.4.2는 판(at)이다. 새 버전을 내놓을 때 그 버전의 파일도 더한다.
 // v0.5.3부터는 고른 값(테마의 글꼴·글자 크기·아래 표시·전환, 장마다의 바탕·강조·모양·장면·차례, 컴포넌트의 바탕·움직임·
-// 이음표)을 모두 넣은 발표(chosen)도 그 버전의 코드로 만들어 둔다. 예시 발표는 기본값뿐이라 고른 값이 사라져도 몰랐다
+// 이음표)을 모두 넣은 발표(chosen)도 그 버전의 코드로 만들어 둔다. 예시 발표는 기본값뿐이라 고른 값이 사라져도 몰랐다.
+// v0.6.0부터는 장의 배경(종류·자리·짙기), AI에게 숨긴 장과 컴포넌트, 발표에서 숨긴 장, 내 PC 글꼴, 컴포넌트의 항목 하나씩 보이기,
+// 모션 그래픽(틀 넷의 레시피와 손잡이, 장 제목은 모션 그래픽 다음에)도 고른 값에 든다
 type Release = { rich: Deck; made: Deck[]; chosen?: Deck }
 const RELEASES: [string, Release][] = [
   ['v0.4.0', v040 as unknown as Release],
@@ -26,17 +29,32 @@ const RELEASES: [string, Release][] = [
   ['v0.5.3', v053 as unknown as Release],
   ['v0.5.4', v054 as unknown as Release],
   ['v0.5.5', v055 as unknown as Release],
+  ['v0.6.0', v060 as unknown as Release],
 ]
 
-/** 사람이 고른 값: 발표 전체, 장마다, 컴포넌트마다 */
+/** 사람이 고른 값: 발표 전체(모션 그래픽의 레시피도), 장마다(배경, 숨기기도), 컴포넌트마다(쓰는 레시피의 버전도) */
 function chosenValues(deck: Deck) {
   return {
     theme: deck.theme,
     motion: deck.motion,
     aiShare: deck.aiShare,
-    slides: deck.slides.map((s) => ({ id: s.id, variant: s.variant, options: s.options })),
+    cines: deck.cines,
+    slides: deck.slides.map((s) => ({ id: s.id, variant: s.variant, options: s.options, backdrop: s.backdrop, hidden: s.hidden })),
     blocks: deck.slides.flatMap((s) =>
-      (s.blocks ?? []).map((b) => ({ id: b.id, look: b.look, effect: b.effect, when: b.when, speed: b.speed, from: b.from, variant: b.variant, highlight: b.highlight, link: b.link, linkBelow: b.linkBelow })),
+      (s.blocks ?? []).map((b) => ({
+        id: b.id,
+        look: b.look,
+        effect: b.effect,
+        when: b.when,
+        speed: b.speed,
+        reveal: b.reveal,
+        from: b.from,
+        variant: b.variant,
+        highlight: b.highlight,
+        link: b.link,
+        linkBelow: b.linkBelow,
+        cine: b.cine,
+      })),
     ),
   }
 }
@@ -68,9 +86,22 @@ describe('예전 버전의 발표', () => {
     expect(RELEASES.find(([v]) => v === 'v0.5.3')![1].chosen?.slides.length).toBeGreaterThan(50)
   })
 
+  it('v0.6.0부터는 고른 값에 배경, 숨기기, 모션 그래픽이 들어 있다', () => {
+    const { slides, cines, theme } = RELEASES.find(([v]) => v === 'v0.6.0')![1].chosen!
+    const blocks = slides.flatMap((s) => s.blocks ?? [])
+    expect(new Set(slides.map((s) => s.backdrop?.kind).filter(Boolean)).size).toBe(3)
+    expect(slides.some((s) => s.backdrop?.at && s.backdrop.strength)).toBe(true)
+    expect(slides.some((s) => s.options.aiHidden) && slides.some((s) => s.options.aiHiddenBlocks?.length) && slides.some((s) => s.hidden)).toBe(true)
+    expect(blocks.some((b) => b.reveal === 'each')).toBe(true)
+    expect(theme.localFont).toBeTruthy()
+    // 틀 넷의 레시피를 모두 쓰고, 손잡이(장 제목은 모션 그래픽 다음에도)를 고른 값으로
+    expect(new Set(blocks.filter((b) => b.type === 'cine').map((b) => cines?.[b.cine!]?.preset))).toEqual(new Set(['light', 'diffuse', 'gather', 'stroke']))
+    expect(Object.values(cines!).every((r) => r.headAfter)).toBe(true)
+  })
+
   for (const [version, { rich, made, chosen }] of RELEASES) {
     if (chosen)
-      it(`${version}에서 고른 값을 그대로 연다 (테마, 장의 설정과 모양, 컴포넌트의 바탕·움직임·이음표)`, () => {
+      it(`${version}에서 고른 값을 그대로 연다 (테마, 장의 설정과 모양과 배경, 컴포넌트의 바탕·움직임·이음표, 모션 그래픽)`, () => {
         expect(chosenValues(migrateDeck(structuredClone(chosen)))).toEqual(chosenValues(chosen))
       })
 
