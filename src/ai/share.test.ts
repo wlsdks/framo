@@ -245,10 +245,12 @@ describe('모양만 고르기', () => {
 
   it('마지막 그물은 모르는 글자를 잡는다', () => {
     const shape = toShape(createSampleDeck())
-    const words = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene']
+    const words = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape', 'blocks', 'x', 'y', 'w', 'h', 'look', 'effect', 'when', 'speed', 'from', 'order', 'link', 'linkBelow', 'scene', 'over']
     expect(onlyKnownStrings(shape, words)).toBe(true)
     expect(onlyKnownStrings(toShape(withScenes(createSampleDeck(), true)), words)).toBe(true)
     expect(onlyKnownStrings(toShape(secretDeck()), words)).toBe(true)
+    const secret = secretDeck()
+    expect(onlyKnownStrings(toShape(secret, { slides: new Set(secret.slides.map((x) => x.id)), blocks: new Set(secret.slides.flatMap((x) => (x.blocks ?? []).map((b) => b.id))) }), words)).toBe(true)
     expect(onlyKnownStrings({ ...shape, extra: SECRET }, [...words, 'extra'])).toBe(false)
     expect(onlyKnownStrings({ [SECRET]: 1 }, words)).toBe(false)
   })
@@ -326,6 +328,30 @@ describe('칸의 글 길이 (글자 수 구간)', () => {
     expect(bad((s) => (s[at].fields.title = '81-140, 1 lines'))).toBe(false)
     expect(bad((s) => (s[at].fields.title = 37 as unknown as string))).toBe(false)
     expect(bad((s) => (s[cover].fields.$logo = 'filled'))).toBe(true)
+  })
+
+  it('편집기가 잰 넘침은 그 장과 부품에 참으로만 붙는다', () => {
+    const deck = secretDeck()
+    const compose = deck.slides.find((s) => s.layout === 'compose')!
+    const message = compose.blocks!.find((b) => b.type === 'message')!
+    const over = { slides: new Set([deck.slides[1].id, compose.id, SECRET]), blocks: new Set([message.id, SECRET]) }
+    const shape = toShape(deck, over)
+    expect(shape.slides.flatMap((s, i) => (s.over ? [i] : []))).toEqual([1, deck.slides.indexOf(compose)])
+    const blocks = shape.slides.find((s) => s.layout === 'compose')!.blocks!
+    expect(blocks.filter((b) => b.over).map((b) => b.type)).toEqual(['message'])
+    expect(checkShape(shape)).toBe(true)
+    expect(JSON.stringify(shape)).not.toContain(SECRET)
+    // 넘침을 모르면(그리지 않는 곳) 붙지 않는다
+    expect(JSON.stringify(toShape(deck))).not.toContain('"over"')
+    // 참 말고는 받지 않는다
+    for (const v of [false, 'yes', 1]) {
+      const a = structuredClone(shape) as unknown as { slides: Record<string, unknown>[] }
+      a.slides[1].over = v
+      expect(checkShape(a), String(v)).toBe(false)
+      const b = structuredClone(shape) as unknown as { slides: { layout: string; blocks?: Record<string, unknown>[] }[] }
+      b.slides.find((s) => s.layout === 'compose')!.blocks![0].over = v
+      expect(checkShape(b), String(v)).toBe(false)
+    }
   })
 
   it('예전 판(2판)의 모양 파일은 받지 않는다', () => {

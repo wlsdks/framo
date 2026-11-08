@@ -19,6 +19,7 @@ import { pageProps, ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
 import { sideName } from '../../slides/panes'
 import { useDeck } from '../../store/deckStore'
 import { AskIcon, BackIcon, CheckIcon, ChevronIcon, CopyIcon, Info, Popover, Toggle, useDialog } from '../ui'
+import { measureOver } from './aiOver'
 
 const SKIP_REASON: Record<Exclude<OpCode, 'applied'>, string> = {
   no_slide: '그 슬라이드가 지금은 없어요',
@@ -474,7 +475,8 @@ function AiDetails({ deck, ai, ask, onPicked }: { deck: Deck; ai: AiShare; ask: 
 /** 한 장 뒤: AI에게 보이는 것과 보이지 않는 것, 보이는 그대로, 터미널에서 직접 연결하기 */
 function AiMore({ deck, ai, onBack }: { deck: Deck; ai: AiShare; onBack: () => void }) {
   const setAiShare = useDeck((s) => s.setAiShare)
-  const shape = useMemo(() => JSON.stringify(toShape(deck), null, 2), [deck])
+  // 올리는 것과 같게 넘침까지 (왼쪽 목록의 그림에서 잰다)
+  const shape = useMemo(() => JSON.stringify(toShape(deck, measureOver(deck)), null, 2), [deck])
   const back = useRef<HTMLButtonElement>(null)
   // 넘어오면 초점을 '뒤로'에: 누른 링크가 사라져 초점이 문서 맨 앞으로 가지 않게
   useEffect(() => back.current?.focus(), [])
@@ -492,7 +494,7 @@ function AiMore({ deck, ai, onBack }: { deck: Deck; ai: AiShare; onBack: () => v
           <ul>
             <li>보고 종류와 시간</li>
             <li>슬라이드 순서와 레이아웃</li>
-            <li>칸마다 글이 대략 몇 자인지</li>
+            <li>칸마다 글이 대략 몇 자인지, 넘쳤는지</li>
             <li>테마와 강조색</li>
           </ul>
         </div>

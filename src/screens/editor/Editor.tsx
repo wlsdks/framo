@@ -19,6 +19,7 @@ import { useEditLock } from '../../store/useEditLock'
 import { canRecord } from '../../present/record'
 import { Present, type RecordResult } from '../Present'
 import { BackIcon, CloseIcon, HistoryIcon, Info, RedoIcon, SAVE_HELP, takeNotice, undoAction, UndoIcon, useToast } from '../ui'
+import { measureOver } from './aiOver'
 import { ASK_ERROR, AiInbox, AiMenu, AiReview, AskStatus } from './AiShare'
 import { useBlockEditing } from './BlockEditor'
 import { BlockLibrary } from './BlockLibrary'
@@ -167,8 +168,9 @@ function EditorBody({ deck }: { deck: Deck }) {
   const toast = useToast()
   const launch = usePresentLaunch(deck, markVersion, toast)
   const exporting = useExports(deck, markVersion, toast)
-  const ai = useAiShare(deck)
-  const ask = useAiAsk(deck, () => useDeck.getState().setAiShare(true))
+  // 넘침은 왼쪽 목록의 그림에서 잰다 (aiOver.ts). AI에게는 넘쳤는지만 간다
+  const ai = useAiShare(deck, measureOver)
+  const ask = useAiAsk(deck, () => useDeck.getState().setAiShare(true), measureOver)
   const blocks = useBlockEditing(deck, slide, toast)
   const fileOver = useImageInput(blocks, toast)
   const side = useSidePanel(blocks)

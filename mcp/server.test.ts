@@ -67,7 +67,8 @@ beforeAll(async () => {
     items: decision.items.map((item) => ({ ...item, title: SECRET, body: SECRET })),
   })!
   example.slides.push({ ...makeSlide('compose'), fields: { title: SECRET }, blocks })
-  const shape = toShape(example)
+  // 편집기가 잰 넘침: 둘째 장과 조건별 흐름 부품
+  const shape = toShape(example, { slides: new Set([example.slides[1].id]), blocks: new Set([blocks[0].id]) })
   writeFileSync(join(share, 'decks', `${shape.deck}.json`), JSON.stringify(shape))
   // 누가 공유 폴더 안에 폴더 밖 파일로 가는 링크를 만들어 둔 경우. 꼴이 맞는 모양 파일이라도 읽히면 안 된다.
   const outside = toShape(createSampleDeck())
@@ -140,7 +141,7 @@ describe('MCP 서버', () => {
     expect(raw.join('\n')).not.toContain('7731')
   })
 
-  it('칸의 글은 글자 수 구간으로만 보이고, 도구 설명이 구간을 알려 준다', async () => {
+  it('칸의 글은 글자 수 구간으로만, 넘침은 참으로만 보이고, 도구 설명이 그 뜻을 알려 준다', async () => {
     const { value: list } = await tool('list_decks')
     const { value: shape } = await tool('get_shape', { deck: list.decks[0].deck })
     type Cells = { fields: Record<string, string>; items: Record<string, string>[] }
@@ -150,9 +151,12 @@ describe('MCP 서버', () => {
     expect(states.every((v: string) => v === 'filled' || (TEXT_STATES as readonly string[]).includes(v))).toBe(true)
     // 비밀을 심은 칸은 찬 칸으로 보인다 (글자 수 구간)
     expect(states.filter((v: string) => /^\d/.test(v)).length).toBeGreaterThan(30)
+    // 넘친 장과 부품은 참으로만
+    expect(shape.slides.flatMap((s: { over?: boolean }, i: number) => (s.over ? [i] : []))).toEqual([1])
+    expect(shape.slides.flatMap((s: { blocks?: { type: string; over?: boolean }[] }) => (s.blocks ?? []).filter((b) => b.over).map((b) => b.type))).toEqual(['decision'])
     const res = await rpc('tools/list')
     const get = (res.result!.tools as { name: string; description: string }[]).find((t) => t.name === 'get_shape')!
-    for (const word of ['1-10', '281+', 'lines']) expect(get.description).toContain(word)
+    for (const word of ['1-10', '281+', 'lines', 'over: true']) expect(get.description).toContain(word)
   })
 
   it('조건별 흐름도 실제 MCP 창구에서 모양만 보이고 질문과 경로의 글은 나가지 않는다', async () => {
