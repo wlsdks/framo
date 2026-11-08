@@ -69,8 +69,9 @@
   --fs: var(--t-small);
   color: var(--ink-2);
   line-height: 1.5;
-  /* 답도 두세 줄이라 고르게: pretty로는 반 칸에서 끝 줄에 '되찾아요' 한 낱말이 남았다 */
-  text-wrap: balance;
+  /* 줄을 먼저 채우고 끝 줄만 다듬는다(pretty): 고르게(balance) 나누면 자리가 남는데도 '우리 회사 / 자료를'처럼 두 줄로 반씩
+     꺾여 답이 실제보다 길어 보였다(사용자: 빽빽하다). 끝 줄 한 낱말은 pretty가 막는다 */
+  text-wrap: pretty;
 }
 
 @container bk (min-width: 1300px) {
