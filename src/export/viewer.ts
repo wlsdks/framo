@@ -12,6 +12,8 @@ export const VIEWER_TEXT = 'PDF로 저장 발표 시작 0123456789 /'
 // 처음 보이는 목록의 장 너비(.v-slide)는 창 높이에도 맞춘다: 받는 분 대부분이 쓰는 1280×600 노트북 창에서 1280 너비의 장은
 // 720 높이라 창보다 높아서, 장 하나를 다 보려면 스크롤해야 했고 어느 장도 한눈에 보이지 않았다. 112는 위 막대와 장 위아래 여백
 // 위 막대(.v-bar)는 칠한 흰 면이다: 반투명에 흐림을 걸면 아래로 지나가는 슬라이드가 비쳐 얼룩처럼 보였다(앱도 유리 효과를 쓰지 않는다)
+// 인쇄(PDF로 저장)는 한 쪽에 한 장, 장 사이에서만 쪽을 나눈다(마지막 장 뒤에서 나누면 끝에 빈 쪽이 생긴다). 발표하던 중에 인쇄해도
+// 지금 장 하나가 아니라 모든 장이 나오게 발표 화면의 자리 잡기를 푼다
 export const VIEWER_CSS = `
 html,body{margin:0;background:#eeeeee;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased}
 .v-bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:#fff;border-bottom:1px solid #e1e1e1}
@@ -41,11 +43,12 @@ body.is-present .v-blank:not([hidden]){position:fixed;inset:0;z-index:5;display:
 body.is-present .v-blank.is-white{background:#fff}
 @media print{
   @page{size:1920px 1080px;margin:0}
-  html,body{background:#fff}
-  .v-bar,.v-count{display:none!important}
-  .v-deck{display:block;padding:0}
-  .v-slide{width:1920px;max-width:none;height:1080px;break-after:page}
-  .v-frame{width:1920px;height:1080px;border-radius:0;box-shadow:none}
+  html,body,body.is-present{overflow:visible;background:#fff}
+  .v-bar,.v-count,.v-blank{display:none!important}
+  .v-deck,body.is-present .v-deck{position:static;display:block;padding:0}
+  .v-slide,body.is-present .v-slide{position:static;display:block;width:1920px;max-width:none;height:1080px}
+  .v-slide+.v-slide{break-before:page}
+  .v-frame,body.is-present .v-frame{width:1920px;height:1080px;border-radius:0;box-shadow:none}
   .v-scale{transform:none}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
