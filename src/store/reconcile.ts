@@ -8,7 +8,7 @@ import { deckSignature } from './versions'
  * - none: 둘이 같은 때다
  * 폴더와 맞출 때(syncWithFolder)와 편집기를 열 때(loadBestDeck)가 같이 쓴다. 따로 두었더니 같은 규칙이 두 번 적혀 있었다
  */
-export type Reconcile = { action: 'take'; backup: boolean } | { action: 'write' } | { action: 'none' }
+type Reconcile = { action: 'take'; backup: boolean } | { action: 'write' } | { action: 'none' }
 
 export function reconcile(local: Deck | null | undefined, file: Deck | null | undefined): Reconcile {
   if (!file) return local ? { action: 'write' } : { action: 'none' }

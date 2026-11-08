@@ -138,7 +138,7 @@ function flowRect(host: CSSStyleDeclaration, s: CSSStyleDeclaration, r: DOMRect,
 }
 
 /** 칸 안에 그려진 것(글자 줄, 그림, 면과 선)을 모두 덮는 네모 (화면 px). 그린 것이 없으면 null */
-export function inkBox(cell: HTMLElement): { left: number; top: number; right: number; bottom: number } | null {
+function inkBox(cell: HTMLElement): { left: number; top: number; right: number; bottom: number } | null {
   const inner = cell.querySelector<HTMLElement>(':scope > .bk-in')
   if (!inner) return null
   let left = Infinity

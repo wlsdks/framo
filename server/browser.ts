@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 /** 띄울 프로그램과 인자. 앞에서부터 해 보고, 못 띄우면 다음 것 */
-export type BrowserTry = [cmd: string, args: string[]]
+type BrowserTry = [cmd: string, args: string[]]
 
 /** 윈도우에서 크롬, 엣지가 설치되는 곳 (크롬 먼저). `start chrome`은 없을 때 오류 창을 띄워서 직접 찾는다 */
 export function windowsBrowsers(env: NodeJS.ProcessEnv = process.env, exists: (file: string) => boolean = existsSync): string[] {

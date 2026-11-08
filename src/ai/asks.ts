@@ -25,7 +25,7 @@ export interface AskRun {
 
 export const REASON_MAX = 280
 
-export interface Ask {
+interface Ask {
   id: string
   scope: AskScope
   /** 화면에 보이는 이름. 하는 일을 그대로 */
@@ -138,8 +138,6 @@ export const ASKS = [
 ] as const satisfies readonly Ask[]
 
 export type AskId = (typeof ASKS)[number]['id']
-
-export const ASK_IDS: readonly AskId[] = ASKS.map((a) => a.id)
 
 export function askOf(id: unknown): (typeof ASKS)[number] | undefined {
   return ASKS.find((a) => a.id === id)

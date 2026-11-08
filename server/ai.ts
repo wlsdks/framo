@@ -37,7 +37,7 @@ const README = `이 폴더는 Framo가 AI(Claude Code, Codex)와 주고받는 �
 
 export type ShareDirs = { root: string } & Record<ShareSubdir, string>
 
-export function shareDirs(root: string): ShareDirs {
+function shareDirs(root: string): ShareDirs {
   return { root, ...(Object.fromEntries(SHARE_SUBDIRS.map((d) => [d, join(root, d)])) as Record<ShareSubdir, string>) }
 }
 
@@ -75,7 +75,7 @@ function removeShared(file: string) {
  * 'AI 공유' 폴더는 지워도 된다고 안내하므로 쓸 폴더부터 만든다. 바꾸지 못하면(윈도우에서 다른 프로그램이
  * 파일을 열고 있으면 EPERM) 임시 파일을 치우고 오류를 그대로 던진다. 처리기가 정해진 500으로 답한다.
  */
-export function writeJsonAtomic(file: string, value: unknown) {
+function writeJsonAtomic(file: string, value: unknown) {
   realFolder(dirname(file))
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`
   writeFileSync(tmp, JSON.stringify(value, null, 2))
@@ -176,7 +176,7 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   }
 }
 
-export interface AiSetup {
+interface AiSetup {
   /** MCP 서버 파일의 경로. Claude Code, Codex 설정에 넣는다. */
   mcpPath: string
   /** MCP 서버를 띄울 node. 윈도우 배포본에는 node.exe가 들어 있어서 PATH의 node가 아닐 수 있다. */

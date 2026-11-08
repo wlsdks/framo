@@ -156,7 +156,7 @@ async function toPng(svg: string, background: string, scale: number): Promise<Bl
   return png
 }
 
-export interface SlideRasterizer {
+interface SlideRasterizer {
   /** 한 장을 PNG로. 한 번에 한 장씩 부른다 */
   shoot(slide: Slide): Promise<Blob>
   close(): void
@@ -201,7 +201,7 @@ export function createSlideRasterizer(deck: Deck, { scale = 1 }: { scale?: numbe
 }
 
 /** 발표에서 PPT에 들어갈 장(숨긴 장 빼고)을 모두 그림으로. only는 1부터 센 장 번호 */
-export async function rasterizeDeck(
+async function rasterizeDeck(
   deck: Deck,
   { scale = 1, only, onProgress }: { scale?: number; only?: number[]; onProgress?: (done: number, total: number) => void } = {},
 ): Promise<Blob[]> {

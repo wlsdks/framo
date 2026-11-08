@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export type Route =
+type Route =
   | { name: 'home' }
   | { name: 'new' }
   | { name: 'edit'; id: string }

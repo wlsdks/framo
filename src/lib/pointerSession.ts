@@ -29,7 +29,7 @@ export interface PointerSession {
 }
 
 /** bodyClass: 끄는 동안 body에 붙여 둘 class (is-block-dragging처럼 화면 전체의 커서나 다른 일을 쉬게 하는 표시) */
-export function pointerSession(bodyClass?: string): PointerSession {
+function pointerSession(bodyClass?: string): PointerSession {
   const ctrl = new AbortController()
   const cleanups: (() => void)[] = []
   // 끄는 동안 화면 전체를 덮는 빈 막. 커서(잡은 손, 너비 화살표)를 이 막 하나에만 준다. 예전에는 body 아래 모든 요소(*)에

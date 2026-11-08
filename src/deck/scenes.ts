@@ -6,7 +6,7 @@
 
 import type { Block, BlockType, Deck, LayoutId, SceneId, Slide } from './types'
 
-export interface SceneSpec {
+interface SceneSpec {
   id: SceneId
   name: string
   description: string
@@ -121,7 +121,7 @@ export function autoScene(slide: Pick<Slide, 'layout' | 'blocks'>, used: Readonl
   return scenesFor(slide).find((id) => !used.has(id)) ?? null
 }
 
-export interface ScenePlanRow {
+interface ScenePlanRow {
   slideId: string
   /** 장 번호 (1부터, 숨긴 장도 센다: 슬라이드 목록과 같게) */
   page: number

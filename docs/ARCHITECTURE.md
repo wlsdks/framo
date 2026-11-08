@@ -143,10 +143,33 @@
 | `src/deck/generate.test.ts` | 구성 규칙(결론부터, 시간에 맞는 장 수, 듣는 사람). 레이아웃 묶음과 예시 |
 | `src/deck/saved.test.ts`, `src/store/partsFile.test.ts` | 내 컴포넌트: 저장한 것이 장과 따로 놀고, 넣을 때마다 새 id, 자리가 없으면 넣지 않는다. 파일에서는 아는 것만 읽는다 |
 | `compat`, `migrate`, `storage`, `deckStore` | 예전 파일과 새 파일, 두 벌 맞추기, 되돌리기 |
+| `scripts/unused.test.ts`, `scripts/readSource.test.ts` | 쓰지 않는 파일, 내보내기, 패키지가 없다. 그 검사가 소스를 바르게 읽는다(아래 6장) |
 
 테스트로 볼 수 없는 것은 갤러리의 콘솔에서 본다. 장의 틀은 `await checkFrame()`, 부품 조합은 `await checkCombos()`, 편집 화면의 칸은 `await checkEdit()`로 본다. `checkCombos()`는 잘리거나 겹친 글에 더해 칸 안이 깨진 곳도 찾는다(`screens/comboChecks.ts`): 글이 줄 선에 닿거나 걸친 곳, 항목의 글이 줄 밖(옆 항목의 자리)으로 나간 곳, 그림이나 면에 가려진 글, 면(옅은 면, 진한 면, 레이아웃 안의 카드) 안에서 내용의 위 여백과 아래 여백이 다르거나 면 끝에 붙은 곳. 여백은 글자가 그려진 선(잉크)에서 면 끝까지로 잰다. 부품의 잘리지 않는 높이를 잴 때도 같은 검사(칸이 높을수록 늘 더 비는 것은 빼고)를 써서, 조합 검사가 깨졌다고 볼 높이를 편집기가 허락하지 않는다. 코드만 정리할 때는 정리 전과 후의 갤러리를 장마다 찍어 화소로 견준다.
 
-## 6. 고칠 때
+## 6. 쓰지 않는 것 찾기
+
+쓰지 않는 코드와 의존성은 0에 가깝게 둔다. 남겨 두면 읽는 사람이 쓰는 줄 알고 지키고, 고칠 때 번지는 곳을 넓게 보게 된다. `scripts/unused.mjs`가 저장소 전체(`src`, `server`, `mcp`, `scripts`, `launch`, `.claude`의 훅, Vite 설정, `index.html`)를 읽어 찾고, `npm test`의 `scripts/unused.test.ts`가 찾은 것이 없는지 본다. 그것만 돌릴 때는 `npx vitest run scripts/unused.test.ts`.
+
+**찾는 것**
+
+| 종류 | 뜻 | 고치는 법 |
+|---|---|---|
+| 쓰지 않는 파일 | 입구에서 닿지 않는 코드, CSS, `launch/`의 파일 | 지운다 |
+| 시험에서만 쓰는 파일 | 시험만 가져가는 파일 | 기능이 죽었으면 시험과 같이 지운다. 시험 도우미면 허락 목록 |
+| 쓰지 않는 내보내기 | 아무도 가져가지 않고 제 파일에서도 쓰지 않는다 | 지운다 |
+| 파일 안에서만 쓰는 내보내기 | 제 파일에서만 쓴다 | `export`만 뗀다 |
+| 시험에서만 쓰는 내보내기 | 시험만 가져가고 제 파일에서도 쓰지 않는다(시험만 하는 죽은 코드) | 시험과 같이 지우거나, 시험이 쓰는 함수로 바꾼다 |
+| 쓰지 않는 패키지, package.json에 없는 패키지 | `dependencies`, `devDependencies`와 코드가 어긋난다 | 패키지를 빼거나 적는다(`npm run licenses`, [OPEN-SOURCE.md](OPEN-SOURCE.md)) |
+| `dependencies`로, `devDependencies`로 옮길 패키지 | 나눠 주는 프로그램(화면, 로컬 서버, MCP 서버)이 가져가는 패키지만 `dependencies`다. `licenses.mjs`가 그것만 배포본의 라이선스 전문에 넣는다 | 옮긴다 |
+| 찾지 못한 파일, 허락 목록이 낡음 | 가리키는 파일이 없다. 허락한 것을 이제 쓰거나 없어졌다 | 고치거나 목록에서 뺀다 |
+
+- **입구:** `index.html`(화면), 서버 빌드의 입력(`vite.node.config.ts`), 두 Vite 설정, `package.json`의 scripts와 `.github/workflows`와 `.claude/settings.json`의 훅이 `node`로 돌리는 파일, `.d.ts`, 시험 파일. 손으로 돌리는 스크립트는 허락 목록의 `manualRoots`에 넣는다. 에이전트의 작업 폴더(`.claude/worktrees`)는 보지 않는다.
+- **가져오기로 세는 것:** `import`, `export … from`, `export *`(창구 파일을 따라간다), `import()`, `require()`, 개발 서버의 `ssrLoadModule()`, `new URL('…', import.meta.url)`, CSS의 `@import`와 `url()`, `?inline` 같은 꼬리, 패키지의 실행 이름(`tsc` → typescript), tsconfig의 `types`, `/// <reference types>`. 모듈을 통째로 받으면(`import * as ns`, `const m = await import()`) `ns.이름`으로 쓴 것만 센다. 가져온 이름을 `export { a }`로 다시 내보내는 것은 원래 파일의 것이라, 가져가는 쪽이 원래 파일에서 가져오게 한다.
+- **읽는 법:** TypeScript 7에는 JavaScript로 부르는 컴파일러 API가 없어서 `scripts/readSource.mjs`가 소스를 직접 낱말로 나눈다(주석, 문자열, 템플릿, 정규식, JSX의 글을 거른다). 이 읽기가 새 꼴의 코드에서 어긋나지 않게, `readSource.test.ts`가 저장소의 모든 소스에서 Vite의 파서(oxc)가 읽은 import, export와 견준다.
+- **허락 목록:** `unused.mjs`의 `ALLOW`에 까닭과 함께 넣는다. 소스로는 아무도 가져가지 않지만 바깥에서 쓰는 내보내기(빌드한 `serve.mjs`에서 `Framo.exe`가 부르는 `main`), 시험 도우미 파일, 검수만 받는 패키지 같은 것이다. 까닭을 댈 수 없으면 넣지 말고 지운다. 다른 작업과 겹쳐 지금 지울 수 없는 것은 `pending`에 `// 정리 대기` 주석과 함께 잠시 두고, 겹친 작업을 합친 뒤 지운다.
+
+## 7. 고칠 때
 
 - **사용자가 고르는 값을 새로 연다:** `themes.ts`에 값 목록을 넣는다. 그다음 `share.ts`의 `toShape`와 `checkShape`, MCP 서버의 `PROTOCOL_WORDS`, `ops.ts`에 같이 넣는다.
 - **저장 형식을 바꾼다:** `version`을 올리고 예전 파일 읽기를 `migrate.ts`에 넣는다. 예전 버전이 버리게 되는 것을 더했으면 `compat.ts`의 `unknownParts`가 알게 한다.

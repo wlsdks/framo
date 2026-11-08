@@ -194,10 +194,6 @@ export function unshownCount(slide: Slide): number {
   return filledCount(slide) - filledCount(shownOnly(slide))
 }
 
-export function deckMissingCount(deck: Deck): number {
-  return deckBlanks(deck).reduce((n, b) => n + b.missing.length, 0)
-}
-
 export interface PageInfo {
   /** 숨긴 장을 뺀 쪽 번호 (1부터). 숨긴 장은 없다. */
   page: Map<string, number>

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { autoArranged, autoPlace, BLOCKS, boardAreaH, boardSig, canCompose, makeBlock, resizeBlock, tiles } from '../deck/blocks'
 import { createSampleDeck } from '../deck/sample'
 import type { Block, Deck, Item, LayoutId, Slide } from '../deck/types'
-import { applyOps, parseOp, parseRequest, REQUEST_FORMAT, slideEmpty, type Op } from './ops'
-import { REQUEST_VERSION } from './protocol'
+import { applyOps, parseOp, parseRequest, slideEmpty, type Op } from './ops'
+import { REQUEST_FORMAT, REQUEST_VERSION } from './protocol'
 import { checkShape, shapeSlideId, toShape } from './share'
 
 const deck = createSampleDeck()

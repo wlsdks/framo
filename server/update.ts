@@ -39,12 +39,12 @@ export const REPOS = [
     download: 'https://github.com/wlsdks/framo/releases/download/',
   },
 ] as const
-export type Repo = (typeof REPOS)[number]
+type Repo = (typeof REPOS)[number]
 /**
  * 받을 때 따라가도 되는 곳. 첫 주소는 github.com, 그다음은 GitHub의 릴리스 파일 보관소.
  * 확인용 api.github.com은 받기에 쓰지 않는다(넘겨받을 까닭이 없다)
  */
-export const DOWNLOAD_HOSTS = ['github.com', 'release-assets.githubusercontent.com', 'objects.githubusercontent.com'] as const
+const DOWNLOAD_HOSTS = ['github.com', 'release-assets.githubusercontent.com', 'objects.githubusercontent.com'] as const
 /** 배포본은 50~100MB다. 이보다 크면 약속과 다른 것으로 보고 받지 않는다 */
 export const MAX_ASSET_BYTES = 300 * 1024 * 1024
 /** 릴리스 정보(JSON)의 상한. 릴리스 설명이 길어도 몇십 KB다 */
@@ -78,7 +78,7 @@ export function compareVersions(a: string, b: string): number {
   return 0
 }
 
-export interface Asset {
+interface Asset {
   /** 받을 첫 주소. https://github.com/<REPOS의 저장소>/releases/download/<태그>/<이름> 그대로인 것만 */
   url: string
   size: number
@@ -140,7 +140,7 @@ export function allowedHop(url: URL, first: boolean): boolean {
 }
 
 /** 바깥 연결 하나의 답. 시험에서는 이것을 흉내 내서 네트워크에 닿지 않는다 */
-export interface Hop {
+interface Hop {
   status: number
   location?: string
   body: AsyncIterable<Buffer>
@@ -152,7 +152,7 @@ export interface Hop {
 export type Getter = (url: URL, headers: Record<string, string>, idleMs: number) => Promise<Hop>
 
 /** 실제로 쓰는 GET. 연결을 다시 쓰지 않는다(agent: false). 쿠키를 갖고 있지 않으니 보낼 것도 없다 */
-export const nodeGet: Getter = (url, headers, idleMs) =>
+const nodeGet: Getter = (url, headers, idleMs) =>
   new Promise((resolve, reject) => {
     const req = httpsGet(url, { headers, agent: false, timeout: idleMs }, (res) => {
       // 읽는 중에 끊기면 그만두게: 이 시간 동안 아무것도 오지 않으면 끊는다
@@ -179,7 +179,7 @@ async function readLimited(body: AsyncIterable<Buffer>, max: number): Promise<Bu
   return Buffer.concat(chunks)
 }
 
-export interface UpdaterOptions {
+interface UpdaterOptions {
   /** 이 앱의 버전 (User-Agent에 넣는다) */
   version: string
   platform?: NodeJS.Platform

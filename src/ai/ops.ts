@@ -65,11 +65,10 @@ import { HEX, isInt, isObj, isOneOf, onlyKeys } from './guards'
 import { DECK_ID, HIGHLIGHT_MAX, HIGHLIGHT_MIN, MAX_ITEMS, REQUEST_FORMAT, REQUEST_ID, REQUEST_VERSION } from './protocol'
 import { shapeBlockId, shapeDeckId, shapeSlideId } from './share'
 
-export { REQUEST_FORMAT, REQUEST_ID }
 export const MAX_OPS = 40
 export const NOTE_MAX = 300
-export const GUIDE_MAX = 200
-export const HINT_MAX = 80
+const GUIDE_MAX = 200
+const HINT_MAX = 80
 export const ROLE_MAX = 24
 
 /** 장을 가리키는 값: 모양 파일의 장 id(s로 시작) 또는 같은 요청에서 새로 만든 장의 이름(n1, n2...) */
@@ -158,7 +157,7 @@ export type Op =
    */
   | { op: 'set_link'; slide: SlideRef; block: BlockRef; side: 'right' | 'below'; link: BlockLink | null }
 
-export type OpName = Op['op']
+type OpName = Op['op']
 export const OP_NAMES: OpName[] = [
   'add_slide',
   'remove_slide',

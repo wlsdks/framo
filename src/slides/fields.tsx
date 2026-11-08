@@ -72,7 +72,7 @@ export function splitNumber(text: string): { pre?: string; num: string; unit: st
 }
 
 /** 숫자 하나와 그 뒤의 단위 */
-export interface NumberRun {
+interface NumberRun {
   num: string
   unit: string
 }
@@ -239,7 +239,7 @@ function sameNodes(el: HTMLElement, next: (Node | string)[]): boolean {
 interface FieldProps extends TextProps {
   value: string
   hint: string
-  /** 스크린 리더가 읽는 칸 이름 (labelFor). 없으면 빈칸일 때 안내 문구를 이름으로 */
+  /** 스크린 리더가 읽는 칸 이름 (labelIn). 없으면 빈칸일 때 안내 문구를 이름으로 */
   label?: string
   fieldId: string
   onChange?: (value: string) => void

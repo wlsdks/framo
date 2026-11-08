@@ -18,10 +18,10 @@ import { CSP, CSP_META } from './csp'
 import { createUpdateHandler, UPDATE_DIR_NAME, type UpdateSetup } from './updateRoutes'
 import { version } from '../package.json'
 
-// 묶는 스크립트(scripts/pack.mjs)가 빌드한 index.html의 CSP를 이것과 견준다
-export { CSP, CSP_META }
+// 묶는 스크립트(scripts/pack.mjs)가 빌드한 index.html의 CSP를 이것과 견준다(빌드한 dist-node/serve.mjs에서 읽는다)
+export { CSP_META }
 export const HOST = '127.0.0.1'
-export const PORT = Number(process.env.GYEOL_PORT) || 41580
+const PORT = Number(process.env.GYEOL_PORT) || 41580
 const ORIGIN = `http://${HOST}:${PORT}`
 const HERE = dirname(fileURLToPath(import.meta.url))
 /** 빌드하면 dist-node/ 안에 들어가므로 한 단계 위가 앱 폴더다 */
@@ -55,7 +55,7 @@ function send(res: ServerResponse, status: number, body: string, headers: Record
   res.end(body)
 }
 
-export interface ServerOptions {
+interface ServerOptions {
   /** 화면 파일 폴더 */
   root?: string
   /** 'AI 공유' 폴더 */
@@ -166,7 +166,7 @@ function fail(message: string): never {
   process.exit(1)
 }
 
-export interface MainOptions {
+interface MainOptions {
   /**
    * MCP 서버를 띄울 node. Framo.exe(launch/framo-exe.cjs)가 이 파일을 불러 켤 때 옆의 node\node.exe를 넘긴다.
    * Framo.exe는 명령줄 인자를 node 인자로 읽지 않아서, MCP 서버가 스스로를 권한 모델(--permission) 안에서 다시 띄우는 길이

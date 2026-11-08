@@ -16,7 +16,7 @@ import { PaneTools } from './panes'
 export const SLIDE_W = 1920
 export const SLIDE_H = 1080
 
-export interface SlideCanvasProps {
+interface SlideCanvasProps {
   deck: Pick<Deck, 'meta' | 'theme' | 'title' | 'motion'>
   slide: Slide
   mode: SlideMode

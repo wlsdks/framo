@@ -25,7 +25,7 @@ import { study } from './blueprints/study'
 import { weekly } from './blueprints/weekly'
 import type { Audience, DeckType } from './types'
 
-export type { Blueprint, Focus, Recipe } from './blueprints/recipes'
+export type { Recipe } from './blueprints/recipes'
 
 export const BLUEPRINTS: Record<DeckType, Blueprint> = {
   business,

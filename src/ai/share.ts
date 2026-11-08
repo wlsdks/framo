@@ -47,8 +47,6 @@ import type { Audience, Block, BlockEffect, BlockFrom, BlockLink, BlockLook, Blo
 import { hasKey, HEX, isInt, isObj, isOneOf, onlyKeys } from './guards'
 import { HIGHLIGHT_MAX, HIGHLIGHT_MIN, OPAQUE_ID, REQUEST_ID, SHAPE_FORMAT, SHAPE_VERSION } from './protocol'
 
-export { SHAPE_FORMAT }
-
 /** 칸의 상태. 글자 수 대신 세 단계만 알려 준다. */
 export type FieldState = 'empty' | 'filled' | 'long'
 

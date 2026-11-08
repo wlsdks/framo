@@ -14,7 +14,7 @@ import { usePointerSessions, type PointerSession } from './pointerSession'
  * 끄는 것의 화면 자리는 끌기 시작할 때의 자리(activeNodeRect)에 transform을 더한 곳이다: 칸이 스크롤된 만큼은 dnd-kit이
  * 따로 더해 손 밑에 둔다
  */
-export const keepInList: Modifier = ({ transform, activeNodeRect, scrollableAncestorRects }) => {
+const keepInList: Modifier = ({ transform, activeNodeRect, scrollableAncestorRects }) => {
   const box = scrollableAncestorRects[0]
   if (!activeNodeRect || !box) return { ...transform, x: 0 }
   const y = Math.min(Math.max(transform.y, box.top - activeNodeRect.top), box.bottom - activeNodeRect.bottom)

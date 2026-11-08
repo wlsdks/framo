@@ -32,11 +32,12 @@ import {
   REQUEST_ID,
   REQUEST_VERSION,
   RESULT_STATUSES,
+  SHAPE_FORMAT,
   SHARE_DIR_NAME,
   SHARE_SUBDIRS,
   type ShareSubdir,
 } from '../src/ai/protocol'
-import { catalog, checkShape, onlyKnownStrings, SHAPE_FORMAT, type ShapeDeck } from '../src/ai/share'
+import { catalog, checkShape, onlyKnownStrings, type ShapeDeck } from '../src/ai/share'
 import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LINK_IDS, BLOCK_LOOK_IDS, BLOCK_REVEAL_IDS, BLOCK_SPEED_IDS, BLOCK_TYPES, BLOCK_WHEN_IDS, BOARD_COLS, BOARD_ROWS, MAX_BLOCKS } from '../src/deck/blocks'
 import { LAYOUT_ORDER } from '../src/deck/layouts'
 import { SCENE_IDS } from '../src/deck/scenes'
@@ -464,7 +465,7 @@ function toolText(value: unknown, isError = false) {
 
 const INVALID = { jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Invalid Request' } }
 
-export function handleMessage(dirs: Dirs, value: unknown): object | null {
+function handleMessage(dirs: Dirs, value: unknown): object | null {
   // null이나 숫자 같은 줄도 JSON으로는 맞다. 예전에는 null에서 msg.id를 읽다가 서버가 죽었다
   if (!isObj(value)) return INVALID
   const msg = value as Message

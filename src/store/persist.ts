@@ -28,7 +28,7 @@ import { deckSignature, deleteDeckVersions, keepVersion } from './versions'
  * 2. 보관 폴더: 폴더를 골라 두면 같이 저장. 브라우저와 상관없이 남는다.
  */
 
-export type WriteState = 'idle' | 'saving' | 'saved' | 'failed'
+type WriteState = 'idle' | 'saving' | 'saved' | 'failed'
 
 interface StorageState {
   folder: FolderStatus | null
@@ -173,7 +173,7 @@ export async function loadBestDeck(id: string): Promise<Deck | undefined> {
   return local
 }
 
-export interface Imported {
+interface Imported {
   deck: Deck
   /** 이 브라우저에 저장했는지 */
   saved: boolean

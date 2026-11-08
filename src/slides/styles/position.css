@@ -140,7 +140,7 @@
   right: 48px;
 }
 
-/* 이웃한 이름표와 겹칠 때: 위의 점은 이름표를 점 위로, 아래 점은 점 아래로 비켜 단다 (layouts.tsx의 labelSides) */
+/* 이웃한 이름표와 겹칠 때: 위의 점은 이름표를 점 위로, 아래 점은 점 아래로 비켜 단다 (layouts/Position.tsx의 labelSides) */
 .pm-pt.is-up .pm-label {
   translate: 0 calc(-100% - 4px);
 }
