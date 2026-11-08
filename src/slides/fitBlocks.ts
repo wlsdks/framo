@@ -1264,8 +1264,12 @@ export function blockFitter() {
     const cs = getComputedStyle(slide)
     const foot = Math.max(0, (parseFloat(cs.paddingBottom) || 0) - (parseFloat(cs.getPropertyValue('--pad-y')) || 0)) * k
     const spare = a.bottom + foot - a.top - (b - t)
-    // 내용은 본문 상자 밖으로는 내리지 않는다
-    const move = Math.round(Math.min(a.top + spare / 2.2 - t, a.bottom - b) / k)
+    // 위의 빈 곳은 보이는 그대로 장 머리(제목, 부제) 아래부터 센다(레이아웃 장의 fitLayout과 같다): 본문 윗선부터 세면 --body-gap만큼
+    // 위가 넓어져, 판을 혼자 쓰는 납작한 흐름(다섯 단계)이 장 제목보다 장 아래 끝에 더 가까이 앉아 제목 아래가 휑했다.
+    // (gap + 내린 값) : (아래 - 내린 값) = 1 : 1.2. 내용은 본문 상자 밖으로는 내리지 않는다
+    const head = slide.querySelector<HTMLElement>(':scope > .s-head')
+    const gap = head?.getClientRects().length ? Math.max(0, a.top - head.getBoundingClientRect().bottom) : 0
+    const move = Math.round(Math.min(a.top + (spare - 1.2 * gap) / 2.2 - t, a.bottom - b) / k)
     return move < 8 ? 0 : move
   }
 
