@@ -65,19 +65,21 @@ function widthEm(text: string): number {
 export const CYCLE_LABEL_EM = 9
 /** 설명 글자는 본문보다 한 단계 작다(26/30) */
 const META_K = 26 / 30
+/** 이름 앞의 번호('01', 출처 글자 22/30의 두 자리)와 번호 뒤 틈(cycle.css의 0.4em) */
+const NUM_EM = 1.3
 
 /**
- * 고리 둘레의 이름표마다 차지할 너비와 높이(본문 em) 어림: 번호 한 줄, 이름(줄 수), 설명(줄 수). 재지 않고 어림하는 것은 반지름이
- * 이 값에 따라 정해지고 이름표 자리는 반지름에 따라 정해져서, 재면 서로를 따라 움직이기 때문이다. 어림이 모자라 넘치거나 겹치면
- * 글자 맞추기(fitBlocks)가 단계로 줄인다
+ * 고리 둘레의 이름표마다 차지할 너비와 높이(본문 em) 어림: 번호와 이름(번호는 이름 첫 줄 앞에, 줄 수), 설명(줄 수). 재지 않고 어림하는
+ * 것은 반지름이 이 값에 따라 정해지고 이름표 자리는 반지름에 따라 정해져서, 재면 서로를 따라 움직이기 때문이다. 어림이 모자라
+ * 넘치거나 겹치면 글자 맞추기(fitBlocks)가 단계로 줄인다
  */
 export function cycleLabelBoxes(labels: { title: string; meta: string }[]): { w: number; h: number }[] {
   return labels.map(({ title, meta }) => {
     const tw = widthEm(title)
     const mw = widthEm(meta) * META_K
-    const tl = Math.max(1, Math.ceil(tw / CYCLE_LABEL_EM))
+    const tl = Math.max(1, Math.ceil(tw / (CYCLE_LABEL_EM - NUM_EM)))
     const ml = meta ? Math.ceil(mw / CYCLE_LABEL_EM) : 0
-    return { w: round(Math.max(1.2, Math.min(CYCLE_LABEL_EM, Math.max(tw, mw)))), h: round(0.95 + 0.2 + tl * 1.35 + (ml ? 0.15 + ml * 1.17 : 0)) }
+    return { w: round(Math.max(1.2, Math.min(CYCLE_LABEL_EM, Math.max(NUM_EM + tw, mw)))), h: round(tl * 1.35 + (ml ? 0.15 + ml * 1.17 : 0)) }
   })
 }
 

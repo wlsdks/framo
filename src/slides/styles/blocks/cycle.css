@@ -260,13 +260,61 @@
     text-align: center;
   }
 
-  .bk-cy-mark,
+  /* 번호는 이름 첫 줄 앞에, 이름과 한 바닥선으로(설명은 그 아래 줄). 번호를 이름 위 한 줄에 두면 이름표마다 번호 줄 높이가 고리 위아래에
+     더해져, 단계가 다섯·여섯이면 비스듬히 위아래에 선 이름표 넷의 높이에 고리가 묶여 판을 혼자 써도 지름이 본문 높이의 60%를 겨우
+     넘었다(사용자: 고리와 이름이 작다). 번호와 이름은 고리 쪽으로 붙는다: 오른쪽 반은 왼쪽 끝에서, 왼쪽 반은 오른쪽 끝에서, 위아래는
+     가운데에서 시작하고 설명이 더 길면 남는 너비는 고리 바깥쪽이 받는다(번호가 이름에서 떨어지지 않게) */
+  .bk-cy-step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: baseline;
+  }
+
+  .bk-cy-step.is-l {
+    grid-template-columns: 1fr auto;
+  }
+
+  .bk-cy-step:is(.is-t, .is-b) {
+    grid-template-columns: 1fr auto auto 1fr;
+  }
+
+  .bk-cy-text {
+    display: contents;
+  }
+
+  .bk-cy-mark {
+    display: block;
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: start;
+    margin-right: 0.4em;
+  }
+
   .bk-cy-n {
     display: block;
   }
 
-  .bk-cy-n {
-    margin-bottom: 0.2em;
+  .bk-cy-t {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .bk-cy-m {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  .bk-cy-step.is-l .bk-cy-mark {
+    justify-self: end;
+  }
+
+  .bk-cy-step:is(.is-t, .is-b) .bk-cy-mark {
+    grid-column: 2;
+  }
+
+  .bk-cy-step:is(.is-t, .is-b) .bk-cy-t {
+    grid-column: 3;
+    text-align: left;
   }
 
   .bk-cy-step .bk-cy-rail {
