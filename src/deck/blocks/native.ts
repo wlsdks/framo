@@ -1135,6 +1135,36 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  spread: {
+    name: '퍼짐',
+    description: '사람 100명을 눈금 100개로 놓고, 단계마다 몇 %까지 퍼졌는지 보여 줘요',
+    motion: '단계마다 눈금이 왼쪽 씨앗에서부터 물결처럼 번지고 그 단계의 몫이 올라와요',
+    fields: [
+      { key: 'label', label: '이름표', hint: '예: 100명 중' },
+      { key: 'note', label: '설명', hint: '예: 눈금 하나가 한 사람', optional: true, multiline: true },
+    ],
+    items: {
+      label: '단계',
+      min: 2,
+      max: 5,
+      default: 3,
+      fields: [
+        { key: 'meta', label: '몫', hint: '예: 16%', hints: ['3%', '16%', '50%', '84%', '100%'] },
+        { key: 'title', label: '단계', hint: '이 단계의 이름', hints: ['시범 부서', '먼저 쓰는 팀', '본사 절반', '지점까지', '모두'], multiline: true },
+      ],
+    },
+    highlight: { label: '지금 단계', fallback: 'last' },
+    minSpan: 6,
+    prefSpan: 12,
+    sample: {
+      fields: { label: '직원 100명 중', note: '눈금 하나가 한 사람' },
+      items: [
+        { meta: '3%', title: '시범 부서' },
+        { meta: '16%', title: '먼저 쓰는 팀' },
+        { meta: '50%', title: '본사 절반' },
+      ],
+    },
+  },
   network: {
     name: '연결도',
     description: '가운데 하나에 여러 시스템이나 팀이 이어진 모습',

@@ -46,6 +46,7 @@
 @import './styles/blocks/decision.css';
 @import './styles/blocks/network.css';
 @import './styles/blocks/hub.css';
+@import './styles/blocks/spread.css';
 @import './styles/blocks/adoption.css';
 @import './styles/blocks/aliases.css';
 @import './styles/blocks/dupes.css';

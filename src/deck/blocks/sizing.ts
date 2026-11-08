@@ -172,6 +172,9 @@ const STRETCHY = new Set<BlockType>([
   'logos',
   // 순환은 높이를 받으면 세로 목록에서 고리로 짜임을 바꾸고 고리가 칸 높이만큼 커진다(cycle.css)
   'cycle',
+  // 확산 곡선과 퍼짐은 그림(곡선, 눈금 판)이 칸의 남는 높이를 받는다. 받지 않으면 맺음 장처럼 머리가 긴 장에서 눈금이 납작했다
+  'adoption',
+  'spread',
 ])
 export const isStretchy = (type: BlockType) => STRETCHY.has(type)
 

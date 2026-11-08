@@ -138,6 +138,7 @@ const FOLD_USES: Partial<Record<BlockType, Record<string, string>>> = {
   search: { result: '수 아래 결과 한 줄 (예: 그래도 없으면 사람에게 물어요)', 'items.meta': '곳마다 찾기 어려운 이유 (예: 대화에 묻힘)' },
   layers: { 'items.meta': '층마다 그 층에 있는 것 (예: 사내 포털, 메신저)' },
   gate: { dropped: '거르는 관문 아래 걸러지는 것 (예: 빠진 서류는 돌려보냄)', 'items.meta': '관문마다 하는 일 (예: 누가 냈는지)' },
+  spread: { note: '눈금 판 아래 짧은 설명 (예: 눈금 하나가 한 사람)' },
   adoption: { note: '이름표 옆 짧은 설명 (예: 지금은 첫 무리, 3개월 차에 다음 무리로)', total: '누적 곡선 끝에 붙는 이름 (예: 누적)', 'items.meta': '무리마다 누구인지 (예: 우리 7명)' },
   aliases: { note: '대상 아래 짧은 설명 (예: 부서마다 부르는 이름이 달라 다시 확인해요)', 'items.meta': '이름마다 그 이름을 쓰는 곳 (예: 고객센터)' },
   hub: { note: '가운데 아래에 짧은 한 줄 (예: 한 곳에서 찾아요)', 'items.meta': '곳마다 무엇이 오가는지 (예: 주문과 결제)' },

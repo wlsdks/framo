@@ -98,7 +98,7 @@ export const BLOCK_GROUPS: { name: string; short: string; description: string; t
   },
   { name: '흐름과 일정', short: '일정', description: '할 일, 일정표, 단계, 진행률, 순서', types: ['checks', 'gantt', 'process', 'timeline', 'progress', 'agenda'] },
   // 발표할 때의 움직임이 내용을 말하는 컴포넌트: 데이터가 건너가고, 갈라지고, 모이고, 조립된다. 다 보인 모습도 그 자체로 읽히는 그림이다
-  { name: '움직이는 컴포넌트', short: '움직이는', description: '모이고 퍼지기, 흐름, 조건별 흐름, 원인 캐기, 순환, 연결도, 나누기, 모으기, 칸 조립, 대화, 바뀌기, 흩어진 것 모으기, 여기저기 찾기, 층, 관문, 겹친 수고, 같은 대상, 다른 이름, 확산 곡선', types: ['hub', 'flow', 'decision', 'whys', 'cycle', 'network', 'split', 'merge', 'tiles', 'chat', 'wipe', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption'] },
+  { name: '움직이는 컴포넌트', short: '움직이는', description: '모이고 퍼지기, 흐름, 조건별 흐름, 원인 캐기, 순환, 연결도, 나누기, 모으기, 칸 조립, 대화, 바뀌기, 흩어진 것 모으기, 여기저기 찾기, 층, 관문, 겹친 수고, 같은 대상, 다른 이름, 확산 곡선, 퍼짐', types: ['hub', 'flow', 'decision', 'whys', 'cycle', 'network', 'split', 'merge', 'tiles', 'chat', 'wipe', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption', 'spread'] },
   { name: '비교와 표', short: '비교', description: '표, 두 안 비교, 평가표, 우선순위, 위치, 가격안', types: ['facts', 'risks', 'swot', 'compare', 'rating', 'matrix', 'position', 'pricing', 'table'] },
   { name: '이미지와 사람', short: '이미지', description: '화면 캡처, 사진, 담당자, 로고', types: ['image', 'people', 'logos'] },
 ]

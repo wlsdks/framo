@@ -2513,6 +2513,47 @@ export function motionEngine(): MotionEngine {
           }
           break
         }
+        case 'spread': {
+          // 퍼짐: 옅은 눈금 판이 먼저 깔리고, 단계마다 그 단계에 드는 눈금이 왼쪽 가운데의 씨앗에서 가까운 차례로 번진다(물결).
+          // 눈금은 칠해지며 위로 한 번 늘었다 제 길이로 돌아온다(사람이 하나씩 '켜지는' 느낌). 단계의 몫과 이름은 그 단계가 번지기
+          // 바로 전에 올라온다. '하나씩'이면 단계마다 멈춘다(단계 이름이 오르는 때가 항목의 시작)
+          const ms = $('.bk-spr-m')
+          const its = $('.bk-spr-it')
+          if (!ms.length) break
+          fade(one('.bk-spr-l'), 40, 400)
+          fade(one('.bk-spr-grid'), 80, 500)
+          const gray = ms.length ? getComputedStyle(ms[ms.length - 1]).getPropertyValue('--sp-off').trim() : ''
+          const base = gray || getComputedStyle(scope).getPropertyValue('--line').trim()
+          const groups: { el: HTMLElement; o: number; to: string }[][] = its.map(() => [])
+          for (const m of ms) {
+            const st = Number(m.dataset.st)
+            if (st >= 0 && groups[st]) groups[st].push({ el: m, o: Number(m.style.getPropertyValue('--o')), to: getComputedStyle(m).backgroundColor })
+          }
+          const wave = levelName === 'lively' ? 900 : 760
+          let at = 520
+          groups.forEach((g, k) => {
+            g.sort((x, y) => x.o - y.o)
+            rise(its[k], at - 120, L.y * 0.4)
+            const per = g.length > 1 ? Math.min(40, wave / g.length) : 0
+            if (!still)
+              g.forEach((m, j) =>
+                run(
+                  anims,
+                  m.el,
+                  [
+                    { backgroundColor: base, scale: '1 1', transformOrigin: '50% 100%', offset: 0 },
+                    { backgroundColor: m.to, scale: '1 1.3', transformOrigin: '50% 100%', offset: 0.35 },
+                    { backgroundColor: m.to, scale: '1 1', transformOrigin: '50% 100%', offset: 1 },
+                  ],
+                  s(at + j * per),
+                  { easing: OUT, duration: d(620) },
+                ),
+              )
+            at += 120 + Math.max(320, per * g.length) + 380
+          })
+          fade(one('.bk-spr-n'), at - 200, 500)
+          break
+        }
         case 'adoption': {
           // 확산 곡선: 바닥선과 종 모양 윤곽이 먼저 그어지고, 세로선(시간)이 왼쪽에서 오른쪽으로 같은 빠르기로 훑는다. 선이 지나간 만큼
           // 무리의 면과 누적 S자 곡선이 드러나고(같은 가림막), 경계를 지날 때 그 경계의 누적 몫(2.5% → 16% → …)이, 무리 칸에 들어설 때

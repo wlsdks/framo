@@ -1,0 +1,127 @@
+/* ---------- 퍼짐 ----------
+   왼쪽: 사람 하나를 가는 세로 눈금 하나로, 20 × 5 = 100개(Spread.tsx). 칠한 정도로만 나눈다: 남은 눈금은 옅은 글자색, 지난 단계는
+   강조색 농담, 지금 단계까지 새로 퍼진 것은 강조색. 눈금 칸은 칸의 남는 높이를 받는다(차트).
+   오른쪽: 단계마다 몫(크게, 보통 굵기)과 이름. 지금 단계의 몫만 강조색, 남은 단계는 한 단계 옅게. 줄 사이는 여백으로만 */
+.bk-spr {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  /* 줄은 칸 높이를 다 쓴다(눈금 판이 남는 높이를 받게). 정하지 않으면 줄이 내용 높이로 줄어 눈금이 납작했다 */
+  grid-template-rows: minmax(0, 1fr);
+  column-gap: max(48px, 5cqw);
+  height: 100%;
+  min-height: 0;
+}
+
+.bk-spr-field {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bk-spr-l {
+  --fs: var(--t-small);
+  margin-bottom: calc(16px * var(--bk-fit, 1));
+  color: var(--ink-2);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.bk-spr-grid {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  row-gap: 14px;
+  min-height: 150px;
+}
+
+.bk-spr-m {
+  /* 남은 눈금의 색. 모션이 칠해지기 전 색으로도 쓴다(engine.ts) */
+  --sp-off: color-mix(in srgb, var(--ink) 14%, transparent);
+  justify-self: center;
+  width: 3px;
+  height: 100%;
+  background: var(--sp-off);
+}
+
+.bk-spr-m.is-past {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.bk-spr-m.is-now {
+  background: var(--accent);
+}
+
+.bk-spr-n {
+  --fs: var(--t-small);
+  margin-top: calc(16px * var(--bk-fit, 1));
+  color: var(--ink-3);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.bk-spr-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(22px * var(--bk-fit, 1));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bk-spr-it {
+  display: grid;
+  grid-template-columns: 4.2em minmax(0, 1fr);
+  column-gap: 24px;
+  align-items: baseline;
+}
+
+.bk-spr-v {
+  --fs: var(--t-h);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight, 400);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.bk-spr-t {
+  --fs: var(--t-body);
+  color: var(--ink-2);
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.bk-spr-it.is-now .bk-spr-v {
+  color: var(--accent);
+}
+
+.bk-spr-it.is-now .bk-spr-t {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.bk-spr-it.is-next .bk-spr-v,
+.bk-spr-it.is-next .bk-spr-t {
+  color: var(--ink-3);
+}
+
+/* 좁은 칸: 눈금 판 아래에 단계를 쌓는다 */
+@container bk (max-width: 760px) {
+  .bk-spr {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    row-gap: calc(24px * var(--bk-fit, 1));
+  }
+
+  .bk-spr-grid {
+    row-gap: 10px;
+  }
+
+  .bk-spr-list {
+    justify-content: flex-start;
+    gap: calc(14px * var(--bk-fit, 1));
+  }
+}

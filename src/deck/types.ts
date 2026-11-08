@@ -170,6 +170,7 @@ export type NativeBlockType =
   | 'cycle'
   | 'network'
   | 'hub'
+  | 'spread'
   | 'adoption'
   | 'aliases'
   | 'dupes'
