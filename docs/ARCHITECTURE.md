@@ -71,7 +71,7 @@
 | 조각 색의 단계(구성비, 쌓은 막대) | `src/slides/tints.ts` |
 | 빈 차트를 예시 값으로 옅게 그릴지 | `src/slides/context.ts`의 `demoOf` |
 | 발표할 때의 움직임 | `src/motion/engine.ts` |
-| 장의 배경: 목록, 이름, 어울리는 장, 자주 쓰는 자리, 처음 자리(`BACKDROPS`, `backdropOf`, `baseBackdrop`) | `src/deck/backdrops.ts`. 편집기(이 장 설정의 ‘배경 모션’, 무대 위 자리 틀)와 장 모음이 같이 쓴다 |
+| 장의 배경: 목록, 이름, 어울리는 장, 자주 쓰는 자리, 처음 자리(`BACKDROPS`, `backdropOf`, `baseBackdrop`) | `src/deck/backdrops.ts`. 편집기, 장 모음, AI 카탈로그(`backdrops`), 모양(`backdrop`), 제안(`set_backdrop`)이 같이 쓴다 |
 | 배경의 그림과 움직임(끝 모습 SVG와 발표할 때의 캔버스가 같은 함수) | `src/motion/backdrop.ts`. 엔진은 `mo-backdrop` 알림 하나만 보낸다. 내보낸 HTML에 소스째 들어간다 |
 | 편집 화면에서 다시 맞춘 자리로 미끄러지기(쓰는 동안의 조립. 부품 칸의 FLIP도 같은 시간과 곡선) | `src/slides/liveMotion.ts` |
 | 단축키 표기 | `src/lib/keys.ts` |

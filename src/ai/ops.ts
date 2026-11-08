@@ -54,13 +54,14 @@ import {
   type LinkTarget,
   type Spot, revealOf, BLOCK_REVEAL_IDS
 } from '../deck/blocks'
+import { backdropOf, baseBackdrop, isBackdropArea, isBackdropKind, isBackdropStrength, tidyBackdrop } from '../deck/backdrops'
 import { BLUEPRINTS } from '../deck/blueprints'
 import { relayout, withVisibleCount } from '../deck/edits'
 import { makeSlide } from '../deck/generate'
 import { BOLD_LAYOUTS, LAYOUTS, LAYOUT_ORDER, panesOf, variantIds, variantOf } from '../deck/layouts'
 import { isScene, sceneFits } from '../deck/scenes'
 import { FONTS, FOOTERS, MOTIONS, PLACES, TEXT_SIZES, THEME_ORDER, TONES, TRANSITIONS } from '../deck/themes'
-import type { Block, BlockEffect, BlockFrom, BlockLink, BlockLook, BlockSpeed, BlockType, BlockWhen, Deck, FontId, FooterMode, Item, ItemKey, LayoutId, Motion, Place as TitlePlace, SceneId, Slide, TextSize, ThemeId, Tone, Transition, BlockReveal } from '../deck/types'
+import type { BackdropId, BackdropStrength, Block, BlockEffect, BlockFrom, BlockLink, BlockLook, BlockSpeed, BlockType, BlockWhen, Deck, FontId, FooterMode, Item, ItemKey, LayoutId, Motion, Place as TitlePlace, SceneId, Slide, TextSize, ThemeId, Tone, Transition, BlockReveal } from '../deck/types'
 import { HEX, isInt, isObj, isOneOf, onlyKeys } from './guards'
 import { DECK_ID, HIGHLIGHT_MAX, HIGHLIGHT_MIN, MAX_ITEMS, REQUEST_FORMAT, REQUEST_ID, REQUEST_VERSION } from './protocol'
 import { shapeBlockId, shapeDeckId, shapeSlideId } from './share'
@@ -111,6 +112,11 @@ export type Op =
       hideHead?: boolean
       hideFoot?: boolean
     }
+  /**
+   * 장의 배경(카탈로그 backdrops). backdrop이 null이면 뺀다. 자리(x, y, w, h: 장 전체를 12×12칸으로)는 넷을 함께 주거나 모두 빼고,
+   * 빼면 지금 자리(처음 고르는 것이면 앱이 그 장에서 글이 적은 쪽)를 쓴다. 고르는 값뿐이라 글에 닿지 않는다
+   */
+  | { op: 'set_backdrop'; slide: SlideRef; backdrop: BackdropId | null; x?: number; y?: number; w?: number; h?: number; strength?: BackdropStrength }
   /** font: null이면 테마의 글꼴로 */
   | {
       op: 'set_theme'
@@ -166,6 +172,7 @@ export const OP_NAMES: OpName[] = [
   'set_hidden',
   'set_item_count',
   'set_options',
+  'set_backdrop',
   'set_theme',
   'set_guide',
   'set_hint',
@@ -272,6 +279,7 @@ export const OP_KEYS = {
   set_hidden: ['op', 'slide', 'hidden'],
   set_item_count: ['op', 'slide', 'count'],
   set_options: ['op', 'slide', 'highlight', 'flip', 'pane', 'contain', 'motion', 'tone', 'place', 'transition', 'scene', 'hideHead', 'hideFoot'],
+  set_backdrop: ['op', 'slide', 'backdrop', 'x', 'y', 'w', 'h', 'strength'],
   set_theme: ['op', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition'],
   set_guide: ['op', 'slide', 'text'],
   set_hint: ['op', 'slide', 'block', 'field', 'item', 'text'],
@@ -425,6 +433,7 @@ export function parseOp(v: unknown): Op | null {
     case 'set_guide':
     case 'move_slide':
     case 'set_options':
+    case 'set_backdrop':
     case 'set_hint': {
       const slide = refOrNull(v.slide)
       if (!slide) return null
@@ -479,6 +488,22 @@ export function parseOp(v: unknown): Op | null {
           scene: v.scene as SceneId | null | undefined,
           hideHead: v.hideHead as boolean | undefined,
           hideFoot: v.hideFoot as boolean | undefined,
+        }
+      }
+      if (v.op === 'set_backdrop') {
+        if (!onlyKeys(v, OP_KEYS.set_backdrop)) return null
+        if (v.backdrop !== null && !isBackdropKind(v.backdrop)) return null
+        const area = [v.x, v.y, v.w, v.h]
+        // 자리는 넷을 함께. 배경을 빼면서 자리나 짙기를 주는 것은 뜻이 서지 않는다
+        if (!area.every((n) => n === undefined) && !isBackdropArea({ x: v.x, y: v.y, w: v.w, h: v.h })) return null
+        if (v.strength !== undefined && !isBackdropStrength(v.strength)) return null
+        if (v.backdrop === null && (v.x !== undefined || v.strength !== undefined)) return null
+        return {
+          op: v.op,
+          slide,
+          backdrop: v.backdrop,
+          ...(v.x !== undefined ? { x: v.x as number, y: v.y as number, w: v.w as number, h: v.h as number } : {}),
+          ...(v.strength !== undefined ? { strength: v.strength as BackdropStrength } : {}),
         }
       }
       // set_hint
@@ -786,6 +811,24 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
           options.scene = op.scene ?? undefined
         }
         put(i, { ...s, options })
+        return done
+      }
+      case 'set_backdrop': {
+        const { backdrop: _, ...rest } = s
+        if (op.backdrop === null) {
+          if (!s.backdrop) return fail('no_change')
+          put(i, rest)
+          return done
+        }
+        // 지금 그리는 배경이 있으면 그 자리와 짙기에서, 없으면(처음이거나 모르는 배경) 그 장의 처음 자리에서
+        const now = backdropOf(s)
+        const next = tidyBackdrop({
+          kind: op.backdrop,
+          at: op.x !== undefined ? { x: op.x, y: op.y!, w: op.w!, h: op.h! } : (now?.at ?? baseBackdrop(s, op.backdrop).at),
+          strength: op.strength ?? now?.strength,
+        })
+        if (now && JSON.stringify(tidyBackdrop(now)) === JSON.stringify(next)) return fail('no_change')
+        put(i, { ...rest, backdrop: next })
         return done
       }
       case 'set_guide':

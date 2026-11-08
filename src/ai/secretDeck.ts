@@ -40,6 +40,12 @@ export function secretDeck(): Deck {
       options: { ...slide.options, motion: s('motion'), tone: s('tone'), transition: s('transition'), order: [s('order')], hideHead: s('hideHead'), hideFoot: s('hideFoot'), scene: i === 0 ? 'opening' : i === 1 ? 'numbers' : s('scene') } as unknown as Deck['slides'][number]['options'],
       fields: Object.fromEntries([...Object.keys(slide.fields), 'title', 'lead', 'body'].map((k) => [k, s(`field-${k}`)])),
       items: slide.items.map((it, j) => ({ ...it, id: s(`item-${j}`), title: s('t'), body: s('b'), value: s('v'), meta: s('m'), image: s('img') })),
+      // 배경: 표지는 아는 배경에 비밀이 든 짙기와 자리(나가면 안 된다), 둘째 장은 비밀이 든 종류, 나머지는 맞는 값(나가도 되는 값)
+      backdrop: (i === 0
+        ? { kind: 'diffuse', at: { x: s('bx'), y: 0, w: 6, h: 6 }, strength: s('strength'), [s('bdkey')]: s('bd') }
+        : i === 1
+          ? { kind: s('backdrop'), at: { x: 0, y: 0, w: 6, h: 6 } }
+          : { kind: 'gather', at: { x: 6, y: 0, w: 6, h: 12 }, strength: 'soft' }) as unknown as Deck['slides'][number]['backdrop'],
     })) as Deck['slides']).concat(composeSecret(s)),
   }
 }

@@ -5,9 +5,10 @@ import { shapeBlockId, shapeDeckId, shapeSlideId, toShape } from '../../ai/share
 import { mcpCommand } from '../../ai/client'
 import type { AiAsk, AskJob } from '../../ai/useAiAsk'
 import type { AiShare } from '../../ai/useAiShare'
-import { BLOCK_EFFECTS, BLOCK_FROMS, BLOCK_LINKS, BLOCK_LOOKS, BLOCK_SPEEDS, BLOCK_WHENS, BLOCKS, slideName } from '../../deck/blocks'
+import { BLOCK_EFFECTS, BLOCK_FROMS, BLOCK_LINKS, BLOCK_LOOKS, BLOCK_SPEEDS, BLOCK_WHENS, BLOCKS, sameArea, slideName } from '../../deck/blocks'
 import { pageInfo } from '../../deck/fields'
 import { LAYOUTS } from '../../deck/layouts'
+import { BACKDROP_PLACES, BACKDROP_STRENGTHS, backdropSpec } from '../../deck/backdrops'
 import { sceneOf, sceneSpec } from '../../deck/scenes'
 import { motionOf, MOTIONS, THEMES, TONES, TRANSITIONS } from '../../deck/themes'
 import type { Deck, Slide } from '../../deck/types'
@@ -656,6 +657,12 @@ function describe(deck: Deck, op: Op, named: Map<string, string>, applied: Appli
       if (op.scene !== undefined)
         return { text: `${name(op.slide)} ${op.scene ? `장면: ${sceneSpec(op.scene).name}` : '장면 끄기'}`, detail: parts.join(', ') || undefined, also: parts.join(', ') || undefined }
       return { text: `${name(op.slide)} 모양 설정`, detail: parts.join(', ') }
+    }
+    case 'set_backdrop': {
+      if (!op.backdrop) return { text: `${name(op.slide)} 배경 빼기` }
+      const at = op.x !== undefined ? { x: op.x, y: op.y!, w: op.w!, h: op.h! } : null
+      const parts = [at && `자리: ${BACKDROP_PLACES.find((p) => sameArea(p.at, at))?.name ?? '직접 고른 자리'}`, op.strength && `짙기: ${BACKDROP_STRENGTHS.find((x) => x.id === op.strength)?.name}`]
+      return { text: `${name(op.slide)} 배경: ${backdropSpec(op.backdrop).name}`, detail: parts.filter(Boolean).join(', ') || undefined }
     }
     case 'set_theme': {
       const parts: string[] = []
