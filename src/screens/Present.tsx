@@ -7,6 +7,8 @@ import { presentAction, presentKey, slideNumber } from '../lib/presentKeys'
 import { motionOf, transitionOf } from '../deck/themes'
 import { motionEngine, type MotionPlay } from '../motion/engine'
 import { presentChannel, type Blank, type PresentMessage } from '../present/link'
+import { canRecord, motionSettled, saveBlob, startRecording, type Recording } from '../present/record'
+import { safeFileName } from '../store/deckFile'
 import { FitSlide, pageProps, SlideCanvas } from '../slides/SlideCanvas'
 
 /** 발표를 시작할 장. 발표에서 뺀 장을 골랐으면 그 뒤의 첫 장부터 (뒤에 없으면 바로 앞 장) */
@@ -88,6 +90,13 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
       on = false
     }
   }, [entering])
+  /**
+   * 영상으로 저장하는 중인지. 녹화는 첫 장부터 실제 발표처럼 움직임이 끝나기를 기다렸다 넘기며 화면을 그대로 담는다(present/record.ts).
+   * 녹화하는 동안은 아래 막대와 커서를 감추고, Esc나 브라우저의 '공유 중지'로 멈추면 거기까지를 파일로 저장한다
+   */
+  const [recording, setRecording] = useState(false)
+  const [notice, setNotice] = useState('')
+  const recStop = useRef<(() => void) | null>(null)
   const startedAt = useRef(Date.now())
   const now = useRef({ index: view.index, blank })
   now.current = { index: view.index, blank }
@@ -176,6 +185,12 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
         return
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return
+      // 녹화하는 동안 Esc는 녹화를 멈춘다(발표는 그대로). 다른 키는 듣지 않는다: 녹화가 장을 넘긴다
+      if (recStop.current) {
+        e.preventDefault()
+        if (e.key === 'Escape') recStop.current()
+        return
+      }
       const { index, blank: b } = now.current
       const k = presentKey(e)
       if (num.push(k, e.timeStamp)) {
@@ -197,7 +212,8 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
   // 전체 화면을 Esc로 빠져나오면 발표도 끝낸다
   useEffect(() => {
     const onChange = () => {
-      if (!document.fullscreenElement) exit()
+      // 녹화를 고르는 창이 뜨며 전체 화면이 풀려도 녹화는 이어 간다
+      if (!document.fullscreenElement && !recStop.current) exit()
     }
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
@@ -256,6 +272,51 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
     }
   }, [view, slides, ahead, ready])
 
+  const record = async () => {
+    const frame = stageRef.current?.closest<HTMLElement>('.slide-frame')
+    if (!frame || recStop.current) return
+    setNotice('')
+    flushSync(() => setRecording(true))
+    let rec: Recording
+    try {
+      rec = await startRecording(frame)
+    } catch {
+      setRecording(false)
+      setNotice('녹화를 시작하지 못했어요. 공유할 화면으로 ‘이 탭’을 고르면 돼요.')
+      return
+    }
+    let stopped = false
+    recStop.current = () => {
+      stopped = true
+    }
+    void rec.ended.then(() => {
+      stopped = true
+    })
+    const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms))
+    // 첫 장부터 움직이며 시작한다
+    flushSync(() => {
+      setAhead(null)
+      setView({ index: 0, play: true })
+    })
+    await wait(400)
+    while (!stopped) {
+      await motionSettled(() => stageRef.current)
+      if (stopped) break
+      const left = playing.current?.left() ?? 0
+      // 다 보인 모습을 잠깐 보여 준다: 단계 사이는 짧게, 장 끝은 읽을 만큼
+      await wait(left > 0 ? 900 : 1800)
+      if (stopped) break
+      if (left <= 0 && now.current.index >= slides.length - 1) break
+      forward()
+      await wait(left > 0 ? 120 : 500)
+    }
+    recStop.current = null
+    const blob = await rec.stop()
+    setRecording(false)
+    if (blob) saveBlob(blob, `${safeFileName(deck.title, '발표')}.${rec.ext}`)
+    else setNotice('녹화된 장면이 없어요. 다시 ‘영상으로 저장’을 눌러 주세요.')
+  }
+
   const slide = slides[view.index]
   if (!slide) return null
   const after = slides[view.index + 1]
@@ -263,7 +324,7 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
 
   return (
     <div
-      className={cx('present', idle && 'is-idle', !settled && 'is-entering')}
+      className={cx('present', idle && 'is-idle', !settled && 'is-entering', recording && 'is-recording')}
       onMouseMove={wake}
       onClick={(e) => (blank ? setBlank(null) : e.clientX < window.innerWidth * 0.3 ? goTo(view.index - 1) : forward())}
     >
@@ -285,6 +346,12 @@ export function Present({ deck, startId, entering, onExit }: { deck: Deck; start
         <span className="present-count">
           {view.index + 1} / {slides.length}
         </span>
+        {notice && <span className="present-note" role="status">{notice}</span>}
+        {canRecord() && (
+          <button type="button" className="present-exit" onClick={() => void record()}>
+            영상으로 저장
+          </button>
+        )}
         <button type="button" className="present-exit" onClick={() => exit()}>
           발표 끝내기
         </button>

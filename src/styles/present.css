@@ -123,3 +123,24 @@
   background: rgb(0 0 0 / 0.75);
   color: #fff;
 }
+
+/* 영상으로 저장하는 동안: 막대와 커서를 감추고, 슬라이드 상자를 쌓임 맥락으로(요소 녹화는 쌓임 맥락이 있는 요소만 프레임을 보낸다) */
+.present.is-recording {
+  cursor: none;
+}
+
+.present.is-recording .present-bar {
+  display: none;
+}
+
+.present.is-recording .slide-frame {
+  isolation: isolate;
+}
+
+.present-note {
+  max-width: 28em;
+  padding: 0 8px;
+  color: #e7e8ea;
+  font-size: 13px;
+  line-height: 1.4;
+}
