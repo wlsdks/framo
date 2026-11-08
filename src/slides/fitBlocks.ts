@@ -1530,9 +1530,14 @@ export function blockFitter() {
    */
   function balance(cells: HTMLElement[], area: HTMLElement, hold?: Map<string, number>, contentHold?: Map<string, number>): void {
     if (hold) {
+      const right = area.getBoundingClientRect().right + 2 * (area.getBoundingClientRect().width / (area.offsetWidth || 1))
+      const shifted: HTMLElement[] = []
       for (const c of cells) {
         const px = hold.get(c.dataset.block ?? '')
-        if (px) c.style.setProperty('--bk-shift-x', px + 'px')
+        if (px) {
+          c.style.setProperty('--bk-shift-x', px + 'px')
+          shifted.push(c)
+        }
         const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
         const contentPx = contentHold?.get(c.dataset.block ?? '')
         if (inner && contentPx) {
@@ -1547,6 +1552,10 @@ export function blockFitter() {
           }
         }
       }
+      // 옮겨 둔 단에서 글이 본문 오른쪽 밖으로 나가게 되면 단을 모두 놓는다(새로 옮길 때도 칸끼리 맞지 않으면 모두 그대로 둔다).
+      // 단을 옮기면 칸 상자가 본문 밖까지 걸쳐서, 짧던 글을 길게 쓰면 줄이 칸 끝까지 차며 장 밖으로 나가 잘렸다(큰 숫자 옆 글 칸,
+      // 칸을 떠나야 제자리로 돌아왔다). 한 단만 놓으면 아직 옮겨 둔 옆 단의 숫자와 겹쳤다
+      if (shifted.some((c) => (drawnX(c, true)?.r ?? -Infinity) > right)) for (const c of shifted) c.style.removeProperty('--bk-shift-x')
       return
     }
     const a = area.getBoundingClientRect()
