@@ -82,3 +82,30 @@
     --gt2-cols: 1;
   }
 }
+
+/* 넓고 높은 칸(판을 혼자 쓸 때 같은): 모인 것의 이름을 한 단계 키우고 모이는 곳과 모인 것 사이, 모인 것의 줄 사이를 넉넉히 벌려
+   두 묶음이 칸 높이를 나눠 쓴다. 예전에는 판을 혼자 써도 두 단의 목록처럼 위에 모여 아래 40%가 통째로 비었다(사용자).
+   모이는 곳은 강조색의 답이라 한 단계 커져도 장 제목과 다투지 않는다. 사이는 글자 크기를 따라(--bk-fit) 같이 크고 줄어든다 */
+@container bk (min-width: 1200px) and (min-height: 520px) {
+  .bk-gt2-head {
+    padding-bottom: calc(48px * var(--bk-fit, 1));
+  }
+
+  .bk-gt2-c {
+    --fs: 52px;
+  }
+
+  .bk-gt2-list {
+    row-gap: calc(52px * var(--bk-fit, 1));
+    margin-top: calc(56px * var(--bk-fit, 1));
+  }
+
+  .bk-gt2-t {
+    --fs: var(--t-h);
+  }
+
+  .bk-gt2-m {
+    --fs: var(--t-body);
+    margin-top: 6px;
+  }
+}
