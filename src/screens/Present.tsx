@@ -63,13 +63,15 @@ const REC_BAND = 36
  * 녹화하는 동안 슬라이드 상자의 자리(화면 px): 위 띠 아래에 16:9로, 크기는 기기 픽셀로 짝수, 자리는 기기 픽셀에 딱 맞게.
  * 녹화는 이 상자의 자리만 잘라 낸다(record.ts). 그 자리에 겹친 것은 다 담기므로 '녹화 중' 표시는 위 띠에 두려고 장을 조금 줄인다
  * (16:9 전체 화면은 장 밖에 여백이 없어 표시가 장 위에 겹쳤다). 자리가 기기 픽셀 사이에 걸치면 영상 가장자리에 1~2px 검은 줄이
- * 들었고(1280×600 창의 장은 1066.67×600), 홀수 크기는 영상으로 만들 때 한 줄을 잘라 낸다
+ * 들었고(1280×600 창의 장은 1066.67×600), 홀수 크기는 영상으로 만들 때 한 줄을 잘라 낸다.
+ * 그래서 크기를 기기 픽셀로 고른다: 너비가 32의 배수면 16:9의 높이도 짝수다. 화면 px로 16의 배수인 너비를 찾던 때는 브라우저 배율이
+ * 딱 떨어지지 않는 수(110% 확대는 1.100000023841858)면 맞는 너비가 없어 장이 320×180으로 작아져 화면 한가운데 작게 녹화됐다
  */
 export function recordBox(w: number, h: number, dpr: number, band = REC_BAND): { left: number; top: number; width: number; height: number } {
-  const even = (x: number) => Math.abs(x - Math.round(x)) < 1e-6 && Math.round(x) % 2 === 0
-  let width = Math.floor(Math.min(w, ((h - band) * 16) / 9) / 16) * 16
-  while (width > 320 && !(even(width * dpr) && even(((width * 9) / 16) * dpr))) width -= 16
-  const height = (width * 9) / 16
+  // 배율의 아주 작은 어긋남(float32)으로 한 칸 덜 잡지 않게 조금 넉넉히 내림
+  const dev = Math.floor((Math.min(w, ((h - band) * 16) / 9) * dpr) / 32 + 1e-6) * 32
+  const width = dev / dpr
+  const height = (dev * 9) / 16 / dpr
   const snap = (x: number) => Math.round(x * dpr) / dpr
   return { left: snap((w - width) / 2), top: snap(band + (h - band - height) / 2), width, height }
 }

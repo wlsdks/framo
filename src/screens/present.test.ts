@@ -70,18 +70,21 @@ describe('녹화하는 동안 슬라이드 상자의 자리 (recordBox)', () => 
       [1280, 720],
       [1920, 1080],
     ])
-      for (const dpr of [1, 1.25, 1.5, 2]) {
+      // 브라우저 배율은 float32로 온다: 110%, 90%, 120%, 133% 확대
+      for (const dpr of [1, 1.25, 1.5, 2, 1.100000023841858, 0.8999999761581421, 1.2000000476837158, 1.3333333730697632]) {
         const b = recordBox(w, h, dpr)
-        const dev = (x: number) => Math.round(x * dpr * 1e6) / 1e6
+        const dev = (x: number) => Math.round(x * dpr * 100) / 100
         expect(dev(b.width) % 2, `${w}×${h}@${dpr}`).toBe(0)
         expect(dev(b.height) % 2, `${w}×${h}@${dpr}`).toBe(0)
         expect(Number.isInteger(dev(b.left)) && Number.isInteger(dev(b.top)), `${w}×${h}@${dpr}`).toBe(true)
+        // 맞는 크기를 찾느라 장이 작아지지 않는다: 기기 픽셀로 32 안쪽 (110% 확대에서 320×180으로 작아졌다)
+        expect(Math.min(w, ((h - 36) * 16) / 9) * dpr - b.width * dpr, `${w}×${h}@${dpr}`).toBeLessThan(32)
         expect(b.width / b.height).toBeCloseTo(16 / 9)
         expect(b.top).toBeGreaterThanOrEqual(36)
         expect(b.top + b.height).toBeLessThanOrEqual(h)
       }
-    // 150% 배율의 1280×600 창은 1440×810 영상
+    // 150% 배율의 1280×600 창은 1504×846 영상
     const b = recordBox(1280, 600, 1.5)
-    expect([b.width * 1.5, b.height * 1.5]).toEqual([1440, 810])
+    expect([b.width * 1.5, b.height * 1.5]).toEqual([1504, 846])
   })
 })
