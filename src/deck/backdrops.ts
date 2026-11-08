@@ -29,7 +29,7 @@ export const BACKDROPS: readonly BackdropSpec[] = [
   { id: 'flow', name: '흐름', description: '가는 선들이 한쪽으로 흐르며 한 곳을 지나가요.', fits: '과정, 일정, 추이, 변화', focal: false, showOn: 'process' },
   { id: 'depth', name: '깊이', description: '등고선의 층이 어긋나 있다가 겹겹이 맞춰져요.', fits: '원인 캐기, 분석, 사례, 이미지', focal: false, showOn: 'case' },
   { id: 'structure', name: '구조', description: '어긋나 있던 점들이 고른 격자로 맞춰져요.', fits: '표와 비교, 매트릭스, 구성, 시스템', focal: false, showOn: 'kpi' },
-  { id: 'linger', name: '여운', description: '가는 결이 천천히 내려앉으며 옅어져요.', fits: '섹션, 인용, 맺음, 결정 요청', focal: true, showOn: 'section' },
+  { id: 'linger', name: '여운', description: '퉁긴 줄의 울림처럼 가는 선이 떨다가 천천히 잦아들어요.', fits: '섹션, 인용, 맺음, 결정 요청', focal: true, showOn: 'section' },
   { id: 'link', name: '연결', description: '양쪽의 점들이 낮은 활 모양 선으로 하나씩 이어져요.', fits: '연결도, 관계, 사람과 팀, 협업', focal: false, showOn: 'compare' },
 ]
 

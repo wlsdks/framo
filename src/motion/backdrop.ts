@@ -55,7 +55,8 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
    * 확산(한 점에서 바깥으로 번진다): 한 점에 모인 짙음이 퍼져 나가며 옅어진다. 인쇄의 망점처럼 고른 판의 점 크기가 그 자리의 짙기다.
    * 퍼지는 너비는 시간의 제곱근을 따르고(확산의 물리: 처음에 빠르고 끝에서 느려진다), 퍼진 만큼 가운데가 옅어진다(양이 그대로라서).
    * 퍼지는 동안 가운데가 시작한 점에서 조금 비켜 간다(흐르는 물에 떨어진 먹처럼). 글자색 하나로만 그린다: 강조색 씨앗과 고리,
-   * 멀리 흩어진 알갱이를 두던 때는 씨앗이 죽은 화소처럼, 알갱이가 먼지처럼 보였다(검수).
+   * 멀리 흩어진 알갱이를 두던 때는 씨앗이 죽은 화소처럼, 알갱이가 먼지처럼 보였다(검수). 망점을 크고 짙게(0.17) 두던 때는 흰 바탕의
+   * 표지에서 망점 면이 제목보다 무거웠고, 처음 0.15초에 이미 덩어리가 서 있어 '번진다'가 약했다(검수): 점을 줄이고 옅게, 처음을 작게.
    * 생동감의 느린 흐름: 14초마다 옅은 물결이 가운데에서 바깥으로 6초에 걸쳐 지나가며 망점이 조금 커졌다 돌아온다
    */
   function diffuse(w: number, h: number): Scene {
@@ -71,7 +72,7 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     const DY = -0.07 * sy
     // 육각 판: 줄마다 반 칸씩 엇갈린다(망점). 가장 큰 점에서도 이웃과 닿지 않는다
     const pitch = Math.max(18, Math.min(26, Math.sqrt(w * h) / 56))
-    const rmax = pitch * 0.38
+    const rmax = pitch * 0.3
     const rowH = pitch * 0.866
     const X: number[] = []
     const Y: number[] = []
@@ -86,8 +87,11 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     const n = X.length
     const T = 1700
     const end = T + 100
-    /** 들어오는 동안의 퍼진 너비(끝을 1로). 시간의 제곱근이라 처음에 빠르고 끝에서 느리게 멈춘다. 처음부터 너비가 있게 0.03에서 */
-    const spread = (e: number) => Math.sqrt(0.03 + 0.97 * (1 - Math.pow(1 - clamp(e / T), 2.2)))
+    /**
+     * 들어오는 동안의 퍼진 너비(끝을 1로). 넓이(제곱)가 드러내기 곡선을 따라 한 점(0.03)에서 넓어진다: 처음 한순간은 작은 덩어리로 머물다
+     * 번지고 끝에서 느리게 멈춘다
+     */
+    const spread = (e: number) => Math.sqrt(0.03 + 0.97 * reveal(clamp(e / T)))
     return {
       end,
       draw(P, e, tau) {
@@ -111,7 +115,7 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
             c *= 1 + 0.3 * Math.sin(Math.PI * wave[1]) * Math.exp(-d * d)
           }
           const r = rmax * Math.pow(Math.min(1.25, c), 0.55)
-          if (r >= 0.45) P.dot(X[i], Y[i], r, 0, 0.17 * show)
+          if (r >= 0.45) P.dot(X[i], Y[i], r, 0, 0.13 * show)
         }
       },
     }
@@ -496,47 +500,53 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
   }
 
   /**
-   * 여운(아주 느리게 옅어지며 가라앉는다): 길이가 다른 가는 선 여섯이 조금 위에서 짙게 나타나, 천천히 내려앉으며 옅어진다. 선은 끝으로
-   * 갈수록 가늘게 사라지고 아주 조금 처져 있다(가라앉은 앙금의 결). 위의 선부터 차례로 내려앉고 아래로 갈수록 사이가 좁다.
-   * 선 다발이 장을 가로지르며 비틀리던 띠는 흔한 '추상 기술 배경' 모양이었고 흐름과 구분되지 않았다(검수).
-   * 생동감의 느린 흐름: 선 사이가 30초에 한 번 아주 조금(2px 안) 벌어졌다 좁아진다
+   * 여운(아주 느리게 옅어지며 가라앉는다): 퉁긴 줄의 울림이 잦아드는 모습. 가는 줄 하나가 퉁겨진 모양으로 나타나 느리게 떨다가
+   * 가라앉고, 조금 뒤 아래의 짧고 옅은 줄 하나(메아리)가 더 작게 떨다 가라앉는다. 떨림은 줄의 고유한 떨기 셋(기본과 두 배, 세 배)을
+   * 겹친 것이고 높은 떨기일수록 빨리 잦아든다(실제 줄처럼). 떨리는 동안 조금 짙다가 가라앉으며 제 짙기로 옅어진다. 쉬는 줄은 아주
+   * 조금 처지고 끝으로 갈수록 가늘게 사라진다. 두 줄은 90px 넘게 떨어져 겹선이 되지 않는다.
+   * 가는 선 여섯을 겹쳐 두던 때는 40px 안의 겹선 다발이라 공책 줄이나 화면 줄무늬로 읽혔고, 작은 점을 흩어 가라앉히던 때는 먼지처럼
+   * 보였다(검수, 필름).
+   * 생동감의 느린 흐름: 14초마다 위의 줄에 아주 작은 떨림(3px 안)이 한 번 지나간다
    */
   function linger(w: number, h: number): Scene {
-    const R = rng(17)
-    const L = 6
-    const lines = Array.from({ length: L }, (_, i) => {
-      const k = i / (L - 1)
-      // 아래로 갈수록 사이가 좁다
-      const y = h * (0.42 + 0.4 * Math.pow(k, 0.75))
-      const a0 = w * (0.04 + R() * 0.18)
-      const a1 = w * (0.78 + R() * 0.2)
-      return { y, a0, a1, sag: (6 + R() * 10) * (h / 1080 + 0.4), drop: h * (0.1 + 0.06 * (1 - k)), alpha: 0.11 + 0.07 * R(), t0: 60 + i * 110, ph: R() }
-    })
-    const SINK = 1400
-    const end = lines[L - 1].t0 + SINK + 100
-    const SEG = 10
+    const amp0 = Math.min(34, h * 0.05)
+    const strings = [
+      { y: h * 0.48, a0: w * 0.06, a1: w * 0.94, amp: amp0, p: 0.37, t0: 80, alpha: 0.22, sag: h * 0.012 },
+      { y: h * 0.48 + Math.max(90, h * 0.15), a0: w * 0.22, a1: w * 0.82, amp: amp0 * 0.55, p: 0.64, t0: 360, alpha: 0.13, sag: h * 0.008 },
+    ]
+    // 기본 떨기(초에 1.3번)와 잦아드는 빠르기(ms). 1.5초면 처음 떨림의 3% 아래로 가라앉는다
+    const F = 1.3
+    const DAMP = 420
+    const RING = 1500
+    const end = strings[1].t0 + RING + 100
+    const SEG = 12
+    const N = 72
     return {
       end,
       draw(P, e, tau) {
-        const breathe = amp(tau) * 2
-        for (let i = 0; i < L; i++) {
-          const ln = lines[i]
-          const p = span(e, ln.t0, SINK)
-          if (p <= 0) continue
-          const k = out(p)
-          // 내려앉으며 옅어진다: 처음에는 1.7배 짙다가 제 짙기로
-          const y = ln.y - ln.drop * (1 - k) + (breathe ? breathe * sway(tau, 30000, ln.ph) * (i / L) : 0)
-          const a = ln.alpha * clamp(p * 4) * (1 + 0.7 * (1 - k))
+        const g = every(tau, 5000, 14000, 2400)
+        for (let si = 0; si < strings.length; si++) {
+          const st = strings[si]
+          const t = e - st.t0
+          if (t <= 0) continue
+          const appear = clamp(t / 140)
+          const damp = Math.exp(-t / DAMP)
+          // 떨기 셋: 퉁긴 자리(p)에 따라 세기가 다르고, n번째는 n배 빠르게 떨며 n배 빨리 잦아든다
+          const modes = [1, 2, 3].map((n) => (st.amp * Math.sin(n * Math.PI * st.p) * Math.cos((2 * Math.PI * F * n * t) / 1000) * Math.exp((-t * n) / DAMP)) / (n * n))
+          // 생동감: 위의 줄에만 아주 작은 떨림이 한 번 지나간다
+          const tremor = si === 0 && g ? 3 * Math.sin(Math.PI * g[1]) * Math.cos(2 * Math.PI * 2 * g[1]) : 0
+          const a = st.alpha * appear * (1 + 0.8 * damp)
+          const yAt = (u: number) =>
+            st.y + st.sag * Math.sin(Math.PI * u) + (modes[0] + tremor) * Math.sin(Math.PI * u) + modes[1] * Math.sin(2 * Math.PI * u) + modes[2] * Math.sin(3 * Math.PI * u)
           // 끝으로 갈수록 옅어지게 마디마다 짙기를 달리 긋는다
-          for (let s = 0; s < SEG; s++) {
-            const u0 = s / SEG
-            const u1 = (s + 1) / SEG
-            const taper = Math.sin(Math.PI * ((u0 + u1) / 2))
-            for (let j = 0; j <= 4; j++) {
-              const u = u0 + ((u1 - u0) * j) / 4
-              P.to(lerp(ln.a0, ln.a1, u), y + ln.sag * Math.sin(Math.PI * u))
+          for (let sg = 0; sg < SEG; sg++) {
+            const k0 = Math.round((sg * N) / SEG)
+            const k1 = Math.round(((sg + 1) * N) / SEG)
+            for (let k = k0; k <= k1; k++) {
+              const u = k / N
+              P.to(lerp(st.a0, st.a1, u), yAt(u))
             }
-            P.stroke(1, 0, a * taper)
+            P.stroke(1.1, 0, a * Math.pow(Math.sin((Math.PI * (k0 + k1)) / 2 / N), 0.7))
           }
         }
       },
@@ -545,8 +555,8 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
 
   /**
    * 연결(점과 점 사이에 선이 이어진다): 자리 아래쪽 바닥선 위에 양쪽 무리의 점이 서고, 낮은 활 모양의 가는 선이 짧은 짝부터 하나씩
-   * 그어져 두 쪽을 잇는다. 활은 아홉 가닥, 높이는 자리 높이의 절반까지라 위쪽(대개 글이 있는 쪽)은 비워 둔다.
-   * 활을 높고 많이(열일곱) 긋던 때는 비교 표의 글과 줄 선을 가로질러 표가 산만해졌다(검수).
+   * 그어져 두 쪽을 잇는다. 활은 여섯 가닥, 높이는 자리 높이의 4분의 1까지라 자리의 아래 띠에만 있다(위쪽은 대개 글과 표가 있다).
+   * 활을 높고 많이(열일곱, 아홉) 긋던 때는 비교 표의 글과 줄 선을 가로질러 데이터처럼 읽혔다(검수).
    * 생동감의 느린 흐름: 13초마다 옅은 조각 하나가 한 가닥을 따라 건너간다(전해진다)
    */
   function link(w: number, h: number): Scene {
@@ -559,15 +569,14 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
     // 짝: 왼쪽의 점마다 오른쪽의 점 하나(차례를 섞어서), 셋에 하나는 하나 더. 너비가 엇갈려 겹겹의 무지개가 되지 않는다
     for (let k = 0; k < n; k++) {
       arcs.push({ a: left[k], b: right[(k * 4 + 1) % n], delay: 0 })
-      if (k % 2 === 0) arcs.push({ a: left[k], b: right[(k * 2 + 3) % n], delay: 0 })
     }
     arcs.sort((x, y) => x.b - x.a - (y.b - y.a) || R() - 0.5)
     const DRAW = 900
-    const GAP = 45
+    const GAP = 70
     arcs.forEach((a, k) => (a.delay = 260 + k * GAP))
     const end = 260 + (arcs.length - 1) * GAP + DRAW + 100
-    const top = h * 0.5
-    /** 활 위 u(0~1)의 자리. 높이는 두 점 사이 거리에 비례하고 자리 높이의 절반을 넘지 않는다 */
+    const top = h * 0.25
+    /** 활 위 u(0~1)의 자리. 높이는 두 점 사이 거리에 비례하고 자리 높이의 4분의 1을 넘지 않는다 */
     const pt = (a: (typeof arcs)[number], u: number): [number, number] => {
       const r = (a.b - a.a) / 2
       const t = Math.PI * (1 - u)
@@ -577,8 +586,8 @@ export function backdropMotion(kit: DrawKit): BackdropRuntime {
       end,
       draw(P, e, tau) {
         for (let k = 0; k < n; k++) {
-          P.dot(left[k], base, 2.4 * out(span(e, 40 + (n - 1 - k) * 30, 360)), 0, 0.3)
-          P.dot(right[k], base, 2.4 * out(span(e, 40 + k * 30, 360)), 0, 0.3)
+          P.dot(left[k], base, 2 * out(span(e, 40 + (n - 1 - k) * 30, 360)), 0, 0.26)
+          P.dot(right[k], base, 2 * out(span(e, 40 + k * 30, 360)), 0, 0.26)
         }
         for (const a of arcs) {
           const p = reveal(span(e, a.delay, DRAW))
