@@ -44,6 +44,24 @@
   margin-top: calc(-1em * ((1.08 - var(--head-box, 1.19)) / 2 + var(--head-gap, 0.15)));
 }
 
+/* 요청 목록이 없는 마지막 장: 큰 제목을 장 위에 붙이면 그 아래가 통째로 비었다(사용자: 제목만 위에 있고 나머지가 다 빈다).
+   제목을 한 단계 키워 눈높이(위 1 : 아래 1.2)에 두고, 발표자와 연락처는 그대로 아래 틀선에 앉힌다 */
+.l-closing:not(:has(.cl-steps)) .cl-main::before {
+  flex: 1 1 0;
+  content: '';
+}
+
+.l-closing:not(:has(.cl-steps)) .cl-main > .cl-title {
+  --fs: 128px;
+  flex: none;
+  margin-top: 0;
+}
+
+.l-closing:not(:has(.cl-steps)) .cl-contact {
+  flex: 1.2 1 0;
+  justify-content: flex-end;
+}
+
 .cl-contact > .meta-row:last-child dd {
   margin-bottom: calc(-1em * ((1.3 - 1.19) / 2 + 0.155));
 }
