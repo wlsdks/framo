@@ -7,7 +7,7 @@ import { canCompose, makeBlock } from '../../deck/blocks'
 import { presetSpec, withKnob, type CineKnob } from '../../deck/cine'
 import type { Block, CineRecipe, Deck, Slide } from '../../deck/types'
 import { sealCine } from '../../store/cines'
-import { stageCine, useDeck } from '../../store/deckStore'
+import { stageCine, stageHead, useDeck } from '../../store/deckStore'
 import type { BlockEditing } from './BlockEditor'
 
 /** 모션 편집을 열어 달라는 알림(고를 부품 id). 넣자마자 장면을 보이고 손잡이를 고르게 */
@@ -26,6 +26,8 @@ export function insertCine(recipe: CineRecipe, blocks: BlockEditing, slide: Slid
   const sample = presetSpec(recipe.preset).sample as Record<string, string>
   const block: Block = { ...makeBlock('cine'), fields: { ...sample }, cine: id, examples: Object.keys(sample) }
   if (fresh) dirty.set(block.id, undefined)
+  // 장에 혼자 서고 레시피에 제목 칸이 있으면 장 제목은 숨긴다(장면의 제목이 장의 제목이다). 제목 칸이 없는 장면은 장 제목 아래에 선다
+  if (recipe.texts?.some((t) => t.key === 'title')) stageHead(block.id)
   const closed = slide.layout !== 'compose' && !canCompose(slide.layout)
   // 한 장에 모션 그래픽은 하나(장면의 무대는 하나다): 이미 있으면 새 장에
   const taken = (slide.blocks ?? []).some((b) => b.type === 'cine') && slide.layout === 'compose'

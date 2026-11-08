@@ -6,13 +6,43 @@ import { autoArranged, autoPlace, boardAreaH, boardSig, boardTight, moveAt, play
 import { LAYOUTS, variantOf } from '../deck/layouts'
 import { gestureKey } from '../lib/pointerSession'
 import type { Block, Slide } from '../deck/types'
-import { undoLast, useDeck } from './deckStore'
+import { stageCine, stageHead, undoLast, useDeck } from './deckStore'
+import { presetRecipe } from '../deck/cine'
 
 const deck = () =>
   createDeck({ type: 'report', audience: 'mixed', minutes: 20, method: 'live', title: '분기 실적 보고', org: '기획팀', presenter: '이서연', theme: 'white' })
 
 describe('되돌리기', () => {
   beforeEach(() => useDeck.getState().open({ ...deck(), aiShare: true }))
+
+  it('모션 그래픽을 넣는 고침에 레시피가 같이 들고, 장에 혼자면 장 제목을 숨긴다(되돌리기 한 번에 함께)', () => {
+    const current = useDeck.getState().deck!
+    const slide = current.slides[1]
+    useDeck.getState().open({ ...current, slides: current.slides.map((s) => (s.id === slide.id ? { ...s, layout: 'compose', blocks: [] } : s)) })
+    const recipe = presetRecipe('gather', 'l1')
+    const id = stageCine(recipe)
+    const block: Block = { id: 'cn', type: 'cine', fields: { title: '예시' }, items: [], cine: id, at: { x: 0, y: 0, w: 12, h: 12 } }
+    stageHead(block.id)
+    useDeck.getState().setBlocks(slide.id, [block])
+    const after = useDeck.getState().deck!
+    expect(after.cines?.[id]).toEqual(recipe)
+    expect(after.slides.find((s) => s.id === slide.id)!.options.hideHead).toBe(true)
+    useDeck.getState().undo()
+    const back = useDeck.getState().deck!
+    expect(back.cines).toBeUndefined()
+    expect(back.slides.find((s) => s.id === slide.id)!.options.hideHead).toBeUndefined()
+  })
+
+  it('다른 부품과 함께 놓이면 장 제목은 그대로다', () => {
+    const current = useDeck.getState().deck!
+    const slide = current.slides[1]
+    useDeck.getState().open({ ...current, slides: current.slides.map((s) => (s.id === slide.id ? { ...s, layout: 'compose', blocks: [{ ...sampleBlock('number'), id: 'n', at: { x: 0, y: 0, w: 6, h: 12 } }] } : s)) })
+    const id = stageCine(presetRecipe('stroke', 'l1'))
+    stageHead('cn')
+    const blocks = useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!.blocks!
+    useDeck.getState().setBlocks(slide.id, [...blocks, { id: 'cn', type: 'cine', fields: {}, items: [], cine: id, at: { x: 6, y: 0, w: 6, h: 12 } }])
+    expect(useDeck.getState().deck!.slides.find((s) => s.id === slide.id)!.options.hideHead).toBeUndefined()
+  })
 
   it('AI 공유를 끈 뒤 되돌리기, 다시 하기를 해도 꺼진 채로', () => {
     useDeck.getState().setTitle('바꾼 제목')
