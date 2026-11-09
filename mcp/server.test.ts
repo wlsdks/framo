@@ -504,6 +504,26 @@ describe('새 버전을 받아 둔 앱의 MCP 서버', () => {
     expect(newerMcp(join(dir, 'dist-node'), '9.9.9', process.platform, process.arch)).toBeNull()
   })
 
+  it('새 버전의 node를 띄우지 못하면(백신) 정해진 말만 남기고 이 버전이 권한 모델 안에서 켠다', async () => {
+    if (!nodeIn('', process.platform, process.arch)) return
+    // 새 버전의 node 자리에 실행할 수 없는 파일(글)이 있다
+    const { app } = appWith('9.9.9', '')
+    mkdirSync(join(app, 'dist-node'))
+    for (const f of readdirSync(built)) copyFileSync(join(built, f), join(app, 'dist-node', f))
+    const mcp = spawn(process.execPath, [join(app, 'dist-node', 'gyeol-mcp.mjs')], { env: { ...process.env, GYEOL_SHARE: '' } })
+    let err = ''
+    mcp.stderr.on('data', (d) => (err += d))
+    const line = new Promise<string>((resolve) => createInterface({ input: mcp.stdout }).once('line', resolve))
+    mcp.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } } }) + '\n')
+    const reply = JSON.parse(await line)
+    mcp.kill()
+    expect(reply.result.serverInfo.name).toBe('gyeol')
+    expect(err).toContain('새 버전의 AI 연결을 켜지 못해서')
+    // 경로나 오류 글은 내보내지 않는다
+    expect(err).not.toContain(app)
+    expect(err).not.toMatch(/Error|spawn|EACCES|ENOENT/)
+  }, 60000)
+
   it('등록한 앱 폴더의 MCP 서버를 띄우면 새 버전의 node로 새 버전의 MCP 서버를 띄운다(권한 인자는 새 버전이 스스로 붙인다)', async () => {
     if (!nodeIn('', process.platform, process.arch)) return
     // 새 버전 대역: 받은 것을 그대로 돌려준다

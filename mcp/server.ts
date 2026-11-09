@@ -652,13 +652,29 @@ function launch() {
   // 권한 인자는 버전마다 그 버전의 것이어야 해서(sandboxTight가 제 것만 받는다) 이 파일이 대신 붙이지 않는다
   // 맡은 쪽은 다시 맡기지 않는다(버전 폴더 이름과 안의 코드 버전이 어긋나도 서로 끝없이 맡기지 않게)
   const newer = process.env[NEWER_ENV] ? null : newerMcp(here, VERSION, process.platform, process.arch)
-  const [node, args] = newer ? [newer.node, [newer.entry]] : [process.execPath, sandboxArgs(share, here, fileURLToPath(import.meta.url))]
-  const child = spawn(node, args, {
-    stdio: 'inherit',
-    env: { ...process.env, GYEOL_SHARE: share, ...(newer ? { [NEWER_ENV]: '1' } : {}) },
-  })
-  for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => child.kill(sig))
-  child.on('exit', (code) => process.exit(code ?? 0))
+  const start = (node: string, args: string[], delegated: boolean) => {
+    const child = spawn(node, args, {
+      stdio: 'inherit',
+      env: { ...process.env, GYEOL_SHARE: share, ...(delegated ? { [NEWER_ENV]: '1' } : {}) },
+    })
+    // 띄우지도 못했을 때(새 버전의 node를 백신이 지웠거나 막았을 때). 오류에는 경로가 들어 있어 내보내지 않고 정해진 말만 쓴다
+    child.on('error', () => {
+      if (child.pid !== undefined) return
+      if (delegated) {
+        process.stderr.write('Framo: 새 버전의 AI 연결을 켜지 못해서 이 버전으로 켤게요.\n')
+        running = start(...own, false)
+        return
+      }
+      process.stderr.write('Framo: AI 연결을 켜지 못했어요. Framo 폴더를 통째로 다시 풀어 주세요.\n')
+      process.exit(1)
+    })
+    child.on('exit', (code) => process.exit(code ?? 0))
+    return child
+  }
+  // 새 버전에 맡기지 못하면 이 버전이 제 권한 인자로 권한 모델 안에서 다시 띄운다(지금까지의 길)
+  const own: [string, string[]] = [process.execPath, sandboxArgs(share, here, fileURLToPath(import.meta.url))]
+  let running = newer ? start(newer.node, [newer.entry], true) : start(...own, false)
+  for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => running.kill(sig))
 }
 
 function isMain(): boolean {
