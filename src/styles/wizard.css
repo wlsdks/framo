@@ -325,7 +325,8 @@ button.wz-step:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wz-sec {
+  .wz-sec,
+  .wzp-grid > li {
     animation: none;
   }
 }
