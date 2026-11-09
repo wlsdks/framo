@@ -657,9 +657,13 @@ function launch() {
       stdio: 'inherit',
       env: { ...process.env, GYEOL_SHARE: share, ...(delegated ? { [NEWER_ENV]: '1' } : {}) },
     })
-    // 띄우지도 못했을 때(새 버전의 node를 백신이 지웠거나 막았을 때). 오류에는 경로가 들어 있어 내보내지 않고 정해진 말만 쓴다
+    // 띄우지도 못했을 때(새 버전의 node를 백신이 지웠거나 막았을 때). 오류에는 경로가 들어 있어 내보내지 않고 정해진 말만 쓴다.
+    // 띄웠는지는 'spawn' 알림으로 안다: 윈도우는 띄우지 못해도 'exit'를 보내는데, 그것을 받아 끝내면 이 버전으로 다시 켜기 전에
+    // MCP 서버가 꺼졌다(CI의 윈도우에서 시험이 답 없이 멈췄다)
+    let spawned = false
+    child.once('spawn', () => (spawned = true))
     child.on('error', () => {
-      if (child.pid !== undefined) return
+      if (spawned) return
       if (delegated) {
         process.stderr.write('Framo: 새 버전의 AI 연결을 켜지 못해서 이 버전으로 켤게요.\n')
         running = start(...own, false)
@@ -668,7 +672,9 @@ function launch() {
       process.stderr.write('Framo: AI 연결을 켜지 못했어요. Framo 폴더를 통째로 다시 풀어 주세요.\n')
       process.exit(1)
     })
-    child.on('exit', (code) => process.exit(code ?? 0))
+    child.on('exit', (code) => {
+      if (spawned) process.exit(code ?? 0)
+    })
     return child
   }
   // 새 버전에 맡기지 못하면 이 버전이 제 권한 인자로 권한 모델 안에서 다시 띄운다(지금까지의 길)
