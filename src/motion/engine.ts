@@ -3644,12 +3644,15 @@ export function motionEngine(): MotionEngine {
           // 생동감에서 계속 흐를 조각의 길(지난 구간의 띠: 첫 눈금에서 지금 단계 눈금까지)은 움직임을 걸기 전에 잰다(조건별 흐름과 같은 까닭)
           const nowTick = one('.bk-stp-it.is-now > .bk-stp-dot')
           const firstTick = one('.bk-stp-dot')
+          // 단계 이름이 줄 아래에 서는 넓은 칸은 띠가 지금 단계 이름의 자리까지(첫 이름이 왼쪽 끝), 좁은 칸은 '몇 / 몇'만큼(steps.css)
+          const named = !!one('.bk-stp-t') && getComputedStyle(one('.bk-stp-t')!).display !== 'none'
           let band: [number, number][] = []
-          if (list && nowTick && firstTick && nowTick !== firstTick) {
+          if (list && nowTick && firstTick && (nowTick !== firstTick || !named)) {
+            // 띠는 줄의 왼쪽 끝(첫 단계 자리의 가운데, steps.css의 --stp-d / 2)에서 시작한다
             const a = spot(firstTick, list)
             const b = spot(nowTick, list)
             const y = (b.t + b.b) / 2
-            band = [[(a.l + a.r) / 2, y], [(b.l + b.r) / 2, y]]
+            band = [[(a.r - a.l) / 2, y], [(b.l + b.r) / 2, y]]
           }
           fade(one('.bk-stp-l'), 0, 500)
           const span = levelName === 'lively' ? 900 : 760
@@ -3662,8 +3665,8 @@ export function motionEngine(): MotionEngine {
             if (i === now) return
             run(anims, dot, [{ opacity: 0, scale: '1 0' }], s(at), { easing: OUT, duration: d(320) })
           })
-          const reach = now < 0 ? 0 : (now / last) * span
-          if (now > 0) draw(list, 180, Math.max(reach, 300), 'left center', '::after')
+          const reach = now < 0 ? 0 : (named ? now / last : (now + 1) / dots.length) * span
+          if (now > 0 || (now === 0 && !named)) draw(list, 180, Math.max(reach, 300), 'left center', '::after')
           // 지금 단계의 눈금은 띠가 닿을 때 기준선에서 위아래로 솟는다(크기 키우기가 아니라 높이만: 눈금이 뭉툭해지지 않게)
           if (now >= 0) run(anims, dots[now], [{ opacity: 0, scale: '1 0.1' }], s(180 + Math.max(reach, 300) * 0.9), { easing: OUT, duration: d(420) })
           // 단계 번호는 굴리지 않는다: 세는 수가 아니라 차례라서 굴리면 다른 단계(4 / 6, 1 / 6)를 거쳐 가는 것처럼 보였다
