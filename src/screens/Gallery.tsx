@@ -3,7 +3,8 @@ import { sampleBlock } from '../deck/blockSamples'
 import { BLUEPRINTS, DECK_TYPES } from '../deck/blueprints'
 import { pageInfo } from '../deck/fields'
 import { createDeck, makeSlide } from '../deck/generate'
-import { hintFor, LAYOUTS } from '../deck/layouts'
+import { filledFromHints } from '../deck/filled'
+import { LAYOUTS } from '../deck/layouts'
 import { createSampleDeck } from '../deck/sample'
 import { showcaseSlides, withItems, withOptions } from '../deck/showcase'
 import type { Block, BlockLook, BlockType, Deck, DeckTheme, DeckType, Slide, ThemeId, Tone } from '../deck/types'
@@ -198,43 +199,9 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
   })
 }
 
-/** '(예: …)'가 든 안내는 그 예시를, 아니면 안내 그대로 */
-const exampleOf = (hint: string) => /\(예: ([^)]+)\)/.exec(hint)?.[1] ?? /^예: (.+)$/.exec(hint)?.[1] ?? hint
-
 /**
- * &filled=1: 구성의 안내를 그 칸의 글로 채운 장. 쓰는 사람이 안내대로 채웠을 때의 끝 모습과 짜임을 본다(빈 장은 발표 화면에 안내가 없다).
- * 구성이 단 안내(줄마다의 예시)가 있는 칸과 꼭 채울 칸만 채우고, 기본 안내뿐인 접는 칸(출처, 덧붙임)은 비워 둔다
+ * &filled=1: 구성의 안내를 그 칸의 글로 채운 장(deck/filled.ts). 쓰는 사람이 안내대로 채웠을 때의 끝 모습과 짜임을 본다(빈 장은 발표 화면에 안내가 없다)
  */
-function filledFromHints(slide: Slide): Slide {
-  const spec = LAYOUTS[slide.layout]
-  const h = slide.hints
-  const fields = { ...slide.fields }
-  for (const f of spec.fields) if (!f.image && !fields[f.key]?.trim() && (h[f.key] || !f.optional)) fields[f.key] = exampleOf(hintFor(slide.layout, h, f.key))
-  const items = slide.items.map((it, i) => {
-    const next = { ...it }
-    for (const f of spec.items?.fields ?? []) {
-      if (!f.image && !next[f.key].trim() && (h[`items.${i}.${f.key}`] || h[`items.${f.key}`] || !f.optional)) next[f.key] = exampleOf(hintFor(slide.layout, h, f.key, f.key, i))
-    }
-    return next
-  })
-  const blocks = slide.blocks?.map((b) => {
-    const bs = BLOCKS[b.type]
-    const bh = b.hints ?? {}
-    const bf = { ...b.fields }
-    for (const f of bs.fields) if (!f.image && !bf[f.key]?.trim() && (bh[f.key] || !f.optional)) bf[f.key] = exampleOf(bh[f.key] ?? f.hint)
-    const bi = b.items.map((it, i) => {
-      const next = { ...it }
-      for (const f of bs.items?.fields ?? []) {
-        const own = bh[`items.${i}.${f.key}`]
-        if (!f.image && !next[f.key].trim() && (own || !f.optional)) next[f.key] = exampleOf(own ?? bh[`items.${f.key}`] ?? f.hints?.[i] ?? f.hint)
-      }
-      return next
-    })
-    return { ...b, fields: bf, items: bi }
-  })
-  return { ...slide, fields, items, ...(blocks ? { blocks } : {}) }
-}
-
 function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck {
   if (set === 'blank') {
     // type=all: 모든 발표 종류의 구성을 이어서(npm run look -- check --decks)
@@ -245,7 +212,7 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
       return params.get('all') === '1' ? createDeck(input, (BLUEPRINTS[type] ?? BLUEPRINTS.blank).recipes) : createDeck(input)
     })
     const slides = decks.flatMap((d) => d.slides)
-    return { ...decks[0], slides: params.get('filled') === '1' ? slides.map(filledFromHints) : slides }
+    return { ...decks[0], slides: params.get('filled') === '1' ? slides.map((s) => filledFromHints(s)) : slides }
   }
   const deck = createSampleDeck()
   if (set === 'edge') return { ...deck, theme: { id: theme }, slides: edgeSlides() }
