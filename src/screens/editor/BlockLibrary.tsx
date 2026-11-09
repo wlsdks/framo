@@ -4,7 +4,7 @@ import { blockPrefH, BLOCK_COL_GAP, BLOCK_GROUPS, BLOCK_LINKS, BLOCKS, canCompos
 import { sampleBlock } from '../../deck/blockSamples'
 import { emptyItem } from '../../deck/generate'
 import { motionOf } from '../../deck/themes'
-import type { BlockLink, BlockType, Deck, Slide } from '../../deck/types'
+import type { Block, BlockLink, BlockType, Deck, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { josa } from '../../lib/josa'
 import { motionEngine } from '../../motion/engine'
@@ -12,8 +12,8 @@ import type { SlideMode } from '../../slides/context'
 import { SlideCanvas } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
 import { loadSaved, useSaved } from '../../store/saved'
-import { soloSlide, type BlockEditing } from './BlockEditor'
-import { COL_W } from './canvas'
+import type { BlockEditing } from './BlockEditor'
+import { COL_W, soloSlide } from './canvas'
 import { CloseIcon, dialogOpen, isTyping, NewSlideIcon, type Toast } from '../ui'
 import { useLook, type Look } from './look'
 import { noRoomText } from './noRoom'
@@ -128,13 +128,28 @@ function useThumbWidth(lazy: boolean) {
 
 /**
  * 예시 부품 하나를 작은 그림으로. 부품이 잘리지 않을 높이로 그린 뒤 같은 비율의 카드에 맞춰 줄인다.
- * blank면 글을 비워 칸마다 안내만 (장 모음의 '빈 칸' 보기)
+ * blank면 글을 비워 칸마다 안내만 (장 모음의 '빈 칸' 보기). block을 주면 예시 대신 그 부품을(바꾸기 메뉴: 적은 글로 바꾼 모습)
  */
-export const BlockThumb = memo(function BlockThumb({ deck, type, blank, mode = 'preview', lazy = false }: { deck: Look; type: BlockType; blank?: boolean; mode?: SlideMode; lazy?: boolean }) {
+export const BlockThumb = memo(function BlockThumb({
+  deck,
+  type,
+  block: given,
+  blank,
+  mode = 'preview',
+  lazy = false,
+}: {
+  deck: Look
+  type: BlockType
+  block?: Block
+  blank?: boolean
+  mode?: SlideMode
+  lazy?: boolean
+}) {
   const block = useMemo(() => {
+    if (given) return given
     const b = sampleBlock(type)
     return blank ? { ...b, fields: {}, items: b.items.map(() => emptyItem()) } : b
-  }, [type, blank])
+  }, [type, blank, given])
   const slide = useMemo(() => soloSlide(block), [block])
   // 부품이 들어갈 수 있는 가장 좁은 칸보다 좁게 그리지 않는다 (표나 차트가 찌그러져 보이지 않게)
   const minW = BLOCKS[type].minSpan * (COL_W + BLOCK_COL_GAP) - BLOCK_COL_GAP + 80
