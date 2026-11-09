@@ -19,24 +19,33 @@
   text-wrap: balance;
 }
 
-/* 숫자와 변화는 한 글자선에. 변화가 길어 옆에 들지 않으면 숫자 아래로 내려간다 */
+/* 숫자와 변화는 한 글자선에. 변화가 길어 옆에 들지 않으면 숫자 아래로 내려간다.
+   이름 → 숫자 → 덧붙임의 세로 리듬은 큰 숫자(number.css)와 같다: 숫자의 줄 상자를 숫자 윗선과 바닥선으로 자르고, 이름에서 숫자 윗선까지
+   14px + 0.16em, 바닥선에서 덧붙임까지 0.17em + 18px. 따로 두던 때(위 6px, 줄 높이 1.1, 아래 8px)는 한 줄에 큰 숫자와 숫자 한 줄이
+   같은 크기로 서도 숫자 윗선이 5px, 아래 설명 줄이 12px 어긋났다(검수, docs/VISUAL-RULES.md 5) */
 .bk-sl-fig {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   column-gap: 16px;
-  margin-top: 6px;
+  margin-top: 14px;
 }
 
 .bk-sl-v {
   --fs: var(--t-title);
   min-width: 0;
+  margin: 0.16em 0 0.17em;
   color: var(--ink);
   font-family: var(--font-head);
   font-variant-numeric: tabular-nums;
   font-weight: var(--num-weight);
   letter-spacing: -0.02em;
-  line-height: 1.1;
+  line-height: 1.05;
+}
+
+.bk-sl-v,
+.bk-sl-v > :is(.ed-input, .ed-hint) {
+  text-box: trim-both cap alphabetic;
 }
 
 .bk-sl-c {
@@ -48,10 +57,21 @@
 
 .bk-sl-n {
   --fs: var(--t-small);
-  margin-top: 8px;
+  margin-top: 18px;
   color: var(--ink-3);
   line-height: 1.45;
   text-wrap: pretty;
+}
+
+/* 낮은 칸(300px 밑): 큰 숫자와 같이 이름, 숫자, 덧붙임 사이를 좁힌다(number.css) */
+@container bk (max-height: 300px) {
+  .bk-sl-fig {
+    margin-top: 8px;
+  }
+
+  .bk-sl-n {
+    margin-top: 10px;
+  }
 }
 
 /* 넓은 칸도 이름 위, 숫자 아래로 왼쪽 끝에 쌓는다(큰 숫자, 전과 후와 같은 짜임). 넓은 칸에서 이름을 격자 왼쪽 4칸에, 숫자를
