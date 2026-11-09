@@ -32,6 +32,11 @@ interface SlideCanvasProps {
   sectionIndex?: number
   /** 부품 하나만 이 크기(캔버스 px)로: 부품 고르기 카드, 끌고 있는 부품 */
   solo?: { w: number; h: number }
+  /**
+   * 장 안은 그리지 않고 바탕(테마와 장의 바탕)만 같은 크기로: 작은 그림을 화면이 그려진 뒤에 그리는 동안의 자리(오른쪽 칸의 그림).
+   * 빈 채로 두면 검은 테마에서 그림 자리가 잠깐 밝게 번쩍였다. 맞추기도 하지 않는다
+   */
+  blank?: boolean
   /** 이어 움직이는 이웃 장과 같이 쓰는 차트의 잣대(차트 자리 → 잣대, sharedScale.ts). pageProps가 넘긴다 */
   scales?: ReadonlyMap<string, Scale>
 }
@@ -97,6 +102,7 @@ export const SlideCanvas = memo(function SlideCanvas({
   sectionIndex = -1,
   solo,
   scales,
+  blank,
 }: SlideCanvasProps) {
   // 발표 모습(발표, 미리 보기, 내보낸 파일)에서는 하나도 채우지 않은 항목을 그리지 않는다
   const slide = useMemo(() => (mode === 'final' ? presentable(given) : given), [given, mode])
@@ -161,7 +167,7 @@ export const SlideCanvas = memo(function SlideCanvas({
   const waiting = useRef(false)
   useLayoutEffect(() => {
     const el = ref.current
-    if (!el || given.layout === 'compose' || solo) return
+    if (!el || given.layout === 'compose' || solo || blank) return
     // 아래 띠(쪽 번호, 단락 지도, 출처)는 장의 틀 밖에 따로 서서(position: absolute) 본문 맞추기에 닿지 않는다.
     // 넘침 재기(overflow.ts)가 재는 동안만 장에 다는 표시(is-measuring)도 바뀐 것이 아니다: 그것까지 세면 넘침을 잰 목록 그림이 모두
     // 바뀐 장이 되어, 장을 하나 더해 쪽 번호만 바뀐 그림까지 다시 맞췄다
@@ -257,10 +263,10 @@ export const SlideCanvas = memo(function SlideCanvas({
         data-scene={sceneOf(slide) ?? undefined}
       >
         {/* 배경: 글과 컴포넌트 뒤의 그래픽 (Backdrop.tsx). 컴포넌트 하나만 그릴 때는 없다 */}
-        {!solo && <Backdrop value={slide.backdrop} dark={isDarkLook(deck.theme, tone)} />}
-        {view}
-        {mode === 'edit' && spec.panes && !solo && <PaneTools />}
-        {!solo && slide.options.hideFoot !== true && (source || mark) && (
+        {!solo && !blank && <Backdrop value={slide.backdrop} dark={isDarkLook(deck.theme, tone)} />}
+        {!blank && view}
+        {mode === 'edit' && spec.panes && !solo && !blank && <PaneTools />}
+        {!solo && !blank && slide.options.hideFoot !== true && (source || mark) && (
           <footer className="s-foot">
             {source ? <T k="source" className="s-source" /> : <span />}
             {mark && (
