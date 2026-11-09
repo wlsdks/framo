@@ -43,6 +43,20 @@ function timing(a: Animation) {
   return { start: Number(effect.getTiming().delay ?? 0), end: Number(effect.getComputedTiming().endTime ?? 0) }
 }
 
+/** 가장 늦게 끝나는 움직임(같으면 앞의 것). 바늘의 때는 이것의 시각으로 읽는다 */
+function lastToEnd(anims: Animation[]): Animation | null {
+  let last: Animation | null = null
+  let end = 0
+  for (const a of anims) {
+    const t = timing(a).end
+    if (!last || t > end) {
+      last = a
+      end = t
+    }
+  }
+  return last
+}
+
 /** 움직임마다 어느 줄인지: 컴포넌트 칸이면 그 부품, 이음표는 앞 부품, 머리는 제목 */
 function laneOf(a: Animation): string {
   // 장면이 얹은 움직임(카메라, 가림막, 결 선, 장막)은 '장면' 줄 하나로. 컴포넌트 줄에 섞으면 그 컴포넌트가 3초 넘게 움직이는 것처럼 보인다
@@ -165,7 +179,9 @@ export function usePlayer(root: HTMLElement | null, slide: Slide, level: MotionL
   const [playing, setPlaying] = useState(false)
   const [solo, setSolo] = useState<string | null>(null)
   const listeners = useRef(new Set<(t: number, playing: boolean) => void>())
-  const state = useRef({ anims: [] as Animation[], offset: 0, solo: false, ended: false, total: 0, raf: 0, stop: null as MotionPlay | null })
+  // last: 가장 늦게 끝나는 움직임(lastToEnd). 걸 때 한 번 고른다: 바늘을 옮기는 프레임마다 모든 움직임의 때를 두 번씩 물어(움직임 수의 두 배만큼
+  // getComputedTiming) 고르던 때는 낱말과 숫자로 나뉜 움직임이 많은 장에서 재생하는 동안 프레임마다 몇 ms를 썼다. 엔진은 건 뒤에 움직임의 때를 바꾸지 않는다
+  const state = useRef({ anims: [] as Animation[], last: null as Animation | null, offset: 0, solo: false, ended: false, total: 0, raf: 0, stop: null as MotionPlay | null })
   /** 끝난 뒤에 끌어 보면 무대를 새로 그려 다시 걸고, 그 때로 옮겨 멈춘다 */
   const pendingSeek = useRef<number | null>(null)
   const [replay, setReplay] = useState(0)
@@ -180,9 +196,8 @@ export function usePlayer(root: HTMLElement | null, slide: Slide, level: MotionL
 
   const now = () => {
     const s = state.current
-    const master = s.anims.reduce<Animation | null>((m, a) => (!m || timing(a).end > timing(m).end ? a : m), null)
-    if (!master) return s.ended ? s.total : 0
-    return Math.min(s.total, s.offset + Number(master.currentTime ?? 0))
+    if (!s.last) return s.ended ? s.total : 0
+    return Math.min(s.total, s.offset + Number(s.last.currentTime ?? 0))
   }
 
   const tick = useCallback(() => {
@@ -208,6 +223,7 @@ export function usePlayer(root: HTMLElement | null, slide: Slide, level: MotionL
       setSolo(null)
       setPlaying(false)
       s.anims = []
+      s.last = null
       s.ended = true
       emit(0, false)
       return
@@ -218,6 +234,7 @@ export function usePlayer(root: HTMLElement | null, slide: Slide, level: MotionL
       setSolo(null)
       setPlaying(false)
       s.anims = []
+      s.last = null
       s.ended = true
       emit(0, false)
       // 움직이지 않아도 발표 화면처럼 엔진에 맡긴다: 앞 장에서 넘어오는 중이면 엔진(swap)이 이 장의 글을 앞 장이 비킨 뒤에 들인다.
@@ -248,6 +265,7 @@ export function usePlayer(root: HTMLElement | null, slide: Slide, level: MotionL
     setSolo(one)
     s.solo = !!one
     s.anims = anims
+    s.last = lastToEnd(anims)
     s.stop = stop
     s.ended = false
     if (pendingSeek.current !== null) {
