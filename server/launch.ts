@@ -127,7 +127,14 @@ export function runServer(run: Run, restarted: boolean, onStable: () => void = (
     else delete env[RESTARTED_ENV]
     let listening = false
     let timer: ReturnType<typeof setTimeout> | undefined
-    const child = spawn(run.node, [join(run.dir, 'dist-node', 'serve.mjs')], { cwd: run.dir, env, stdio: ['inherit', 'inherit', 'inherit', 'ipc'] })
+    let child: ReturnType<typeof spawn>
+    try {
+      child = spawn(run.node, [join(run.dir, 'dist-node', 'serve.mjs')], { cwd: run.dir, env, stdio: ['inherit', 'inherit', 'inherit', 'ipc'] })
+    } catch {
+      // 윈도우는 실행할 수 없는 node(백신이 망가뜨린 파일 같은)를 띄우면 알림 대신 그 자리에서 던진다(spawn EFTYPE, CI에서 확인)
+      resolve({ listening, code: null, signal: null, spawnFailed: true })
+      return
+    }
     child.on('message', (m) => {
       if (m !== LISTENING || listening) return
       listening = true

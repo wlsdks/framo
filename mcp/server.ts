@@ -10,7 +10,7 @@
 //
 // 바꾸는 것은 제안(requests)으로만 남기고, 사람이 앱에서 보고 적용하거나 거절한다.
 
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, realpathSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, parse, resolve } from 'node:path'
@@ -652,11 +652,22 @@ function launch() {
   // 권한 인자는 버전마다 그 버전의 것이어야 해서(sandboxTight가 제 것만 받는다) 이 파일이 대신 붙이지 않는다
   // 맡은 쪽은 다시 맡기지 않는다(버전 폴더 이름과 안의 코드 버전이 어긋나도 서로 끝없이 맡기지 않게)
   const newer = process.env[NEWER_ENV] ? null : newerMcp(here, VERSION, process.platform, process.arch)
-  const start = (node: string, args: string[], delegated: boolean) => {
-    const child = spawn(node, args, {
-      stdio: 'inherit',
-      env: { ...process.env, GYEOL_SHARE: share, ...(delegated ? { [NEWER_ENV]: '1' } : {}) },
-    })
+  const start = (node: string, args: string[], delegated: boolean): ChildProcess => {
+    let child: ChildProcess
+    try {
+      child = spawn(node, args, {
+        stdio: 'inherit',
+        env: { ...process.env, GYEOL_SHARE: share, ...(delegated ? { [NEWER_ENV]: '1' } : {}) },
+      })
+    } catch {
+      // 윈도우는 실행할 수 없는 node를 띄우면 'error' 알림 대신 그 자리에서 던진다(spawn EFTYPE, CI에서 확인)
+      if (delegated) {
+        process.stderr.write('Framo: 새 버전의 AI 연결을 켜지 못해서 이 버전으로 켤게요.\n')
+        return start(...own, false)
+      }
+      process.stderr.write('Framo: AI 연결을 켜지 못했어요. Framo 폴더를 통째로 다시 풀어 주세요.\n')
+      process.exit(1)
+    }
     // 띄우지도 못했을 때(새 버전의 node를 백신이 지웠거나 막았을 때). 오류에는 경로가 들어 있어 내보내지 않고 정해진 말만 쓴다.
     // 띄웠는지는 'spawn' 알림으로 안다: 윈도우는 띄우지 못해도 'exit'를 보내는데, 그것을 받아 끝내면 이 버전으로 다시 켜기 전에
     // MCP 서버가 꺼졌다(CI의 윈도우에서 시험이 답 없이 멈췄다)
