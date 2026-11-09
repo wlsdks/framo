@@ -1,0 +1,100 @@
+/* 흐름 차트의 숫자를 찾지 않고 고치는 창. 낮은 노트북에서는 입력칸만 스크롤하고 닫기는 남긴다. */
+.chart-data-open {
+  margin-top: 16px;
+}
+
+.modal.chart-data {
+  width: min(760px, 100%);
+  max-height: calc(100dvh - 32px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.chart-data .modal-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+.chart-data .modal-actions {
+  margin-top: 20px;
+}
+
+.chart-data-more {
+  margin-right: auto;
+}
+
+.chart-data-note {
+  font-size: 14px;
+}
+
+.chart-data-sections {
+  display: grid;
+  gap: 32px;
+  margin-top: 24px;
+}
+
+.chart-data-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.chart-data-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.chart-data label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.chart-data small {
+  margin-left: 8px;
+  color: var(--ink-2);
+}
+
+.chart-data h3 small {
+  margin-left: 0;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.chart-data .input {
+  min-width: 0;
+  width: 100%;
+}
+
+.chart-data-rows {
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 20px;
+}
+
+.chart-data-rows h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.chart-data-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 80px;
+  gap: 12px;
+}
+
+@media (max-width: 700px) {
+  .chart-data-fields,
+  .chart-data-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

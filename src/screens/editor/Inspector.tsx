@@ -14,6 +14,7 @@ import { BackdropSection } from './BackdropPicker'
 import { useAfterPaint, useLook, type Look } from './look'
 import { BackIcon, CheckIcon, ChevronIcon, EyeOffIcon, Info, Segmented, Toggle, useEscape } from '../ui'
 import { useDeck } from '../../store/deckStore'
+import { ChartData } from './ChartData'
 
 const PREVIEW_SECTIONS = ['섹션 1', '섹션 2', '섹션 3']
 
@@ -115,6 +116,7 @@ export function Inspector({
         <Blanks deck={deck} slide={slide} onFocusField={onFocusField} onGoSlide={onGoSlide} />
         <Optional deck={deck} slide={slide} />
         <Unshown slide={slide} />
+        <ChartData key={slide.id} slide={slide} />
       </section>
       <ArrangeSection deck={deck} slide={slide} areaHeight={areaHeight} />
       <ShapeSection slide={slide} shown={shown} look={look} />
