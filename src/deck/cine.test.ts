@@ -5,6 +5,7 @@ import {
   CINE_FIELDS,
   CINE_MAX_MS,
   CINE_PRESETS,
+  amountKnob,
   cineId,
   cineScript,
   cleanCines,
@@ -43,8 +44,8 @@ function deckWith(recipe: CineRecipe, extra: Record<string, CineRecipe> = {}): D
 }
 
 describe('모션 그래픽 레시피', () => {
-  it('틀 넷은 모두 그릴 수 있고, 첫 연출은 한도(10초) 안이다', () => {
-    expect(CINE_PRESETS.map((p) => p.id)).toEqual(['light', 'diffuse', 'gather', 'stroke'])
+  it('틀 여섯은 모두 그릴 수 있고, 첫 연출은 한도(10초) 안이다', () => {
+    expect(CINE_PRESETS.map((p) => p.id)).toEqual(['light', 'diffuse', 'gather', 'stroke', 'fork', 'fill'])
     for (const p of CINE_PRESETS) {
       const r = presetRecipe(p.id, 'l1')
       const s = cineScript(r)!
@@ -149,7 +150,7 @@ describe('모션 그래픽 레시피', () => {
 
   it('틀마다 재료가 달라 한 발표에서도 서로 다른 몸짓이다: 입자는 빛에서 글자로만', () => {
     const material = (id: (typeof CINE_PRESETS)[number]['id']) => cineScript(presetRecipe(id, 'l'))!.material
-    expect(CINE_PRESETS.map((p) => material(p.id))).toEqual(['particles', 'wash', 'threads', 'line'])
+    expect(CINE_PRESETS.map((p) => material(p.id))).toEqual(['particles', 'wash', 'threads', 'line', 'branches', 'pool'])
     // 재료에 뜻이 없는 모양은 그 재료의 첫 모양으로(입자에 선을 고른 예전 레시피 같은)
     const odd = { ...presetRecipe('light', 'l'), shape: { kind: 'line' as const } }
     expect(cineScript(odd)!.shape).toBe('glyph')
@@ -160,10 +161,17 @@ describe('모션 그래픽 레시피', () => {
     expect(knobsFor(presetRecipe('gather', 'l'))).not.toContain('light')
     expect(knobsFor(presetRecipe('stroke', 'l'))).toEqual(expect.arrayContaining(['shape', 'pace', 'headAfter']))
     expect(knobsFor(presetRecipe('stroke', 'l'))).not.toContain('bleed')
+    // 수(amount)는 엔진이 읽는 재료에만: 먹의 면과 가는 선은 읽지 않으므로 보이지 않는다
+    expect(knobsFor(presetRecipe('diffuse', 'l'))).not.toContain('amount')
+    expect(knobsFor(presetRecipe('gather', 'l'))).not.toContain('amount')
+    // 갈림길의 수는 안의 수
+    expect(amountKnob(presetRecipe('fork', 'l'))).toMatchObject({ label: '안의 수' })
+    expect(amountKnob(presetRecipe('fork', 'l')).options.map((o) => o.name)).toEqual(['둘', '셋', '넷'])
+    expect(amountKnob(presetRecipe('light', 'l')).label).toBe('입자')
   })
 
   it('강조색은 값이 맺히는 장면의 답 하나에만, 다 들어온 뒤 한 번: 이름·문장 장면은 글자색으로 끝난다', () => {
-    const answered = { light: 0, diffuse: 1, gather: 0, stroke: 1 }
+    const answered = { light: 0, diffuse: 1, gather: 0, stroke: 1, fork: 0, fill: 1 }
     for (const p of CINE_PRESETS) {
       const s = cineScript(presetRecipe(p.id, 'l'))!
       const answers = s.texts.filter((t) => t.accent !== undefined)
@@ -196,6 +204,53 @@ describe('모션 그래픽 레시피', () => {
     expect(stroke.sample.after).toBeTruthy()
     expect(cineScript(presetRecipe('stroke', 'l'))!.texts.find((t) => t.key === 'after')?.enter).toBe('carry')
     expect(CINE_PRESETS.find((p) => p.id === 'gather')!.sample.label).toBeUndefined()
+  })
+
+  it('새 재료의 틀(갈림길, 차오름)은 엔진 2가 필요하다고 적고, 처음의 틀 넷은 예전 버전도 다 아는 엔진 1 그대로다', () => {
+    expect(CINE_ENGINE).toBe(2)
+    for (const p of CINE_PRESETS) expect(presetRecipe(p.id, 'l').engine, p.id).toBe(p.id === 'fork' || p.id === 'fill' ? 2 : 1)
+    // 처음의 틀 넷은 버전 id도 그대로라 라이브러리에 같은 갈래로 쌓인다(엔진 번호를 모두 올리면 같은 레시피가 새 버전처럼 보인다)
+    expect(cineId(presetRecipe('light', 'l1'))).toBe(cineId({ ...presetRecipe('light', 'l1'), engine: 1 }))
+  })
+
+  it('이 버전이 모르는 재료(더 새 버전의 것)는 다른 재료로 바꿔 그리지 않고 쉰다: 글은 제 때에 맺힌다', () => {
+    const r = { ...presetRecipe('fork', 'l1'), engine: CINE_ENGINE + 1, material: 'smoke' } as unknown as CineRecipe
+    const s = cineScript(r)!
+    expect(s.material).toBe('rest')
+    expect(s.texts.map((t) => t.key)).toEqual(['label', 'title', 'sub'])
+    // 레시피는 그대로 남는다(지우지 않는다)
+    expect((cleanRecipe(r) as unknown as { material: string }).material).toBe('smoke')
+  })
+
+  it('갈림길: 무엇 가운데서 고르는지가 갈래와 함께 0.5초 안에, 머묾 뒤에 고르고, 답은 고른 길의 펜 끝으로 써진다. 강조색 없이', () => {
+    const s = cineScript(presetRecipe('fork', 'l'))!
+    const span = (k: string) => s.spans.find((x) => x.kind === k)!
+    const at = (k: string) => s.texts.find((t) => t.key === k)!
+    expect(at('label').start).toBeLessThan(500)
+    // 펼쳐 보이기 → 머묾(고르기 직전의 숨) → 고르기
+    expect(span('hold').start).toBe(span('spread').end)
+    expect(span('resolve').start).toBe(span('hold').end)
+    expect(span('hold').end - span('hold').start).toBeGreaterThanOrEqual(250)
+    expect(at('title').enter).toBe('write')
+    expect(at('title').start).toBeGreaterThan(span('resolve').start)
+    expect(at('sub').start).toBeGreaterThan(at('title').start)
+    // 칸의 차례가 곧 글의 차례(이름표가 답 위에)
+    expect(s.texts.map((t) => t.key)).toEqual(['label', 'title', 'sub'])
+    expect(s.total * 0.78).toBeLessThanOrEqual(3000)
+    // 손잡이는 뜻이 있는 것만: 갈래의 촘촘하기, 카메라, 빠르기, 글 들어오기, 슬라이드 전체로
+    expect(knobsFor(presetRecipe('fork', 'l'))).toEqual(['amount', 'camera', 'pace', 'enter', 'bleed', 'headAfter'])
+  })
+
+  it('차오름: 숫자가 물과 함께 오르고 다 오른 순간 강조색이 한 번, 무엇이 모이는지는 처음 0.5초 안에 맺힌다', () => {
+    const s = cineScript(presetRecipe('fill', 'l'))!
+    const title = s.texts.find((t) => t.key === 'title')!
+    const value = s.texts.find((t) => t.key === 'value')!
+    expect(title.start).toBe(0)
+    expect(value.enter).toBe('count')
+    expect(value.accent).toBeGreaterThan(value.end)
+    // 숫자는 2초 안에 맺힌다(docs/MOTION.md 4절)
+    expect(value.end).toBeLessThanOrEqual(2000)
+    expect(knobsFor(presetRecipe('fill', 'l'))).toEqual(['amount', 'camera', 'pace', 'enter', 'bleed', 'headAfter'])
   })
 
   it('장 제목은 모션 그래픽 다음에: 손잡이로 켜고 끈다(끄면 레시피에서 빠진다)', () => {

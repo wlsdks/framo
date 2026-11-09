@@ -5,7 +5,8 @@
 //   끌어 보기, 하나씩, 필름 띠, 멈춘 그림이 한 계산에서 나오고, 어느 때로 건너뛰어도 같은 그림이다. 시계는 Web Animations 하나(clock)라서
 //   엔진의 끝맺음, 모션 편집의 멈추기와 끌어 보기, 발표하는 사람의 건너뛰기가 그 시계만 맞추면 된다.
 // - 그리기는 셋: 입자는 WebGL2의 점(기본), 소프트웨어 GL이거나 GPU가 없으면 Canvas2D(입자 1500, 잔상 없음), 멈춘 그림은 SVG(남는 선만.
-//   편집 화면, 목록, PDF, PPT, 내보낸 HTML의 처음 모습). 빛, 먹, 선, 펜 끝은 뒤의 2D 캔버스가 그린다.
+//   편집 화면, 목록, PDF, PPT, 내보낸 HTML의 처음 모습). 빛, 먹, 선, 펜 끝, 갈래, 물은 뒤의 2D 캔버스가 그린다. 이 버전이 모르는 재료
+//   (더 새 버전의 것)는 다른 재료로 바꿔 그리지 않고 쉰다(글만 제 때에 맺힌다).
 // - 밝기: 장 바탕이 어두우면 빛(더하기 섞기), 밝으면 번지는 먹(보통 섞기, 낮은 짙기, 빛 번짐 없음). 색은 장의 글자색과 강조색뿐이다.
 // - 글은 DOM의 글 그대로다(고를 수 있고 PDF에서 벡터). 엔진은 그리는 순간 칸의 글자를 그 칸의 글꼴로 화면 밖 캔버스에 그려 모양을 딴다.
 //   들어오기는 투명도, 흐림(8px까지), 가림(mask)으로만 한다(자리를 다시 짜지 않는다). 끝나면 손댄 것을 모두 되돌려 편집 화면과 같다.
@@ -138,7 +139,12 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     /** 갈래: 입자마다 몇째 갈래인지(-1은 갈래 없이 가운데 둘레), 갈래마다 [뻗는 각도, 길이, 휘는 몫] */
     arm: Int8Array
     arms: number[][]
-    mode: 'burst' | 'scatter' | 'pen' | 'wash' | 'threads'
+    /** 뻗어 나가는 갈래(갈림길) */
+    br: Branches | null
+    /** 떨어져 모여 차오르는 물(차오름) */
+    pool: Pool | null
+    /** rest: 이 버전이 모르는 재료라 그리지 않고 쉰다 */
+    mode: 'burst' | 'scatter' | 'pen' | 'wash' | 'threads' | 'branches' | 'pool' | 'rest'
     N: number
     ang: Float32Array
     rad: Float32Array
@@ -380,6 +386,180 @@ export function cineMotion(kit: DrawKit): CineRuntime {
   }
 
   /**
+   * 갈래(갈림길): 장 왼쪽 밖에서 들어온 줄기가 한 번 갈라져 안의 수(둘~넷)만큼의 갈래가 되고, 고른 안 하나만 끝까지 그어져 답의 첫머리에
+   * 닿는다. 갈래는 3차 곡선을 표본 점으로 잘라 둔다(점마다 [x, y, 뿌리에서의 거리, 굵기]). 묶음 0은 고른 길(줄기, 고른 안, 답까지 이어지는
+   * 끝), 1부터는 고르지 않은 안이다
+   */
+  interface Branches {
+    pts: Float32Array
+    /** 갈래마다 [첫 표본, 표본 수, 묶음] */
+    segs: Int32Array
+    /** 묶음마다 그 길의 끝(뿌리에서의 거리) */
+    ends: number[]
+    /** 갈라지는 자리, 고른 안이 고르기 전에 멈춘 자리, 답의 첫머리(모두 뿌리에서의 거리) */
+    fork: number
+    stop: number
+    end: number
+    /** 갈라진 자리의 둥근 이음매 [x, y, 반지름] */
+    joint: number[]
+  }
+
+  /**
+   * 갈래를 짠다. aim은 답의 글(주인공) 첫 줄의 왼쪽 끝(조금 띄운 자리)과 그 줄의 가운데 높이, band는 글이 설 띠 [왼, 위, 오른, 아래].
+   * 갈래는 양 끝이 가로로 눕는 S자라 강물처럼 흐른다. 안의 수는 촘촘하기에 따라 둘, 셋, 넷: 열여섯 갈래로 거듭 갈라지던 시안은 퍼짐이나 자람(계통수)으로
+   * 읽혀 '하나를 골랐다'가 서지 않았다(감성 검수)
+   */
+  function branchesOf(R: () => number, c: { ox: number; oy: number; cw: number; ch: number; W: number }, aim: number[], band: number[] | null, dense: number): Branches {
+    const { oy, cw, ch } = c
+    const K = 22
+    const pts: number[] = []
+    const segs: number[] = []
+    const top = oy + ch * 0.06
+    const [tx, ty] = aim
+    const ph = R() * TAU
+    /** 3차 곡선 하나를 K점으로(거리와 굵기도). 끝의 거리 */
+    const bez = (p: number[], s0: number, w0: number, w1: number, g: number) => {
+      const first = pts.length / 4
+      let sd = s0
+      let px = p[0]
+      let py = p[1]
+      for (let i = 0; i < K; i++) {
+        const t = i / (K - 1)
+        const u = 1 - t
+        const x = u * u * u * p[0] + 3 * u * u * t * p[2] + 3 * u * t * t * p[4] + t * t * t * p[6]
+        const y = u * u * u * p[1] + 3 * u * u * t * p[3] + 3 * u * t * t * p[5] + t * t * t * p[7]
+        if (i) sd += Math.hypot(x - px, y - py)
+        // 붓질처럼 굵기가 조금씩 오르내린다(고른 굵기는 그래프의 선으로 읽힌다)
+        pts.push(x, y, sd, lerp(w0, w1, t) * (1 + 0.08 * Math.sin(sd * 0.017 + ph)))
+        px = x
+        py = y
+      }
+      segs.push(first, K, g)
+      return sd
+    }
+    /** 양 끝이 가로로 눕는 S자 */
+    const flow = (a: number[], b: number[], s0: number, w0: number, w1: number, g: number) => {
+      const d = (b[0] - a[0]) * 0.46
+      return bez([a[0], a[1], a[0] + d, a[1], b[0] - d, b[1], b[0], b[1]], s0, w0, w1, g)
+    }
+    const x0 = -30
+    const L = Math.max(cw * 0.16, tx - x0)
+    const n = dense === 0 ? 2 : dense === 2 ? 4 : 3
+    // 갈림은 답의 줄보다 조금 위나 아래: 고른 안도 휘어 들어가 하나의 갈래로 보인다(곧으면 줄기가 조금 길어진 것으로 보였다, 필름)
+    const y0 = ty + (R() < 0.5 ? -1 : 1) * ch * (0.07 + 0.03 * R())
+    const F = [x0 + Math.min(L * 0.3, c.W * 0.06), y0]
+    // 고른 안은 가운데: 답의 첫머리에서 멈췄다가(고르기 전), 고른 뒤 그 끝이 펜이 되어 답을 끝까지 써 나간다(답보다 멀리 가는 길은 없다).
+    // 고르지 않은 안은 글 띠의 위와 아래로 크게 휘어 장의 위아래 가까이, 답의 첫머리보다 장 폭의 15% 남짓 더 가서 멈춘다: 모든 안을 답의
+    // 첫머리 앞에서 멈추게 하던 시안은 장 왼쪽 10%의 화살 깃 그림 문자로 읽혔고(필름), 장 가운데 너머까지 보내면 고른 안이 그 7분의 1인
+    // 곁가지라 '작은 샛길을 골랐다'로, 답의 첫머리를 조금 지나서 멈추게 하면 장 왼쪽 4분의 1의 삼지창 기호로 읽혔다(감성 검수). 안들은 같은
+    // 굵기로 같은 무게다
+    const fork = flow([x0, y0], F, 0, 15, 13, 0)
+    const end = flow(F, [tx, ty], fork, 12.5, 9.5, 0)
+    const stop = end
+    const ends = [end]
+    const bt = band ? band[1] - 50 : ty - ch * 0.16
+    const bb = band ? band[3] + 50 : ty + ch * 0.16
+    const others = n - 1
+    let up = others === 1 ? (R() < 0.5 ? 1 : 0) : Math.ceil(others / 2)
+    if (others === 3 && R() < 0.5) up = 1
+    for (let k = 0, g = 1; k < others; k++) {
+      const upper = k < up
+      const j = upper ? k : k - up
+      const m = upper ? up : others - up
+      // 위는 글 띠 위의 자리를, 아래는 글 띠 아래의 자리를 고르지 않게 나눠 갖는다(거울에 비친 꼴이 되지 않게)
+      const f = m === 1 ? 0.6 + 0.25 * R() : (j + 0.45 + 0.3 * R()) / m
+      const y = upper ? lerp(bt, top, f) : lerp(bb, oy + ch * 0.92, f)
+      const x = tx + c.W * (0.13 + 0.05 * R()) + (upper ? 0 : c.W * 0.03)
+      ends.push(flow(F, [x, y], fork, 12.5, 7, g++))
+    }
+    return { pts: new Float32Array(pts), segs: new Int32Array(segs), ends, fork, stop, end, joint: [F[0], F[1], 6.5] }
+  }
+
+  /**
+   * 물(차오름): 글 칸 곁에서 물방울이 하나씩 떨어져 아래에 고인 물로 들어가고, 들어간 만큼 물이 차오르며 숫자가 오른다(작은 것이 모여
+   * 이만큼이 됐다). 물방울이 닿을 때마다 수위와 숫자가 그 방울만큼 함께 오른다(poured): 처음의 몇 방울은 숫자가 한 칸씩 오르는 것이
+   * 보이고, 잦아지면 이어 굴러가며, 마지막 몇 방울은 다시 하나씩 보인다. 방울이 닿는 때는 S자(carry)로 흩는다: 숫자 굴리기의 곡선(reveal)은
+   * 처음에 쏟아져 '하나씩'이 보이지 않았다(감성 검수). 물은 숫자의 바닥 바로 아래까지 차서 마지막 방울과 함께 다 찬다
+   */
+  interface Pool {
+    /** 물방울마다 [x, 닿는 때, 떨어지기 시작하는 높이, 떨어지는 시간, 크기] */
+    drops: Float32Array
+    n: number
+    /** 물방울 크기의 합 */
+    sum: number
+    /** 바닥(장 아래 끝 너머), 다 찬 수위(숫자의 바닥), 물이 찰 가로 범위 */
+    base: number
+    full: number
+    x0: number
+    x1: number
+  }
+  const DROP = 5
+  /** 물방울 하나가 닿고 수위와 숫자가 그만큼 오르는 데 걸리는 때(ms) */
+  const RISE = 170
+
+  function poolOf(R: () => number, c: { ox: number; oy: number; cw: number; ch: number; W: number; H: number }, band: number[] | null, vb: number[] | null, win: number[], dense: number): Pool {
+    const x0 = Math.min(0, c.ox) - 20
+    const x1 = Math.max(c.W, c.ox + c.cw) + 20
+    const base = Math.max(c.H, c.oy + c.ch) + 24
+    // 다 찬 수위: 숫자의 바닥에서 숨 쉴 틈(72px)만큼 아래. 숫자가 없으면 글 띠 아래. 글 띠 아래까지만 차던 시안은 숫자와 따로 놀았고
+    // 화면 아래 4분의 1이라 프로젝터에서 보이지 않았으며, 숫자의 바닥에 붙이면 답을 읽는 동안 물 낯이 숫자의 밑줄로 섰다(감성 검수)
+    const full = vb ? vb[1] + vb[3] + 72 : band ? band[3] + 40 : c.oy + c.ch * 0.6
+    const [c0, c1] = win
+    const inv = (q: number) => {
+      let lo = 0
+      let hi = 1
+      for (let j = 0; j < 22; j++) {
+        const m = (lo + hi) / 2
+        if (carry(m) < q) lo = m
+        else hi = m
+      }
+      return (lo + hi) / 2
+    }
+    const n = dense === 0 ? 12 : dense === 2 ? 30 : 18
+    // 글 띠 바로 옆의 두 기둥에서 떨어진다: 숫자 곁이라 떨어지는 것과 오르는 숫자가 한눈에 든다
+    const l1 = band ? band[0] - 50 : c.ox + c.cw * 0.3
+    const l0 = Math.max(c.ox + c.cw * 0.03, l1 - 320)
+    const r0 = band ? band[2] + 50 : c.ox + c.cw * 0.7
+    const r1 = Math.min(c.ox + c.cw * 0.97, r0 + 320)
+    const lw = Math.max(0, l1 - l0)
+    const rw = Math.max(0, r1 - r0)
+    const drops = new Float32Array(n * DROP)
+    let sum = 0
+    for (let j = 0; j < n; j++) {
+      const o = j * DROP
+      const u = R() * (lw + rw || 1)
+      drops[o] = u < lw ? l0 + u : r0 + (u - lw)
+      // j번째 방울이 닿는 때(마지막 방울이 오르기를 마칠 때가 숫자가 맺히는 때)
+      drops[o + 1] = c0 + (c1 - c0 - RISE) * inv((j + 0.5) / n)
+      drops[o + 2] = c.oy + c.ch * (0.03 + 0.16 * R())
+      drops[o + 3] = 380 + 120 * R()
+      drops[o + 4] = 0.75 + 0.5 * R()
+      sum += drops[o + 4]
+    }
+    return { drops, n, sum, base, full, x0, x1 }
+  }
+
+  /** 그때까지 들어온 물의 몫(0~1): 수위와 숫자가 함께 쓴다. 물방울은 닿은 뒤 RISE 동안 제 크기만큼 올린다 */
+  function poured(P: Pool, e: number) {
+    let f = 0
+    for (let j = 0; j < P.n; j++) {
+      const dt = e - P.drops[j * DROP + 1]
+      if (dt > 0) f += P.drops[j * DROP + 4] * smooth(0, RISE, dt)
+    }
+    return f / P.sum
+  }
+
+  /** 글이 설 띠: 글이 있는 모든 글 칸을 두른 상자 [왼, 위, 오른, 아래](판 좌표). 글 칸이 없으면 null */
+  function bandOf(texts: TextBox[]): number[] | null {
+    let band: number[] | null = null
+    for (const t of texts) {
+      const b = t.box
+      band = band ? [Math.min(band[0], b[0]), Math.min(band[1], b[1]), Math.max(band[2], b[0] + b[2]), Math.max(band[3], b[1] + b[3])] : [b[0], b[1], b[0] + b[2], b[1] + b[3]]
+    }
+    return band
+  }
+
+  /**
    * 장면을 만든다: 칸과 글의 자리를 재고, 입자 n개의 씨앗 값과 모일 자리를 정한다. 재는 동안에는 카메라를 잠깐 풀어 둔다
    * (배율이 걸린 채로 재면 글의 자리가 어긋난다)
    */
@@ -433,7 +613,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const path = s.material === 'line' && isPath(s)
     const P = (u: number) => [ox + (pathX(u) / 1000) * cw, oy + (pathY(s.shape, u) / 1000) * ch]
     if (path) [fx, fy] = P(0)
-    const mode: Scene['mode'] = s.material === 'wash' ? 'wash' : s.material === 'threads' ? 'threads' : s.material === 'line' ? 'pen' : spans.spread ? 'burst' : 'scatter'
+    const mode: Scene['mode'] =
+      s.material === 'wash' || s.material === 'threads' || s.material === 'branches' || s.material === 'pool' || s.material === 'rest' ? s.material : s.material === 'line' ? 'pen' : spans.spread ? 'burst' : 'scatter'
     // 번지는 크기: 뒤에 모임이 있으면 장의 한가운데를 채울 만큼, 번짐으로 끝나면 장 끝 너머까지
     const far = Math.hypot(Math.max(fx, host.w - fx), Math.max(fy, host.h - fy))
     // 모이기 전의 구름은 장의 한쪽에 머물게(장 절반을 덮으면 흰 바탕에서 그을음으로 읽혔다, 감성 검수). 차분하게는 같은 안무의 작은 판
@@ -615,7 +796,29 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       threads[k * 8 + 6] = 0.38 * (0.35 * Math.min(1, Math.abs(y0 - y1) / ch) + 0.65 * R())
       threads[k * 8 + 7] = 0.75 + 0.25 * R()
     }
-    return { s, W: host.w, H: host.h, ox, oy, cw, ch, fx, fy, gr, gb, reach, shaped: sampled, cz: 0, edge, threads, threadW, arm, arms, mode, N: n, ang, rad, z, size, alpha, tone, delay, bow, ph, w, sx, sy, tx, ty, pu, texts, spans, dark }
+    // 촘촘하기(손잡이): 갈래의 깊이, 낱장의 두께
+    const dense = s.count >= 5000 ? 2 : s.count <= 1500 ? 0 : 1
+    let br: Branches | null = null
+    if (mode === 'branches') {
+      // 남는 길이 닿을 곳: 답(주인공 글)의 첫 줄 왼쪽 끝을 조금 띄운 자리, 그 줄의 가운데 높이(글의 첫머리로 흘러 든다). 가운데에 닿게
+      // 하던 시안은 남는 길이 글 아래를 지나야 해서, 답이 맺히기 전까지 홀로 선 물결 밑줄로 읽혔다(필름). 글이 없으면 칸의 가운데 왼쪽
+      const hero = texts.find((t) => t.cue.key === bigKey)
+      let aim = [fx - cw * 0.12, fy]
+      if (hero) {
+        const hr = hero.el.getBoundingClientRect()
+        const l0 = linesOf(hero.el, (r) => [(r.left - hr.left) / kz, (r.top - hr.top) / kz, r.width / kz, r.height / kz]).lines[0]
+        if (l0) aim = [hero.box[0] + l0[0] - 30, hero.box[1] + l0[1] + l0[3] * 0.55]
+      }
+      br = branchesOf(R, { ox, oy, cw, ch, W: host.w }, aim, bandOf(texts), dense)
+    }
+    let pool: Pool | null = null
+    if (mode === 'pool') {
+      // 숫자 굴리기와 같은 때(숫자가 없으면 모임 구간)
+      const cue = texts.find((t) => t.cue.enter === 'count')?.cue
+      const win = cue ? [cue.start, cue.end] : spans.gather ? [spans.gather.start, spans.gather.end] : [0, s.total * 0.6]
+      pool = poolOf(R, { ox, oy, cw, ch, W: host.w, H: host.h }, bandOf(texts), bigBox, win, dense)
+    }
+    return { s, W: host.w, H: host.h, ox, oy, cw, ch, fx, fy, gr, gb, reach, shaped: sampled, cz: 0, edge, threads, threadW, arm, arms, br, pool, mode, N: n, ang, rad, z, size, alpha, tone, delay, bow, ph, w, sx, sy, tx, ty, pu, texts, spans, dark }
   }
 
   /** 구간 안에서의 진행(0~1). 구간이 없으면 없다(-1) */
@@ -817,8 +1020,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
    * 글 하나의 그 때 모습. 장의 답이면 다 들어온 순간 글자색에서 강조색으로 한 번 바뀌고 그대로 둔다(끝 모습의 강조색과 같다). 강조색은
    * 장면 전체에서 이때 한 번만 들어온다
    */
-  function textAt(t: TextBox, e: number, lively: boolean) {
-    enterAt(t, e, lively)
+  function textAt(t: TextBox, e: number, lively: boolean, fill?: number) {
+    enterAt(t, e, lively, fill)
     const cue = t.cue
     if (cue.accent === undefined) return
     const a = clamp((e - cue.end) / Math.max(1, cue.accent - cue.end))
@@ -842,7 +1045,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     if (c.node.nodeValue !== next) c.node.nodeValue = next
   }
 
-  function enterAt(t: TextBox, e: number, lively: boolean) {
+  /** fill이 있으면 숫자 굴리기는 그 몫(차오른 물의 몫)을 따른다: 물방울이 닿을 때마다 숫자가 그만큼 오르고, 첫 방울 전에는 보이지 않는다 */
+  function enterAt(t: TextBox, e: number, lively: boolean, fill?: number) {
     const st = t.el.style
     const cue = t.cue
     const p = clamp((e - cue.start) / Math.max(1, cue.end - cue.start))
@@ -864,13 +1068,16 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     if (cue.enter === 'settle') {
       const o = out(p)
       st.opacity = String(o)
-      const b = (1 - o) * (lively ? 6 : 4)
+      // 흐림은 생동감에서만(MOTION.md 10절: 차분하게는 흐림 없음). 차분하게도 4px로 흐리게 맺히던 때는 결정 자리의 기본 세기에서 큰 제목이
+      // 한 칸 뿌옇게 떠 신뢰감을 깎았다(감성 검수)
+      const b = lively ? (1 - o) * 6 : 0
       st.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : ''
       return
     }
     if (cue.enter === 'count') {
-      st.opacity = String(out(clamp(p * 3)))
-      if (t.count) rollTo(t.count, t.count.value * reveal(p))
+      // 0인 숫자가 답처럼 서 있지 않게: 물을 따르는 숫자는 첫 방울이 닿을 때 나타난다
+      st.opacity = String(out(fill === undefined ? clamp(p * 3) : clamp(fill / 0.04)))
+      if (t.count) rollTo(t.count, t.count.value * (fill ?? reveal(p)))
       return
     }
     // 써지기, 한 글자씩: 줄마다 가림을 하나씩 두고, 펜 끝이 지나간 만큼 왼쪽부터 드러낸다
@@ -1271,6 +1478,8 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       x.globalCompositeOperation = 'source-over'
       if (c.mode === 'wash') drawWash(x, c, e)
       if (c.mode === 'threads') drawThreads(x, c, e)
+      if (c.mode === 'branches') drawBranches(x, c, e)
+      if (c.mode === 'pool') drawPool(x, c, e)
       // 길: 펜 끝이 지나간 만큼 가는 선이 남는다(끝 모습의 SVG와 같은 길, 같은 색, 같은 굵기)
       if (c.mode === 'pen') {
         const u = penAt(c, e)
@@ -1441,6 +1650,206 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       x.globalCompositeOperation = 'source-over'
     }
 
+    /**
+     * 갈래 하나의 [from, to] 구간(뿌리에서의 거리)을 굵기만큼의 띠로 경로에 더한다. 띠는 한쪽 둘레로 가서 다른 쪽 둘레로 돌아오는
+     * 닫힌 꼴이고, 모든 띠와 이음매의 원이 같은 돌림 방향이라 겹친 곳도 한 번만 칠해진다(겹친 곳만 짙어지면 갈림마다 먹 점이 생긴다).
+     * 끝(자라는 앞)과 꼬리(빨려 드는 뒤)는 붓끝처럼 가늘어진다
+     */
+    const ribbon = (x: CanvasRenderingContext2D, P: Float32Array, first: number, count: number, from: number, to: number, wk: number) => {
+      const s0 = P[first * 4 + 2]
+      const s1 = P[(first + count - 1) * 4 + 2]
+      const a = Math.max(from, s0)
+      const b = Math.min(to, s1)
+      if (b - a < 0.5) return
+      const L = rib
+      let m = 0
+      const put = (i: number, u: number) => {
+        const j = i * 4
+        const k = j + 4
+        L[m++] = lerp(P[j], P[k], u)
+        L[m++] = lerp(P[j + 1], P[k + 1], u)
+        L[m++] = lerp(P[j + 2], P[k + 2], u)
+        L[m++] = lerp(P[j + 3], P[k + 3], u)
+      }
+      for (let i = first; i < first + count - 1 && m < L.length - 8; i++) {
+        const sa = P[i * 4 + 2]
+        const sb = P[i * 4 + 6]
+        if (sb < a || sa > b) continue
+        const d = Math.max(1e-3, sb - sa)
+        if (!m) put(i, clamp((a - sa) / d))
+        put(i, clamp((b - sa) / d))
+      }
+      const n = m / 4
+      if (n < 2) return
+      // 한쪽 둘레로 가고(-n 쪽) 다른 쪽 둘레로 돌아온다(+n 쪽)
+      for (let pass = 0; pass < 2; pass++) {
+        for (let jj = 0; jj < n; jj++) {
+          const j = pass ? n - 1 - jj : jj
+          const o = j * 4
+          const p0 = Math.max(0, j - 1) * 4
+          const p1 = Math.min(n - 1, j + 1) * 4
+          let dx = L[p1] - L[p0]
+          let dy = L[p1 + 1] - L[p0 + 1]
+          const dl = Math.hypot(dx, dy) || 1
+          dx /= dl
+          dy /= dl
+          const sd = L[o + 2]
+          // 붓끝: 자라는 앞(to)과 빨려 드는 꼬리(from) 둘레만 가늘게. 갈래 하나의 끝(b)에서 가늘게 하면 마디마다 끊겨 보였다(필름)
+          const hw = (L[o + 3] * wk * clamp(0.28 + (to - sd) / 44) * clamp(0.28 + (sd - from) / 44)) / 2
+          const sg = pass ? hw : -hw
+          const px = L[o] - dy * sg
+          const py = L[o + 1] + dx * sg
+          if (!pass && !jj) x.moveTo(px, py)
+          else x.lineTo(px, py)
+        }
+      }
+      x.closePath()
+    }
+    /** 띠 하나의 표본(갈래 하나는 22점이라 넉넉하다) */
+    const rib = new Float32Array(26 * 4)
+
+    /**
+     * 갈래(갈림길): 줄기가 들어와 갈라지고, 안들이 함께 뻗어 같은 때에 멈춘다(펼쳐 보이기). 머묾 뒤 고른다: 고르지 않은 안은 제자리에서
+     * 옅어지고(되감으면 '취소'로 읽혔다, 감성 검수), 고른 안은 짙고 조금 굵어지며 멈춘 자리에서 끝까지 그어져 답의 첫머리에 닿는다. 답이
+     * 써지는 동안 펜 끝이 글줄을 따라가고 고른 길은 뒤에서부터 답의 첫머리로 빨려 든다(고른 길이 답이 된다). 끝 모습은 글뿐이고 강조색은
+     * 쓰지 않는다
+     */
+    const drawBranches = (x: CanvasRenderingContext2D, c: Scene, e: number) => {
+      const b = c.br
+      if (!b) return
+      const SP = c.spans.spread
+      const RS = c.spans.resolve
+      const g = SP ? reveal(Math.max(0, prog(SP, e))) : 1
+      // 줄기가 먼저 갈림까지, 그다음 안들이 같은 몫씩 뻗어 같은 때에 멈춘다
+      const a = b.fork / Math.max(1, b.stop)
+      const trunk = b.fork * clamp(g / a)
+      const opt = clamp((g - a) / (1 - a))
+      const r = RS ? Math.max(0, prog(RS, e)) : 0
+      const split = r > 0
+      // 고르는 몸짓은 0.4초 남짓: 고르지 않은 안이 옅어지는 동안 고른 안이 짙어진다(잘라 붙인 듯 짧으면 고르는 순간이 보이지 않았다, 감성 검수)
+      const pick = out(clamp(r / 0.5))
+      const fade = 1 - out(clamp(r / 0.6))
+      const ext = carry(clamp((r - 0.1) / 0.7))
+      // 답(주인공 글)이 들어오는 동안 고른 길은 뒤에서부터 빨려 든다. 써지기면 펜 끝이 글줄을 따라간다
+      const tw = c.texts.find((t) => t.cue.key === 'title') ?? c.texts.find((t) => t.cue.enter === 'write')
+      // 답을 비웠으면 글이 들어오는 구간에 맞춰 빨려 든다(끝에 한꺼번에 사라지지 않게)
+      const WR = c.spans.write
+      const wq = tw ? clamp((e - tw.cue.start) / Math.max(1, tw.cue.end - tw.cue.start)) : WR ? Math.max(0, prog(WR, e)) : 0
+      const writing = !!tw && wq > 0 && wq < 1 && (tw.cue.enter === 'write' || tw.cue.enter === 'letters')
+      const tail = b.end * carry(clamp(wq * 1.6))
+      if (tail < b.end - 1) {
+        const chosen = g < a ? trunk : r <= 0 ? b.fork + (b.stop - b.fork) * opt : b.stop + (b.end - b.stop) * ext
+        const A0 = c.dark ? 0.62 : 0.72
+        const A1 = c.dark ? 0.94 : 0.96
+        const wk = 1 + 0.22 * pick
+        x.globalCompositeOperation = 'source-over'
+        for (let pass = 0; pass < (split ? 2 : 1); pass++) {
+          x.beginPath()
+          for (let k = 0; k < b.segs.length; k += 3) {
+            const grp = b.segs[k + 2]
+            if (split && (grp === 0) !== (pass === 0)) continue
+            if (grp === 0) ribbon(x, b.pts, b.segs[k], b.segs[k + 1], tail, chosen, wk)
+            else if (opt > 0 && fade > 0) ribbon(x, b.pts, b.segs[k], b.segs[k + 1], split ? b.fork + 8 : 0, b.fork + (b.ends[grp] - b.fork) * opt, 1)
+          }
+          if (pass === 0 && trunk >= b.fork - 2 && tail < b.fork - 4) {
+            const rr = b.joint[2] * wk
+            x.moveTo(b.joint[0] + rr, b.joint[1])
+            x.arc(b.joint[0], b.joint[1], rr, 0, TAU)
+          }
+          x.fillStyle = rgbCss(ink.c, pass === 1 ? A0 * fade : lerp(A0, A1, pick))
+          x.fill()
+        }
+      }
+      if (writing) {
+        const edge = writeEdge(tw!, e)
+        if (edge) pen(x, c, tw!.box[0] + edge[1], tw!.box[1] + edge[2], 1 - smooth(0.85, 1, wq))
+      }
+    }
+
+    /**
+     * 물(차오름): 물방울이 글 칸 곁에서 떨어지고(둥근 머리와 꼬리의 물방울 꼴), 닿은 자리는 잠깐 오목해지며 낮고 긴 너울 둘이 양옆으로
+     * 퍼져 잦아든다. 물은 바탕에 글자색을 섞은 면(프로젝터에서도 보이게 크기로: 장의 절반 가까이)과 또렷한 물 낯. 마지막 방울과 함께 숫자
+     * 바로 아래까지 차고, 너울이 잦아들자 물은 조금 가라앉으며 걷힌다(끝 모습은 글뿐이다). 장면 안(물, 방울)에는 강조색을 쓰지 않는다:
+     * 강조색은 숫자가 다 오른 순간 숫자에 한 번뿐이다
+     */
+    const drawPool = (x: CanvasRenderingContext2D, c: Scene, e: number) => {
+      const P = c.pool
+      if (!P) return
+      const RS = c.spans.resolve
+      const gone = RS ? clamp((Math.max(0, prog(RS, e)) - 0.15) / 0.7) : 0
+      if (gone >= 1) return
+      const D = P.drops
+      const fade = 1 - smooth(0, 1, gone)
+      const level = lerp(P.base, P.full, poured(P, e)) + 26 * carry(gone)
+      // 물결: 닿은 때부터 양옆으로 퍼지며(초당 600px) 잦아든다(0.6초). 물결 하나는 낮고 긴 너울 하나(짧은 굽이가 겹치면 지진계의 잡음으로,
+      // 높은 봉우리는 소리의 파형으로 읽혔다, 필름과 감성 검수)
+      const wave = (px: number) => {
+        let y = 0
+        for (let j = 0; j < P.n; j++) {
+          const o = j * DROP
+          const dt = e - D[o + 1]
+          if (dt <= 0 || dt > 1800) continue
+          const amp = 10 * D[o + 4] * Math.exp(-dt / 600)
+          for (const sg of [-1, 1]) {
+            const u = px - (D[o] + sg * 0.6 * dt)
+            if (Math.abs(u) > 340) continue
+            y += amp * Math.sin(u * 0.026) * Math.exp(-(u * u) / 20000)
+          }
+          const u0 = px - D[o]
+          if (dt < 300 && Math.abs(u0) < 110) y += amp * 1.2 * (1 - dt / 300) * Math.exp(-(u0 * u0) / 1800)
+        }
+        return y
+      }
+      if (level < P.base - 1) {
+        const N = 160
+        const sx = (P.x1 - P.x0) / N
+        const surf = new Float32Array(N + 1)
+        for (let i = 0; i <= N; i++) surf[i] = level + wave(P.x0 + i * sx)
+        x.beginPath()
+        for (let i = 0; i <= N; i++) {
+          if (i) x.lineTo(P.x0 + i * sx, surf[i])
+          else x.moveTo(P.x0, surf[0])
+        }
+        x.lineTo(P.x1, P.base + 40)
+        x.lineTo(P.x0, P.base + 40)
+        x.closePath()
+        x.fillStyle = rgbCss(ink.c, (c.dark ? 0.16 : 0.12) * fade)
+        x.fill()
+        x.beginPath()
+        for (let i = 0; i <= N; i++) {
+          if (i) x.lineTo(P.x0 + i * sx, surf[i])
+          else x.moveTo(P.x0, surf[0])
+        }
+        x.strokeStyle = rgbCss(ink.c, (c.dark ? 0.6 : 0.55) * fade)
+        x.lineWidth = 2.2
+        x.lineJoin = 'round'
+        x.stroke()
+      }
+      // 떨어지는 물방울: 위에서 옅게 나타나 빨라지며(자유 낙하) 그때의 물 낯에 닿는다. 둥근 머리와 위로 가늘어지는 꼬리의 물방울 꼴이고,
+      // 빨라질수록 꼬리가 늘어난다. 짧은 획은 먼지나 불티로, 길게 늘인 획은 검은 바탕에서 필름의 긁힌 자국으로 읽혔다(감성 검수)
+      x.fillStyle = rgbCss(ink.c, c.dark ? 0.85 : 0.78)
+      for (let j = 0; j < P.n; j++) {
+        const o = j * DROP
+        const t1 = D[o + 1]
+        const t0 = t1 - D[o + 3]
+        if (e <= t0 || e >= t1) continue
+        const u = (e - t0) / (t1 - t0)
+        const yEnd = lerp(P.base, P.full, poured(P, t1))
+        const y = lerp(D[o + 2], yEnd, u * u)
+        const r = 6 * D[o + 4]
+        const tail = r * (1.6 + 2.6 * u)
+        const px = D[o]
+        x.globalAlpha = smooth(0, 0.2, u)
+        x.beginPath()
+        x.moveTo(px, y - tail)
+        x.quadraticCurveTo(px + r * 0.95, y - r * 0.9, px + r, y)
+        x.arc(px, y, r, 0, Math.PI)
+        x.quadraticCurveTo(px - r * 0.95, y - r * 0.9, px, y - tail)
+        x.fill()
+      }
+      x.globalAlpha = 1
+    }
+
     /** 펜 끝: 작은 점 하나(빛 번짐 없이. 번지는 빛은 어두운 바탕의 초점 하나뿐이다) */
     const pen = (x: CanvasRenderingContext2D, c: Scene, px: number, py: number, a: number) => {
       if (a <= 0.01) return
@@ -1511,7 +1920,8 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
 
     const applyDom = (c: Scene | null, e: number) => {
       if (c) {
-        for (const t of c.texts) textAt(t, e, lively)
+        const fill = c.pool ? poured(c.pool, e) : undefined
+        for (const t of c.texts) textAt(t, e, lively, t.cue.enter === 'count' ? fill : undefined)
         applyCam(zoom(s, e), c.fx - c.ox, c.fy - c.oy, s.bleed ? host : null, bx, by)
       }
     }

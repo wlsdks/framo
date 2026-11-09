@@ -26,8 +26,12 @@ import type {
   Deck,
 } from './types'
 
-/** 이 버전의 엔진 번호. 레시피를 읽는 법(구간, 모양, 손잡이의 뜻)이 바뀌면 올린다 */
-export const CINE_ENGINE = 1
+/**
+ * 이 버전의 엔진 번호. 레시피를 읽는 법(구간, 모양, 손잡이의 뜻)이 바뀌거나 새 재료가 생기면 올린다. 레시피에는 그 레시피를 읽는 데 필요한
+ * 번호를 적는다(틀의 engine): 1은 처음의 틀 넷, 2는 갈림길과 차오름(새 재료). 그래서 틀 넷의 레시피는 예전 버전에서도 손잡이까지 그대로 쓰고,
+ * 새 재료의 레시피는 예전 버전이 '새 버전에서 만든 모션 그래픽'으로 알린다(아는 층만 그리고 레시피는 지우지 않는다)
+ */
+export const CINE_ENGINE = 2
 
 /** 첫 연출의 한도(ms, 생동감·보통 빠르기). 더 길면 듣는 분을 기다리게 한다(docs/MOTION.md '모션 그래픽') */
 export const CINE_MAX_MS = 10000
@@ -37,13 +41,13 @@ export const CINE_MAX_MS = 10000
 const CINE_PHASES: readonly CinePhaseKind[] = ['seed', 'spread', 'gather', 'resolve', 'write', 'pull', 'hold']
 export const CINE_FIELDS: readonly CineFieldKey[] = ['glyph', 'title', 'lead', 'label', 'text', 'sub', 'value', 'note', 'before', 'after']
 const ENTERS: readonly CineEnter[] = ['settle', 'write', 'letters', 'count', 'carry']
-const MATERIALS: readonly CineMaterial[] = ['particles', 'wash', 'threads', 'line']
-/** 재료마다 고를 수 있는 모양(첫째가 기본) */
-export const SHAPES_OF: Record<CineMaterial, readonly CineShape[]> = { particles: ['glyph', 'ring', 'point'], wash: ['point'], threads: ['glyph'], line: ['line', 'wave'] }
+const MATERIALS: readonly CineMaterial[] = ['particles', 'wash', 'threads', 'line', 'branches', 'pool']
+/** 재료마다 고를 수 있는 모양(첫째가 기본). 갈래와 물은 모양을 고르지 않는다(갈래는 답의 글 첫머리로, 물은 글 아래까지 차오른다) */
+export const SHAPES_OF: Record<CineMaterial, readonly CineShape[]> = { particles: ['glyph', 'ring', 'point'], wash: ['point'], threads: ['glyph'], line: ['line', 'wave'], branches: ['point'], pool: ['point'] }
 /** 장의 답에 강조색이 들어오는 시간(ms, 보통 빠르기) */
 const ACCENT_MS = 450
 const FRAMES: readonly CineFrame[] = ['mark', 'center', 'line']
-const PRESET_IDS: readonly CinePresetId[] = ['light', 'diffuse', 'gather', 'stroke']
+const PRESET_IDS: readonly CinePresetId[] = ['light', 'diffuse', 'gather', 'stroke', 'fork', 'fill']
 
 interface Choice<T> {
   id: T
@@ -58,10 +62,16 @@ export const CINE_SHAPES: Choice<CineShape>[] = [
   { id: 'wave', name: '물결', description: '굽이치는 선이 돼요' },
   { id: 'point', name: '한 점', description: '한 점으로 모였다가 사라져요' },
 ]
-export const CINE_AMOUNTS: Choice<CineAmount>[] = [
+const CINE_AMOUNTS: Choice<CineAmount>[] = [
   { id: 'few', name: '적게', description: '성글고 가벼워요' },
   { id: 'normal', name: '보통', description: '' },
   { id: 'many', name: '많이', description: '촘촘하고 또렷해요' },
+]
+/** 갈림길에서 같은 값(amount)은 안의 수다 */
+const CINE_OPTION_COUNTS: Choice<CineAmount>[] = [
+  { id: 'few', name: '둘', description: '두 안 가운데 하나를 골라요' },
+  { id: 'normal', name: '셋', description: '세 안 가운데 하나를 골라요' },
+  { id: 'many', name: '넷', description: '네 안 가운데 하나를 골라요' },
 ]
 export const CINE_SPREADS: Choice<CineSpread>[] = [
   { id: 'round', name: '둥글게', description: '한 점에서 사방으로 번져요' },
@@ -105,7 +115,7 @@ export const CINE_FIELD_SPECS: { key: CineFieldKey; label: string; hint: string;
   { key: 'after', label: '바뀐 값', hint: '2시간' },
 ]
 
-// ---------- 틀(프리셋) 넷 ----------
+// ---------- 틀(프리셋) 여섯 ----------
 
 /** 틀마다 이름, 하는 말, 어울리는 장, 처음 레시피(글 없이 정해진 낱말만) */
 interface CinePresetSpec {
@@ -117,13 +127,15 @@ interface CinePresetSpec {
   fits: string
   /** 칸에 처음 넣을 지어낸 글(예시). 레시피에는 들어가지 않는다 */
   sample: Partial<Record<CineFieldKey, string>>
+  /** 이 틀의 레시피를 읽는 데 필요한 엔진 번호(없으면 1) */
+  engine?: number
   recipe: Omit<CineRecipe, 'engine' | 'lineage' | 'seed' | 'preset'>
 }
 
 const phases = (...list: [CinePhaseKind, number, number?][]): CinePhase[] => list.map(([kind, ms, overlap]) => (overlap ? { kind, ms, overlap } : { kind, ms }))
 
 /**
- * 틀 넷. 시간은 생동감·보통 빠르기 기준이고 차분하게는 엔진이 같은 안무를 줄인다. 큐 시트와 까닭은 docs/MOTION.md '모션 그래픽'.
+ * 틀 여섯, 재료 여섯. 시간은 생동감·보통 빠르기 기준이고 차분하게는 엔진이 같은 안무를 줄인다. 큐 시트와 까닭은 docs/MOTION.md '모션 그래픽'.
  * 차례가 곧 고르는 곳의 차례다
  */
 export const CINE_PRESETS: readonly CinePresetSpec[] = [
@@ -236,6 +248,71 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       bleed: false,
     },
   },
+  {
+    id: 'fork',
+    name: '갈림길',
+    description: '한 줄기가 안의 수만큼 갈라져 뻗다가 잠깐 멈추고, 고른 길만 끝까지 그어져 답을 써 나가요.',
+    fits: '여러 안 가운데 고른 것, 선택과 집중',
+    engine: 2,
+    sample: { label: '여러 안 가운데', title: '작게 시작해 넓혀 가요', sub: '비용과 일정을 함께 보고 골랐어요' },
+    recipe: {
+      frame: 'center',
+      material: 'branches',
+      // 안들이 함께 뻗어 멈추고(펼쳐 보이기), 머묾(고르기 직전의 숨) 뒤에 고른 안이 끝까지 그어져 답을 써 나간다. 고르는 박자가 0.15초뿐이던
+      // 첫 시안은 '골랐다'가 보이지 않았다(감성 검수)
+      phases: phases(['spread', 700], ['hold', 280], ['resolve', 700], ['write', 700, 260]),
+      particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.3, trail: false, spread: 'side' },
+      shape: { kind: 'point' },
+      light: false,
+      line: false,
+      // 고르는 동안 답 쪽으로 천천히 다가간다(여기를 보라)
+      camera: 'push',
+      pace: 'normal',
+      texts: [
+        // 칸의 차례가 곧 글의 차례(이름표, 답, 덧붙이는 말). 무엇 가운데서 고르는지(이름표)는 갈래와 함께 처음 0.5초 안에 맺혀 갈래의 뜻이 되고,
+        // 답은 고른 길이 닿는 때부터 그 펜 끝을 따라 써진다. 까닭은 덧붙임으로
+        { key: 'label', enter: 'settle', on: 'spread', lag: 0.35 },
+        { key: 'title', enter: 'write', on: 'resolve', lag: 0.4 },
+        { key: 'sub', enter: 'settle', on: 'write', lag: 0.5 },
+      ],
+      handoff: false,
+      loop: false,
+      // 줄기는 장 왼쪽 끝 밖에서 들어온다(지금까지 걸어온 길)
+      bleed: true,
+    },
+  },
+  {
+    id: 'fill',
+    name: '차오름',
+    description: '물방울이 하나씩 떨어질 때마다 물이 차오르고 숫자가 오르다가, 마지막 방울과 함께 숫자 아래까지 차요.',
+    fits: '쌓아 온 것, 작은 것이 모여 이룬 것, 누적 성과',
+    engine: 2,
+    sample: { title: '세 해 동안 모은 개선 제안', value: '2,400건', sub: '한 주에 열다섯 건 남짓' },
+    recipe: {
+      frame: 'center',
+      material: 'pool',
+      // 차오르는 구간은 1.5초: 처음 몇 방울이 하나씩 보이고, 잦아졌다가, 마지막 몇 방울이 다시 하나씩 보일 만큼. 너울이 잦아들자 물이
+      // 걷히고, 덧붙이는 말은 물이 다 걷힌 뒤에(물 안에서 맺히면 글과 물 낯이 닿았다, 감성 검수)
+      phases: phases(['seed', 300], ['gather', 1500, 150], ['resolve', 600], ['write', 600, 100]),
+      particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.3, trail: false, spread: 'round' },
+      shape: { kind: 'point' },
+      light: false,
+      line: false,
+      camera: 'none',
+      pace: 'normal',
+      texts: [
+        // 무엇이 모이는지가 먼저(처음 0.5초 안에 읽힌다), 숫자는 물방울이 닿을 때마다 물과 함께 오른다. 값이 맺히는 장면이라 숫자가 다
+        // 오른 순간 강조색이 한 번 들어온다(장의 답)
+        { key: 'title', enter: 'settle', on: 'seed' },
+        { key: 'value', enter: 'count', on: 'gather', answer: true },
+        { key: 'sub', enter: 'settle', on: 'write' },
+      ],
+      handoff: false,
+      loop: false,
+      // 물은 장의 왼쪽 끝에서 오른쪽 끝까지 찬다(칸 안에 가두면 옆이 막힌 상자로 읽힌다)
+      bleed: true,
+    },
+  },
 ]
 
 export const presetSpec = (id: CinePresetId) => CINE_PRESETS.find((p) => p.id === id) ?? CINE_PRESETS[0]
@@ -243,7 +320,7 @@ export const presetSpec = (id: CinePresetId) => CINE_PRESETS.find((p) => p.id ==
 /** 틀에서 새 레시피. lineage는 라이브러리의 새 갈래 id */
 export function presetRecipe(id: CinePresetId, lineage: string, seed = 7): CineRecipe {
   const p = presetSpec(id)
-  return structuredCopy({ engine: CINE_ENGINE, lineage, preset: p.id, seed, ...p.recipe })
+  return structuredCopy({ engine: p.engine ?? 1, lineage, preset: p.id, seed, ...p.recipe })
 }
 
 const structuredCopy = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T
@@ -367,7 +444,8 @@ export interface CineTextCue {
  */
 export interface CineScript {
   frame: CineFrame
-  material: CineMaterial
+  /** rest는 이 버전이 모르는 재료(더 새 버전의 것): 그리지 않고 쉰다(글은 제 때에 맺힌다) */
+  material: CineMaterial | 'rest'
   seed: number
   spans: CineSpan[]
   /** 다 맺히는 때(ms) */
@@ -445,9 +523,10 @@ export function cineScript(raw: unknown): CineScript | null {
     // 장의 답은 하나: 강조색이 들어오는 0.45초를 끝에 더한다
     texts.push({ key: t.key as CineFieldKey, enter, start, end: start + len, ...(t.answer === true && !texts.some((x) => x.accent !== undefined) ? { accent: start + len + ACCENT_MS * pace } : {}) })
   }
-  // 모양은 재료마다 뜻이 있는 것만: 입자는 글자, 고리, 한 점으로 모이고, 그어지는 선은 선이나 물결, 먹의 면은 한 점에서, 가는 선은 글자로
-  const material = oneOf(MATERIALS, r.material, preset.material ?? 'particles')
-  const kinds = SHAPES_OF[material]
+  // 모양은 재료마다 뜻이 있는 것만: 입자는 글자, 고리, 한 점으로 모이고, 그어지는 선은 선이나 물결, 먹의 면은 한 점에서, 가는 선은 글자로.
+  // 모르는 재료(더 새 버전의 것)는 다른 재료로 바꿔 그리지 않고 쉰다: 틀의 재료로 그리면 그 장면과 다른 그림이 된다
+  const material: CineScript['material'] = r.material === undefined ? (preset.material ?? 'particles') : MATERIALS.includes(r.material) ? r.material : 'rest'
+  const kinds = material === 'rest' ? SHAPES_OF.wash : SHAPES_OF[material]
   const kind = oneOf(kinds, shape.kind, kinds[0])
   return {
     frame: oneOf(FRAMES, r.frame, preset.frame),
@@ -516,15 +595,19 @@ export function knobValue(r: CineRecipe, knob: CineKnob): string | boolean {
   }
 }
 
+/** 레시피의 재료(없으면 틀의 재료) */
+const materialOf = (r: CineRecipe) => oneOf(MATERIALS, r.material, presetSpec(oneOf(PRESET_IDS, r.preset, 'light')).recipe.material ?? 'particles')
+
 /** 이 레시피에서 뜻이 있는 손잡이만(번지는 구간이 없으면 번지는 모양은 고를 것이 없다) */
 export function knobsFor(r: CineRecipe): CineKnob[] {
   const has = (k: CinePhaseKind) => r.phases?.some((p) => p.kind === k)
-  const material = oneOf(MATERIALS, r.material, presetSpec(oneOf(PRESET_IDS, r.preset, 'light')).recipe.material ?? 'particles')
-  // 재료마다 뜻이 있는 손잡이만: 입자가 아닌 재료에 모일 모양, 번지는 모양, 빛, 잔상을 보이면 눌러도 바뀌는 것이 없다
+  const material = materialOf(r)
+  // 재료마다 뜻이 있는 손잡이만: 입자가 아닌 재료에 모일 모양, 번지는 모양, 빛, 잔상을 보이면 눌러도 바뀌는 것이 없다. 수(amount)는 엔진이
+  // 읽는 재료에만(입자 수, 갈림길의 안의 수, 물방울 수): 먹의 면과 가는 선은 읽지 않아 눌러도 바뀌지 않았다
   const out: CineKnob[] = []
   if (material === 'particles') out.push('shape', 'amount')
   else if (material === 'line') out.push('shape')
-  else out.push('amount')
+  else if (material === 'branches' || material === 'pool') out.push('amount')
   if (material === 'particles' && has('spread')) out.push('spread')
   if (material === 'particles') out.push('light')
   if (material !== 'line') out.push('camera')
@@ -534,6 +617,13 @@ export function knobsFor(r: CineRecipe): CineKnob[] {
   if (material !== 'line') out.push('bleed')
   out.push('headAfter')
   return out
+}
+
+/** 수(amount) 손잡이의 이름과 고를 것: 재료마다 뜻이 다르다(입자 수, 갈림길의 안의 수, 물방울 수) */
+export function amountKnob(r: CineRecipe): { label: string; options: Choice<CineAmount>[] } {
+  const material = materialOf(r)
+  if (material === 'branches') return { label: '안의 수', options: CINE_OPTION_COUNTS }
+  return { label: material === 'pool' ? '물방울' : '입자', options: CINE_AMOUNTS }
 }
 
 /** 글 칸마다 고를 수 있는 들어오기(숫자 굴리기는 숫자 칸에만) */

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BLOCK_WHENS, whenOf } from '../../../deck/blocks'
 import {
-  CINE_AMOUNTS,
   CINE_CAMERAS,
   CINE_ENTERS,
   CINE_PACES,
@@ -14,6 +13,7 @@ import {
   mainText,
   presetSpec,
   SHAPES_OF,
+  amountKnob,
   type CineKnob,
 } from '../../../deck/cine'
 import type { Block, BlockWhen, CineEnter, Slide } from '../../../deck/types'
@@ -45,6 +45,7 @@ export function CineKnobs({ slide, block, n, disabled, onWhen, onPlay }: { slide
   const known = cineKnown(r)
   const set = (k: CineKnob, v: string | boolean) => setKnob(slide.id, block, r, k, v)
   const knobs = knobsFor(r)
+  const amount = amountKnob(r)
   const main = mainText(r)
   const shapes = CINE_SHAPES.filter((s) => SHAPES_OF[r.material ?? 'particles'].includes(s.id))
   const on = (k: CineKnob) => knobValue(r, k) as string
@@ -81,8 +82,8 @@ export function CineKnobs({ slide, block, n, disabled, onWhen, onPlay }: { slide
           </Opt>
         )}
         {knobs.includes('amount') && (
-          <Opt label={r.material === 'particles' || !r.material ? '입자' : '촘촘하기'} wide>
-            <Segmented className="seg-fill" label="촘촘하기" options={CINE_AMOUNTS} value={on('amount')} onPick={(v) => set('amount', v)} />
+          <Opt label={amount.label} wide>
+            <Segmented className="seg-fill" label={amount.label} options={amount.options} value={on('amount')} onPick={(v) => set('amount', v)} />
           </Opt>
         )}
         {knobs.includes('spread') && (
