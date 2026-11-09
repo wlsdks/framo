@@ -1,6 +1,13 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { makeBlock, WHOLE } from '../deck/blocks'
+import { cineId, presetRecipe, presetSpec } from '../deck/cine'
+import { makeSlide } from '../deck/make'
+import { createSampleDeck } from '../deck/sample'
 import { cssSource } from './cssSource'
 import { gluedParts, minusSigns, numberRuns, numberUnits, pastedText, splitNumber, textUnits, UNIT_K } from './fields'
+import { SlideCanvas } from './SlideCanvas'
 
 // 숫자의 꼴은 그릴 때만 바꾼다 (docs/DESIGN.md '숫자의 꼴'). 저장한 글은 이 함수들을 거치지 않는다
 describe('숫자의 꼴', () => {
@@ -119,5 +126,26 @@ describe('붙여 넣은 글', () => {
     expect(pastedText('칸1\t칸2\u00a0끝\r\n', true)).toBe('칸1 칸2 끝')
     expect(pastedText('\n\n가\n\n나\n\n', false)).toBe('가 나')
     expect(pastedText('그림 문자 👍 그대로', true)).toBe('그림 문자 👍 그대로')
+  })
+})
+
+describe('예시 글', () => {
+  // 모션 그래픽을 넣을 때 틀이 채운 지어낸 글: 장 목록(미리 보기 꼴)도 편집 화면처럼 옅게, 발표와 내보내기는 다른 글과 같게
+  function render(mode: 'preview' | 'final'): string {
+    const recipe = presetRecipe('light', 'test')
+    const id = cineId(recipe)
+    const block = { ...makeBlock('cine'), fields: { ...(presetSpec('light').sample as Record<string, string>) }, cine: id, examples: ['title'], at: WHOLE }
+    const deck = { ...createSampleDeck(), cines: { [id]: recipe } }
+    return renderToStaticMarkup(createElement(SlideCanvas, { deck, slide: { ...makeSlide('compose'), blocks: [block] }, mode }))
+  }
+
+  it('미리 보기 꼴에서는 예시인 칸에만 is-example을 단다', () => {
+    const html = render('preview')
+    expect(html).toMatch(/class="bk-cn-title[^"]*is-example/)
+    expect(html).not.toMatch(/class="bk-cn-lead[^"]*is-example/)
+  })
+
+  it('발표 모습에는 달지 않는다', () => {
+    expect(render('final')).not.toContain('is-example')
   })
 })

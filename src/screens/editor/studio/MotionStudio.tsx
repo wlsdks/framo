@@ -101,6 +101,8 @@ export function MotionStudio({
   // 아직 틀의 지어낸 예시 글인 칸이 있는 컴포넌트: 무대는 발표 모습 그대로라 예시 글이 진하게(답은 강조색으로) 보여 실제 내용으로 읽혔다.
   // 글을 옅게 하면 움직임 미리 보기가 발표와 달라지므로, 멈춘 동안의 번호 옆에 '예시 글'이라고만 단다(움직이는 동안은 번호와 함께 숨는다)
   const exampled = new Set((slide.blocks ?? []).filter((b) => b.examples?.length).map((b) => b.id))
+  // 모션 그래픽은 칸이 아니라 장면이라 고른 표시를 네모 테 대신 네 모서리로만 단다(motion-studio.css의 .ms-mark.is-scene)
+  const scenes = new Set((slide.blocks ?? []).filter((b) => b.type === 'cine').map((b) => b.id))
   const player = usePlayer(root, slide, level)
   const small = useLowWindow()
   const reduced = useReducedMotion()
@@ -247,7 +249,7 @@ export function MotionStudio({
                 return (
                   <span
                     key={b.id}
-                    className={cx('ms-mark', selected === b.id && 'is-on', hot === b.id && 'is-hot')}
+                    className={cx('ms-mark', selected === b.id && 'is-on', hot === b.id && 'is-hot', scenes.has(b.id) && 'is-scene')}
                     style={{ left: b.x, top: b.y, width: b.w, height: b.h } as CSSProperties}
                   >
                     <b className="ms-mark-n">{n}</b>
