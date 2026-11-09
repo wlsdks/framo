@@ -47,15 +47,15 @@ export const decide: Blueprint = {
       priority: 2,
       focus: 'detail',
       guide: '안을 견줄 기준을 먼저 맞추고, 가장 많이 걸러 낸 기준을 짚어요.',
-      hints: { title: '세 가지 기준으로 견줬어요' },
+      hints: { title: '세 기준으로 거르니 B안이 남았어요' },
       blocks: [
         {
           type: 'gate',
           highlight: 0,
           hints: {
-            from: '검토한 안 3가지',
-            to: '추천안',
-            dropped: '비용이 기준을 넘는 안',
+            from: '검토한 세 안',
+            to: 'B안',
+            dropped: '비용을 넘는 C안',
             ...each({ title: ['비용', '쓰기 쉬움', '보안'], meta: ['3년 동안 드는 돈', '익히는 데 걸리는 시간', '사내 보안 기준을 지키는지'] }),
           },
         },
@@ -77,13 +77,14 @@ export const decide: Blueprint = {
       blocks: [
         {
           type: 'rating',
+          items: 3,
           fields: { opts: 'A안 B안 C안' },
           hints: {
             pick: 'B안',
             ...each({
-              title: ['비용', '쓰기 쉬움', '보안', '도입 기간'],
-              body: ['좋음 보통 나쁨', '보통 좋음 나쁨', '보통 좋음 좋음', '좋음 좋음 나쁨'],
-              meta: ['연 1,800만, 2,400만, 4,000만 원', '익히는 데 걸리는 시간', '사내 보안 기준을 지키는지', '바로, 1개월, 6개월'],
+              title: ['비용', '쓰기 쉬움', '보안'],
+              body: ['좋음 보통 나쁨', '보통 좋음 나쁨', '보통 좋음 좋음'],
+              meta: ['연 1,800만, 2,400만, 4,000만 원', '익히는 데 걸리는 시간', '사내 보안 기준을 지키는지'],
             }),
           },
         },

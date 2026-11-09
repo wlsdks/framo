@@ -37,7 +37,7 @@ export const business: Blueprint = {
       focus: 'numbers',
       section: '배경',
       guide: '전체 시장에서 노릴 시장, 우리 목표까지 좁혀 가며 출처와 함께 적어요.',
-      hints: { title: '노릴 시장만 600억 원이에요' },
+      hints: { title: '600억 원 시장에서 12억 원을 노려요' },
       blocks: [
         {
           type: 'market',

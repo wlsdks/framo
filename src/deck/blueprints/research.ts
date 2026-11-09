@@ -90,7 +90,6 @@ export const research: Blueprint = {
           type: 'rating',
           hints: {
             opts: 'A사 B사 C사 우리',
-            pick: '우리',
             ...each({
               title: ['기능', '값', '도입 속도', '사례'],
               body: ['좋음 나쁨 보통 보통', '나쁨 좋음 나쁨 좋음', '나쁨 나쁨 나쁨 좋음', '보통 보통 좋음 나쁨'],

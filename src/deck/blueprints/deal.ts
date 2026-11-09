@@ -56,7 +56,6 @@ export const deal: Blueprint = {
           type: 'rating',
           fields: { opts: '경쟁사 우리' },
           hints: {
-            pick: '우리',
             ...each({
               title: ['가격', '기능', '구축 기간', '거래 경험'],
               body: ['좋음 보통', '보통 좋음', '나쁨 좋음', '좋음 보통'],
