@@ -40,16 +40,18 @@
 /* 원은 규모를 그린 데이터 면이라 칠한다: 바깥 원부터 강조색의 옅은 농담 둘(나누기의 나머지 조각, 구성비와 같은 단계, tints.ts의
    --ta-*: 검은 바탕에서는 더 진한 단계), 마지막(목표)만 강조색. 목표가 답이라 진한 강조색은 거기에만(docs/VISUAL-RULES.md 4).
    바깥 원을 66% 농담으로 칠하던 때는 커다란 파란 원이 장식처럼 쨍했고(사용자), 회색으로 칠하면 장에서 가장 큰 회색 면이었고,
-   1px 옅은 테두리로 두면 3~5m 떨어진 회의실 화면에서 사라져(검은 테마는 아예) 데이터의 절반이 안 보였다.
-   원은 바닥이 맞닿아 안쪽 원이 바깥 원 안에 든 것이 그대로 보인다 */
+   1px 옅은 테두리로 두면 3~5m 떨어진 회의실 화면에서 사라져(검은 테마는 아예) 데이터의 절반이 안 보였다. 가장 바깥 원은 구성비의
+   넷째 단계(--ta-3: 흰 바탕 28%, 검은 바탕 42%): 다섯째 단계(18%)로 두면 흰 바탕과의 대비가 1.3 남짓이라 밝은 회의실 프로젝터에서
+   원의 테두리가 바탕에 녹았다(검수). 원은 바닥이 맞닿아 안쪽 원이 바깥 원 안에 든 것이 그대로 보인다.
+   지름(--mk-d, 바깥 원에 견준 몫)은 Market.tsx(marketSizes)가 규모로 정한다: 넓이가 규모에 비례한다 */
 .bk-mk-c {
   position: absolute;
   bottom: 0;
   left: 50%;
-  width: 100%;
+  width: calc(var(--mk-d, 1) * 100%);
   aspect-ratio: 1;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) var(--ta-4, 18%), var(--bg));
+  background: color-mix(in srgb, var(--accent) var(--ta-3, 28%), var(--bg));
   translate: -50% 0;
 }
 
@@ -59,18 +61,6 @@
 
 .bk-mk-c:last-child:not(:first-child) {
   background: var(--accent);
-}
-
-.bk-mk[data-n='3'] .bk-mk-c:nth-child(2) {
-  width: 64%;
-}
-
-.bk-mk-c:last-child:not(:first-child) {
-  width: 32%;
-}
-
-.bk-mk[data-n='2'] .bk-mk-c:last-child {
-  width: 46%;
 }
 
 /* 발표할 때 칸을 하나도 채우지 않은 시장의 원 (Market.tsx) */
@@ -144,7 +134,7 @@
 }
 
 /* 넓고 낮은 칸: 목록을 원 옆에 가로로. 긴 숫자는 필요한 너비를 차지하고, 자리가 모자라면 다음 줄로 내려 서로 겹치지 않는다. */
-@container bk (min-aspect-ratio: 5 / 2) and (min-width: 1300px) {
+@container bk (min-aspect-ratio: 2 / 1) and (min-width: 1300px) {
   .bk-mk-list {
     display: flex;
     flex-wrap: wrap;
