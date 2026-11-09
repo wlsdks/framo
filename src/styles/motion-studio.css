@@ -139,6 +139,39 @@
   outline: calc(2px / var(--vs, 1)) solid var(--sel);
 }
 
+/* 모션 그래픽(장면)은 네모 테 대신 네 모서리의 짧은 꺾쇠만: 장 가득한 장면에 테를 두르면 테 두른 카드처럼 보여 발표 모습과 달랐다
+   (처음 쓰는 사람 검수). 고른 것은 파란 꺾쇠와 파란 번호, 시간표의 고른 줄이 같이 말한다. 왼쪽 위 모서리는 번호가 짚으므로 꺾쇠를
+   긋지 않는다(번호 밑에서 꺾쇠 끝만 삐져나와 흘린 점처럼 보였다) */
+.ms-mark.is-scene,
+.ms-mark.is-scene.is-on {
+  outline: none;
+}
+
+.ms-mark.is-scene::before {
+  --c: transparent;
+  --l: calc(18px / var(--vs, 1));
+  --t: calc(2px / var(--vs, 1));
+  position: absolute;
+  inset: calc(-6px / var(--vs, 1));
+  background:
+    linear-gradient(var(--c), var(--c)) right top / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) right top / var(--t) var(--l),
+    linear-gradient(var(--c), var(--c)) left bottom / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) left bottom / var(--t) var(--l),
+    linear-gradient(var(--c), var(--c)) right bottom / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) right bottom / var(--t) var(--l);
+  background-repeat: no-repeat;
+  content: '';
+}
+
+.ms-mark.is-scene.is-hot::before {
+  --c: color-mix(in srgb, var(--sel) 45%, transparent);
+}
+
+.ms-mark.is-scene.is-on::before {
+  --c: var(--sel);
+}
+
 /* 번호는 내용의 왼쪽 위 모서리 바깥에 걸친다(첫 글자를 가리지 않게) */
 .ms-mark-n {
   position: absolute;
