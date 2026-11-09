@@ -202,6 +202,21 @@ describe('빈칸과 비워 둬도 되는 칸', () => {
     expect(optionalBlanks(biz.slides[0], biz.meta).map((m) => m.key)).toContain('ask')
   })
 
+  it('컴포넌트 장의 제목은 프레임 잡기가 그 장의 말을 정해 준 장에서만 빈칸으로 센다', () => {
+    const improve = createDeck({ type: 'improve', audience: 'practitioner', minutes: 10, method: 'live', title: '개선 제안', org: '', presenter: '', theme: 'white' })
+    // 장의 칸만 (컴포넌트 안의 칸은 m.block이 있다)
+    const own = (s: Slide) => missingFields(s, improve.meta).filter((m) => !m.block).map((m) => m.key)
+    const made = improve.slides.find((s) => s.layout === 'compose' && s.hints.title)!
+    expect(own(made)).toContain('title')
+    expect(optionalBlanks(made, improve.meta).map((m) => m.key)).not.toContain('title')
+    // 채우면 빈칸이 아니다
+    expect(own({ ...made, fields: { ...made.fields, title: '결론 한 줄' } })).not.toContain('title')
+    // 쓰는 사람이 더한 컴포넌트 장은 제목 안내가 없어 비워 둬도 된다
+    const added = makeSlide('compose')
+    expect(own(added)).not.toContain('title')
+    expect(optionalBlanks(added, improve.meta).map((m) => m.key)).toContain('title')
+  })
+
   it('발표의 빈칸 수는 장마다 센 빈칸을 더한 것 (숨긴 장은 빼고)', () => {
     const hidden = { ...deck, slides: deck.slides.map((s, i) => (i === 1 ? { ...s, hidden: true } : s)) }
     const sum = hidden.slides.filter((s) => !s.hidden).reduce((n, s) => n + missingFields(s, hidden.meta).length, 0)

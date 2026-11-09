@@ -247,6 +247,13 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   cursor: row-resize;
 }
 
+/* 컴포넌트 테두리의 옆 끝에 손을 올리면: 끌면 옆 컴포넌트와의 사이 선을 끄는 것과 같아서 같은 커서 (BlockEditor의 frameSide).
+   그 끝의 글 칸이나 그림이 제 커서를 갖고 있어도 이 자리에서는 너비 커서가 보여야 해서 안쪽까지 덮는다 */
+.bk-area.is-live[data-edge='col'],
+.bk-area.is-live[data-edge='col'] * {
+  cursor: col-resize !important;
+}
+
 /* 부품 장이 아닌 장의 아래 빈자리: 여기에 부품을 더 놓을 수 있다는 안내. 장에 올리면 또렷해진다 */
 .ed-room {
   position: fixed;
