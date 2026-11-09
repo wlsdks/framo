@@ -2539,7 +2539,9 @@ export function motionEngine(): MotionEngine {
               wyPath.push(p)
             })
           }
-          const hop = Math.min(levelName === 'lively' ? 560 : 480, 1600 / Math.max(1, steps.length - 1))
+          // 단 사이는 근본 원인이 차분하게 1.2초, 생동감 1.6초 안에 맺히게 단 수로 나눈다: 1600ms를 나누던 때는 네 단에서 근본 원인이
+          // 생동감 2.4초에야 맺혀 듣는 분을 기다리게 했다(검수)
+          const hop = levelName === 'lively' ? Math.min(400, 1000 / Math.max(1, steps.length - 1)) : Math.min(340, 860 / Math.max(1, steps.length - 1))
           const seg = hop * 0.8
           steps.forEach((step, n) => {
             const at = 120 + n * hop
@@ -2647,34 +2649,32 @@ export function motionEngine(): MotionEngine {
             stream(stage, loop, again + 300, lap)
             stream(stage, loop, again + 300, lap, lap / 2)
           } else if (getComputedStyle(root).getPropertyValue('--cy-flat').trim() === '1') {
+            // 단계가 왼쪽부터 차례로 나온다(번호 사이에는 선이 없다: 차례는 읽는 방향과 번호가 말한다, cycle.css). 사이는 세로의 괄호 선과
+            // 같은 짧은 차례(hop의 0.6배): 번호 사이 선을 걷은 뒤에도 선을 긋던 사이(hop)를 그대로 두면 생동감에서 단계마다 0.6초씩 서서
+            // 기다리게 했고, 돌아가는 길이 3초에야 닫혔다(검수)
+            const lead = hop * 0.6
             steps.forEach((step, n) => {
-              const at = 120 + n * hop
+              const at = 120 + n * lead
               rise(step.querySelector('.bk-cy-n'), at, L.y * 0.4)
               rise(step.querySelector('.bk-cy-text'), at + 40, L.y * 0.4)
-              if (n === steps.length - 1) return
-              const to = step.querySelector('.bk-cy-to')
-              draw(to, at + 120, hop * 0.8, 'left center')
-              pop(to, at + 120 + hop * 0.8, '::after')
             })
-            // 돌아가는 길: 마지막 번호 뒤의 선 → 위로 꺾임 → 윗변을 거꾸로 → 처음 단계 앞에서 내려와 머리로. 조각과 같은 빠르기로
+            // 돌아가는 길: 마지막 번호 뒤에서 위로 꺾임 → 윗변을 거꾸로 → 처음 단계 앞에서 내려와 번호로. 조각과 같은 빠르기로
             // 이어 그어지게 조각마다 길이대로 시간을 나누고 곡선 없이(linear) 긋는다
             const last = steps[steps.length - 1]
             const first = steps[0]
             const list = one('.bk-cy-list')
-            const outTo = last.querySelector<HTMLElement>('.bk-cy-to')
             const up = last.querySelector<HTMLElement>('.bk-cy-rail')
             const down = first.querySelector<HTMLElement>('.bk-cy-rail')
-            if (!list || !outTo || !up || !down || steps.length < 2) break
-            const a = spot(outTo, stage)
+            if (!list || !up || !down || steps.length < 2) break
             const u = spot(up, stage)
             const w = spot(down, stage)
             const L0 = spot(list, stage)
-            const yLine = a.t + line / 2
+            const yLine = u.b - line / 2
             const top = L0.t + line / 2
             const xLeft = w.l + line / 2
             const yIn = w.b - line / 2
             const path: [number, number][] = [
-              [a.l, yLine],
+              [u.l, yLine],
               [u.r - line / 2, yLine],
               [u.r - line / 2, top],
               [xLeft, top],
@@ -2686,15 +2686,14 @@ export function motionEngine(): MotionEngine {
             const total = lens.reduce((x, y) => x + y, 0) || 1
             const T = Math.max(700, Math.min(1200, total * 0.45))
             const per = (len: number) => (T * len) / total
-            let at = 120 + steps.length * hop + 60
+            let at = 120 + steps.length * lead + 60
             const linear = (el: Element, from: string, ms: number, pseudo?: string) =>
               run(anims, el, [{ clipPath: from }, { clipPath: 'inset(-12px -12px -12px -12px)' }], s(at), { easing: 'linear', duration: d(ms) }, pseudo)
             // 조각은 곡선 없이: 선이 그어지는 끝과 같은 빠르기로 탄다. 조각만 CARRY로 타면 윗길 가운데에서 선 끝보다 300px 남짓 앞서 달렸다
             packet(stage, path, at, T, 'linear')
-            linear(outTo, 'inset(-12px 100% -12px 0)', per(lens[0]))
-            at += per(lens[0])
-            linear(up, 'inset(100% -12px 0 -12px)', per(lens[1]))
-            at += per(lens[1])
+            // 마지막 번호 뒤의 꺾임(╯)은 한 조각이라 아래에서 위로 연다(번호 쪽 둥근 모서리부터)
+            linear(up, 'inset(100% -12px 0 -12px)', per(lens[0] + lens[1]))
+            at += per(lens[0] + lens[1])
             linear(list, 'inset(-12px 0 -12px 100%)', per(lens[2]), '::before')
             at += per(lens[2])
             bend(down, at, per(lens[3] + lens[4]), 'top', 'left', line + 4, 'linear')
@@ -3048,16 +3047,36 @@ export function motionEngine(): MotionEngine {
             items('.bk-ra-it', 120, (el, at) => fade(el, at, 420))
             break
           }
+          // 강조할 항목(기본은 지금 1위)이 제 박자를 갖는다: 그 선이 먼저 홀로 그어져 닿으면 '이번 분기' 머리말과 그 줄이 함께 맺히고
+          // 바뀐 만큼(▲3)이 켜진다. 나머지 선은 강조 선이 다 닿기 전에 함께 그어지고(밀려난 길), 닿으면 나머지 줄이 위부터 맺힌다.
+          // 모든 선을 한꺼번에 열던 때는 답과 나머지가 같은 박자였고, 머리말만 줄보다 0.12초 먼저 혼자 섰고, 마지막에 바뀐 만큼이 모두
+          // 함께 켜져 ▼1이 줄마다 되풀이되었다(검수). 선은 획을 긋는다(dashK: 늘어난 그림의 길이 단위)
           fade(one('.bk-ra-when.is-from'), 40, 500)
           const was = $('.bk-ra-wi')
-          was.forEach((el, i) => fade(el, 80 + i * 70, 420))
-          const go = 80 + was.length * 70 + 300
-          const travel = levelName === 'lively' ? 1100 : 900
-          run(anims, links!, [{ clipPath: 'inset(-8px 100% -8px 0)' }, { clipPath: 'inset(-8px 0 -8px 0)' }], s(go), { easing: CARRY, duration: d(travel) })
-          const land = go + travel * 0.8
-          fade(one('.bk-ra-when.is-to'), land - 120, 400)
-          now.forEach((el, k) => fade(el, land + k * 60, 420))
-          for (const mv of $('.bk-ra-mv')) fade(mv, land + now.length * 60 + 160, 500)
+          was.forEach((el, i) => fade(el, 80 + i * 50, 420))
+          const go = 80 + was.length * 50 + 200
+          const lead = levelName === 'lively' ? 1000 : 800
+          const paths = Array.from(links!.querySelectorAll<SVGPathElement>('.bk-ra-ln'))
+          const hlPath = paths.find((p) => p.classList.contains('is-hl')) ?? null
+          const stroke = (p: SVGPathElement, at: number, ms: number) => {
+            if (still) return
+            const k = dashK(p) * 100
+            run(anims, p, [{ strokeDasharray: `${k} ${k}`, strokeDashoffset: k }, { strokeDasharray: `${k} ${k}`, strokeDashoffset: 0 }], s(at), { easing: CARRY, duration: d(ms) })
+          }
+          // 강조 선이 없으면(새로 든 항목이거나 강조하지 않음) 모든 선이 함께
+          const restAt = hlPath ? go + lead * 0.65 : go
+          const restMs = hlPath ? lead * 0.75 : lead
+          if (hlPath) stroke(hlPath, go, lead)
+          for (const p of paths) if (p !== hlPath) stroke(p, restAt, restMs)
+          const hlRow = now.find((el) => el.classList.contains('is-hl') && hlPath) ?? null
+          const hlLand = go + lead * 0.85
+          const restLand = restAt + restMs * 0.85
+          fade(one('.bk-ra-when.is-to'), hlRow ? hlLand : restLand, 400)
+          if (hlRow) {
+            fade(hlRow, hlLand, 420)
+            pop(hlRow.querySelector('.bk-ra-mv'), hlLand + 160)
+          }
+          now.filter((el) => el !== hlRow).forEach((el, k) => fade(el, restLand + k * 60, 420))
           break
         }
         case 'spread': {
@@ -3650,12 +3669,14 @@ export function motionEngine(): MotionEngine {
           // 생동감에서 계속 흐를 조각의 길(지난 구간의 띠: 첫 눈금에서 지금 단계 눈금까지)은 움직임을 걸기 전에 잰다(조건별 흐름과 같은 까닭)
           const nowTick = one('.bk-stp-it.is-now > .bk-stp-dot')
           const firstTick = one('.bk-stp-dot')
+          // 띠는 '몇 / 몇'만큼 찬다: 단계 자리는 제 칸의 오른쪽 끝이라 지금 단계 자리가 곧 띠의 끝이다(steps.css)
           let band: [number, number][] = []
-          if (list && nowTick && firstTick && nowTick !== firstTick) {
+          if (list && nowTick && firstTick) {
+            // 띠는 줄의 왼쪽 끝(steps.css의 --stp-d / 2)에서 시작한다
             const a = spot(firstTick, list)
             const b = spot(nowTick, list)
             const y = (b.t + b.b) / 2
-            band = [[(a.l + a.r) / 2, y], [(b.l + b.r) / 2, y]]
+            band = [[(a.r - a.l) / 2, y], [(b.l + b.r) / 2, y]]
           }
           fade(one('.bk-stp-l'), 0, 500)
           const span = levelName === 'lively' ? 900 : 760
@@ -3668,8 +3689,8 @@ export function motionEngine(): MotionEngine {
             if (i === now) return
             run(anims, dot, [{ opacity: 0, scale: '1 0' }], s(at), { easing: OUT, duration: d(320) })
           })
-          const reach = now < 0 ? 0 : (now / last) * span
-          if (now > 0) draw(list, 180, Math.max(reach, 300), 'left center', '::after')
+          const reach = now < 0 ? 0 : ((now + 1) / dots.length) * span
+          if (now >= 0) draw(list, 180, Math.max(reach, 300), 'left center', '::after')
           // 지금 단계의 눈금은 띠가 닿을 때 기준선에서 위아래로 솟는다(크기 키우기가 아니라 높이만: 눈금이 뭉툭해지지 않게)
           if (now >= 0) run(anims, dots[now], [{ opacity: 0, scale: '1 0.1' }], s(180 + Math.max(reach, 300) * 0.9), { easing: OUT, duration: d(420) })
           // 단계 번호는 굴리지 않는다: 세는 수가 아니라 차례라서 굴리면 다른 단계(4 / 6, 1 / 6)를 거쳐 가는 것처럼 보였다

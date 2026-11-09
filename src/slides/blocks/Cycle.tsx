@@ -174,7 +174,7 @@ export function Cycle() {
     <div
       className="bk-cy"
       data-steps={shown.length}
-      style={{ '--cy-fit': fit.fit } as CSSProperties}
+      style={{ '--cy-fit': fit.fit, '--cy-n': shown.length } as CSSProperties}
     >
       <T k="heading" as="h3" className="bk-h" fit={[18, 32]} multiline />
       {/* 고리 가운데를 옮기는 식은 반지름(--cy-r)을 정하는 판에 둔다: 사용자 속성 안의 var()는 그 속성을 정한 요소에서 풀려서,
@@ -208,7 +208,6 @@ export function Cycle() {
               <span className="bk-cy-mark">
                 <span className="bk-cy-rail" aria-hidden="true" />
                 <span className="bk-cy-n">{String(n + 1).padStart(2, '0')}</span>
-                <span className="bk-cy-to" aria-hidden="true" />
               </span>
               <div className="bk-cy-text">
                 <IT i={i} k="title" className="bk-cy-t" multiline />

@@ -103,6 +103,13 @@
   font-weight: 700;
 }
 
+/* 근본 원인은 답이라 한 단계 크게(30 → 36): 다른 줄과 같은 크기라 굵기와 이름표 색만으로는 3~5m에서 답이 서지 않았다(검수).
+   단의 글자 크기째 올려서 들어오는 갈고리(em으로 잰 높이)도 큰 글의 첫 줄 가운데에 닿는다 */
+.bk-wy-step.is-root,
+.bk-wy-step.is-root .bk-wy-t {
+  --fs: var(--t-h);
+}
+
 .bk-wy-m {
   --fs: var(--t-source);
   display: block;

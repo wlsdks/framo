@@ -79,7 +79,7 @@
   white-space: nowrap;
 }
 
-/* 선 끝의 점(반지름 12px, 둘레 6px)이 칸 밖으로 나가지 않게 오른쪽을 띄운다.
+/* 선 끝의 점(반지름 9px)이 칸 밖으로 나가지 않게 오른쪽을 띄운다.
    나가면 fitBlocks가 넘친 것으로 보고 글자를 가장 작게 줄인다 */
 .bk-sp-plot {
   position: relative;
@@ -119,17 +119,17 @@
   background: var(--bg);
 }
 
+/* 끝 점은 처음 점과 같은 크기로 속만 찬다(지금 값은 옆의 큰 숫자가 말한다). 24px 점에 바탕색 둘레(6px)를 두르던 때는 선 끝에 36px
+   원이 매달린 꾸밈처럼 보였다(검수: 선 끝의 큰 원) */
 .bk-sp-dot {
   position: absolute;
   top: calc(12px + (100% - 24px) * var(--y) / 100);
   left: calc(var(--x) * 1%);
-  width: 24px;
-  height: 24px;
-  margin: -12px 0 0 -12px;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
   border-radius: 50%;
   background: var(--accent);
-  /* 빛무리 대신 바탕색 둘레: 선 끝에서 점을 떼어 보이게만 */
-  box-shadow: 0 0 0 6px var(--bg);
 }
 
 /* 흐름 숫자(편집할 때만): 그림 위에서 고친다 (.on-chart, edit.css) */

@@ -244,6 +244,19 @@ function picture(b: Block, r: { w: number; h: number }): { w: number; h: number 
   return { w: iw + (card ? 104 : 0), h: iw / aspect + cap + (card ? 88 : 0) }
 }
 
+/** 비율로 읽을 수 없는 값(150%, 10건)을 적은 비율 원: 원 없이 숫자 옆에 이름과 덧붙임을 둔다(styles/blocks/ring.css) */
+const unknownRing = (b: Block): boolean => b.type === 'ring' && readPercent(b.fields.value ?? '') === null
+
+/**
+ * 원을 그리지 않는 비율 원이 넓은 칸에서 그리는 너비 (캔버스 px): 숫자(칸의 55%까지) + 사이 64 + 이름과 덧붙임 중 긴 것.
+ * 칸 전체를 쓴다고 계산하면 그 아래에 다른 부품을 쌓고 본문 오른쪽 29%를 비운 판을 골랐다(검수)
+ */
+function unknownRingW(b: Block, w = AREA_W): number {
+  const value = Math.min(w * 0.55, widthOf(b.fields.value ?? '', headLook().lead) * 154)
+  const text = Math.max(220, widthOf(b.fields.label ?? '', headLook().lead) * 44, widthOf(b.fields.note ?? '', headLook().lead) * 36)
+  return value + 64 + text
+}
+
 /** 짜임 하나의 점수 (작을수록 좋다). 그려질 모습을 어림한다: 글자를 몇 단계까지 키울 수 있는지, 쌓은 뒤 본문을 얼마나 채우는지, 나란한 칸 한쪽이 얼마나 비는지 */
 export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?: string): number {
   const size = { w: AREA_W, h: areaH }
@@ -298,7 +311,9 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
     // 보기 좋은 너비보다 좁은 칸은 짜임이 눌린다. 숫자는 가장 좁은 너비에서도 한 줄로 서서(숫자 셋이 4·4·4) 덜 친다.
     // 좁은 칸의 짜임으로 그려지는 핵심 숫자는 반 칸이 보기 좋은 너비다(narrowKpi)
     const narrow = narrowKpi(laid.get(b.id)!, rect(b))
-    const want = narrow ? fit.minW(b) : fit.prefW(b)
+    // 원을 그리지 않는 비율 원은 숫자와 이름 너비만큼이 보기 좋은 너비다(그보다 넓히면 옆 칸 앞이 빈다)
+    const lone = unknownRing(b) ? Math.max(fit.minW(b), Math.ceil((unknownRingW(laid.get(b.id)!) + BLOCK_COL_GAP) / ((AREA_W + BLOCK_COL_GAP) / BOARD_COLS))) : 0
+    const want = narrow ? fit.minW(b) : lone || fit.prefW(b)
     cost += Math.max(0, want - at.w) * (NUMBER_TYPES.has(b.type) ? 1 : 3)
     // 줄로 쌓은 둘·셋은 반 칸에 맞춘 짜임이라 그보다 넓히면 이름 오른쪽이 비고 옆 칸만 좁아진다 (둘씩 두 줄인 넷은 넓힌 만큼 두 단이 쓴다)
     if (narrow && blockItems(b).length <= 3) cost += Math.max(0, at.w - want) * 3
@@ -353,6 +368,9 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
       const text = Math.max(220, widthOf(placed.fields.label ?? '', headLook().lead) * 44, widthOf(placed.fields.note ?? '', headLook().lead) * 36)
       return r.x + Math.min(r.w, circle + 64 + text)
     }
+    // 비율로 읽을 수 없는 값(150%, 10건)은 원 없이 숫자 옆에 이름과 덧붙임을 둔다(styles/blocks/ring.css). 칸 전체를 쓴다고 계산하면
+    // 그 아래에 다른 부품을 쌓고 본문 오른쪽 29%를 비운 판을 골랐다(검수)
+    if (unknownRing(b) && r.w >= 700) return r.x + Math.min(r.w, unknownRingW(placed, r.w))
     const total = placed.fields.total?.trim() ?? ''
     if (b.type === 'ratio' && r.w >= 900 && /^\d+$/.test(total) && Number(total) > 0 && Number(total) <= 20) {
       const words = Math.max(1, ...[placed.fields.label, placed.fields.note].map((s) => [...(s ?? '')].length)) * 26
@@ -384,7 +402,8 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
     const img = picture(laid.get(b.id)!, r)
     return img ? r.x + (r.w - img.w) / 2 : r.x
   }
-  const ragged = (b: Block) => RAGGED.has(b.type) && shownLook(laid.get(b.id)!, isAlone(laid.get(b.id)!)) === 'plain'
+  // 원을 그리지 않는 비율 원(150%, 10건)도 글처럼 제 길이에서 끝난다: 넓은 칸을 주면 숫자와 이름 뒤로 옆 칸까지 빈다
+  const ragged = (b: Block) => (RAGGED.has(b.type) || unknownRing(b)) && shownLook(laid.get(b.id)!, isAlone(laid.get(b.id)!)) === 'plain'
   const holes = (n: Tree) => {
     if (n.kind === 'leaf') return
     if (n.dir === 'h')

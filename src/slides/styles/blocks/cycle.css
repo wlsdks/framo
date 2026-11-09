@@ -81,10 +81,6 @@
   display: contents;
 }
 
-.bk-cy-to {
-  display: none;
-}
-
 .bk-cy-n {
   --fs: var(--t-source);
   color: var(--ink-3);
@@ -342,10 +338,11 @@
 }
 
 /* ---------- 가로 ----------
-   넓고 낮은 칸: 단계를 왼쪽에서 오른쪽으로 같은 너비에 놓고, 번호 줄을 따라 다음 번호의 머리까지 선을 잇는다.
-   마지막 단계의 선은 칸 끝에서 위로 꺾여 번호 줄 위(--cy-loop)를 거꾸로 건너, 처음 단계 앞에서 내려와 머리로 들어간다(⊓).
-   01 ──▶ 02 ──▶ 03 ──▶ 04 ─┘. 칸이 좁으면(단계 넷까지 960px, 다섯부터 1300px 밑) 세로로 쌓는다: 한 칸이 240px 밑이면
-   이름이 네댓 글자마다 꺾였다(원인 캐기의 가로와 같은 기준) */
+   넓고 낮은 칸: 단계를 왼쪽에서 오른쪽으로 같은 너비에 놓고, 마지막 번호 바로 뒤에서 선이 위로 꺾여 번호 줄 위(--cy-loop)를 거꾸로
+   건너, 처음 단계 앞에서 내려와 번호로 들어간다(⊓): ╭───────────╮ / ╰ 01   02   03 ╯. 번호 사이에는 선을 긋지 않는다: 차례는 세로의
+   괄호 선(⊏)처럼 읽는 방향과 번호가 말한다. 번호 사이 선을 긋던 때는 그 선과 43px 위의 돌아가는 길이 칸 너비만큼 나란히 달려
+   두 겹 선처럼 보였다(검수, docs/VISUAL-RULES.md 2). 칸이 좁으면(단계 넷까지 960px, 다섯부터 1300px 밑) 세로로 쌓는다:
+   한 칸이 240px 밑이면 이름이 네댓 글자마다 꺾였다(원인 캐기의 가로와 같은 기준) */
 @container bk (min-width: 960px) and (max-height: 519.98px) {
   .bk-cy:is([data-steps='2'], [data-steps='3'], [data-steps='4']) {
     --cy-flat: 1;
@@ -365,6 +362,10 @@
        12px만 둥글리면 끝 눈금을 걷은 뒤 번호를 담은 둥근 네모 상자로 보였다 */
     --cy-loop: calc(30px * var(--bk-fit, 1));
     --cy-bend: 12px;
+    /* 마지막 번호 뒤의 조각: 번호 끝(두 자리 번호는 판의 글자로 0.9em 남짓)에서 0.45em 띄워 시작하고, 처음 단계 앞의 조각(╰─)과 같은
+       너비로 가로로 간 뒤 위로 꺾인다(─╯). 꺾이는 둥근 모서리만 두던 때는 번호 바로 옆에 작은 갈고리만 붙어 '03~'처럼 읽혔다(검수) */
+    --cy-turn: 1.35em;
+    --cy-leg: calc(var(--cy-in) - 0.45em);
   }
 
   .bk-cy-list {
@@ -375,11 +376,12 @@
     padding: var(--cy-loop) 0 0 var(--cy-in);
   }
 
-  /* 돌아가는 길의 윗부분(╭──╮): 번호 줄 위의 높이만큼. 그 아래(번호 줄까지)는 처음과 마지막 단계의 조각이 잇는다 */
+  /* 돌아가는 길의 윗부분(╭──╮): 번호 줄 위의 높이만큼. 그 아래(번호 줄까지)는 처음과 마지막 단계의 조각이 잇는다. 오른쪽 끝은 마지막
+     단계 칸의 꺾이는 자리(단계 칸 하나는 목록 너비에서 왼쪽 여백과 칸 사이(--cy-row)를 뺀 것의 1/n) */
   .bk-cy-list::before {
     position: absolute;
     top: 0;
-    right: 0;
+    right: calc((100% - var(--cy-in) - (var(--cy-n, 1) - 1) * var(--cy-row)) / var(--cy-n, 1) - var(--cy-turn) - var(--cy-leg));
     left: 0;
     height: var(--cy-loop);
     border: var(--cy-line) solid var(--cy-c);
@@ -404,20 +406,6 @@
     flex: none;
   }
 
-  /* 다음 단계로 가는 선: 번호 뒤에서 다음 칸의 번호 앞까지. 끝에 눈금을 달지 않는다(위 머리말) */
-  .bk-cy-to {
-    position: relative;
-    display: block;
-    flex: 1;
-    margin: 0 0.45em;
-    border-top: var(--cy-line) solid var(--cy-c);
-  }
-
-  /* 마지막 단계의 선은 칸 끝의 둥근 모서리까지 */
-  .bk-cy-step:last-child .bk-cy-to {
-    margin-right: var(--cy-bend);
-  }
-
   .bk-cy-step .bk-cy-rail {
     display: none;
   }
@@ -432,14 +420,14 @@
     border-bottom-left-radius: var(--cy-bend);
   }
 
-  /* 마지막 단계: 번호 줄의 선이 칸 오른쪽 끝에서 둥글게 위로 꺾여 윗부분에 닿는다(─╯) */
+  /* 마지막 단계: 번호 뒤에서 가로로 나가 둥글게 위로 꺾여 윗부분에 닿는다(─╯) */
   .bk-cy-step:last-child .bk-cy-rail {
     top: 0;
-    right: 0;
+    right: auto;
     bottom: calc(50% - var(--cy-line) / 2);
-    left: auto;
+    left: var(--cy-turn);
     display: block;
-    width: var(--cy-bend);
+    width: var(--cy-leg);
     height: auto;
     border: none;
     border-right: var(--cy-line) solid var(--cy-c);
