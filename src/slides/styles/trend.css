@@ -89,14 +89,10 @@
   box-shadow: inset 0 0 0 5px var(--accent);
 }
 
+/* 강조한 점은 다른 점과 같은 크기로 속만 찬다. 답은 그 위의 큰 숫자가 말한다: 30px 점에 바탕색 틈(8px)을 두르던 때는 선 끝에 46px
+   원이 매달린 꾸밈처럼 보였다(검수: 선 끝의 큰 원, VISUAL-RULES 5) */
 .tn-pt.is-hl .tn-dot {
-  top: -15px;
-  left: -15px;
-  width: 30px;
-  height: 30px;
   background: var(--accent);
-  /* 바탕색 틈만 두르고 옅은 강조색 고리는 두르지 않는다: 고리는 점을 두 배로 키워 보이는 장식이었다(VISUAL-RULES 4) */
-  box-shadow: 0 0 0 8px var(--bg);
 }
 
 .tn-pt.is-blank .tn-dot {
