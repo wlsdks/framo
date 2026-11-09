@@ -2647,34 +2647,29 @@ export function motionEngine(): MotionEngine {
             stream(stage, loop, again + 300, lap)
             stream(stage, loop, again + 300, lap, lap / 2)
           } else if (getComputedStyle(root).getPropertyValue('--cy-flat').trim() === '1') {
+            // 단계가 왼쪽부터 차례로 나온다(번호 사이에는 선이 없다: 차례는 읽는 방향과 번호가 말한다, cycle.css)
             steps.forEach((step, n) => {
               const at = 120 + n * hop
               rise(step.querySelector('.bk-cy-n'), at, L.y * 0.4)
               rise(step.querySelector('.bk-cy-text'), at + 40, L.y * 0.4)
-              if (n === steps.length - 1) return
-              const to = step.querySelector('.bk-cy-to')
-              draw(to, at + 120, hop * 0.8, 'left center')
-              pop(to, at + 120 + hop * 0.8, '::after')
             })
-            // 돌아가는 길: 마지막 번호 뒤의 선 → 위로 꺾임 → 윗변을 거꾸로 → 처음 단계 앞에서 내려와 머리로. 조각과 같은 빠르기로
+            // 돌아가는 길: 마지막 번호 뒤에서 위로 꺾임 → 윗변을 거꾸로 → 처음 단계 앞에서 내려와 번호로. 조각과 같은 빠르기로
             // 이어 그어지게 조각마다 길이대로 시간을 나누고 곡선 없이(linear) 긋는다
             const last = steps[steps.length - 1]
             const first = steps[0]
             const list = one('.bk-cy-list')
-            const outTo = last.querySelector<HTMLElement>('.bk-cy-to')
             const up = last.querySelector<HTMLElement>('.bk-cy-rail')
             const down = first.querySelector<HTMLElement>('.bk-cy-rail')
-            if (!list || !outTo || !up || !down || steps.length < 2) break
-            const a = spot(outTo, stage)
+            if (!list || !up || !down || steps.length < 2) break
             const u = spot(up, stage)
             const w = spot(down, stage)
             const L0 = spot(list, stage)
-            const yLine = a.t + line / 2
+            const yLine = u.b - line / 2
             const top = L0.t + line / 2
             const xLeft = w.l + line / 2
             const yIn = w.b - line / 2
             const path: [number, number][] = [
-              [a.l, yLine],
+              [u.l, yLine],
               [u.r - line / 2, yLine],
               [u.r - line / 2, top],
               [xLeft, top],
@@ -2691,10 +2686,9 @@ export function motionEngine(): MotionEngine {
               run(anims, el, [{ clipPath: from }, { clipPath: 'inset(-12px -12px -12px -12px)' }], s(at), { easing: 'linear', duration: d(ms) }, pseudo)
             // 조각은 곡선 없이: 선이 그어지는 끝과 같은 빠르기로 탄다. 조각만 CARRY로 타면 윗길 가운데에서 선 끝보다 300px 남짓 앞서 달렸다
             packet(stage, path, at, T, 'linear')
-            linear(outTo, 'inset(-12px 100% -12px 0)', per(lens[0]))
-            at += per(lens[0])
-            linear(up, 'inset(100% -12px 0 -12px)', per(lens[1]))
-            at += per(lens[1])
+            // 마지막 번호 뒤의 꺾임(╯)은 한 조각이라 아래에서 위로 연다(번호 쪽 둥근 모서리부터)
+            linear(up, 'inset(100% -12px 0 -12px)', per(lens[0] + lens[1]))
+            at += per(lens[0] + lens[1])
             linear(list, 'inset(-12px 0 -12px 100%)', per(lens[2]), '::before')
             at += per(lens[2])
             bend(down, at, per(lens[3] + lens[4]), 'top', 'left', line + 4, 'linear')
