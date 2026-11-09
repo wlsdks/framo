@@ -69,8 +69,8 @@ const pct = (v: number, of: number) => `${r((v / of) * 100)}%`
 
 /**
  * 모이고 퍼지기: 여러 곳의 것이 가운데로 모여들거나(모이기), 가운데에서 여러 곳으로 퍼져 나간다(퍼지기).
- * 선과 흐르는 조각은 SVG, 점과 가운데 계기판은 HTML 위의 SVG, 글은 그 위의 HTML(글자 크기 단계를 그대로 쓰려고).
- * 번짐 빛과 칠한 원, 네온처럼 빛나는 조각은 쓰지 않는다: 흔한 'AI 대시보드' 모양이다(사용자). 가는 선과 눈금, 강조색은 데이터가 닿는 순간에만.
+ * 선과 흐르는 조각은 SVG, 점과 가운데 원은 HTML 위의 SVG, 글은 그 위의 HTML(글자 크기 단계를 그대로 쓰려고).
+ * 번짐 빛과 칠한 원, 네온처럼 빛나는 조각은 쓰지 않는다: 흔한 'AI 대시보드' 모양이다(사용자). 가는 선, 강조색은 데이터가 닿는 순간에만.
  * 발표할 때 선이 그어진 뒤 데이터 조각이 쉬지 않고 흐르고, 닿을 때마다 가운데 테와 끝점이 잠깐 강조색으로 밝아진다(engine.ts).
  * 멈춰 있는 그림(편집, PDF, PPT)에서는 조각을 감춘다
  */
@@ -108,13 +108,13 @@ export function Hub() {
           </span>
         ))}
         <div className="bk-hb-core" style={at(center)}>
-          {/* 계기판: 바깥 눈금 고리와 안쪽의 가는 테. 칠한 원에 번짐을 두른 흔한 모양 대신 Framo의 지면 말투(가는 선, 정확한 눈금)로 */}
+          {/* 가운데 원: 가는 테 하나. 칠한 원에 번짐을 두른 흔한 모양 대신 Framo의 지면 말투(가는 선)로. 테 밖에 두르던 눈금 고리(짧은
+              획 120개)는 데이터가 아닌 꾸밈으로 보여(감성 검수) 뺐다 */}
           <svg className="bk-hb-dial" viewBox="0 0 100 100" aria-hidden="true">
-            <circle className="bk-hb-ticks" cx="50" cy="50" r="47" pathLength={120} />
-            <circle className="bk-hb-rim" cx="50" cy="50" r="41" />
+            <circle className="bk-hb-rim" cx="50" cy="50" r="46" />
             {/* 데이터가 닿을 때 밝아지는 테: 길마다 하나(engine.ts가 그 길의 조각과 같은 때에 맞춘다) */}
             {spots.map((_, k) => (
-              <circle key={k} className="bk-hb-hit" cx="50" cy="50" r="41" />
+              <circle key={k} className="bk-hb-hit" cx="50" cy="50" r="46" />
             ))}
           </svg>
           <div className="bk-hb-hub">

@@ -275,3 +275,17 @@
     height: calc(36px * var(--bk-fit, 1) + 2 * var(--bk-air, 0px));
   }
 }
+
+/* 한 줄을 다 쓰는 넓은 칸에 지표가 셋까지면 지금 값을 두 단계 크게(36 → 52, 단위는 두 단계 아래 36): 지금 값이 이 표의 답인데
+   36으로 두면 1000px 넘는 흐름 선과 굵은 이름 사이에서 숫자가 작아 보였다(감성 검수). 넷부터는 두 단이라 단마다 선 자리를 지킨다 */
+@container bk (min-width: 1200px) and (min-height: 300px) {
+  .bk-sx-list:not([data-n='4'], [data-n='5'], [data-n='6']) {
+    .bk-sx-v {
+      --fs: 52px;
+    }
+
+    .bk-sx-u {
+      --fs: var(--t-h);
+    }
+  }
+}

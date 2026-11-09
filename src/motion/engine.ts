@@ -1097,13 +1097,8 @@ export function motionEngine(): MotionEngine {
         const box = el.getBoundingClientRect()
         const zoom = el.offsetWidth ? box.width / el.offsetWidth : 1
         const labelsOf = (n: Element) => (Array.prototype.slice.call(n.children) as HTMLElement[]).filter((c) => (c.textContent || '').trim())
-        // 추이의 숫자 글자. 숫자 칸(.tn-val)은 목표선을 비키는 여백까지 품어 글자보다 훨씬 크다
+        // 추이의 숫자 글자(글자 높이로 자른 상자, trend.css)
         const numOf = (c: HTMLElement) => c.querySelector('.tn-num') as HTMLElement | null
-        // 목표선 비키기(trend.css의 .tn-num 여백)는 움직이는 동안 css 대신 아래 lift로 센다: css는 지금 쪽의 것만 알려 줘서, 옮겨 갈 다른 쪽에서
-        // 비켜 설 자리를 알 수 없었다(처음에 잰 자리로 보면 앞 장에서 목표선 위로 비켜 있던 숫자가 넘기자마자 점선 위에 내려앉았다)
-        const nums = sides.map((sd) => labelsOf(sd.el).map(numOf))
-        const numStyles = nums.map((list) => list.map((n) => (n ? n.getAttribute('style') : null)))
-        nums.forEach((list) => list.forEach((n) => n && (n.style.margin = '0px')))
         const offsets = () =>
           sides.map((sd) => {
             const p = sd.el.getBoundingClientRect()
@@ -1125,31 +1120,15 @@ export function motionEngine(): MotionEngine {
         sides.forEach((sd) => toSide(sd, sd.after))
         // 자리 0: 앞 장의 쪽, 1: 새 쪽, 2: 새 쪽에서 위아래를 바꾼 자리
         const spots = [then, now, away]
-        /** 숫자가 목표선에 걸칠 때 비켜 서는 만큼(px, 위로는 음수). trend.css의 .tn-num 여백과 같은 셈: 점에서 목표선까지(d)가 숫자 자리
-            (점에서 up 위, 글 높이 em) 둘레 10px 안이면 숫자 끝을 목표선에서 10px 띄운다. 그림이 낮으면(200px 이하) 골짜기 숫자도 위에 선다 */
-        const lift = (list: string[], hl: boolean, y: number, ty: number, h: number, em: number) => {
-          if (!Number.isFinite(ty) || !Number.isFinite(y) || list.indexOf('is-mid') >= 0) return 0
-          const below = list.indexOf('is-below') >= 0 && h > 200
-          const d = ((below ? y - ty : ty - y) * h) / 100
-          const up = hl ? 40 : 24
-          const by = d - up + 10 > 0 && d - up - em - 10 <= 0 ? d + 10 - up : 0
-          return below ? by : -by
-        }
         sides.forEach((sd, k) => {
           const labels = labelsOf(sd.el)
           const styles = labels.map((c) => c.getAttribute('style'))
-          const lists = [sd.before, sd.after, flip(sd)]
-          const hl = sd.el.classList.contains('is-hl')
-          const em = nums[k].map((n) => (n ? parseFloat(getComputedStyle(n).fontSize) * 1.1 : 0))
           // 추이의 그림 상자와 선: 숫자가 겹치는지 볼 곳
           const canvas = sd.el.closest('.tn-canvas') as HTMLElement | null
           const polys = canvas ? (Array.prototype.slice.call(canvas.querySelectorAll('.tn-line')) as SVGPolylineElement[]) : []
           // 숫자마다 지금 자리와 그 자리로 옮긴 때(처음에는 앞 장의 쪽)
           const state = labels.map(() => ({ side: 0, at: -1 }))
-          const restore = () => {
-            labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
-            nums[k].forEach((n, i) => n && (numStyles[k][i] === null ? n.removeAttribute('style') : n.setAttribute('style', numStyles[k][i]!)))
-          }
+          const restore = () => labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
           sets.push((t) => {
             if (t.v >= 1) return restore()
             const w = canvas ? canvas.offsetWidth : 0
@@ -1159,21 +1138,17 @@ export function motionEngine(): MotionEngine {
             const ty = canvas ? parseFloat(canvas.style.getPropertyValue('--ty')) : NaN
             const py = h - (y * h) / 100
             const pts = polys.map((pl) => (pl.getAttribute('points') || '').trim().split(/[\s,]+/).map(Number))
-            /** 쪽(side)의 글자 자리: 점에서 글자 상자의 왼쪽 위까지(목표선 비키기 더함) */
-            const spot = (side: number, i: number) => {
-              const o = spots[side][k][i] || now[k][i]
-              return [o[0], o[1] + (nums[k][i] ? lift(lists[side], hl, y, ty, h, em[i]) : 0)]
-            }
-            /** 쪽(side)에 선 숫자가 선이나 목표 점선과 겹치는지(그림 상자의 px). 숫자의 잉크는 글자 상자(줄 높이 1.1em)의 가운데쯤이라
-                위아래를 조금 덜고, 둘레(pad)를 넉넉히 본다 */
+            /** 쪽(side)의 글자 자리: 점에서 글자 상자의 왼쪽 위까지 */
+            const spot = (side: number, i: number) => spots[side][k][i] || now[k][i]
+            /** 쪽(side)에 선 숫자가 선이나 목표 점선과 겹치는지(그림 상자의 px). 글자 상자가 곧 숫자의 잉크라 둘레(pad)만 더 본다 */
             const hits = (side: number, i: number, pad = 3) => {
               const o = spots[side][k][i]
               if (!canvas || !o || !Number.isFinite(px) || !Number.isFinite(py)) return false
               const at = spot(side, i)
               const l = px + at[0] - pad
               const r = l + o[2] + pad * 2
-              const top = py + at[1] + o[3] * 0.12 - pad
-              const b = top + o[3] * 0.76 + pad * 2
+              const top = py + at[1] - pad
+              const b = top + o[3] + pad * 2
               if (Number.isFinite(ty) && top < (1 - ty / 100) * h && (1 - ty / 100) * h < b) return true
               for (const list of pts)
                 for (let j = 0; j + 3 < list.length; j += 2) {
@@ -3261,8 +3236,8 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'hub': {
-          // 모이고 퍼지기(모션 그래픽 장면). 모이기는 끝점이 위에서부터 맺히고 선이 가운데로 그어진 뒤 계기판이 서고, 퍼지기는
-          // 계기판이 먼저 서고 선이 끝점으로 뻗는다. 다 서면 데이터 조각이 길을 따라 쉬지 않고 흐르고, 조각이 닿는 순간 그 길의
+          // 모이고 퍼지기(모션 그래픽 장면). 모이기는 끝점이 위에서부터 맺히고 선이 가운데로 그어진 뒤 가운데 원이 서고, 퍼지기는
+          // 가운데 원이 먼저 서고 선이 끝점으로 뻗는다. 다 서면 데이터 조각이 길을 따라 쉬지 않고 흐르고, 조각이 닿는 순간 그 길의
           // 가운데 테(모이기)나 끝점(퍼지기)이 잠깐 강조색으로 밝아진다: 움직임이 '전달됐다'는 뜻을 갖게. 떠나는 쪽도 조각이 출발할 때
           // 살짝 밝아진다. 계속 움직이는 것은 이 흐름 하나다(번짐 빛, 숨쉬기, 도는 호는 쓰지 않는다: docs/MOTION.md).
           // 흐름은 이 장을 떠날 때(stops)까지 이어진다. 끝맺음(묶음이 끝났는지)을 기다리는 목록(anims)에는 넣지 않는다
@@ -3273,7 +3248,6 @@ export function motionEngine(): MotionEngine {
           const dots = $('.bk-hb-dot')
           const nodes = $('.bk-hb-node')
           const core = one('.bk-hb-core')
-          const ticks = one('.bk-hb-ticks')
           const hubText = one('.bk-hb-hub')
           const hits = $('.bk-hb-hit')
           const n = Math.max(1, lines.length)
@@ -3286,12 +3260,10 @@ export function motionEngine(): MotionEngine {
             const k = dashK(el) * 100
             run(anims, el, [{ strokeDasharray: `${k} ${k}`, strokeDashoffset: k }, { strokeDasharray: `${k} ${k}`, strokeDashoffset: 0 }], s(at), { easing: OUT, duration: lineDur })
           }
-          // 모이기: 계기판은 마지막 선이 가운데에 거의 닿을 때 그 자리에서 선다. 선이 다 닿은 뒤에 세우면 선 끝이 한 점에 모인 꺾쇠(>)가
+          // 모이기: 가운데 원은 마지막 선이 가운데에 거의 닿을 때 그 자리에서 선다. 선이 다 닿은 뒤에 세우면 선 끝이 한 점에 모인 꺾쇠(>)가
           // 0.2~0.3초 혼자 보였다(필름)
           const coreAt = out ? 60 : 200 + (n - 1) * step + 240
-          // 계기판: 테가 먼저 서고 눈금이 한 바퀴 그어진다
           grow(core, coreAt)
-          if (ticks) run(anims, ticks, [{ strokeDasharray: '0 1' }, { strokeDasharray: '0.35 0.65' }], s(coreAt + 80), { easing: OUT, duration: d(700) })
           rise(hubText, coreAt + 160, L.y * 0.5)
           lines.forEach((line, k) => {
             const at = out ? coreAt + 260 + k * step : 60 + k * step

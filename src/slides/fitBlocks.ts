@@ -60,6 +60,8 @@ export function blockFitter() {
   let inks: Record<string, [number, number]> = {}
   // 움직임이 끝나기를 기다리는 본문 상자와 판 (같은 것을 여러 번 기다리지 않게)
   const waiting = new WeakSet<Element>()
+  // 점 숫자가 둘 자리를 찾지 못한 추이의 그림 (trendPlace가 적고 crowded가 본다)
+  const cramped = new WeakSet<Element>()
   // 편집 화면에서 글을 쓰는 동안 붙잡아 둔 자리 (본문 상자마다, typing의 설명): 판의 짜임, 눈높이로 내린 값, 칸마다 옆으로 옮긴 값,
   // 키운 단계(--bk-fit의 가장 큰 값)
   const held = new WeakMap<HTMLElement, { board: string; eye: number; xs: Map<string, number>; contentXs: Map<string, number>; up: number }>()
@@ -378,7 +380,7 @@ export function blockFitter() {
   /**
    * 위치 비교의 이름표 자리를 그려진 크기로 다시 고른다. 그리기 전에 글 길이로 어림한 자리(layouts/Position.tsx의 labelSides)를 먼저 보고,
    * 앞의 점의 이름표나 다른 점을 덮거나 판 밖으로 나가면 오른쪽, 왼쪽, 위, 아래 차례로 겹치지 않는 자리를 찾는다. 없으면 어림한 자리.
-   * 흐름의 단계 이름도 여기서 다시 고른다(flowNames)
+   * 흐름의 단계 이름과 추이의 점 숫자(trendPlace)도 여기서 다시 고른다(flowNames)
    */
   function place(scope: ParentNode): void {
     flowNames(scope)
@@ -413,6 +415,9 @@ export function blockFitter() {
         return cost
       })
     }
+    // 추이의 점 숫자도: 글자 맞추기가 숫자를 키우거나 줄이면(52px에서 62px) 점과 목표선 사이의 자리가 달라진다. 처음 그린 크기로 한 번만
+    // 고르던 때는 키운 강조 숫자가 목표선에 걸친 채 남았다
+    for (const canvas of Array.from(scope.querySelectorAll<HTMLElement>('.tn-canvas'))) trendPlace(canvas)
   }
 
   /**
@@ -463,7 +468,8 @@ export function blockFitter() {
   /**
    * 추이의 점 숫자 자리를 그려진 크기로 다시 고른다. 그릴 때 어림한 자리(골짜기는 점 아래, Trend.tsx의 data-tn-side)를 먼저 보고,
    * 숫자가 선(앞뒤 점으로 가는 선)이나 다른 점, 앞의 숫자를 덮거나 그림 밖(위는 숫자 띠까지, 아래는 바닥줄)으로 나가면
-   * 위, 점 오른쪽 위, 왼쪽 위, 점 바로 왼쪽과 오른쪽, 아래 차례로 겹치지 않는 자리를 찾는다. 없으면 가장 덜 겹치는 자리.
+   * 위, 점 오른쪽 위, 왼쪽 위, 점 바로 왼쪽과 오른쪽, 아래 차례로 겹치지 않는 자리를 찾는다. 목표선을 건너 점과 다른 쪽에 서는 자리도
+   * 겹치는 것으로 본다. 없으면 가장 덜 겹치는 자리.
    * 앞 점보다 한참 낮은 마지막 점은 내리꽂히는 선이 점 위의 숫자를 그대로 지나갔다(바닥에 붙어 아래에 둘 자리도 없다)
    */
   function trendPlace(canvas: HTMLElement): void {
@@ -499,16 +505,54 @@ export function blockFitter() {
     }
     const meet = (a: DOMRect, b: DOMRect) =>
       Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left) + gap) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) + gap)
-    // 위는 그림 판(숫자 띠까지), 아래는 바닥줄, 양옆은 판 끝까지
-    const outside = (r: DOMRect) => Math.max(0, P.top - r.top) + Math.max(0, r.bottom - (P.bottom - 4 * k)) + Math.max(0, P.left - r.left) + Math.max(0, r.right - P.right)
+    // 위는 그림 판(숫자 띠까지), 아래는 바닥줄, 양옆은 판 끝까지. 줄 선(바닥줄, 목표선)과는 그려진 글자가 8px 떨어진다: 조합 검사가
+    // 글과 줄 선 사이를 6px는 본다(comboChecks.ts의 RULE_GAP, 목표선은 2px 굵기)
+    const clear = 8 * k
+    // 그려진 글자(잉크)의 위아래: 숫자 상자는 글자 높이로 잘랐지만(trend.css) 둥근 숫자(0, 8, 9)와 명조 숫자는 그보다 몇 px 위아래로
+    // 나와서, 상자로만 재면 목표선에 붙은 숫자를 비켰다고 봤다. 자리마다 상자만 옮겨 가므로 상자에서 잉크까지를 점마다 한 번 잰다
+    const inkGap = pts.map((p) => {
+      const box = p.querySelector('.tn-val')?.getBoundingClientRect()
+      const num = p.querySelector('.tn-num')
+      const text = (num?.textContent || '').trim()
+      if (!box || !num || !text) return [0, 0]
+      if (!range) range = document.createRange()
+      range.selectNodeContents(num)
+      const q = range.getBoundingClientRect()
+      const [up, down] = ink(num, text.slice(0, 60))
+      return [q.top + q.height * up - box.top, q.bottom - q.height * down - box.bottom]
+    })
+    const inkTop = (r: DOMRect, i: number) => r.top + Math.min(0, inkGap[i][0])
+    const inkBottom = (r: DOMRect, i: number) => r.bottom + Math.max(0, inkGap[i][1])
+    const outside = (r: DOMRect, i: number) =>
+      Math.max(0, P.top - r.top) + Math.max(0, inkBottom(r, i) - (P.bottom - clear)) + Math.max(0, P.left - r.left) + Math.max(0, r.right - P.right)
+    // 목표선: 숫자는 제 점과 같은 쪽에 선다. 목표선에 걸치는 숫자를 선 너머로 비켜 세우던 때는 목표 아래 점들(96, 101, 99)의 숫자가
+    // 목표선 위에 한 줄로 서서 '목표를 넘었다'로 읽혔다(감성 검수). 점에서 선 너머로 나간 깊이(px)만큼 친다: 다 건너간 숫자가 선에
+    // 조금 걸친 숫자보다 무겁다
+    const goal = canvas.querySelector<HTMLElement>(':scope > .tn-target')?.getBoundingClientRect()
+    const across = (r: DOMRect, i: number) => {
+      const d = mid[i]
+      if (!goal || !d) return 0
+      const y = goal.top + k
+      return d.y < y ? Math.max(0, inkBottom(r, i) - (y - clear)) : Math.max(0, y + clear - inkTop(r, i))
+    }
+    // 바닥줄 밖(시기 이름 위)으로 나가는 것이 가장 나쁘다: 이름과 겹친다. 목표선에 걸치는 것은 그다음
     pickSides(pts, '.tn-val', (p) => p.dataset.tnSide, tries, set, (r, i, taken) => {
-      let cost = (crossed(r) + outside(r)) * r.height * 40
+      let cost = (crossed(r) + outside(r, i) * 4 + across(r, i) * 2) * r.height * 40
       for (const t of taken) cost += meet(r, t)
       dots.forEach((d, j) => {
         if (j !== i && d) cost += meet(r, d) * 2
       })
       return cost
     })
+    // 어느 자리에도 들지 못해 바닥줄 밖이나 목표선 너머에 선 숫자가 있으면 이 크기에서는 숫자를 키우지 않는다(crowded): 글자 맞추기가
+    // 숫자를 1.44배까지 키워 점과 목표선 사이, 점과 바닥줄 사이에 들던 숫자도 자리를 잃었다
+    let bad = false
+    pts.forEach((p, i) => {
+      const r = p.querySelector('.tn-val')?.getBoundingClientRect()
+      if (r && (outside(r, i) > 0.5 * k || across(r, i) > 0.5 * k)) bad = true
+    })
+    if (bad) cramped.add(canvas)
+    else cramped.delete(canvas)
   }
 
   /** 칸 안의 그림 하나와 키우기 전의 크기 (화면 px) */
@@ -539,6 +583,7 @@ export function blockFitter() {
    */
   function crowded(inner: HTMLElement, shapes: Shape[] = []): boolean {
     if (over(inner, true)) return true
+    for (const c of Array.from(inner.querySelectorAll('.tn-canvas'))) if (cramped.has(c)) return true
     const r = inner.getBoundingClientRect()
     const k = inner.offsetWidth ? r.width / inner.offsetWidth : 1
     const bottom = r.bottom - parseFloat(getComputedStyle(inner).paddingBottom) * k + 2 * k
@@ -1930,10 +1975,7 @@ export function blockFitter() {
       const fresh = cells.filter((c) => !known.has(c))
       for (const c of fresh) {
         const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
-        if (inner) {
-          place(inner)
-          for (const canvas of Array.from(inner.querySelectorAll<HTMLElement>('.tn-canvas'))) trendPlace(canvas)
-        }
+        if (inner) place(inner)
         shrink(c, least)
       }
       for (const c of fresh) shrink(c, 0)
