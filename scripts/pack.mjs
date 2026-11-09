@@ -19,7 +19,7 @@
 
 import { createHash } from 'node:crypto'
 import { execFileSync, execSync } from 'node:child_process'
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -76,7 +76,7 @@ if (external.length) {
 }
 
 // 빌드한 화면에 서버와 같은 CSP가 들어갔는지. 서버 없이 파일로 열어도 이 PC 밖으로 연결하지 못하게 하는 장치다
-const { CSP_META } = await import(pathToFileURL(join(root, 'dist-node', 'serve.mjs')).href)
+const { CSP_META, PACKAGE_TOP } = await import(pathToFileURL(join(root, 'dist-node', 'serve.mjs')).href)
 const cspTag = `<meta http-equiv="Content-Security-Policy" content="${CSP_META}" />`
 if (!readFileSync(join(root, 'dist', 'index.html'), 'utf8').includes(cspTag)) {
   console.error('dist/index.html에 CSP가 없거나 서버의 CSP와 달라요. vite.config.ts의 cspMeta를 확인해 주세요.')
@@ -127,6 +127,18 @@ async function officialNode(dist) {
   // 맥과 윈도우 10 이상의 tar(bsdtar)는 zip도 푼다
   execFileSync('tar', ['-xf', archive, '-C', tmp, bin, `${top}/LICENSE`])
   return { bin: join(tmp, bin), license: join(tmp, top, 'LICENSE'), cleanup: () => rmSync(tmp, { recursive: true, force: true }) }
+}
+
+/**
+ * 배포본 맨 위에는 새 버전 풀기(server/install.ts의 PACKAGE_TOP)가 받는 이름만 둔다. 이미 깔린 버전은 그 목록에 없는 이름이 든
+ * 새 zip을 저절로 풀지 않고 사람이 푸는 안내로 돌아가므로, 새 파일은 dist나 dist-node 안에 넣는다
+ */
+function checkTop(out) {
+  const extra = readdirSync(out).filter((n) => !PACKAGE_TOP.includes(n))
+  if (extra.length) {
+    console.error(`배포본 맨 위에 새 버전 풀기가 모르는 이름이 있어요: ${extra.join(', ')}. dist나 dist-node 안으로 옮겨 주세요.`)
+    process.exit(1)
+  }
 }
 
 /** 윈도우 메모장과 명령 프롬프트가 바로 읽는 줄바꿈과 인코딩 */
@@ -194,6 +206,7 @@ async function windows() {
   }
   windowsText(join(out, 'Framo 시작.bat'), { bom: false })
   for (const file of ['사용법.txt', '오픈소스 라이선스.txt']) windowsText(join(out, file), { bom: true })
+  checkTop(out)
   const zipFile = join(root, 'release', 'gyeol-windows.zip')
   zipDir(out, zipFile)
   console.log(`윈도우용: ${zipFile}`)
@@ -210,6 +223,7 @@ async function mac() {
     await putNode('darwin-arm64', join(out, 'node', 'arm64', 'node'), join(out, 'node', 'LICENSE.txt'))
     await putNode('darwin-x64', join(out, 'node', 'x64', 'node'))
   }
+  checkTop(out)
   const zipFile = join(root, 'release', 'gyeol-mac.zip')
   zipDir(out, zipFile, { executable: (file) => file.endsWith('.command') || /\/node\/(arm64|x64)\/node$/.test(file) })
   console.log(`맥용: ${zipFile}`)

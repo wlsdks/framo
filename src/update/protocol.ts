@@ -25,16 +25,30 @@ export type UpdateCheck =
 export type DownloadState =
   | { state: 'idle' }
   | { state: 'downloading'; received: number; total: number }
-  /** 받아서 지문까지 맞춰 봤고, 폴더를 열었다 */
-  | { state: 'done' }
+  /** 받은 zip을 앱 폴더 안(versions/)에 풀고 확인하는 중. done, total은 풀린 바이트 */
+  | { state: 'preparing'; done: number; total: number }
+  /** 새 버전을 다 풀고 확인했다. 다시 켜면(‘지금 다시 시작’, 또는 다음에 켤 때) 이 버전이 켜진다 */
+  | { state: 'ready'; version: string }
+  /**
+   * 받아서 지문까지 맞춰 봤고, 폴더를 열었다. 사람이 zip을 직접 푼다.
+   * why: 저절로 바꾸지 못한 까닭. 없으면 이렇게 켠 Framo(시작 파일이 아니라 서버를 바로 켠 것)는 저절로 바꾸지 않는다
+   */
+  | { state: 'done'; why?: InstallError }
   | { state: 'failed'; reason: DownloadError }
 
-/** 받기가 안 된 까닭. 화면은 이 말에 맞춰 안내한다 */
-export type DownloadError = 'network' | 'verify' | 'write'
+/** 받기가 안 된 까닭. 화면은 이 말에 맞춰 안내한다. start: 받아 둔 새 버전이 켜지지 않아 시작 프로그램이 이 버전으로 켰다 */
+export type DownloadError = 'network' | 'verify' | 'write' | 'start'
+
+/** 받은 새 버전을 저절로 바꾸지 못한 까닭(server/install.ts). start는 그 버전이 예전에 켜지지 않았던 것 */
+export type InstallError = 'verify' | 'layout' | 'space' | 'write' | 'blocked' | 'start'
 
 export interface UpdateStatus {
   /** 지금 이 앱의 버전 */
   current: string
+  /** 이 서버를 켤 때마다 새로 정하는 표시. 다시 켠 뒤 화면이 새 서버가 떴는지 알아본다 */
+  boot: string
+  /** 받은 새 버전을 서버가 풀어 두고 다시 켤 수 있는지(시작 파일로 켠 Framo). 아니면 받기만 하고 사람이 푼다 */
+  auto: boolean
   check: UpdateCheck
   download: DownloadState
 }

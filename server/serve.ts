@@ -9,7 +9,7 @@
 //   발표와 이어지는 것(AI 공유, 받은 파일, AI에 등록한 MCP 서버 경로)은 버전이 바뀌어도 앱 폴더의 것을 쓴다.
 
 import { spawn } from 'node:child_process'
-import { createReadStream, existsSync, lstatSync, realpathSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, lstatSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { createServer, get, type IncomingMessage, type ServerResponse } from 'node:http'
 import { dirname, extname, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -18,11 +18,13 @@ import { createAiHandler } from './ai'
 import { browserTries, windowsBrowsers } from './browser'
 import { CSP, CSP_META } from './csp'
 import { createUpdateHandler, UPDATE_DIR_NAME, type UpdateSetup } from './updateRoutes'
-import { appHome, FAIL_CODE, LAUNCHER_ENV, LISTENING, nodeIn, RESTARTED_ENV } from './versions'
+import { appHome, FAIL_CODE, LAUNCHER_ENV, LISTENING, nodeIn, RESTART_CODE, RESTARTED_ENV } from './versions'
 import { version } from '../package.json'
 
-// 묶는 스크립트(scripts/pack.mjs)가 빌드한 index.html의 CSP를 이것과 견준다(빌드한 dist-node/serve.mjs에서 읽는다)
+// 묶는 스크립트(scripts/pack.mjs)가 빌드한 index.html의 CSP를 이것과 견주고, 배포본 맨 위의 이름이 새 버전 풀기가 받는 이름
+// (PACKAGE_TOP)뿐인지 본다(빌드한 dist-node/serve.mjs에서 읽는다)
 export { CSP_META }
+export { PACKAGE_TOP } from './install'
 export const HOST = '127.0.0.1'
 const PORT = Number(process.env.GYEOL_PORT) || 41580
 const ORIGIN = `http://${HOST}:${PORT}`
@@ -81,6 +83,16 @@ function appNode(): string | undefined {
   }
 }
 
+/** 앱 폴더의 버전(처음 푼 버전). 읽지 못하면 이 서버의 버전 */
+function appVersion(): string {
+  try {
+    const v = (JSON.parse(readFileSync(join(APP_ROOT, 'package.json'), 'utf8')) as { version?: unknown }).version
+    return typeof v === 'string' ? v : version
+  } catch {
+    return version
+  }
+}
+
 export function createAppServer({ root = join(CODE_ROOT, 'dist'), share = join(APP_ROOT, SHARE_DIR_NAME), update = {} }: ServerOptions = {}) {
   root = normalize(root)
   // Claude Code, Codex 설정에 넣는 MCP 서버 경로는 앱 폴더의 것이다. 새 버전으로 바뀌어도 등록한 연결이 끊기지 않고,
@@ -88,7 +100,7 @@ export function createAppServer({ root = join(CODE_ROOT, 'dist'), share = join(A
   // (Framo.exe로 켜도 MCP 서버는 Framo.exe가 아니라 같이 든 node로 띄운다)
   const ai = createAiHandler(share, { mcpPath: join(APP_ROOT, 'dist-node', 'gyeol-mcp.mjs'), nodePath: appNode() })
   // 받은 새 배포본은 앱 폴더 안의 고정된 폴더에 둔다
-  const updates = createUpdateHandler({ version, downloadDir: join(APP_ROOT, UPDATE_DIR_NAME), ...update })
+  const updates = createUpdateHandler({ version, downloadDir: join(APP_ROOT, UPDATE_DIR_NAME), home: APP_ROOT, base: appVersion(), ...update })
 
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
     // 다른 이름으로 들어온 요청은 받지 않는다 (DNS 리바인딩 방어).
@@ -194,8 +206,14 @@ async function main() {
     return
   }
   let server: ReturnType<typeof createAppServer>
+  // '지금 다시 시작': 자리를 비우고 RESTART_CODE로 끝나면 시작 프로그램이 가장 새 버전으로 다시 켠다
+  const restart = () => {
+    server.close()
+    server.closeAllConnections()
+    process.exit(RESTART_CODE)
+  }
   try {
-    server = createAppServer()
+    server = createAppServer({ update: SUPERVISED ? { restart } : {} })
   } catch {
     // 'AI 공유' 폴더를 만들지 못했을 때. 읽기만 되는 곳(압축 파일 안, 막힌 폴더)에서 켜면 그렇다
     return fail("'AI 공유' 폴더를 만들지 못했어요. 받은 zip 파일을 바탕 화면이나 문서 폴더에 풀고 그 안에서 다시 실행해 주세요.")

@@ -14,7 +14,7 @@
 import { lstatSync, readdirSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 
-const VERSIONS_DIR = 'versions'
+export const VERSIONS_DIR = 'versions'
 /** 다 풀고 확인을 마친 버전 폴더의 표시 */
 export const READY_FILE = '.framo-ready'
 export const READY_FORMAT = 'framo/version'
@@ -33,7 +33,7 @@ export const RESTARTED_ENV = 'FRAMO_RESTARTED'
 export const LISTENING = 'framo:listening'
 
 /** 버전 폴더 이름: 앞에 0이 붙지 않은 X.Y.Z만 */
-const VERSION_NAME = /^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})$/
+export const VERSION_NAME = /^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})$/
 
 /** 'X.Y.Z'를 견준다. a가 새것이면 양수. 꼴이 틀리면 NaN이라 어느 비교도 참이 아니다(새 버전으로 보지 않는다) */
 export function compareVersions(a: string, b: string): number {

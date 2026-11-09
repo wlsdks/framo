@@ -1,7 +1,7 @@
 // 새 버전 확인과 받기. 네트워크에는 닿지 않는다: GitHub 대신 흉내 낸 GET(fake)을 넣는다.
 
 import { createHash } from 'node:crypto'
-import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer, request, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -9,7 +9,8 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { UpdateStatus } from '../src/update/protocol'
 import { allowedHop, createUpdater, MAX_ASSET_BYTES, parseRelease, REPOS, type Getter } from './update'
-import { compareVersions } from './versions'
+import { compareVersions, FAILED_FILE, READY_FILE, READY_FORMAT, requiredFiles } from './versions'
+import { fakePackage } from './zipFixture'
 import { createUpdateHandler, type UpdateSetup } from './updateRoutes'
 
 const ZIP = Buffer.from('지어낸 배포본 내용 '.repeat(200))
@@ -410,5 +411,114 @@ describe('새 버전 창구', () => {
     expect((await call('check')).body.check).toMatchObject({ state: 'available', download: false, page: 'https://github.com/wlsdks/gyeol/releases/tag/v0.9.0' })
     expect((await call('download')).status).toBe(409)
     expect(calls).toHaveLength(1)
+  })
+  describe('저절로 바꾸기(시작 프로그램으로 켠 Framo)', () => {
+    /** 지어낸 배포본 zip을 0.9.0 릴리스로 내놓는 가짜 GitHub */
+    function packaged(zip = fakePackage('0.9.0', 'win32')) {
+      const sha = createHash('sha256').update(zip).digest('hex')
+      return fake({
+        [API]: { status: 200, body: JSON.stringify(release({}, { size: zip.length, digest: `sha256:${sha}` })) },
+        [DL]: { status: 302, location: ASSET_HOST },
+        [ASSET_HOST]: { status: 200, body: zip },
+      })
+    }
+
+    function app() {
+      const home = mkdtempSync(join(tmpdir(), 'gyeol-update-app-'))
+      return { home, downloadDir: join(home, '새 버전') }
+    }
+
+    async function until(call: Awaited<ReturnType<typeof serve>>, ok: (s: UpdateStatus) => boolean) {
+      for (let i = 0; i < 200; i++) {
+        const s = (await call('status', { method: 'GET' })).body
+        if (ok(s)) return s
+        await new Promise((r) => setTimeout(r, 10))
+      }
+      throw new Error('기다린 상태가 오지 않았어요')
+    }
+
+    it('업데이트: 받고, 풀고, 확인을 마치면 다시 시작을 권한다. 받은 zip은 지우고 폴더를 열지 않는다', async () => {
+      const { home, downloadDir } = app()
+      const opened: string[] = []
+      let restarts = 0
+      const call = await serve({ get: packaged().get, downloadDir, home, restart: () => restarts++, reveal: (f) => opened.push(f) })
+      const first = await call('check')
+      expect(first.body).toMatchObject({ auto: true, check: { state: 'available', version: '0.9.0', download: true } })
+      expect((await call('download')).status).toBe(202)
+      const done = await until(call, (s) => s.download.state === 'ready')
+      expect(done.download).toEqual({ state: 'ready', version: '0.9.0' })
+      expect(existsSync(join(home, 'versions', '0.9.0', READY_FILE))).toBe(true)
+      expect(existsSync(join(downloadDir, 'gyeol-windows.zip'))).toBe(false)
+      expect(opened).toEqual([])
+      // 다시 확인해도 같은 버전이면 다시 시작 권유가 그대로다
+      expect((await call('check/now')).body.download).toEqual({ state: 'ready', version: '0.9.0' })
+      expect(restarts).toBe(0)
+      const res = await call('restart')
+      expect(res.status).toBe(202)
+      await new Promise((r) => setTimeout(r, 20))
+      // 답을 다 보낸 뒤에 한 번만
+      expect(restarts).toBe(1)
+      expect(res.body.boot).toBe(first.body.boot)
+    })
+
+    it('다시 시작은 풀어 둔 새 버전이 있고, 시작 프로그램으로 켰을 때만 받는다', async () => {
+      const { home, downloadDir } = app()
+      let restarts = 0
+      const call = await serve({ get: packaged().get, downloadDir, home, restart: () => restarts++ })
+      expect((await call('restart')).status).toBe(409)
+      expect((await call('restart', { headers: {} })).status).toBe(403)
+      // 시작 프로그램 없이 켠 서버(restart 없음)는 풀지 않고 사람이 푸는 길로
+      const manual = await serve({ get: packaged().get, downloadDir: app().downloadDir, home })
+      expect((await manual('status', { method: 'GET' })).body.auto).toBe(false)
+      expect((await manual('restart')).status).toBe(409)
+      expect(restarts).toBe(0)
+    })
+
+    it('풀지 못하면(배포본과 꼴이 다르면) 받은 폴더를 열어 사람이 풀게 하고 까닭을 알린다', async () => {
+      const { home, downloadDir } = app()
+      const opened: string[] = []
+      const call = await serve({ get: packaged(fakePackage('0.9.0', 'win32', { 'node/node.exe': null })).get, downloadDir, home, restart: () => {}, reveal: (f) => opened.push(f) })
+      await call('check')
+      await call('download')
+      const s = await until(call, (x) => x.download.state === 'done')
+      expect(s.download).toEqual({ state: 'done', why: 'layout' })
+      expect(opened).toEqual([join(downloadDir, 'gyeol-windows.zip')])
+      expect(existsSync(join(home, 'versions', '0.9.0'))).toBe(false)
+    })
+
+    /** 받아 둔 버전 폴더 */
+    function put(home: string, version: string, failed = false) {
+      const dir = join(home, 'versions', version)
+      for (const f of requiredFiles('win32', process.arch)) {
+        mkdirSync(join(dir, ...f.split('/').slice(0, -1)), { recursive: true })
+        writeFileSync(join(dir, ...f.split('/')), 'x')
+      }
+      writeFileSync(join(dir, READY_FILE), JSON.stringify({ format: READY_FORMAT, version }))
+      if (failed) writeFileSync(join(dir, FAILED_FILE), '{}')
+    }
+
+    it('켤 때 받아 둔 새 버전이 있으면 GitHub에 묻지 않고도 다시 시작을 권한다', async () => {
+      const { home, downloadDir } = app()
+      put(home, '0.9.0')
+      const { get, calls } = packaged()
+      const call = await serve({ get, downloadDir, home, restart: () => {} })
+      expect((await call('status', { method: 'GET' })).body.download).toEqual({ state: 'ready', version: '0.9.0' })
+      expect(calls).toHaveLength(0)
+    })
+
+    it('받아 둔 새 버전이 켜지지 않았으면 알리고, 다시 받으면 풀지 않고 사람이 풀게 한다(또 켜지지 않게)', async () => {
+      const { home, downloadDir } = app()
+      put(home, '0.9.0', true)
+      const opened: string[] = []
+      const call = await serve({ get: packaged().get, downloadDir, home, restart: () => {}, reveal: (f) => opened.push(f) })
+      expect((await call('status', { method: 'GET' })).body.download).toEqual({ state: 'failed', reason: 'start' })
+      // 같은 버전이 나와 있다고 확인해도 켜지지 않았다는 알림은 그대로
+      expect((await call('check')).body.download).toEqual({ state: 'failed', reason: 'start' })
+      await call('download')
+      const s = await until(call, (x) => x.download.state === 'done')
+      expect(s.download).toEqual({ state: 'done', why: 'start' })
+      expect(opened).toHaveLength(1)
+      expect(readFileSync(join(home, 'versions', '0.9.0', FAILED_FILE), 'utf8')).toBe('{}')
+    })
   })
 })
