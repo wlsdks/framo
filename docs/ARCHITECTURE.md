@@ -36,7 +36,7 @@
 | 폴더 | 하는 일 | 가져와도 되는 것 |
 |---|---|---|
 | `lib/` | 어디에도 기대지 않는 작은 도구: 단축키 표기, 발표 중의 키(`presentKeys`), 끄는 동안의 처리기(`pointerSession`), 조사 고르기(`josa`), 주소, 이미지 크기 읽기, 앱 버전 | 없음 |
-| `deck/` | 발표 모델: 꼴(`types.ts`), 구성(`blueprints.ts`와 발표 종류마다의 `blueprints/<id>.ts`, `generate.ts`), 레이아웃과 부품의 정의와 규칙, 테마 값, 예전 파일 읽기. 화면 없이 돈다 | `lib` |
+| `deck/` | 발표 모델: 꼴(`types.ts`), 구성(`blueprints.ts`와 발표 종류마다의 `blueprints/<id>.ts`, `generate.ts`), 새 id·항목·장(`make.ts`: 부품 장도 쓰는 가장 아래의 만들기라 구성 만들기와 나눴다. 구성 만들기가 부품 장을 짜려고 `blocks`를 가져오면, 둘이 한 파일일 때 순환이다), 레이아웃과 부품의 정의와 규칙, 테마 값, 예전 파일 읽기. 화면 없이 돈다 | `lib` |
 | `motion/` | 발표할 때의 움직임 엔진. 내보낸 HTML에 소스째 들어간다 | `lib` |
 | `present/` | 발표 화면과 발표자 화면 잇기 | `deck`, `lib` |
 | `slides/` | 장 그리기(React), 글자 칸, 숫자 읽기, 부품 장 맞추기 | `deck`, `lib`, `motion` |
@@ -61,6 +61,7 @@
 | 사용자가 고르는 값(글꼴, 글자 크기, 아래 표시, 장 넘기기, 바탕, 움직임 …) | `src/deck/themes.ts`. AI 카탈로그, 모양, 제안이 이 목록을 같이 쓴다 |
 | 장면 목록과 맞는 장(`SCENES`, `sceneFits`) | `src/deck/scenes.ts`. 편집기, 예전 버전 검사, AI 카탈로그(`scenes`), 모양(`options.scene`), 제안(`set_options`의 `scene`)이 같이 쓴다 |
 | 항목 수와 레이아웃 바꾸기(편집기와 AI 제안이 같은 규칙으로) | `src/deck/edits.ts` |
+| 구성의 장 하나 만들기(부품 장이면 레시피의 컴포넌트를 판이 알아서 짠다). 프레임 잡기, 미리 보기, AI 제안의 역할로 장 넣기가 같이 쓴다 | `src/deck/generate.ts`의 `recipeSlide` |
 | 예전에 저장한 발표 읽기 | `src/deck/migrate.ts`의 `migrateDeck` |
 | 새 버전에서 만든 발표 알아보기 | `src/deck/compat.ts` |
 | 브라우저와 보관 폴더 중 어느 쪽을 남길지 | `src/store/reconcile.ts` |

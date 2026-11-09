@@ -30,17 +30,26 @@ export const business: Blueprint = {
       hints: { title: '지금 이 사업을 해야 하는 이유를 한 문장으로', lead: '그렇게 보는 근거 (시장 변화, 고객 요구, 경쟁사 움직임)' },
     },
     {
-      layout: 'kpi',
+      // 기회의 크기는 숫자 셋을 나란히 두기보다 전체 시장 안에 노릴 시장과 우리 목표를 겹쳐 보이는 쪽이 한눈에 읽힌다
+      layout: 'compose',
       purpose: '기회의 크기',
       priority: 2,
       focus: 'numbers',
       section: '배경',
-      guide: '기회가 얼마나 큰지 숫자로, 출처와 함께 적어요.',
-      hints: {
-        title: '숫자로 보는 기회',
-        'items.body': '출처와 기준 연도',
-        ...each({ value: ['1,200억 원', '3,400곳', '18%'], title: ['국내 시장 규모', '대상 기업 수', '해마다 크는 비율'] }),
-      },
+      guide: '전체 시장에서 노릴 시장, 우리 목표까지 좁혀 가며 출처와 함께 적어요.',
+      hints: { title: '600억 원 시장에서 12억 원을 노려요' },
+      blocks: [
+        {
+          type: 'market',
+          hints: {
+            ...each({
+              title: ['국내 품질 관리 시장', '중소 제조사 시장', '3년 안 목표'],
+              value: ['1,200억 원', '600억 원', '12억 원'],
+              body: ['해마다 18%씩 커요', '대상 기업 3,400곳', '3년 차 한 해 매출'],
+            }),
+          },
+        },
+      ],
     },
     {
       layout: 'share',
@@ -73,21 +82,26 @@ export const business: Blueprint = {
       },
     },
     {
-      layout: 'compare',
+      layout: 'compose',
       purpose: '바뀌는 모습',
       priority: 2,
       section: '제안',
-      guide: '지금과 추진 후를 줄마다 나란히 놓아요.',
-      fields: { leftTitle: '지금', rightTitle: '추진 후' },
-      hints: {
-        title: '추진하면 이렇게 달라져요',
-        'items.title': '지금의 모습',
-        'items.body': '추진 후의 모습',
-        ...each({
-          title: ['한 번 팔고 끝나요', '고객이 문제를 겪어야 연락이 와요', '해마다 매출이 들쭉날쭉해요'],
-          body: ['다달이 구독료를 받아요', '먼저 이상을 알려 줘요', '매달 매출이 쌓여요'],
-        }),
-      },
+      guide: '지금과 추진 후를 줄마다 짝지어요.',
+      hints: { title: '추진하면 이렇게 달라져요' },
+      blocks: [
+        {
+          type: 'wipe',
+          fields: { from: '지금', to: '추진 후' },
+          hints: {
+            'items.title': '지금의 모습',
+            'items.body': '추진 후의 모습',
+            ...each({
+              title: ['한 번 팔고 끝나요', '고객이 문제를 겪어야 연락이 와요', '해마다 매출이 들쭉날쭉해요'],
+              body: ['다달이 구독료를 받아요', '먼저 이상을 알려 줘요', '매달 매출이 쌓여요'],
+            }),
+          },
+        },
+      ],
     },
     options('추진 방안 비교', 2, '제안', {
       title: '세 가지 방안 중 B안을 추천해요',

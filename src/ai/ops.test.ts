@@ -110,6 +110,25 @@ describe('제안 적용', () => {
     expect(removed.deck.slides).toHaveLength(deck.slides.length)
   })
 
+  it('구성의 그림 장을 역할로 넣으면 빈 컴포넌트와 안내가 같이 들어오고, 그 컴포넌트는 빈 것으로 지울 수 있다', () => {
+    // 개선 제안 구성의 '바뀌는 모습'은 바뀌기 컴포넌트 하나를 넣은 부품 장이다. 미리 넣는 이름표(지금, 개선 후)는 사람이 적은 글이 아니다
+    const { deck: next, results } = run({ op: 'add_slide', after: sid(1), role: '바뀌는 모습', as: 'n1' })
+    expect(results.every((r) => r.ok)).toBe(true)
+    const added = next.slides[2]
+    expect(added.layout).toBe('compose')
+    expect(added.blocks!.map((b) => b.type)).toEqual(['wipe'])
+    expect(added.blocks![0].fields).toEqual({ from: '지금', to: '개선 후' })
+    expect(added.blocks![0].items.every((it) => !it.title && !it.body)).toBe(true)
+    expect(added.blocks![0].hints?.['items.0.title']).toBeTruthy()
+    const shaped = toShape(next).slides[2]
+    const cleared = applyOps(next, [
+      { op: 'remove_block', slide: shaped.id, block: shaped.blocks![0].id! },
+      { op: 'remove_slide', slide: shaped.id },
+    ])
+    expect(cleared.results.map((r) => r.code)).toEqual(['applied', 'applied'])
+    expect(cleared.deck.slides).toHaveLength(deck.slides.length)
+  })
+
   it('맞지 않는 옵션은 건너뛴다', () => {
     const { results } = run({ op: 'set_options', slide: sid(0), highlight: 1 }, { op: 'set_options', slide: 's00000000', flip: true })
     expect(results.map((r) => r.code)).toEqual(['not_for_layout', 'no_slide'])

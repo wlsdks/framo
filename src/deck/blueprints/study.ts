@@ -36,20 +36,26 @@ export const study: Blueprint = {
       },
     },
     {
-      layout: 'compare',
+      // 예전 방식에 줄이 그어지고 새 방식이 드러나는 장면이 '이렇게 바꾸면 된다'를 두 단의 글보다 먼저 말한다
+      layout: 'compose',
       purpose: '전과 후',
       priority: 2,
-      guide: '예전 방식과 새 방식을 줄마다 나란히 놓아요.',
-      fields: { leftTitle: '예전에는', rightTitle: '이렇게 하면' },
-      hints: {
-        title: '이렇게 달라져요',
-        'items.title': '예전 방식',
-        'items.body': '새 방식',
-        ...each({
-          title: ['영수증을 종이에 붙여요', '합계를 손으로 맞춰요', '양식이 사람마다 달라요'],
-          body: ['사진으로 찍어 올려요', '합계가 자동으로 맞아요', '한 양식으로 올려요'],
-        }),
-      },
+      guide: '예전 방식과 새 방식을 줄마다 짝지어요.',
+      hints: { title: '이렇게 달라져요' },
+      blocks: [
+        {
+          type: 'wipe',
+          fields: { from: '예전에는', to: '이렇게 하면' },
+          hints: {
+            'items.title': '예전 방식',
+            'items.body': '새 방식',
+            ...each({
+              title: ['영수증을 종이에 붙여요', '합계를 손으로 맞춰요', '양식이 사람마다 달라요'],
+              body: ['사진으로 찍어 올려요', '합계가 자동으로 맞아요', '한 양식으로 올려요'],
+            }),
+          },
+        },
+      ],
     },
     {
       layout: 'process',
@@ -74,11 +80,16 @@ export const study: Blueprint = {
       hints: { title: '이 화면에서 시작해요', body: '어디를 누르고 무엇을 보면 되는지' },
     },
     {
-      layout: 'case',
+      // 먼저 해 본 팀의 결과는 긴 이야기보다 숫자 하나가 전과 후로 바뀌는 그림과 해 본 사람의 한마디가 '나도 해 볼까'를 끌어낸다
+      layout: 'compose',
       purpose: '해 본 사례',
       priority: 3,
-      guide: '먼저 써 본 팀의 결과가 있으면 넣어요.',
-      hints: { client: '먼저 써 본 팀 (예: 인사팀)', title: '해 보니 얻은 것을 한 문장으로' },
+      guide: '먼저 써 본 팀의 결과를 전과 후의 숫자와 한마디로 넣어요.',
+      hints: { title: '해 보니 얻은 것을 한 문장으로 (예: 인사팀은 정산이 7분의 1로 줄었어요)' },
+      blocks: [
+        { type: 'delta', hints: { label: '정산 한 건에 드는 시간', before: '42분', after: '6분', note: '먼저 써 본 팀과 기간 (예: 인사팀, 3월 한 달)' } },
+        { type: 'quote', hints: { quote: '해 본 사람의 한마디 (예: 영수증 붙이던 오후가 통째로 돌아왔어요)', by: '말한 사람 (예: 인사팀 정산 담당)' } },
+      ],
     },
     closing(
       '정리',

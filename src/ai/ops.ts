@@ -60,7 +60,7 @@ import { aiHiddenIds, slideAiHidden } from '../deck/aiHidden'
 import { backdropOf, baseBackdrop, isBackdropArea, isBackdropKind, isBackdropStrength, tidyBackdrop } from '../deck/backdrops'
 import { BLUEPRINTS } from '../deck/blueprints'
 import { relayout, withVisibleCount } from '../deck/edits'
-import { makeSlide } from '../deck/generate'
+import { makeSlide, recipeSlide } from '../deck/generate'
 import { BOLD_LAYOUTS, LAYOUTS, LAYOUT_ORDER, panesOf, variantIds, variantOf } from '../deck/layouts'
 import { isScene, sceneFits } from '../deck/scenes'
 import { FONTS, FOOTERS, MOTIONS, PLACES, TEXT_SIZES, THEME_ORDER, TONES, TRANSITIONS } from '../deck/themes'
@@ -572,7 +572,9 @@ let prefilled: Set<string> | null = null
 function prefilledWords(): Set<string> {
   if (!prefilled) {
     prefilled = new Set()
-    for (const r of Object.values(BLUEPRINTS).flatMap((b) => b.recipes)) {
+    const recipes = Object.values(BLUEPRINTS).flatMap((b) => b.recipes)
+    // 구성이 부품 장에 넣어 두는 컴포넌트의 이름표('지금', '바뀐 뒤' 같은)도 같다
+    for (const r of [...recipes, ...recipes.flatMap((x) => x.blocks ?? [])]) {
       Object.values(r.fields ?? {}).forEach((v) => prefilled!.add(v))
       r.prefill?.forEach((p) => Object.values(p).forEach((v) => v && prefilled!.add(v)))
     }
@@ -745,7 +747,8 @@ export function applyOps(deck: Deck, ops: Op[]): Applied {
       const recipe = op.role ? recipeFor(deck, op.role) : undefined
       const layout = op.layout ?? recipe?.layout
       if (!layout) return fail('unknown_role')
-      const slide = makeSlide(layout, recipe && recipe.layout === layout ? recipe : { purpose: op.role ?? LAYOUTS[layout].name })
+      // 구성에 있는 역할이면 그 장의 안내와 이름표, 부품 장이면 빈 컴포넌트까지 그대로(글은 없다)
+      const slide = recipe && recipe.layout === layout ? recipeSlide(recipe, deck) : makeSlide(layout, { purpose: op.role ?? LAYOUTS[layout].name })
       const prev = slides[at - 1]
       if (prev && !recipe?.section) slide.section = prev.section
       slides = [...slides.slice(0, at), slide, ...slides.slice(at)]

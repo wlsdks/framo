@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { asksDecision, AUDIENCES, BLUEPRINTS, DECK_GROUPS, DECK_TYPES, DURATIONS } from './blueprints'
-import { createDeck, planRecipes, priorityFor, targetCount } from './generate'
+import { BLOCKS, boardAreaH, boardFit, BOARD_ROWS, boardSig, needRows, tiles } from './blocks'
+import { createDeck, planRecipes, priorityFor, recipeSlide, targetCount } from './generate'
 import { DROP_ROW, hintFor, LAYOUT_GROUPS, LAYOUT_ORDER, LAYOUTS, logoColumns, rowHint } from './layouts'
 import { showcaseSlides } from './showcase'
 import { scoreOf, seriesIn } from '../slides/numbers'
@@ -248,7 +249,9 @@ describe('createDeck', () => {
         for (const d of DURATIONS) {
           for (const s of createDeck({ ...input, type, audience: a.id, minutes: d.minutes }).slides) {
             const m = (s.hints.title ?? '').match(/(두|세|네|다섯|여섯) ?(가지|과제|단계|팀|목표|지표)/)
-            if (m && s.items.length !== NUM[m[1]]) wrong.add(`${type} ${s.layout} '${s.hints.title}' 줄 ${s.items.length}`)
+            // 부품 장은 그 장의 컴포넌트가 든 항목
+            const n = s.layout === 'compose' ? (s.blocks ?? []).reduce((k, b) => k + b.items.length, 0) : s.items.length
+            if (m && n !== NUM[m[1]]) wrong.add(`${type} ${s.layout} '${s.hints.title}' 줄 ${n}`)
           }
         }
       }
@@ -326,6 +329,84 @@ describe('createDeck', () => {
     const deck = createDeck({ ...input, type: 'report', title: '', ask: '' })
     expect(deck.title).toBe('실적 보고')
     expect(deck.slides[0].fields.ask).toBeUndefined()
+  })
+})
+
+describe('구성의 부품 장 (그림이 말하는 장)', () => {
+  const composed = Object.values(BLUEPRINTS).flatMap((bp) => bp.recipes.filter((r) => r.blocks?.length).map((r) => ({ type: bp.type, r })))
+
+  it('컴포넌트는 부품 장에만, 부품 장은 컴포넌트를 넣어 둔다', () => {
+    expect(composed.length).toBeGreaterThan(10)
+    for (const bp of Object.values(BLUEPRINTS)) {
+      for (const r of bp.recipes) expect(!!r.blocks?.length, `${bp.type} ${r.purpose}`).toBe(r.layout === 'compose')
+    }
+  })
+
+  it('넣어 둔 컴포넌트가 모두 판에 들어가 잘리지 않는다: 테마와 글자 크기, 보내는 자료에서도', () => {
+    const wrong: string[] = []
+    for (const { type, r } of composed) {
+      for (const theme of ['white', 'navy', 'serif'] as const) {
+        for (const size of [undefined, 'large'] as const) {
+          for (const method of ['live', 'send']) {
+            const look = { meta: { method }, theme: { id: theme, size } }
+            const slide = recipeSlide(r, look)
+            const blocks = slide.blocks ?? []
+            const at = `${type} ${r.purpose} ${theme} ${size ?? ''} ${method}`
+            if (blocks.length !== r.blocks!.length) wrong.push(`${at}: ${r.blocks!.length}개 중 ${blocks.length}개`)
+            else if (!tiles(blocks) || needRows(blocks, boardFit(boardAreaH(slide, look), blocks)) > BOARD_ROWS) wrong.push(`${at}: 판에 들지 않아요`)
+            // 알아서 짠 판으로 남긴다: 사람이 컴포넌트를 더 넣으면 판을 다시 고른다
+            if (slide.arranged !== boardSig(blocks)) wrong.push(`${at}: 알아서 짠 판 표시가 없어요`)
+          }
+        }
+      }
+    }
+    expect(wrong).toEqual([])
+  })
+
+  it('사람은 내용만 채운다: 컴포넌트의 항목은 비어 있고, 미리 채우는 칸은 구조 글자(이름표)뿐이다', () => {
+    for (const { type, r } of composed) {
+      for (const b of recipeSlide(r).blocks!) {
+        expect(b.items.every((it) => !it.title && !it.body && !it.value && !it.meta && !it.image), `${type} ${r.purpose}`).toBe(true)
+        // 바뀌기의 '지금', '개선 후', 평가표의 'A안 B안 C안' 같은 머리 이름표. 글은 안내(hints)로만
+        for (const [k, v] of Object.entries(b.fields)) expect(['from', 'to', 'opts'].includes(k) && [...v].length <= 12, `${type} ${r.purpose} ${k}`).toBe(true)
+      }
+    }
+  })
+
+  it('한 발표에서 같은 컴포넌트를 되풀이하지 않는다', () => {
+    for (const bp of Object.values(BLUEPRINTS)) {
+      const types = bp.recipes.flatMap((r) => (r.blocks ?? []).map((b) => b.type))
+      expect(new Set(types).size, bp.type).toBe(types.length)
+    }
+  })
+
+  it('컴포넌트의 안내는 그 컴포넌트에 있는 칸에만, 줄마다 다른 예시는 항목 수만큼 있다', () => {
+    const wrong: string[] = []
+    for (const { type, r } of composed) {
+      for (const b of r.blocks!) {
+        const spec = BLOCKS[b.type]
+        const keys = new Set(spec.fields.map((f) => f.key))
+        const itemKeys = new Set<string>((spec.items?.fields ?? []).map((f) => f.key))
+        const count = b.items ?? spec.items?.default ?? 0
+        const rows: Record<string, number> = {}
+        for (const key of Object.keys(b.hints ?? {})) {
+          const m = /^items\.(?:(\d+)\.)?(\w+)$/.exec(key)
+          if (!m ? !keys.has(key) : !itemKeys.has(m[2])) wrong.push(`${type} ${r.purpose} ${b.type}: 없는 칸 ${key}`)
+          if (m?.[1]) rows[m[2]] = Math.max(rows[m[2]] ?? 0, Number(m[1]) + 1)
+        }
+        for (const [key, n] of Object.entries(rows)) if (n !== count) wrong.push(`${type} ${r.purpose} ${key}: 예시 ${n}줄, 항목 ${count}개`)
+        if (spec.items && (count < spec.items.min || count > spec.items.max)) wrong.push(`${type} ${r.purpose}: 항목 ${count}개`)
+      }
+    }
+    expect(wrong).toEqual([])
+  })
+
+  it('발표 종류마다 처음 고른 듣는 사람과 시간의 구성에 그림이 말하는 장이 들어간다', () => {
+    // 실적 보고는 레이아웃 장(핵심 숫자, 목표 대비, 증감, 추이, 진행 막대)이 이미 숫자와 그림으로 말해서 바꾸지 않았다
+    for (const type of DECK_TYPES.filter((t) => t !== 'report')) {
+      const { audience, minutes } = BLUEPRINTS[type].defaults
+      expect(planRecipes(type, audience, minutes).some((r) => r.layout === 'compose'), type).toBe(true)
+    }
   })
 })
 

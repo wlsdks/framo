@@ -1,9 +1,9 @@
 import { BLOCK_LOOK_IDS, BLOCKS, BLOCK_TYPES, BOARD_ROWS, boardFit, boardFromRows, composeAreaH, needRows, rearrangeBlocks, settleDeck } from '../deck/blocks'
 import { sampleBlock } from '../deck/blockSamples'
-import { BLUEPRINTS } from '../deck/blueprints'
+import { BLUEPRINTS, DECK_TYPES } from '../deck/blueprints'
 import { pageInfo } from '../deck/fields'
 import { createDeck, makeSlide } from '../deck/generate'
-import { LAYOUTS } from '../deck/layouts'
+import { hintFor, LAYOUTS } from '../deck/layouts'
 import { createSampleDeck } from '../deck/sample'
 import { extraSlides, withItems, withOptions } from '../deck/showcase'
 import type { Block, BlockLook, BlockType, Deck, DeckTheme, DeckType, Slide, ThemeId, Tone } from '../deck/types'
@@ -197,13 +197,55 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
   })
 }
 
+/** '(예: …)'가 든 안내는 그 예시를, 아니면 안내 그대로 */
+const exampleOf = (hint: string) => /\(예: ([^)]+)\)/.exec(hint)?.[1] ?? hint
+
+/**
+ * &filled=1: 구성의 안내를 그 칸의 글로 채운 장. 쓰는 사람이 안내대로 채웠을 때의 끝 모습과 짜임을 본다(빈 장은 발표 화면에 안내가 없다).
+ * 구성이 단 안내(줄마다의 예시)가 있는 칸과 꼭 채울 칸만 채우고, 기본 안내뿐인 접는 칸(출처, 덧붙임)은 비워 둔다
+ */
+function filledFromHints(slide: Slide): Slide {
+  const spec = LAYOUTS[slide.layout]
+  const h = slide.hints
+  const fields = { ...slide.fields }
+  for (const f of spec.fields) if (!f.image && !fields[f.key]?.trim() && (h[f.key] || !f.optional)) fields[f.key] = exampleOf(hintFor(slide.layout, h, f.key))
+  const items = slide.items.map((it, i) => {
+    const next = { ...it }
+    for (const f of spec.items?.fields ?? []) {
+      if (!f.image && !next[f.key].trim() && (h[`items.${i}.${f.key}`] || h[`items.${f.key}`] || !f.optional)) next[f.key] = exampleOf(hintFor(slide.layout, h, f.key, f.key, i))
+    }
+    return next
+  })
+  const blocks = slide.blocks?.map((b) => {
+    const bs = BLOCKS[b.type]
+    const bh = b.hints ?? {}
+    const bf = { ...b.fields }
+    for (const f of bs.fields) if (!f.image && !bf[f.key]?.trim() && (bh[f.key] || !f.optional)) bf[f.key] = exampleOf(bh[f.key] ?? f.hint)
+    const bi = b.items.map((it, i) => {
+      const next = { ...it }
+      for (const f of bs.items?.fields ?? []) {
+        const own = bh[`items.${i}.${f.key}`]
+        if (!f.image && !next[f.key].trim() && (own || !f.optional)) next[f.key] = exampleOf(own ?? bh[`items.${f.key}`] ?? f.hints?.[i] ?? f.hint)
+      }
+      return next
+    })
+    return { ...b, fields: bf, items: bi }
+  })
+  return { ...slide, fields, items, ...(blocks ? { blocks } : {}) }
+}
+
 function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck {
   if (set === 'blank') {
-    const type = (params.get('type') as DeckType | null) ?? 'business'
-    const input = { type, audience: 'mixed', minutes: 30, method: 'live', title: '', org: '', presenter: '', theme } as const
-    // &all=1: 듣는 사람과 시간으로 고르지 않은 구성의 모든 장. 홍보 페이지 구성 보기의 그림(site/images/decks/<종류>-<차례>.webp)이
-    // 이 장들을 mode=preview로 찍은 것이라, 차례가 BLUEPRINTS[type].recipes의 차례와 같다
-    return params.get('all') === '1' ? createDeck(input, (BLUEPRINTS[type] ?? BLUEPRINTS.blank).recipes) : createDeck(input)
+    // type=all: 모든 발표 종류의 구성을 이어서(npm run look -- check --decks)
+    const types = params.get('type') === 'all' ? DECK_TYPES : [(params.get('type') as DeckType | null) ?? 'business']
+    const decks = types.map((type) => {
+      const input = { type, audience: 'mixed', minutes: 30, method: 'live', title: '', org: '', presenter: '', theme } as const
+      // &all=1: 듣는 사람과 시간으로 고르지 않은 구성의 모든 장. 홍보 페이지 구성 보기의 그림(site/images/decks/<종류>-<차례>.webp)이
+      // 이 장들을 mode=preview로 찍은 것이라, 차례가 BLUEPRINTS[type].recipes의 차례와 같다
+      return params.get('all') === '1' ? createDeck(input, (BLUEPRINTS[type] ?? BLUEPRINTS.blank).recipes) : createDeck(input)
+    })
+    const slides = decks.flatMap((d) => d.slides)
+    return { ...decks[0], slides: params.get('filled') === '1' ? slides.map(filledFromHints) : slides }
   }
   const deck = createSampleDeck()
   if (set === 'edge') return { ...deck, theme: { id: theme }, slides: edgeSlides() }
@@ -256,7 +298,8 @@ export function Gallery() {
   // 부품의 잘리지 않는 높이를 재는 도구 (measureBlocks.ts). 콘솔에서 await measureBlocks()
   if (params.get('set') === 'blocks') Object.assign(window, { measureAll, measureAllFonts, measureBlocks, mergeHeights, heightsSource, clashes, failingHeights, spanWidth, fitBlocks })
   // 부품 조합 시험 (combos.ts). 콘솔에서 await checkCombos()
-  if (['combos', 'review', 'dirs', 'scenarios'].includes(params.get('set') ?? '')) Object.assign(window, { checkCombos, comboSlides, checkAssembly })
+  // 프레임 잡기가 만드는 구성(set=blank, &filled=1이면 안내대로 채운 모습)의 부품 장도 같은 검사로
+  if (['combos', 'review', 'dirs', 'scenarios', 'blank'].includes(params.get('set') ?? '')) Object.assign(window, { checkCombos, comboSlides, checkAssembly })
   // 잘림과 짜임 검사는 레이아웃 장 갤러리에서도 (레이아웃 장은 잘림만 본다)
   else Object.assign(window, { checkAssembly })
   // 부품 하나를 항목 수와 칸 크기마다 재는 시험 (stress.ts). 콘솔에서 await checkStress()
@@ -318,7 +361,8 @@ export function Gallery() {
       },
     })),
   }
-  const deck = ['hideHead', 'hideFoot', 'blankHead'].some((key) => params.get(key) === '1') ? settleDeck(raw) : raw
+  // 구성(set=blank)은 처음 만들 때의 판이라, 글자 크기(&size)나 테마를 바꾼 모습은 편집기처럼 판을 다시 맞춰 본다
+  const deck = ['hideHead', 'hideFoot', 'blankHead'].some((key) => params.get(key) === '1') || params.get('set') === 'blank' ? settleDeck(raw) : raw
   const info = pageInfo(picked)
   if (params.get('set') === 'bdsheet') return <BackdropSheet deck={deck} params={params} />
   return (

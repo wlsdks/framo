@@ -102,7 +102,8 @@ describe('모양만 고르기', () => {
   })
 
   it('모든 발표 종류와 듣는 사람의 구성이 꼴 확인과 마지막 그물을 지난다', () => {
-    const words = ['format', 'version', 'deck', 'type', 'audience', 'duration', 'method', 'theme', 'accent', 'motion', 'font', 'size', 'footer', 'transition', 'tone', 'updatedAt', 'slides', 'id', 'layout', 'role', 'section', 'hidden', 'hiddenItems', 'fields', 'items', 'options', 'highlight', 'flip', 'pane', 'contain', 'place', 'variant', 'base', 'filled', ...TEXT_STATES, 'html-maker/shape']
+    // 구성이 부품 장(흐름, 원인 캐기, 일정 막대 …)도 만들어서 부품 장의 키까지
+    const words = [...SHAPE_WORDS, 'pane']
     for (const type of [...DECK_TYPES, 'blank' as const]) {
       for (const { id: audience } of AUDIENCES) {
         const shape = toShape(createDeck({ type, audience, minutes: 30, method: 'send', title: SECRET, org: SECRET, presenter: SECRET, ask: SECRET, theme: 'white' }))

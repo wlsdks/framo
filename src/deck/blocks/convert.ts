@@ -1,7 +1,7 @@
 // 장을 부품 장으로, 부품 장을 다시 장으로. 사람이 적은 글은 하나도 버리지 않는다
 
 import { relayout } from '../edits'
-import { uid } from '../generate'
+import { uid } from '../make'
 import { sceneFits } from '../scenes'
 import type { Block, BlockType, Item, LayoutBlockType, LayoutId, Slide } from '../types'
 import { HEAD_KEYS } from './catalog'

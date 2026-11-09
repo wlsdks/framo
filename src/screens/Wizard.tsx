@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { asksDecision, AUDIENCES, BLUEPRINTS, DECK_GROUPS, DURATIONS, METHODS } from '../deck/blueprints'
 import { pageInfo } from '../deck/fields'
-import { createDeck, formatDate, makeSlide } from '../deck/generate'
+import { createDeck, formatDate, makeSlide, recipeSlide } from '../deck/generate'
 import { LAYOUTS } from '../deck/layouts'
 import { THEMES, THEME_ORDER } from '../deck/themes'
 import type { Audience, Deck, DeckMeta, DeckType, Method, Slide, ThemeId } from '../deck/types'
@@ -49,7 +49,7 @@ function filmOf(type: DeckType): { deck: Deck; slides: Slide[] } {
   })
   const slides = (bp.showcase ?? []).flatMap((purpose) => {
     const recipe = bp.recipes.find((r) => r.purpose === purpose)
-    return recipe ? [makeSlide(recipe.layout, recipe)] : []
+    return recipe ? [recipeSlide(recipe)] : []
   })
   return { deck: { ...deck, slides }, slides }
 }

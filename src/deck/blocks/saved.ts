@@ -2,7 +2,7 @@
 // 저장한 것은 발표 밖(이 PC의 브라우저와 보관 폴더, store/saved.ts)에 두고 AI에게 보내지 않는다.
 // 발표에 넣은 뒤에는 보통 부품이라, AI 공유 모양에도 다른 부품처럼 고른 값만 들어간다.
 
-import { makeSlide, uid } from '../generate'
+import { makeSlide, uid } from '../make'
 import { MOTIONS, TONES, TRANSITIONS } from '../themes'
 import type { Block, BlockAt, Motion, Slide, SlideOptions, Tone, Transition } from '../types'
 import { bandOf, BOARD_COLS, tiles } from './board'

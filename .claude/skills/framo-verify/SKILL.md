@@ -24,6 +24,7 @@ npm run typecheck && npm test
 |---|---|---|
 | 부품(컴포넌트)이나 그 CSS, `fitBlocks.ts` | 조합 seed 1~4의 모든 장을 두 테마, 명조, 큰 글자로. 바꾼 부품은 혼자일 때와 옆에 다른 부품이 있을 때 | `npm run look -- check` (기본: seed 1~4 × white·navy·serif), `npm run look -- check --large`. 높이를 바꿨으면 `#/gallery?set=blocks`에서 다시 잰다(`src/screens/measureBlocks.ts` 맨 위) |
 | 레이아웃 | 모든 모양(`&variants=1`)을 두 테마와 명조로 | `npm run look -- frame --only <레이아웃 id>` |
+| 프레임 잡기의 구성(`src/deck/blueprints/`) | 고친 종류의 구성을 프레임 잡기 1·2단계와 `#/gallery?set=blank&type=<종류>&all=1&filled=1`(안내대로 채운 끝 모습)으로, 두 테마 | `npm run look -- check --decks`, `npm run look -- check --decks --large` |
 | 모션(`src/motion/`) | 바꾼 장의 필름 띠: `npm run look -- film "<갤러리 주소>" --slide N --level lively`, 차분하게도, 흰·검은 테마 둘 다. 찍는 법과 점검표는 `/framo-motion`, 감성은 `/framo-review`의 ‘모션 비평’. 장면, 장 넘기기, 내보낸 HTML은 필름으로 찍지 못하니 사람에게 확인을 부탁한다 | `npx vitest run src/motion` |
 | 화면(`src/screens/`, `src/styles/`) | 1280×600, 1366×650, 1536×730(`--scrollbars`), 1920×1080. 처음 쓰는 사람의 흐름을 끝까지 | 가로 스크롤 없음 |
 | 내보내기(PDF, `print.css`, 내보낸 HTML의 인쇄) | 쪽마다 그림(`--pages`)을 열어 모든 장이 끝난 모습인지(세는 숫자는 마지막 값, 누르면 나오는 것까지), 두 테마로 | `npm run look -- pdf`(예시 발표), `npm run look -- pdf --deck <작업 파일>`: 쪽 수 = 장 수, 16:9 한 가지, 글꼴이 들었는지 |

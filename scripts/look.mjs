@@ -4,7 +4,7 @@
 // 브라우저는 매번 빈 임시 프로필로 띄워 쓰는 사람의 크롬 프로필과 화면을 건드리지 않는다.
 //
 //   npm run look -- shot  <주소> [--size 1280x600] [--wait 2000] [--scrollbars] [--run a.js[,b.js]] [--out a.png]
-//   npm run look -- check [--base http://localhost:5199] [--seeds 1-4] [--themes white,navy,serif] [--large]
+//   npm run look -- check [--base http://localhost:5199] [--seeds 1-4] [--themes white,navy,serif] [--large] [--decks]
 //   npm run look -- frame --only cover,kpi [--base …]
 //   npm run look -- film  <갤러리 주소> --slide 0 [--level lively] [--every 300] [--count 12] [--exact] [--gpu off] [--cols 4] [--tile 480] [--out film.png]
 //   npm run look -- perf  <갤러리 주소> --slide 0 [--level lively] [--cpu 4] [--gpu off] [--ms 7000]
@@ -15,6 +15,7 @@
 //        (async 함수의 몸통. 쉼표로 여럿을 이어 붙인다. 개발 서버의 모듈을 import('/src/…')로 불러 발표를 만들거나, 단추를 눌러 메뉴를
 //        열어 둔 화면을 찍는다). 몸통에서 wait(ms)를 쓸 수 있고, 돌려준 값은 출력한다. --do는 --run과 같다(예전 이름).
 // check  부품 조합(set=combos)을 조건마다 열어 checkCombos()와 checkAssembly()를 돌린다. 문제가 있으면 1로 끝난다.
+//        --decks면 조합 대신 프레임 잡기가 만드는 모든 발표 종류의 구성(set=blank&type=all)을 안내대로 채워(&filled=1) 본다.
 // frame  레이아웃의 모든 모양(variants=1)을 두 테마, 명조, 큰 글자, 편집 화면에서 열어 checkFrame()을 돌린다.
 // film   갤러리의 장 하나를 playSlide로 움직이며 every ms마다 찍어 한 장의 필름 띠로 묶는다(모션 검토). --exact면 움직임을 모두 멈추고
 //        시계를 정확히 every ms씩 옮겨 찍는다(찍는 데 걸리는 시간만큼 늦지 않는다. 모션 그래픽처럼 시간의 순수 함수인 것을 볼 때).
@@ -217,14 +218,15 @@ async function run(page, url, fns) {
 
 async function check(o) {
   const base = o.base || DEFAULT_BASE
-  const seeds = range(o.seeds || '1-4')
+  // 구성은 씨앗 없이 한 벌이다
+  const seeds = o.decks ? [1] : range(o.seeds || '1-4')
   const themes = String(o.themes || 'white,navy,serif').split(',')
   const page = await openBrowser()
   let bad = 0
   try {
     for (const theme of themes)
       for (const seed of seeds) {
-        const q = `set=combos&n=60&w=1920&seed=${seed}${theme === 'white' ? '' : `&theme=${theme}`}${o.large ? '&size=large' : ''}`
+        const q = `${o.decks ? 'set=blank&type=all&all=1&filled=1&only=compose' : `set=combos&n=60&seed=${seed}`}&w=1920${theme === 'white' ? '' : `&theme=${theme}`}${o.large ? '&size=large' : ''}`
         const { problems, slides } = await run(page, `${base}/#/gallery?${q}`, ['checkCombos', 'checkAssembly'])
         bad += problems.length
         console.log(`${problems.length ? '✗' : '✓'} ${q} (${slides}장)${problems.length ? '\n  ' + problems.slice(0, 20).join('\n  ') : ''}`)

@@ -7,8 +7,9 @@ describe('대외 제안의 안내 예시', () => {
     // 한 발표 안의 예시끼리 말이 맞지 않았다
     const recipes = BLUEPRINTS.proposal.recipes
     const cost = recipes.find((r) => r.purpose === '비용과 조건')!.hints!
-    const plan = recipes.find((r) => r.hints?.title === '이런 순서로 진행해요')!.hints!
-    const weeks = Object.keys(plan).filter((k) => /^items\.\d+\.meta$/.test(k)).map((k) => plan[k])
+    // 진행 일정은 주마다의 기간 막대(추진 일정 컴포넌트)라 마지막 기간 칸이 마지막 주다
+    const plan = recipes.find((r) => r.purpose === '진행 일정')!.blocks![0].hints!
+    const weeks = plan.cols.split(',').map((w) => w.trim())
     expect(cost['items.1.title']).toBe('예상 기간')
     expect(cost['items.1.value']).toBe(weeks.at(-1))
   })

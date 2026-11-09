@@ -1,7 +1,7 @@
 // 파일에서 읽은 부품 장 바로잡기: 정해진 꼴로 맞추고, 모르는 부품은 빼되 글은 지우지 않는다
 
 import { isCineId } from '../cine'
-import { uid } from '../generate'
+import { uid } from '../make'
 import type { Block, BlockEffect, BlockFrom, BlockLook, BlockSpeed, BlockType, BlockWhen, Item, Slide, BlockReveal } from '../types'
 import { type Fit, isArea, LOOSE, normalize, removeFromBoard } from './board'
 import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_LOOK_IDS, BLOCK_REVEAL_IDS, BLOCK_SPEED_IDS, BLOCK_TYPES, BLOCK_WHEN_IDS, BLOCKS } from './catalog'
