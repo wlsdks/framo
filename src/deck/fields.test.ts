@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { deckBlanks, dropIndex, isBlankItem, missingFields, optionalBlanks, presentable, shownChars, shownOnly, unshownCount } from './fields'
+import { deckBlanks, dropIndex, isBlankItem, missingFields, optionalBlanks, presentable, sendable, shownChars, shownOnly, unshownCount, withUnsent } from './fields'
 import { createDeck, emptyItem, makeSlide } from './generate'
 import { BLOCKS, withLayout } from './blocks'
 import { labelIn, LAYOUT_ORDER, LAYOUTS } from './layouts'
-import type { Item } from './types'
+import type { Deck, Item, Slide } from './types'
 
 const item = (title: string): Item => ({ ...emptyItem(), title })
 
@@ -217,5 +217,87 @@ describe('항목을 뺀 뒤 강조 (dropIndex)', () => {
     expect(dropIndex(2, 3)).toBe(2)
     expect(dropIndex(undefined, 0)).toBeUndefined()
     expect(dropIndex(-1, 0)).toBe(-1)
+  })
+})
+
+describe('발표 파일(HTML)에 담는 발표와 다시 열 때 이어받기 (sendable, withUnsent)', () => {
+  // 레이아웃이 그리는 칸과 그 레이아웃이 그리지 않는 칸(다른 레이아웃에서 쓴 글), 최대 수보다 많은 항목, 노트까지 채운 장
+  const rich = (id: (typeof LAYOUT_ORDER)[number], n: number): Slide => {
+    const spec = LAYOUTS[id]
+    const fields = { ...Object.fromEntries(spec.fields.filter((f) => !f.key.startsWith('$')).map((f) => [f.key, `${f.label} ${n}`])), oldCell: `남겨 둔 칸 ${n}` }
+    const count = (spec.items?.max ?? 0) + 2
+    const items = Array.from({ length: count }, (_, i) => ({ ...emptyItem(), title: `이름 ${n}.${i}`, body: `설명 ${n}.${i}`, value: `${i}`, meta: `메모 ${n}.${i}` }))
+    return { ...makeSlide(id), fields, items, notes: `대본 ${n}` }
+  }
+  const deckOf = (): Deck => {
+    const deck = createDeck({ type: 'weekly', audience: 'practitioner', minutes: 10, method: 'live', title: '주간 보고', org: '품질팀', presenter: '발표자', theme: 'white' })
+    deck.meta = { ...deck.meta, contact: '연락처', logo: 'data:image/png;base64,AA' }
+    const slides = LAYOUT_ORDER.filter((id) => id !== 'compose').map((id, n) => rich(id, n))
+    // 부품 장이었던 장(남겨 둔 부품), 제목과 아래 띠를 숨긴 장, 숨긴 장(맨 앞, 가운데에 이어서 둘, 맨 끝)
+    slides.push(withLayout(withLayout(rich('points', 90), 'compose'), 'statement'))
+    slides.push({ ...rich('summary', 91), options: { hideHead: true, hideFoot: true } })
+    slides.splice(0, 0, { ...rich('closing', 92), hidden: true })
+    slides.splice(5, 0, { ...rich('kpi', 93), hidden: true }, { ...rich('bars', 94), hidden: true })
+    slides.push({ ...rich('closing', 95), hidden: true })
+    return { ...deck, slides }
+  }
+  const viaFile = (d: Deck) => JSON.parse(JSON.stringify(sendable(d))) as Deck
+
+  it('파일에는 노트, 숨긴 장, 가려진 칸이 없다', () => {
+    const sent = viaFile(deckOf())
+    expect(sent.slides.some((s) => s.hidden || s.notes)).toBe(false)
+    expect(JSON.stringify(sent)).not.toContain('남겨 둔 칸')
+    expect(JSON.stringify(sent)).not.toContain('대본')
+  })
+
+  it('이 PC의 발표를 보낸 파일 그대로 열면 이 PC의 발표와 키의 차례까지 똑같다', () => {
+    const d = deckOf()
+    const again = withUnsent(viaFile(d), d)
+    expect(again).toEqual(d)
+    expect(JSON.stringify(again)).toBe(JSON.stringify(d))
+  })
+
+  it('파일에 담긴 것(보이는 글, 차례)은 파일 그대로 두고, 같은 장의 노트와 가려진 칸만 이어받는다', () => {
+    const d = deckOf()
+    const sent = viaFile(d)
+    const [first, second, ...rest] = sent.slides
+    // 다른 곳에서 고친 파일: 보이는 제목을 바꾸고, 장 둘의 차례를 바꾸고, 새 장을 더했다
+    const edited = { ...sent, slides: [second, { ...first, fields: { ...first.fields, title: '파일에서 고친 제목' } }, ...rest, { ...makeSlide('statement'), fields: { title: '새 장' } }] }
+    const again = withUnsent(edited, d)
+    const byId = new Map(again.slides.map((s) => [s.id, s]))
+    expect(byId.get(first.id)!.fields.title).toBe('파일에서 고친 제목')
+    expect(byId.get(first.id)!.fields.oldCell).toBe(d.slides.find((s) => s.id === first.id)!.fields.oldCell)
+    for (const s of d.slides) expect(byId.get(s.id)?.notes, s.id).toBe(s.notes)
+    // 파일에만 있는 장은 파일 그대로(노트 없음)
+    expect(again.slides.at(-1)!.fields.title).toBe('새 장')
+    expect(again.slides.at(-1)!.notes).toBe('')
+    // 숨긴 장은 이 PC에서 바로 앞에 있던 장 뒤에: 맨 앞의 숨긴 장은 맨 앞, 이어서 숨긴 두 장은 함께
+    expect(again.slides[0].id).toBe(d.slides[0].id)
+    const at = (id: string) => again.slides.findIndex((s) => s.id === id)
+    expect(at(d.slides[5].id)).toBe(at(d.slides[4].id) + 1)
+    expect(at(d.slides[6].id)).toBe(at(d.slides[5].id) + 1)
+    expect(at(d.slides.at(-1)!.id)).toBe(at(d.slides.at(-2)!.id) + 1)
+    expect(again.slides).toHaveLength(d.slides.length + 1)
+  })
+
+  it('최대 수 너머의 항목은 파일의 장이 최대 수까지 찼을 때만 되찾는다(덜 찬 장에 붙이면 숨어 있던 항목이 장에 나온다)', () => {
+    const d = deckOf()
+    const sent = viaFile(d)
+    const i = sent.slides.findIndex((s) => s.layout === 'points')
+    const id = sent.slides[i].id
+    expect(withUnsent(sent, d).slides.find((s) => s.id === id)!.items).toHaveLength(LAYOUTS.points.items!.max + 2)
+    const fewer = { ...sent, slides: sent.slides.map((s, j) => (j === i ? { ...s, items: s.items.slice(0, 2) } : s)) }
+    expect(withUnsent(fewer, d).slides.find((s) => s.id === id)!.items).toHaveLength(2)
+  })
+
+  it('발표 전체의 값은 파일의 장에 나오지 않는 것만 되찾는다', () => {
+    // 연락처는 숨긴 마지막 장에만 나온다: 파일에는 빈 값, 다시 열면 이 PC의 값
+    const all = deckOf()
+    const d = { ...all, slides: all.slides.filter((s) => s.hidden || !LAYOUTS[s.layout].fields.some((f) => f.key === '$contact')) }
+    const sent = viaFile(d)
+    expect(sent.meta.contact).toBe('')
+    expect(withUnsent(sent, d).meta.contact).toBe('연락처')
+    // 파일의 장에 나오는 값을 비웠으면 지운 것이다
+    expect(withUnsent({ ...sent, meta: { ...sent.meta, org: '' } }, d).meta.org).toBe('')
   })
 })

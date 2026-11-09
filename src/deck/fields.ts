@@ -181,18 +181,97 @@ export function shownChars(slide: Slide, meta: DeckMeta): number {
 
 const META_KEYS: MetaKey[] = ['org', 'presenter', 'date', 'contact', 'logo']
 
-/**
- * 받은 장들에 그려지는 발표 전체의 값($org 같은 칸)만 남긴 값. 고르는 값(종류, 듣는 사람, 시간, 방식)은 그대로 둔다.
- * 연락처와 로고는 표지와 마지막 장에만 나와서, 그 장을 숨기거나 빼고 보낸 HTML 파일에서는 보이지 않는데도 소스에는 들어 있었다
- */
-export function shownMeta(meta: DeckMeta, slides: readonly Slide[]): DeckMeta {
+/** 받은 장들에 그려지는 발표 전체의 값($org 같은 칸)의 이름 */
+function metaShownIn(slides: readonly Slide[]): Set<string> {
   const shown = new Set<string>()
   const add = (spec: { fields: { key: string }[] }) => spec.fields.forEach((f) => isMetaKey(f.key) && shown.add(f.key.slice(1)))
   for (const s of slides) {
     add(LAYOUTS[s.layout])
     if (s.layout === 'compose') allBlocks(s.blocks ?? []).forEach((b) => add(BLOCKS[b.type]))
   }
-  return { ...meta, ...Object.fromEntries(META_KEYS.filter((key) => !shown.has(key)).map((key) => [key, ''])) }
+  return shown
+}
+
+/**
+ * 다른 사람에게 보내는 발표 파일(HTML)에 담는 발표. 듣는 분께 보이지 않는 것은 뺀다: 발표자 노트, 숨긴 장, 레이아웃을 바꿔 가려진 칸(shownOnly),
+ * 보내는 장에 나오지 않는 발표 전체의 값. 고르는 값(종류, 듣는 사람, 시간, 방식)은 그대로 둔다. 연락처와 로고는 표지와 마지막 장에만 나와서,
+ * 그 장을 숨기거나 빼고 보낸 HTML 파일에서는 보이지 않는데도 소스에는 들어 있었다. 뺀 것은 이 PC의 같은 발표에서 되찾는다(withUnsent)
+ */
+export function sendable(deck: Deck): Deck {
+  const slides = deck.slides.filter((s) => !s.hidden)
+  const shown = metaShownIn(slides)
+  const meta = { ...deck.meta, ...Object.fromEntries(META_KEYS.filter((key) => !shown.has(key)).map((key) => [key, ''])) }
+  return { ...deck, meta, slides: slides.map((s) => ({ ...shownOnly(s), notes: '' })) }
+}
+
+/**
+ * 발표 파일(HTML)로 연 발표(sent)에, 그 파일이 담지 않는 것(sendable이 뺀 것)을 이 PC의 같은 발표(full)에서 되찾아 넣는다: 같은 장의 발표자
+ * 노트와 가려진 칸, 숨긴 장(있던 자리에), 보내는 장에 나오지 않는 발표 전체의 값. 발표 파일의 빈 노트는 지운 것이 아니라 담기지 않은 것이다.
+ * 이것 없이 같은 발표를 발표 파일 내용으로 바꾸면 노트와 숨긴 장이 사라진 것으로 보였다(바뀌기 전 모습은 버전 기록에만 있었다).
+ * 파일에 담긴 것(보이는 글, 차례, 고른 값)은 파일 그대로 둔다. 이 PC의 발표를 내보낸 파일을 그대로 열면 이 PC의 발표와 똑같다
+ */
+export function withUnsent(sent: Deck, full: Deck): Deck {
+  const was = new Map(full.slides.map((s) => [s.id, s]))
+  const slides = sent.slides.map((s) => {
+    const f = was.get(s.id)
+    return f ? withUnsentSlide(s, f) : s
+  })
+  // 숨긴 장은 이 PC의 발표에서 바로 앞에 있던 장 뒤에 (앞에 있던 장이 파일에 없으면 그 앞 장, 하나도 없으면 맨 앞에)
+  const ids = new Set(slides.map((s) => s.id))
+  full.slides.forEach((s, i) => {
+    if (!s.hidden || ids.has(s.id)) return
+    let at = 0
+    for (let j = i - 1; j >= 0 && !at; j--) at = slides.findIndex((x) => x.id === full.slides[j].id) + 1
+    slides.splice(at, 0, s)
+    ids.add(s.id)
+  })
+  const shown = metaShownIn(sent.slides)
+  const meta = { ...sent.meta, ...Object.fromEntries(META_KEYS.filter((key) => !shown.has(key) && !sent.meta[key]).map((key) => [key, full.meta[key]])) }
+  return { ...sent, meta, slides }
+}
+
+/** 같은 장: 노트, 가려진 칸, 부품 장이 아닌 장에 남겨 둔 부품, 부품마다 가려진 칸 */
+function withUnsentSlide(s: Slide, f: Slide): Slide {
+  const cells = withHiddenCells(s, f, LAYOUTS[s.layout], (key) => hiddenField(s, key))
+  const was = new Map((f.blocks ?? []).map((b) => [b.id, b]))
+  const blocks =
+    s.layout === 'compose'
+      ? s.blocks?.map((b) => {
+          const from = was.get(b.id)
+          return from ? inOrderOf(from, withHiddenCells(b, from, BLOCKS[b.type])) : b
+        })
+      : f.blocks
+  return inOrderOf(f, { ...cells, notes: s.notes || f.notes, blocks })
+}
+
+/**
+ * within이(와 숨긴 머리와 아래 띠가) 뺀 것을 full에서 되찾는다: 정의에 없는 칸, 같은 항목의 정의에 없는 칸, 최대 수 너머의 항목.
+ * 최대 수 너머의 항목은 최대 수까지 찬 장에만 붙인다: 덜 찬 장에 붙이면 숨어 있던 항목이 장에 나온다
+ */
+function withHiddenCells<T extends Cells>(sent: T, full: Cells, spec: CellSpec, hidden: (key: string) => boolean = () => false): T {
+  const keys = new Set(spec.fields.map((f) => f.key))
+  const parts = new Set(spec.items?.fields.map((f) => f.key))
+  const fields: Record<string, string> = {}
+  for (const [key, v] of Object.entries(full.fields)) if (!(key in sent.fields) && ((!isMetaKey(key) && !keys.has(key)) || hidden(key))) fields[key] = v
+  const gone = ITEM_TEXT.filter((key) => !parts.has(key))
+  const was = new Map(full.items.map((it) => [it.id, it]))
+  const items = sent.items.map((it) => {
+    const f = was.get(it.id)
+    return f && gone.length ? { ...it, ...Object.fromEntries(gone.map((key) => [key, it[key] || f[key]])) } : it
+  })
+  const max = spec.items?.max ?? 0
+  const ids = new Set(sent.items.map((it) => it.id))
+  const rest = sent.items.length >= max ? full.items.slice(max).filter((it) => !ids.has(it.id)) : []
+  return { ...sent, fields: inOrderOf(full.fields, { ...fields, ...sent.fields }), items: [...items, ...rest] }
+}
+
+/** model의 키 차례대로 value의 키를 늘어놓는다(model에 없는 키는 뒤에). 되찾은 발표가 이 PC의 발표와 차례까지 같은 꼴이 되게(같은 발표로 알아보는 비교 값이 같게) */
+function inOrderOf<T extends object>(model: object, value: T): T {
+  const v = value as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  for (const key of Object.keys(model)) if (key in v) out[key] = v[key]
+  for (const key of Object.keys(v)) if (!(key in out)) out[key] = v[key]
+  return out as T
 }
 
 /** 채운 칸의 수 (발표 전체의 값은 빼고, 부품 안의 칸까지) */

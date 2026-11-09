@@ -19,6 +19,7 @@ import {
 import { deleteDeck, listDecks, loadDeck, saveDeck } from './library'
 import { reconcile } from './reconcile'
 import { unshareDeck } from '../ai/client'
+import { withUnsent } from '../deck/fields'
 import { uid } from '../deck/generate'
 import { deckSignature, deleteDeckVersions, keepVersion } from './versions'
 
@@ -177,6 +178,8 @@ interface Imported {
   deck: Deck
   /** 이 브라우저에 저장했는지 */
   saved: boolean
+  /** 같은 발표가 이 PC에 있었다 */
+  existed: boolean
   /** 같은 발표가 있어서 파일 내용으로 바꿨다 (바뀌기 전은 버전 기록에 있다) */
   replaced: boolean
   /** 같은 발표가 있는데 바뀌기 전을 버전으로 남기지 못해서, 덮어쓰지 않고 사본으로 열었다 */
@@ -184,17 +187,19 @@ interface Imported {
 }
 
 /**
- * 내려받아 둔 작업 파일을 연다. 같은 발표가 이미 있으면 지금 상태를 버전으로 남기고 파일 내용으로 바꾼다.
+ * 내려받아 둔 작업 파일(.deck)이나 발표 파일(HTML)을 연다. 같은 발표가 이미 있으면 지금 상태를 버전으로 남기고 파일 내용으로 바꾼다.
  * 버전 기록에 남았는지 확인하지 못하면 있던 발표를 덮어쓰지 않고 사본으로 연다.
+ * sent: 발표 파일에서 읽은 발표. 발표 파일은 노트, 숨긴 장, 가려진 칸을 담지 않으므로(deck/fields.ts의 sendable) 같은 발표가 있으면 그것들을
+ * 그 발표에서 이어받는다(withUnsent): 파일의 빈 노트는 지운 것이 아니라 담기지 않은 것이다. 작업 파일은 모두 담으니 파일 그대로 연다
  */
-export async function importDeck(deck: Deck): Promise<Imported> {
+export async function importDeck(deck: Deck, { sent = false }: { sent?: boolean } = {}): Promise<Imported> {
   const local = await loadDeck(deck.id)
   const now = Date.now()
   // 가져온 발표는 AI 공유를 끈 채로 시작한다. 공유는 발표마다 사람이 켠다.
-  let next: Deck = { ...deck, aiShare: false, updatedAt: now }
+  let next: Deck = { ...(sent && local ? withUnsent(deck, local) : deck), aiShare: false, updatedAt: now }
   let replaced = false
   let copied = false
-  if (local && deckSignature(local) !== deckSignature(deck)) {
+  if (local && deckSignature(local) !== deckSignature(next)) {
     if (await keepVersion(local, { reason: 'file' })) replaced = true
     else {
       next = { ...next, id: uid(), title: `${deck.title} 사본`, createdAt: now }
@@ -202,7 +207,7 @@ export async function importDeck(deck: Deck): Promise<Imported> {
     }
   }
   const saved = await persistNow(next)
-  return { deck: next, saved, replaced, copied }
+  return { deck: next, saved, existed: !!local, replaced, copied }
 }
 
 export async function removeDeck(deck: Deck): Promise<void> {

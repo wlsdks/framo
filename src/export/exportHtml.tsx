@@ -1,7 +1,6 @@
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import { pageInfo, shownMeta, shownOnly } from '../deck/fields'
-import { uid } from '../deck/generate'
+import { pageInfo, sendable } from '../deck/fields'
 import type { Deck } from '../deck/types'
 import { pageProps, SlideCanvas } from '../slides/SlideCanvas'
 import { isDeck, safeFileName } from '../store/deckFile'
@@ -59,13 +58,12 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * 다시 열어 편집할 수 있게 덱을 넣어 둔다. 듣는 분께 보이지 않는 글은 빼서 다른 사람에게 보내도 안전하다: 발표자 노트,
+ * 다시 열어 편집할 수 있게 덱을 넣어 둔다. 듣는 분께 보이지 않는 글은 빼서 다른 사람에게 보내도 안전하다(sendable): 발표자 노트,
  * 숨긴 장, 레이아웃을 바꿔 가려진 칸, 보내는 장에 나오지 않는 발표 전체의 값(연락처, 로고 같은. 장에서는 보이지 않아도
- * 파일을 열거나 소스를 보면 읽혔다). 이어서 고칠 원본은 작업 파일이다
+ * 파일을 열거나 소스를 보면 읽혔다). 이어서 고칠 원본은 작업 파일이다. 이 PC에서 이 파일을 열면 뺀 것은 이 PC의 같은 발표에서 되찾는다(withUnsent)
  */
 export function deckData(deck: Deck, pictures: readonly string[] = []): string {
-  const slides = deck.slides.filter((s) => !s.hidden)
-  const safe: Deck = { ...deck, meta: shownMeta(deck.meta, slides), slides: slides.map((s) => ({ ...shownOnly(s), notes: '' })) }
+  const safe = sendable(deck)
   const images: [Path, number][] = []
   const lean = pluck(safe, new Map(pictures.map((src, n) => [src, n])), [], images) as Deck
   // 장 그림에 든 이미지가 없으면 예전 꼴(덱 그대로)로 둔다: 예전 버전도 연다
@@ -227,13 +225,15 @@ export function parseDeckData(raw: string, pictures: readonly string[] = []): De
     // 이미지를 뺀 데이터(지금 꼴)면 장 그림의 이미지를 되돌려 넣는다. 아니면 예전에 내보낸 파일(덱 그대로)
     const lean = !!data && typeof data === 'object' && (data as Partial<HtmlDeckData>).format === HTML_DECK
     const deck = lean ? withPictures(data as Partial<HtmlDeckData>, pictures) : data
-    return isDeck(deck) ? { ...deck, id: uid(), updatedAt: Date.now() } : null
+    // id는 그대로 둔다: 이 PC에 같은 발표가 있으면 그 발표로 열고, 파일에 담지 않은 노트와 숨긴 장은 그 발표에서 이어받는다(persist.ts의 importDeck).
+    // 예전에는 열 때마다 새 id의 새 발표가 되어, 같은 이름의 발표가 둘 생기고 연 쪽에는 노트와 숨긴 장이 없었다
+    return isDeck(deck) ? { ...deck, updatedAt: Date.now() } : null
   } catch {
     return null
   }
 }
 
-/** 내보낸 HTML 파일에서 덱을 되살린다. 새 발표로 저장된다. */
+/** 내보낸 HTML 파일에서 덱을 되살린다. 파일에 담지 않은 것(노트, 숨긴 장, 가려진 칸)은 없다 */
 export function readDeckFromHtml(html: string): Deck | null {
   try {
     const doc = new DOMParser().parseFromString(html, 'text/html')

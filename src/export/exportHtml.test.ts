@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import { autoPlace, makeBlock, withLayout } from '../deck/blocks'
 import { emptyItem, makeSlide } from '../deck/generate'
+import { withUnsent } from '../deck/fields'
 import { createSampleDeck } from '../deck/sample'
 import type { Deck } from '../deck/types'
 import { isDeck } from '../store/deckFile'
@@ -96,11 +97,32 @@ describe('HTML 파일에 넣는 덱', () => {
 })
 
 describe('HTML 파일에서 덱 되살리기', () => {
-  it('내보낸 덱은 새 발표로 되살린다', () => {
+  it('내보낸 덱은 같은 id로 되살린다: 이 PC에 같은 발표가 있으면 그 발표로 열어 노트와 숨긴 장을 이어받는다', () => {
     const deck = createSampleDeck()
     const back = parseDeckData(JSON.stringify(deck))
     expect(back?.slides).toEqual(deck.slides)
-    expect(back?.id).not.toBe(deck.id)
+    expect(back?.id).toBe(deck.id)
+  })
+
+  it('이 PC의 발표를 내보낸 파일을 그대로 열면 이 PC의 발표와 똑같다 (노트, 숨긴 장, 가려진 칸, 이미지까지)', () => {
+    const LOGO = `data:image/png;base64,${btoa('logo-bytes')}`
+    const PHOTO = `data:image/png;base64,${btoa('photo-bytes')}`
+    const deck = createSampleDeck()
+    const item = (title: string, body: string) => ({ ...emptyItem(), title, body })
+    const points = { ...makeSlide('points'), fields: { title: '보이는 제목' }, items: [item('보이는 항목', '가려진 설명'), item('둘째 항목', '')], notes: '대본 둘' }
+    deck.meta = { ...deck.meta, contact: '연락처', logo: LOGO }
+    deck.slides = [
+      { ...deck.slides[0], notes: '대본 하나' },
+      withLayout(points, 'bars'),
+      { ...makeSlide('closing'), hidden: true, notes: '숨긴 장의 대본' },
+      { ...makeSlide('imageText'), fields: { title: '사진', image: PHOTO }, notes: '사진 장 대본' },
+    ]
+    const html = parseDeckData(deckData(deck, [LOGO, PHOTO]), [LOGO, PHOTO])!
+    expect(html.slides.map((s) => s.notes)).toEqual(['', '', ''])
+    const again = withUnsent(html, deck)
+    expect({ ...again, updatedAt: 0 }).toEqual({ ...deck, updatedAt: 0 })
+    // 저장한 발표와 같은지 보는 값(deckSignature)은 JSON 글이라 키의 차례까지 같아야 한다
+    expect(JSON.stringify({ ...again, updatedAt: 0 })).toBe(JSON.stringify({ ...deck, updatedAt: 0 }))
   })
 
   it('.deck 파일과 같은 꼴이 아니면 받지 않는다', () => {

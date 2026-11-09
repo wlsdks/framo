@@ -85,6 +85,7 @@
 | 발표의 사본(복제, 버전 꺼내기): 새 id, AI 공유 끄기 | `src/store/copy.ts`의 `copyDeck` |
 | 컴포넌트를 놓을 자리(끌어 놓기, 눌러 넣기, 넣을 수 없음) | `src/screens/editor/planDrop.ts`의 `planDrop` |
 | 파일 이름 | `src/store/deckFile.ts`의 `safeFileName` |
+| 발표 파일(HTML)에 담는 것(듣는 분께 보이는 것만)과, 그 파일을 열 때 이 PC의 같은 발표에서 이어받는 것(노트, 숨긴 장, 가려진 칸) | `src/deck/fields.ts`의 `sendable`, `withUnsent`. 내보내기(`deckData`)와 파일 열기(`store/persist.ts`의 `importDeck`)가 같이 쓴다 |
 | CSP | `server/csp.ts`, 내보낸 HTML은 `src/export/exportHtml.tsx`의 `exportCsp` |
 | ‘AI 공유’ 폴더의 파일 읽기(링크, 하드 링크, 큰 파일, 링크인 하위 폴더 거르기) | `server/shareFiles.ts`. 로컬 서버와 MCP 서버가 같이 쓴다 |
 

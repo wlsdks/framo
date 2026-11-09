@@ -91,20 +91,29 @@ export function Home() {
       const text = await file.text()
       // 작업 파일인지는 확장자가 아니라 내용으로 가린다. 'X.DECK'처럼 확장자가 대문자이거나(윈도우는 대소문자를 가리지 않는다)
       // 이름을 바꾼 작업 파일을 HTML로 읽어 열 수 없는 파일이라고 했다
-      const deck = decodeDeckFile(text) ?? readDeckFromHtml(text)
+      const work = decodeDeckFile(text)
+      const deck = work ?? readDeckFromHtml(text)
       if (!deck) {
         toast.show('Framo에서 저장한 작업 파일이나 내보낸 발표 파일(HTML)만 열 수 있어요.')
         return
       }
-      const opened = await importDeck(deck)
+      // 발표 파일(HTML)에는 노트와 숨긴 슬라이드가 들어 있지 않다: 같은 발표가 이 PC에 있으면 그 발표의 것을 이어받는다
+      const opened = await importDeck(deck, { sent: !work })
       if (!opened.saved) {
         toast.show(`파일을 열지 못했어요. ${SAVE_HELP}`, undefined, 8000)
         refresh()
         return
       }
       // 같은 발표를 말없이 덮어쓰지 않았다는 것을 편집기에서 알린다
-      if (opened.replaced) noticeAfterGo('있던 발표를 파일 내용으로 바꿨어요. 바뀌기 전 모습은 버전 기록에 있어요.')
+      if (opened.replaced)
+        noticeAfterGo(
+          work
+            ? '있던 발표를 파일 내용으로 바꿨어요. 바뀌기 전 모습은 버전 기록에 있어요.'
+            : '있던 발표를 발표 파일 내용으로 바꿨어요. 발표자 노트와 숨긴 슬라이드는 있던 그대로예요. 바뀌기 전 모습은 버전 기록에 있어요.',
+        )
       else if (opened.copied) noticeAfterGo('같은 발표가 이미 있어서 사본으로 열었어요. 있던 발표는 그대로예요.')
+      // 이 PC에 없던 발표를 발표 파일로 열면 노트와 숨긴 슬라이드가 빈 것이 지운 것처럼 보인다
+      else if (!work && !opened.existed) noticeAfterGo('발표 파일(HTML)에는 발표자 노트와 숨긴 슬라이드가 들어 있지 않아요. 노트까지 이어서 고치려면 작업 파일(.deck)을 열어 주세요.')
       go({ name: 'edit', id: opened.deck.id })
     }
     input.click()
