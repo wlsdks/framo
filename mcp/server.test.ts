@@ -516,8 +516,13 @@ describe('새 버전을 받아 둔 앱의 MCP 서버', () => {
     mcp.stderr.on('data', (d) => (err += d))
     const line = new Promise<string>((resolve) => createInterface({ input: mcp.stdout }).once('line', resolve))
     mcp.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } } }) + '\n')
-    const reply = JSON.parse(await line)
+    // 답이 없으면 60초를 기다리지 않고 MCP 서버가 남긴 말과 함께 실패한다(윈도우에서만 멈춘 까닭을 CI 기록으로 보려고)
+    let code: number | null | undefined
+    mcp.once('exit', (c) => (code = c))
+    const got = await Promise.race([line, new Promise<null>((r) => setTimeout(() => r(null), 30000))])
     mcp.kill()
+    if (got === null) throw new Error(`답이 없었어요(끝 코드 ${code}). stderr: ${err}`)
+    const reply = JSON.parse(got)
     expect(reply.result.serverInfo.name).toBe('gyeol')
     expect(err).toContain('새 버전의 AI 연결을 켜지 못해서')
     // 경로나 오류 글은 내보내지 않는다
