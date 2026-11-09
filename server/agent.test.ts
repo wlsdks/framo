@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { ASKS, askPrompt, mcpPrompt } from '../src/ai/asks'
+import { ASKS, askPrompt, askSentence, mcpPrompt } from '../src/ai/asks'
 import { requestId } from '../src/ai/ops'
 import { REQUEST_FORMAT, REQUEST_VERSION } from '../src/ai/protocol'
 import { catalogStrings, toShape } from '../src/ai/share'
@@ -95,7 +95,7 @@ describe('AI에게 부탁', () => {
     const texts = [...deck.slides.flatMap((s) => [s.purpose, s.notes, ...Object.values(s.fields), ...s.items.flatMap((it) => [it.title, it.body, it.value, it.meta])]), deck.title, deck.meta.org, deck.meta.presenter]
     for (const a of ASKS) {
       // MCP 프롬프트(prompts/get)로 고른 부탁의 문장도 같다
-      for (const text of [askPrompt(a.id, shape.deck, a.scope === 'slide' ? shape.slides[0].id : null), mcpPrompt(a.id, shape.deck, a.scope === 'slide' ? 1 : null)])
+      for (const text of [askPrompt(a.id, shape.deck, a.scope === 'slide' ? shape.slides[0].id : null), askSentence(a.id, shape.deck, a.scope === 'slide' ? shape.slides[0].id : null), mcpPrompt(a.id, shape.deck, a.scope === 'slide' ? 1 : null)])
         // 사람이 적은 글은 한 조각도 들어가지 않는다 (카탈로그에도 있는 짧은 말은 빼고 본다)
         for (const t of texts) if (t && t.length > 3 && !known.has(t)) expect(text).not.toContain(t)
     }

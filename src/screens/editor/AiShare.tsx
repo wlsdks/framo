@@ -102,7 +102,7 @@ function Consent({ direct, onMore, onCancel, onOk }: { direct: boolean; onMore?:
   return (
     <div className="ask-consent" role="group" aria-label="AI에게 모양 보여 주기">
       <p className="ask-consent-p">
-        이 발표의 모양만 AI에게 보여 줘요. 적은 글은 보내지 않아요.
+        슬라이드의 역할·순서·배치 같은 정보만 보내요. 작성한 글과 숫자는 보내지 않아요.
         {!onMore && <Info label="AI에게 보이는 것">슬라이드 순서, 레이아웃, 칸마다 글이 대략 몇 자인지, 테마가 보여요. 제목과 작성한 글, 숫자, 이미지, 노트는 보이지 않아요.</Info>}
       </p>
       <div className="ask-consent-actions">
@@ -425,7 +425,7 @@ function AiHead({ title, ai, ask, compact }: { title: string; ai: AiShare; ask: 
     <header className="ai-head">
       <p className="ai-head-h">
         {title}
-        <Info label="AI 도움받기 설명">고르면 AI가 발표의 모양을 살펴보고 바꿀 것을 제안해요. 바뀌는 모습을 미리 보고 적용할지 정해요. 적용한 뒤에도 되돌릴 수 있어요.</Info>
+        <Info label="AI 도움받기 설명">AI는 슬라이드 역할, 순서, 레이아웃과 글 길이를 보고 제안해요. 작성한 글과 숫자를 보지 않아서 내용의 정확성이나 핵심은 판단하지 못해요. 바뀌는 모습을 미리 보고 적용할지 정해요. 적용한 뒤에도 되돌릴 수 있어요.</Info>
       </p>
       <AiConn ai={ai} ask={ask} compact={compact} />
     </header>
@@ -474,7 +474,7 @@ function AiDetails({ deck, ai, ask, onPicked }: { deck: Deck; ai: AiShare; ask: 
               </button>
             </span>
           ) : (
-            <span>작성한 글은 AI에게 보내지 않아요</span>
+            <span>작성한 글과 숫자는 보내지 않아요</span>
           )}
           <button type="button" className="ai-foot-more" onClick={() => setMore(true)}>
             {ai.status ? '보이는 것, 직접 연결' : 'AI에게 보이는 것'}
@@ -506,8 +506,8 @@ function AiMore({ deck, ai, onBack }: { deck: Deck; ai: AiShare; onBack: () => v
         <div>
           <p className="ai-pop-k">보여요</p>
           <ul>
-            <li>보고 종류와 시간</li>
-            <li>슬라이드 순서와 레이아웃</li>
+            <li>발표 종류와 시간</li>
+            <li>슬라이드 역할·순서·레이아웃</li>
             <li>칸마다 글이 대략 몇 자인지, 넘쳤는지</li>
             <li>테마와 강조색</li>
           </ul>
