@@ -92,6 +92,8 @@ function standInSlide(s: ShapeSlide): Slide {
     ...(s.variant !== 'base' ? { variant: s.variant } : {}),
     ...(s.hidden ? { hidden: true } : {}),
     ...(s.blocks ? { blocks: s.blocks.map(standInBlock) } : {}),
+    // 배경도 옮긴다: 빠뜨리면 이미 배경이 있는 장에 같은 배경을 고르는 op가 앱에서는 바뀌는 것이 없는데 미리 돌려 보기에서는 적용된다고 했다
+    ...(s.backdrop ? { backdrop: { kind: s.backdrop.id, at: { x: s.backdrop.x, y: s.backdrop.y, w: s.backdrop.w, h: s.backdrop.h }, ...(s.backdrop.strength ? { strength: s.backdrop.strength } : {}) } } : {}),
   }
 }
 
