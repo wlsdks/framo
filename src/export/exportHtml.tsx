@@ -225,9 +225,10 @@ export function parseDeckData(raw: string, pictures: readonly string[] = []): De
     // 이미지를 뺀 데이터(지금 꼴)면 장 그림의 이미지를 되돌려 넣는다. 아니면 예전에 내보낸 파일(덱 그대로)
     const lean = !!data && typeof data === 'object' && (data as Partial<HtmlDeckData>).format === HTML_DECK
     const deck = lean ? withPictures(data as Partial<HtmlDeckData>, pictures) : data
-    // id는 그대로 둔다: 이 PC에 같은 발표가 있으면 그 발표로 열고, 파일에 담지 않은 노트와 숨긴 장은 그 발표에서 이어받는다(persist.ts의 importDeck).
+    // id와 고친 때(updatedAt)는 파일 그대로 둔다: 이 PC에 같은 발표가 있으면 그 발표로 열고, 파일에 담지 않은 노트와 숨긴 장은 그 발표에서
+    // 이어받는다. 이 PC의 발표가 파일보다 나중에 고쳐졌으면 덮지 않고 사본으로 연다(persist.ts의 importDeck. 저장할 때 지금 시각으로).
     // 예전에는 열 때마다 새 id의 새 발표가 되어, 같은 이름의 발표가 둘 생기고 연 쪽에는 노트와 숨긴 장이 없었다
-    return isDeck(deck) ? { ...deck, updatedAt: Date.now() } : null
+    return isDeck(deck) ? deck : null
   } catch {
     return null
   }

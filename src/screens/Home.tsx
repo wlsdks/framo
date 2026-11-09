@@ -111,6 +111,7 @@ export function Home() {
             ? '있던 발표를 파일 내용으로 바꿨어요. 바뀌기 전 모습은 버전 기록에 있어요.'
             : '있던 발표를 발표 파일 내용으로 바꿨어요. 발표자 노트와 숨긴 슬라이드는 있던 그대로예요. 바뀌기 전 모습은 버전 기록에 있어요.',
         )
+      else if (opened.copied === 'newer') noticeAfterGo('이 PC의 발표가 파일보다 나중에 고쳐져서, 있던 발표는 그대로 두고 파일은 사본으로 열었어요.')
       else if (opened.copied) noticeAfterGo('같은 발표가 이미 있어서 사본으로 열었어요. 있던 발표는 그대로예요.')
       // 이 PC에 없던 발표를 발표 파일로 열면 노트와 숨긴 슬라이드가 빈 것이 지운 것처럼 보인다
       else if (!work && !opened.existed) noticeAfterGo('발표 파일(HTML)에는 발표자 노트와 숨긴 슬라이드가 들어 있지 않아요. 노트까지 이어서 고치려면 작업 파일(.deck)을 열어 주세요.')

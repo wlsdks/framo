@@ -102,6 +102,8 @@ describe('HTML 파일에서 덱 되살리기', () => {
     const back = parseDeckData(JSON.stringify(deck))
     expect(back?.slides).toEqual(deck.slides)
     expect(back?.id).toBe(deck.id)
+    // 고친 때도 파일 그대로: 이 PC의 발표가 파일보다 나중에 고쳐졌는지 본다(store/persist.ts의 importDeck)
+    expect(back?.updatedAt).toBe(deck.updatedAt)
   })
 
   it('이 PC의 발표를 내보낸 파일을 그대로 열면 이 PC의 발표와 똑같다 (노트, 숨긴 장, 가려진 칸, 이미지까지)', () => {
@@ -120,9 +122,9 @@ describe('HTML 파일에서 덱 되살리기', () => {
     const html = parseDeckData(deckData(deck, [LOGO, PHOTO]), [LOGO, PHOTO])!
     expect(html.slides.map((s) => s.notes)).toEqual(['', '', ''])
     const again = withUnsent(html, deck)
-    expect({ ...again, updatedAt: 0 }).toEqual({ ...deck, updatedAt: 0 })
+    expect(again).toEqual(deck)
     // 저장한 발표와 같은지 보는 값(deckSignature)은 JSON 글이라 키의 차례까지 같아야 한다
-    expect(JSON.stringify({ ...again, updatedAt: 0 })).toBe(JSON.stringify({ ...deck, updatedAt: 0 }))
+    expect(JSON.stringify(again)).toBe(JSON.stringify(deck))
   })
 
   it('.deck 파일과 같은 꼴이 아니면 받지 않는다', () => {

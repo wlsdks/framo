@@ -182,13 +182,18 @@ interface Imported {
   existed: boolean
   /** 같은 발표가 있어서 파일 내용으로 바꿨다 (바뀌기 전은 버전 기록에 있다) */
   replaced: boolean
-  /** 같은 발표가 있는데 바뀌기 전을 버전으로 남기지 못해서, 덮어쓰지 않고 사본으로 열었다 */
-  copied: boolean
+  /**
+   * 같은 발표가 있는데 덮어쓰지 않고 파일을 사본으로 열었다. newer: 이 PC의 발표가 파일보다 나중에 고쳐졌다.
+   * unsaved: 바뀌기 전을 버전으로 남기지 못했다
+   */
+  copied: false | 'newer' | 'unsaved'
 }
 
 /**
  * 내려받아 둔 작업 파일(.deck)이나 발표 파일(HTML)을 연다. 같은 발표가 이미 있으면 지금 상태를 버전으로 남기고 파일 내용으로 바꾼다.
- * 버전 기록에 남았는지 확인하지 못하면 있던 발표를 덮어쓰지 않고 사본으로 연다.
+ * 이 PC의 발표가 파일에 담긴 발표보다 나중에 고쳐졌으면(파일을 만든 뒤에 더 고쳤으면) 바꾸지 않고 파일을 사본으로 연다: 예전 파일을 열면
+ * 그 뒤에 고친 것이 버전 기록으로만 남았는데, 버전 기록을 찾지 못하는 분에게는 고친 것을 잃은 것과 같았다.
+ * 버전 기록에 남았는지 확인하지 못해도 있던 발표를 덮어쓰지 않고 사본으로 연다.
  * sent: 발표 파일에서 읽은 발표. 발표 파일은 노트, 숨긴 장, 가려진 칸을 담지 않으므로(deck/fields.ts의 sendable) 같은 발표가 있으면 그것들을
  * 그 발표에서 이어받는다(withUnsent): 파일의 빈 노트는 지운 것이 아니라 담기지 않은 것이다. 작업 파일은 모두 담으니 파일 그대로 연다
  */
@@ -197,13 +202,18 @@ export async function importDeck(deck: Deck, { sent = false }: { sent?: boolean 
   const now = Date.now()
   // 가져온 발표는 AI 공유를 끈 채로 시작한다. 공유는 발표마다 사람이 켠다.
   let next: Deck = { ...(sent && local ? withUnsent(deck, local) : deck), aiShare: false, updatedAt: now }
+  // 같은 내용이면 있던 발표를 그대로 연다: 고친 때(updatedAt)와 AI 공유도 그대로. 다시 저장하면 고친 때만 지금으로 바뀌어, 그 뒤에 연 예전
+  // 파일과 견줄 때 이 PC의 발표가 더 나중에 고쳐진 것으로 보였다
+  if (local && deckSignature(local) === deckSignature(next)) return { deck: local, saved: true, existed: true, replaced: false, copied: false }
   let replaced = false
-  let copied = false
-  if (local && deckSignature(local) !== deckSignature(next)) {
-    if (await keepVersion(local, { reason: 'file' })) replaced = true
+  let copied: Imported['copied'] = false
+  if (local) {
+    // 파일에 담긴 발표가 고쳐진 때. 없거나 숫자가 아니면 알 수 없으니 이 PC의 것을 지킨다
+    const newerHere = !(typeof deck.updatedAt === 'number' && deck.updatedAt >= local.updatedAt)
+    if (!newerHere && (await keepVersion(local, { reason: 'file' }))) replaced = true
     else {
       next = { ...next, id: uid(), title: `${deck.title} 사본`, createdAt: now }
-      copied = true
+      copied = newerHere ? 'newer' : 'unsaved'
     }
   }
   const saved = await persistNow(next)
