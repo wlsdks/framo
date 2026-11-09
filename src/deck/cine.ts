@@ -28,7 +28,7 @@ import type {
 
 /**
  * 이 버전의 엔진 번호. 레시피를 읽는 법(구간, 모양, 손잡이의 뜻)이 바뀌거나 새 재료가 생기면 올린다. 레시피에는 그 레시피를 읽는 데 필요한
- * 번호를 적는다(틀의 engine): 1은 처음의 틀 넷, 2는 갈림길(새 재료). 그래서 틀 넷의 레시피는 예전 버전에서도 손잡이까지 그대로 쓰고,
+ * 번호를 적는다(틀의 engine): 1은 처음의 틀 넷, 2는 갈림길과 차오름(새 재료). 그래서 틀 넷의 레시피는 예전 버전에서도 손잡이까지 그대로 쓰고,
  * 새 재료의 레시피는 예전 버전이 '새 버전에서 만든 모션 그래픽'으로 알린다(아는 층만 그리고 레시피는 지우지 않는다)
  */
 export const CINE_ENGINE = 2
@@ -41,13 +41,13 @@ export const CINE_MAX_MS = 10000
 const CINE_PHASES: readonly CinePhaseKind[] = ['seed', 'spread', 'gather', 'resolve', 'write', 'pull', 'hold']
 export const CINE_FIELDS: readonly CineFieldKey[] = ['glyph', 'title', 'lead', 'label', 'text', 'sub', 'value', 'note', 'before', 'after']
 const ENTERS: readonly CineEnter[] = ['settle', 'write', 'letters', 'count', 'carry']
-const MATERIALS: readonly CineMaterial[] = ['particles', 'wash', 'threads', 'line', 'branches']
-/** 재료마다 고를 수 있는 모양(첫째가 기본). 갈래는 모양을 고르지 않는다(답의 글 첫머리로 간다) */
-export const SHAPES_OF: Record<CineMaterial, readonly CineShape[]> = { particles: ['glyph', 'ring', 'point'], wash: ['point'], threads: ['glyph'], line: ['line', 'wave'], branches: ['point'] }
+const MATERIALS: readonly CineMaterial[] = ['particles', 'wash', 'threads', 'line', 'branches', 'pool']
+/** 재료마다 고를 수 있는 모양(첫째가 기본). 갈래와 물은 모양을 고르지 않는다(갈래는 답의 글 첫머리로, 물은 글 아래까지 차오른다) */
+export const SHAPES_OF: Record<CineMaterial, readonly CineShape[]> = { particles: ['glyph', 'ring', 'point'], wash: ['point'], threads: ['glyph'], line: ['line', 'wave'], branches: ['point'], pool: ['point'] }
 /** 장의 답에 강조색이 들어오는 시간(ms, 보통 빠르기) */
 const ACCENT_MS = 450
 const FRAMES: readonly CineFrame[] = ['mark', 'center', 'line']
-const PRESET_IDS: readonly CinePresetId[] = ['light', 'diffuse', 'gather', 'stroke', 'fork']
+const PRESET_IDS: readonly CinePresetId[] = ['light', 'diffuse', 'gather', 'stroke', 'fork', 'fill']
 
 interface Choice<T> {
   id: T
@@ -109,7 +109,7 @@ export const CINE_FIELD_SPECS: { key: CineFieldKey; label: string; hint: string;
   { key: 'after', label: '바뀐 값', hint: '2시간' },
 ]
 
-// ---------- 틀(프리셋) 다섯 ----------
+// ---------- 틀(프리셋) 여섯 ----------
 
 /** 틀마다 이름, 하는 말, 어울리는 장, 처음 레시피(글 없이 정해진 낱말만) */
 interface CinePresetSpec {
@@ -129,7 +129,7 @@ interface CinePresetSpec {
 const phases = (...list: [CinePhaseKind, number, number?][]): CinePhase[] => list.map(([kind, ms, overlap]) => (overlap ? { kind, ms, overlap } : { kind, ms }))
 
 /**
- * 틀 다섯, 재료 다섯. 시간은 생동감·보통 빠르기 기준이고 차분하게는 엔진이 같은 안무를 줄인다. 큐 시트와 까닭은 docs/MOTION.md '모션 그래픽'.
+ * 틀 여섯, 재료 여섯. 시간은 생동감·보통 빠르기 기준이고 차분하게는 엔진이 같은 안무를 줄인다. 큐 시트와 까닭은 docs/MOTION.md '모션 그래픽'.
  * 차례가 곧 고르는 곳의 차례다
  */
 export const CINE_PRESETS: readonly CinePresetSpec[] = [
@@ -272,6 +272,36 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       handoff: false,
       loop: false,
       // 줄기는 장 왼쪽 끝 밖에서 들어온다(지금까지 걸어온 길)
+      bleed: true,
+    },
+  },
+  {
+    id: 'fill',
+    name: '차오름',
+    description: '물방울이 하나씩 떨어져 모이는 만큼 물이 차오르고 숫자가 굴러가며, 물결이 잦아들면 그 수가 답으로 맺혀요.',
+    fits: '쌓아 온 것, 작은 것이 모여 이룬 것, 누적 성과',
+    engine: 2,
+    sample: { title: '세 해 동안 모은 개선 제안', value: '2,400건', sub: '한 주에 열다섯 건 남짓' },
+    recipe: {
+      frame: 'center',
+      material: 'pool',
+      // 차오르는 구간은 1.2초: 숫자 굴리기의 느린 끝자락 동안 물 낯만 고요히 서 있으면 기다리게 했다(필름)
+      phases: phases(['seed', 300], ['gather', 1200, 150], ['resolve', 600, 100], ['write', 600, 300]),
+      particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.3, trail: false, spread: 'round' },
+      shape: { kind: 'point' },
+      light: false,
+      line: false,
+      camera: 'none',
+      pace: 'normal',
+      texts: [
+        // 무엇이 모이는지가 먼저(처음 0.5초 안에 읽힌다), 숫자는 차오르는 물과 같은 곡선으로 굴러간다
+        { key: 'title', enter: 'settle', on: 'seed' },
+        { key: 'value', enter: 'count', on: 'gather', answer: true },
+        { key: 'sub', enter: 'settle', on: 'write' },
+      ],
+      handoff: false,
+      loop: false,
+      // 물은 장의 왼쪽 끝에서 오른쪽 끝까지 찬다(칸 안에 가두면 옆이 막힌 상자로 읽힌다)
       bleed: true,
     },
   },

@@ -5,7 +5,7 @@
 //   끌어 보기, 하나씩, 필름 띠, 멈춘 그림이 한 계산에서 나오고, 어느 때로 건너뛰어도 같은 그림이다. 시계는 Web Animations 하나(clock)라서
 //   엔진의 끝맺음, 모션 편집의 멈추기와 끌어 보기, 발표하는 사람의 건너뛰기가 그 시계만 맞추면 된다.
 // - 그리기는 셋: 입자는 WebGL2의 점(기본), 소프트웨어 GL이거나 GPU가 없으면 Canvas2D(입자 1500, 잔상 없음), 멈춘 그림은 SVG(남는 선만.
-//   편집 화면, 목록, PDF, PPT, 내보낸 HTML의 처음 모습). 빛, 먹, 선, 펜 끝, 갈래는 뒤의 2D 캔버스가 그린다. 이 버전이 모르는 재료
+//   편집 화면, 목록, PDF, PPT, 내보낸 HTML의 처음 모습). 빛, 먹, 선, 펜 끝, 갈래, 물은 뒤의 2D 캔버스가 그린다. 이 버전이 모르는 재료
 //   (더 새 버전의 것)는 다른 재료로 바꿔 그리지 않고 쉰다(글만 제 때에 맺힌다).
 // - 밝기: 장 바탕이 어두우면 빛(더하기 섞기), 밝으면 번지는 먹(보통 섞기, 낮은 짙기, 빛 번짐 없음). 색은 장의 글자색과 강조색뿐이다.
 // - 글은 DOM의 글 그대로다(고를 수 있고 PDF에서 벡터). 엔진은 그리는 순간 칸의 글자를 그 칸의 글꼴로 화면 밖 캔버스에 그려 모양을 딴다.
@@ -141,8 +141,10 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     arms: number[][]
     /** 뻗어 나가는 갈래(갈림길) */
     br: Branches | null
+    /** 떨어져 모여 차오르는 물(차오름) */
+    pool: Pool | null
     /** rest: 이 버전이 모르는 재료라 그리지 않고 쉰다 */
-    mode: 'burst' | 'scatter' | 'pen' | 'wash' | 'threads' | 'branches' | 'rest'
+    mode: 'burst' | 'scatter' | 'pen' | 'wash' | 'threads' | 'branches' | 'pool' | 'rest'
     N: number
     ang: Float32Array
     rad: Float32Array
@@ -540,6 +542,64 @@ export function cineMotion(kit: DrawKit): CineRuntime {
   }
 
   /**
+   * 물(차오름): 장의 위에서 물방울이 하나씩 떨어져 아래에 고인 물로 들어가고, 들어간 만큼 물이 차오른다(작은 것이 모여 이만큼이 됐다).
+   * 수위는 숫자 굴리기와 같은 곡선(reveal)이라 차오른 높이와 숫자가 움직이는 동안에도 같은 값을 말한다. 물방울은 그 곡선이 오르는
+   * 빠르기만큼 떨어진다: 처음에는 소나기처럼 잦고 끝으로 갈수록 드문드문, 마지막 몇 방울은 하나씩 보인다. 물방울은 글 칸의 옆에서만
+   * 떨어져 글 위를 지나지 않는다. 물방울이 닿은 자리에서 잔물결이 양옆으로 퍼지며 잦아든다(시간의 순수 함수: 닿은 때와 자리만 안다)
+   */
+  interface Pool {
+    /** 물방울마다 [x, 닿는 때, 떨어지기 시작하는 높이, 떨어지는 시간, 물결 세기] */
+    drops: Float32Array
+    n: number
+    /** 바닥(장 아래 끝 너머), 다 찬 수위, 물이 찰 가로 범위 */
+    base: number
+    full: number
+    x0: number
+    x1: number
+    /** 숫자 굴리기의 때 [시작, 끝] */
+    win: number[]
+  }
+  const DROP = 5
+
+  function poolOf(R: () => number, c: { ox: number; oy: number; cw: number; ch: number; W: number; H: number }, band: number[] | null, win: number[], dense: number): Pool {
+    const x0 = Math.min(0, c.ox) - 20
+    const x1 = Math.max(c.W, c.ox + c.cw) + 20
+    const base = Math.max(c.H, c.oy + c.ch) + 24
+    // 다 찬 수위: 글 띠 바로 아래(글이 물에 잠기지 않는다)
+    const full = band ? Math.min(base - 80, band[3] + 40) : c.oy + c.ch * 0.72
+    const [c0, c1] = win
+    const inv = (q: number) => {
+      let lo = 0
+      let hi = 1
+      for (let j = 0; j < 22; j++) {
+        const m = (lo + hi) / 2
+        if (reveal(m) < q) lo = m
+        else hi = m
+      }
+      return (lo + hi) / 2
+    }
+    const n = dense === 0 ? 18 : dense === 2 ? 52 : 32
+    // 글 칸 옆의 두 기둥에서만 떨어진다(글 칸 둘레를 띄워)
+    const gl = band ? band[0] - 60 : c.ox + c.cw * 0.3
+    const gr = band ? band[2] + 60 : c.ox + c.cw * 0.7
+    const L = Math.max(0, gl - (c.ox + c.cw * 0.04))
+    const Rw = Math.max(0, c.ox + c.cw * 0.96 - gr)
+    const drops = new Float32Array(n * DROP)
+    for (let j = 0; j < n; j++) {
+      const o = j * DROP
+      const u = R() * (L + Rw)
+      drops[o] = u < L ? c.ox + c.cw * 0.04 + u : gr + (u - L)
+      // j번째 방울이 닿는 때: 수위(숫자)가 (j+0.5)/n만큼 오른 때. 조금씩 흩어 고른 박자가 되지 않게
+      drops[o + 1] = c0 + (c1 - c0) * inv(Math.min(1, (j + 0.3 + 0.4 * R()) / n))
+      drops[o + 2] = c.oy + c.ch * (0.02 + 0.2 * R())
+      drops[o + 3] = 300 + 160 * R()
+      // 큰 방울은 드물게(모두 같은 세기면 고른 빗소리 무늬가 된다)
+      drops[o + 4] = 0.55 + 0.9 * R() * R()
+    }
+    return { drops, n, base, full, x0, x1, win }
+  }
+
+  /**
    * 장면을 만든다: 칸과 글의 자리를 재고, 입자 n개의 씨앗 값과 모일 자리를 정한다. 재는 동안에는 카메라를 잠깐 풀어 둔다
    * (배율이 걸린 채로 재면 글의 자리가 어긋난다)
    */
@@ -594,7 +654,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const P = (u: number) => [ox + (pathX(u) / 1000) * cw, oy + (pathY(s.shape, u) / 1000) * ch]
     if (path) [fx, fy] = P(0)
     const mode: Scene['mode'] =
-      s.material === 'wash' || s.material === 'threads' || s.material === 'branches' || s.material === 'rest' ? s.material : s.material === 'line' ? 'pen' : spans.spread ? 'burst' : 'scatter'
+      s.material === 'wash' || s.material === 'threads' || s.material === 'branches' || s.material === 'pool' || s.material === 'rest' ? s.material : s.material === 'line' ? 'pen' : spans.spread ? 'burst' : 'scatter'
     // 번지는 크기: 뒤에 모임이 있으면 장의 한가운데를 채울 만큼, 번짐으로 끝나면 장 끝 너머까지
     const far = Math.hypot(Math.max(fx, host.w - fx), Math.max(fy, host.h - fy))
     // 모이기 전의 구름은 장의 한쪽에 머물게(장 절반을 덮으면 흰 바탕에서 그을음으로 읽혔다, 감성 검수). 차분하게는 같은 안무의 작은 판
@@ -791,7 +851,20 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       }
       br = branchesOf(R, { ox, oy, cw, ch, W: host.w }, aim, dense)
     }
-    return { s, W: host.w, H: host.h, ox, oy, cw, ch, fx, fy, gr, gb, reach, shaped: sampled, cz: 0, edge, threads, threadW, arm, arms, br, mode, N: n, ang, rad, z, size, alpha, tone, delay, bow, ph, w, sx, sy, tx, ty, pu, texts, spans, dark }
+    let pool: Pool | null = null
+    if (mode === 'pool') {
+      // 숫자 굴리기와 같은 때(숫자가 없으면 모임 구간)
+      const cue = texts.find((t) => t.cue.enter === 'count')?.cue
+      const win = cue ? [cue.start, cue.end] : spans.gather ? [spans.gather.start, spans.gather.end] : [0, s.total * 0.6]
+      // 글이 설 띠(모든 글 칸을 두른 상자): 물방울은 그 옆으로만, 물은 그 아래까지
+      let band: number[] | null = null
+      for (const t of texts) {
+        const b = t.box
+        band = band ? [Math.min(band[0], b[0]), Math.min(band[1], b[1]), Math.max(band[2], b[0] + b[2]), Math.max(band[3], b[1] + b[3])] : [b[0], b[1], b[0] + b[2], b[1] + b[3]]
+      }
+      pool = poolOf(R, { ox, oy, cw, ch, W: host.w, H: host.h }, band, win, dense)
+    }
+    return { s, W: host.w, H: host.h, ox, oy, cw, ch, fx, fy, gr, gb, reach, shaped: sampled, cz: 0, edge, threads, threadW, arm, arms, br, pool, mode, N: n, ang, rad, z, size, alpha, tone, delay, bow, ph, w, sx, sy, tx, ty, pu, texts, spans, dark }
   }
 
   /** 구간 안에서의 진행(0~1). 구간이 없으면 없다(-1) */
@@ -1448,6 +1521,7 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       if (c.mode === 'wash') drawWash(x, c, e)
       if (c.mode === 'threads') drawThreads(x, c, e)
       if (c.mode === 'branches') drawBranches(x, c, e)
+      if (c.mode === 'pool') drawPool(x, c, e)
       // 길: 펜 끝이 지나간 만큼 가는 선이 남는다(끝 모습의 SVG와 같은 길, 같은 색, 같은 굵기)
       if (c.mode === 'pen') {
         const u = penAt(c, e)
@@ -1731,6 +1805,95 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         x.fillStyle = rgbCss(ink.c, split && pass === 1 ? A0 * (1 - 0.35 * pick) : split ? keepA : A0)
         x.fill()
       }
+    }
+
+    /**
+     * 물(차오름): 수위(숫자와 같은 곡선) 위에 물방울이 닿은 자리마다 잔물결 둘이 양옆으로 퍼지며 잦아든다. 물은 옅은 먹의 면(어두운 바탕은
+     * 옅은 빛), 물 낯은 또렷한 가는 선. 떨어지는 물방울은 빠를수록 길게 늘어난 짧은 획이다(3~5m에서 점 하나는 보이지 않는다). 다 차고
+     * 숫자가 맺히면 물은 조금 가라앉으며 걷힌다(끝 모습은 글뿐이다). 강조색은 쓰지 않는다
+     */
+    const drawPool = (x: CanvasRenderingContext2D, c: Scene, e: number) => {
+      const P = c.pool
+      if (!P) return
+      const RS = c.spans.resolve
+      const gone = RS ? clamp(prog(RS, e)) : 0
+      if (gone >= 1) return
+      const [c0, c1] = P.win
+      const rise = reveal(clamp((e - c0) / Math.max(1, c1 - c0)))
+      const fade = 1 - smooth(0, 1, gone)
+      const level = lerp(P.base, P.full, rise) + 22 * carry(gone)
+      const D = P.drops
+      // 물결: 닿은 때부터 양옆으로 퍼지며(초당 700px) 잦아든다(0.48초)
+      const wave = (px: number) => {
+        let y = 0
+        for (let j = 0; j < P.n; j++) {
+          const o = j * DROP
+          const dt = e - D[o + 1]
+          if (dt <= 0 || dt > 1600) continue
+          const reach = 0.7 * dt
+          const amp = 12 * D[o + 4] * Math.exp(-dt / 480)
+          // 물결 하나는 긴 굽이 한두 개(짧은 굽이가 겹치면 지진계의 잡음으로 읽혔다, 필름)
+          for (const sg of [-1, 1]) {
+            const u = px - (D[o] + sg * reach)
+            if (Math.abs(u) > 240) continue
+            y += amp * Math.sin(u * 0.038) * Math.exp(-(u * u) / 9000)
+          }
+          // 닿은 자리는 잠깐 오목하게
+          const u0 = px - D[o]
+          if (dt < 280 && Math.abs(u0) < 80) y += amp * (1 - dt / 280) * Math.exp(-(u0 * u0) / 900)
+        }
+        return y
+      }
+      if (rise > 0 && level < P.base) {
+        const N = 160
+        const sx = (P.x1 - P.x0) / N
+        x.beginPath()
+        for (let i = 0; i <= N; i++) {
+          const px = P.x0 + i * sx
+          const py = level + wave(px)
+          if (i) x.lineTo(px, py)
+          else x.moveTo(px, py)
+        }
+        // 물: 물 낯에서 바닥까지
+        x.lineTo(P.x1, P.base + 40)
+        x.lineTo(P.x0, P.base + 40)
+        x.closePath()
+        x.fillStyle = rgbCss(ink.c, (c.dark ? 0.09 : 0.06) * fade)
+        x.fill()
+        // 물 낯: 닫힌 경로의 윗변만 다시 긋는다
+        x.beginPath()
+        for (let i = 0; i <= N; i++) {
+          const px = P.x0 + i * sx
+          const py = level + wave(px)
+          if (i) x.lineTo(px, py)
+          else x.moveTo(px, py)
+        }
+        x.strokeStyle = rgbCss(ink.c, (c.dark ? 0.62 : 0.58) * fade)
+        x.lineWidth = 2.4
+        x.lineJoin = 'round'
+        x.stroke()
+      }
+      // 떨어지는 물방울: 위에서 옅게 나타나 빨라지며(자유 낙하) 물 낯에 닿는다
+      x.strokeStyle = rgbCss(ink.c, c.dark ? 0.78 : 0.7)
+      x.lineCap = 'round'
+      for (let j = 0; j < P.n; j++) {
+        const o = j * DROP
+        const t1 = D[o + 1]
+        const t0 = t1 - D[o + 3]
+        if (e <= t0 || e >= t1) continue
+        const u = (e - t0) / (t1 - t0)
+        const yEnd = lerp(P.base, P.full, reveal(clamp((t1 - c0) / Math.max(1, c1 - c0))))
+        const y = lerp(D[o + 2], yEnd, u * u)
+        // 빠를수록 길게(떨어지는 거리 × 빠르기)
+        const len = 10 + 70 * u * D[o + 4]
+        x.globalAlpha = smooth(0, 0.25, u)
+        x.lineWidth = 3.5 + 2 * D[o + 4]
+        x.beginPath()
+        x.moveTo(D[o], y - len)
+        x.lineTo(D[o], y)
+        x.stroke()
+      }
+      x.globalAlpha = 1
     }
 
     /** 펜 끝: 작은 점 하나(빛 번짐 없이. 번지는 빛은 어두운 바탕의 초점 하나뿐이다) */

@@ -105,7 +105,7 @@ export interface Backdrop {
  * 해시 id뿐이다. 뜻과 값의 범위, 기본값, 시간표는 deck/cine.ts 한 곳이 정한다
  */
 /** 처음 고른 틀 */
-export type CinePresetId = 'light' | 'diffuse' | 'gather' | 'stroke' | 'fork'
+export type CinePresetId = 'light' | 'diffuse' | 'gather' | 'stroke' | 'fork' | 'fill'
 /** 글의 짜임: 큰 글자와 옆의 제목(mark), 가운데 하나(center), 가로로 그어지는 선과 두 끝(line) */
 export type CineFrame = 'mark' | 'center' | 'line'
 /** 구간: 한 점이 맺힘, 번짐, 모임, 또렷해짐, 글이 써짐, 카메라가 물러남, 머묾 */
@@ -118,9 +118,10 @@ export type CineFieldKey = 'glyph' | 'title' | 'lead' | 'label' | 'text' | 'sub'
 export type CineEnter = 'settle' | 'write' | 'letters' | 'count' | 'carry'
 /**
  * 재료: 틀마다 다른 몸짓이라 한 발표에 함께 나와도 서로 다르게 읽힌다. 입자(빛에서 글자로), 번지는 먹의 면(확산),
- * 모여드는 가는 선(모여 맺힘), 그어지는 선과 그 위를 건너가는 값(그어지는 선), 뻗어 나가 갈라지는 갈래(갈림길)
+ * 모여드는 가는 선(모여 맺힘), 그어지는 선과 그 위를 건너가는 값(그어지는 선), 뻗어 나가 갈라지는 갈래(갈림길),
+ * 떨어져 모여 차오르는 물(차오름)
  */
-export type CineMaterial = 'particles' | 'wash' | 'threads' | 'line' | 'branches'
+export type CineMaterial = 'particles' | 'wash' | 'threads' | 'line' | 'branches' | 'pool'
 export type CineAmount = 'few' | 'normal' | 'many'
 /** 번지는 모양: 둥글게, 옆으로 길게, 위로 */
 export type CineSpread = 'round' | 'side' | 'rise'
