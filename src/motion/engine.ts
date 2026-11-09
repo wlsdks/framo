@@ -3236,8 +3236,8 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'hub': {
-          // 모이고 퍼지기(모션 그래픽 장면). 모이기는 끝점이 위에서부터 맺히고 선이 가운데로 그어진 뒤 계기판이 서고, 퍼지기는
-          // 계기판이 먼저 서고 선이 끝점으로 뻗는다. 다 서면 데이터 조각이 길을 따라 쉬지 않고 흐르고, 조각이 닿는 순간 그 길의
+          // 모이고 퍼지기(모션 그래픽 장면). 모이기는 끝점이 위에서부터 맺히고 선이 가운데로 그어진 뒤 가운데 원이 서고, 퍼지기는
+          // 가운데 원이 먼저 서고 선이 끝점으로 뻗는다. 다 서면 데이터 조각이 길을 따라 쉬지 않고 흐르고, 조각이 닿는 순간 그 길의
           // 가운데 테(모이기)나 끝점(퍼지기)이 잠깐 강조색으로 밝아진다: 움직임이 '전달됐다'는 뜻을 갖게. 떠나는 쪽도 조각이 출발할 때
           // 살짝 밝아진다. 계속 움직이는 것은 이 흐름 하나다(번짐 빛, 숨쉬기, 도는 호는 쓰지 않는다: docs/MOTION.md).
           // 흐름은 이 장을 떠날 때(stops)까지 이어진다. 끝맺음(묶음이 끝났는지)을 기다리는 목록(anims)에는 넣지 않는다
@@ -3248,7 +3248,6 @@ export function motionEngine(): MotionEngine {
           const dots = $('.bk-hb-dot')
           const nodes = $('.bk-hb-node')
           const core = one('.bk-hb-core')
-          const ticks = one('.bk-hb-ticks')
           const hubText = one('.bk-hb-hub')
           const hits = $('.bk-hb-hit')
           const n = Math.max(1, lines.length)
@@ -3261,12 +3260,10 @@ export function motionEngine(): MotionEngine {
             const k = dashK(el) * 100
             run(anims, el, [{ strokeDasharray: `${k} ${k}`, strokeDashoffset: k }, { strokeDasharray: `${k} ${k}`, strokeDashoffset: 0 }], s(at), { easing: OUT, duration: lineDur })
           }
-          // 모이기: 계기판은 마지막 선이 가운데에 거의 닿을 때 그 자리에서 선다. 선이 다 닿은 뒤에 세우면 선 끝이 한 점에 모인 꺾쇠(>)가
+          // 모이기: 가운데 원은 마지막 선이 가운데에 거의 닿을 때 그 자리에서 선다. 선이 다 닿은 뒤에 세우면 선 끝이 한 점에 모인 꺾쇠(>)가
           // 0.2~0.3초 혼자 보였다(필름)
           const coreAt = out ? 60 : 200 + (n - 1) * step + 240
-          // 계기판: 테가 먼저 서고 눈금이 한 바퀴 그어진다
           grow(core, coreAt)
-          if (ticks) run(anims, ticks, [{ strokeDasharray: '0 1' }, { strokeDasharray: '0.35 0.65' }], s(coreAt + 80), { easing: OUT, duration: d(700) })
           rise(hubText, coreAt + 160, L.y * 0.5)
           lines.forEach((line, k) => {
             const at = out ? coreAt + 260 + k * step : 60 + k * step
