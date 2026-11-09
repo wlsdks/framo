@@ -309,8 +309,9 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
   const shown = value || auto || hint
   const one = oneLineProps(shown, oneLine, units, numeral)
   if (mode === 'preview' || !onChange) {
+    // 예시 글은 미리 보기 꼴(장 목록, 오른쪽 칸의 장 그림)에서도 편집 화면처럼 옅게(edit.css): 장 목록만 짙게 그려 적은 글처럼 읽혔다
     return (
-      <Tag className={cx(className, fitClass(fitText ?? shown, fit), one.cls, !value && !auto && 'is-hint')} style={one.style}>
+      <Tag className={cx(className, fitClass(fitText ?? shown, fit), one.cls, !value && !auto && 'is-hint', !!value && example && 'is-example')} style={one.style}>
         <Shown text={shown} numeral={numeral} parens={keepParens} />
       </Tag>
     )
