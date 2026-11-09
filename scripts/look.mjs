@@ -371,7 +371,8 @@ async function pdf(o) {
     await press(page, 'PDF', '.menu button')
     await sleep(800)
     // 빈칸이 남았다고 물으면 그대로 내보낸다
-    if (await page.eval(`!!document.querySelector('.modal')`)) await press(page, 'PDF', '.modal button')
+    // (확인 창의 단추는 '그대로 내보내기'다. 예전에는 'PDF'를 찾아서 빈칸이 남은 작업 파일이면 여기서 멈췄다)
+    if (await page.eval(`!!document.querySelector('.modal')`)) await press(page, '그대로', '.modal button')
     for (let i = 0; i < 1200 && !(await page.eval('!!window.__printed')); i++) await sleep(100)
     const shown = await page.eval(`document.querySelectorAll('.print-page').length`)
     if (!shown) throw new Error('인쇄할 장이 그려지지 않았어요.')
