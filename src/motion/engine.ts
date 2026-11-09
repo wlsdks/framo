@@ -2647,9 +2647,12 @@ export function motionEngine(): MotionEngine {
             stream(stage, loop, again + 300, lap)
             stream(stage, loop, again + 300, lap, lap / 2)
           } else if (getComputedStyle(root).getPropertyValue('--cy-flat').trim() === '1') {
-            // 단계가 왼쪽부터 차례로 나온다(번호 사이에는 선이 없다: 차례는 읽는 방향과 번호가 말한다, cycle.css)
+            // 단계가 왼쪽부터 차례로 나온다(번호 사이에는 선이 없다: 차례는 읽는 방향과 번호가 말한다, cycle.css). 사이는 세로의 괄호 선과
+            // 같은 짧은 차례(hop의 0.6배): 번호 사이 선을 걷은 뒤에도 선을 긋던 사이(hop)를 그대로 두면 생동감에서 단계마다 0.6초씩 서서
+            // 기다리게 했고, 돌아가는 길이 3초에야 닫혔다(검수)
+            const lead = hop * 0.6
             steps.forEach((step, n) => {
-              const at = 120 + n * hop
+              const at = 120 + n * lead
               rise(step.querySelector('.bk-cy-n'), at, L.y * 0.4)
               rise(step.querySelector('.bk-cy-text'), at + 40, L.y * 0.4)
             })
@@ -2681,7 +2684,7 @@ export function motionEngine(): MotionEngine {
             const total = lens.reduce((x, y) => x + y, 0) || 1
             const T = Math.max(700, Math.min(1200, total * 0.45))
             const per = (len: number) => (T * len) / total
-            let at = 120 + steps.length * hop + 60
+            let at = 120 + steps.length * lead + 60
             const linear = (el: Element, from: string, ms: number, pseudo?: string) =>
               run(anims, el, [{ clipPath: from }, { clipPath: 'inset(-12px -12px -12px -12px)' }], s(at), { easing: 'linear', duration: d(ms) }, pseudo)
             // 조각은 곡선 없이: 선이 그어지는 끝과 같은 빠르기로 탄다. 조각만 CARRY로 타면 윗길 가운데에서 선 끝보다 300px 남짓 앞서 달렸다

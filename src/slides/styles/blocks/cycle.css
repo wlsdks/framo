@@ -362,9 +362,10 @@
        12px만 둥글리면 끝 눈금을 걷은 뒤 번호를 담은 둥근 네모 상자로 보였다 */
     --cy-loop: calc(30px * var(--bk-fit, 1));
     --cy-bend: 12px;
-    /* 마지막 번호 뒤에서 위로 꺾이는 자리: 단계 칸의 왼쪽 끝에서 두 자리 번호와 그 뒤 틈만큼(판의 글자 em. 번호는 한 단계 작은 글자라
-       두 자리가 0.9em 남짓) */
-    --cy-turn: 1.25em;
+    /* 마지막 번호 뒤의 조각: 번호 끝(두 자리 번호는 판의 글자로 0.9em 남짓)에서 0.45em 띄워 시작하고, 처음 단계 앞의 조각(╰─)과 같은
+       너비로 가로로 간 뒤 위로 꺾인다(─╯). 꺾이는 둥근 모서리만 두던 때는 번호 바로 옆에 작은 갈고리만 붙어 '03~'처럼 읽혔다(검수) */
+    --cy-turn: 1.35em;
+    --cy-leg: calc(var(--cy-in) - 0.45em);
   }
 
   .bk-cy-list {
@@ -380,7 +381,7 @@
   .bk-cy-list::before {
     position: absolute;
     top: 0;
-    right: calc((100% - var(--cy-in) - (var(--cy-n, 1) - 1) * var(--cy-row)) / var(--cy-n, 1) - var(--cy-turn) - var(--cy-bend));
+    right: calc((100% - var(--cy-in) - (var(--cy-n, 1) - 1) * var(--cy-row)) / var(--cy-n, 1) - var(--cy-turn) - var(--cy-leg));
     left: 0;
     height: var(--cy-loop);
     border: var(--cy-line) solid var(--cy-c);
@@ -419,14 +420,14 @@
     border-bottom-left-radius: var(--cy-bend);
   }
 
-  /* 마지막 단계: 번호 바로 뒤에서 둥글게 위로 꺾여 윗부분에 닿는다(╯) */
+  /* 마지막 단계: 번호 뒤에서 가로로 나가 둥글게 위로 꺾여 윗부분에 닿는다(─╯) */
   .bk-cy-step:last-child .bk-cy-rail {
     top: 0;
     right: auto;
     bottom: calc(50% - var(--cy-line) / 2);
     left: var(--cy-turn);
     display: block;
-    width: var(--cy-bend);
+    width: var(--cy-leg);
     height: auto;
     border: none;
     border-right: var(--cy-line) solid var(--cy-c);
