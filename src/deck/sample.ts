@@ -213,9 +213,9 @@ const SHOWROOM: Record<string, Fill> = {
   '한 장 요약': {
     fields: { title: COMMON['한 장 요약'].fields!.title, source: '본부 설문을 바탕으로 한 추정, 9월 기준' },
     items: [
-      { value: '3시간', title: '한 사람이 한 주에 돌려받는 시간', body: '회의 9시간이 6시간으로' },
-      { value: '12,000시간', title: '본부가 한 해에 돌려받는 시간', body: '80명, 한 해 50주' },
-      { value: '월 40만 원', title: '두 팀 2개월 시범에 드는 돈', body: '맞지 않으면 바로 멈춰요' },
+      { value: '3시간', title: '한 사람이 한 주에', body: '회의 9시간이 6시간으로' },
+      { value: '12,000시간', title: '본부 전체가 한 해에', body: '80명, 한 해 50주' },
+      { value: '월 40만 원', title: '두 팀 2개월 시범', body: '맞지 않으면 바로 멈춰요' },
     ],
     options: { scene: 'numbers' },
     notes:
