@@ -31,7 +31,7 @@
   grid-row: 2;
 }
 
-.bk-cc > :is(.bk-cc-plot, .bk-hm-grid, .bk-pr-list) {
+.bk-cc > :is(.bk-cc-plot, .bk-hm-grid, .bk-pr-list, .bk-tg-text) {
   grid-row: 3;
 }
 
@@ -60,7 +60,9 @@
     margin: 0 0 20px 48px;
   }
 
-  .bk-cc > :is(.bk-cc-plot, .bk-hm-grid, .bk-pr-list) {
+  /* 비교할 수 없는 값의 표(.bk-tg-text)도 그래프 자리에: 따로 셋째 줄에 두던 때는 낮은 칸의 둘째 줄(1fr)이 빈 채 남아 소제목과 표 사이가
+     170px 넘게 떨어졌다(검수) */
+  .bk-cc > :is(.bk-cc-plot, .bk-hm-grid, .bk-pr-list, .bk-tg-text) {
     grid-row: 2;
   }
 }
@@ -516,9 +518,8 @@
   grid-template-rows: minmax(124px, 1fr) auto;
 }
 
-/* 비교할 수 없는 값은 막대를 만들지 않고 적은 실적과 목표를 같은 줄에서 읽는다. */
+/* 비교할 수 없는 값은 막대를 만들지 않고 적은 실적과 목표를 같은 줄에서 읽는다(그래프 자리, 위 .bk-cc 줄) */
 .bk-tg-text {
-  grid-row: 3;
   align-self: start;
 }
 
