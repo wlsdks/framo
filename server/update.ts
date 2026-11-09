@@ -8,9 +8,12 @@
 //   2) 받기(사람이 '받기'를 누를 때만): https://github.com/wlsdks/gyeol/releases/download/<태그>/<이 OS의 zip>
 //      GitHub은 이 주소를 파일 보관소(release-assets.githubusercontent.com, 예전에는 objects.githubusercontent.com)로
 //      한 번 넘긴다(302, 2026-10 확인). 넘기는 곳도 정해 둔 이름 안에서만 따라간다.
+//      자동으로 풀 때는 같은 릴리스의 같은 경로에서 지문 목록(SHA256SUMS.txt)과 그 서명(SHA256SUMS.txt.sig)도 같은 규칙으로 받는다
+//      (signature.ts). 새 주소나 새 곳으로 가지 않는다.
 //
 // 받은 파일은 GitHub이 알려 준 SHA-256 지문과 크기가 맞을 때만 남긴다. 지문이 없는 릴리스는 받지 않고 릴리스 페이지만 알린다.
-// 받은 파일을 풀거나 실행하지 않는다. 사람이 폴더에서 직접 푼다.
+// 이 파일은 받기까지만 한다. 푸는 것은 install.ts가 지문을 다시 맞춘 zip만 앱 폴더의 versions/ 안에 풀고,
+// 켜는 것은 시작 프로그램(launch.ts)이 다음에 켤 때 또는 사람이 '지금 다시 시작'을 누를 때 한다.
 // 실패는 조용히, 정해진 말로만 알린다. 네트워크 오류 글, 주소, 경로는 밖으로 내보내지 않는다.
 
 import { createHash } from 'node:crypto'
@@ -18,6 +21,7 @@ import { createWriteStream, mkdirSync, renameSync, rmSync } from 'node:fs'
 import { get as httpsGet } from 'node:https'
 import { dirname } from 'node:path'
 import type { DownloadError } from '../src/update/protocol'
+import { MAX_SIGNED_BYTES, SIG_NAME, SUMS_NAME } from './signature'
 
 // 주소는 글자 그대로 적는다. 빌드 결과의 바깥 주소 검사(scripts/offline.mjs)가 이 꼴 그대로만 허락한다
 /**
@@ -66,18 +70,6 @@ export function assetName(platform: NodeJS.Platform): string | null {
   return null
 }
 
-/** 'X.Y.Z'를 견준다. a가 새것이면 양수. 꼴이 틀리면 NaN이라 어느 비교도 참이 아니다(새 버전으로 보지 않는다) */
-export function compareVersions(a: string, b: string): number {
-  const pa = /^(\d+)\.(\d+)\.(\d+)$/.exec(a)
-  const pb = /^(\d+)\.(\d+)\.(\d+)$/.exec(b)
-  if (!pa || !pb) return NaN
-  for (let i = 1; i <= 3; i++) {
-    const d = Number(pa[i]) - Number(pb[i])
-    if (d) return Math.sign(d)
-  }
-  return 0
-}
-
 interface Asset {
   /** 받을 첫 주소. https://github.com/<REPOS의 저장소>/releases/download/<태그>/<이름> 그대로인 것만 */
   url: string
@@ -85,11 +77,19 @@ interface Asset {
   sha256: string
 }
 
+/** 작은 파일(지문 목록, 서명). 주소는 Asset과 같은 꼴 */
+interface Small {
+  url: string
+  size: number
+}
+
 export interface Release {
   version: string
   page: string
   /** 이 OS에서 받을 파일. 없거나 지문이 없으면 null (받지 않는다) */
   asset: Asset | null
+  /** 지문 목록과 그 서명. 둘 다 있어야 자동으로 풀 수 있다(서명이 맞는지는 받은 뒤 signature.ts가 본다) */
+  signed: { sums: Small; sig: Small } | null
 }
 
 function isObj(v: unknown): v is Record<string, unknown> {
@@ -113,19 +113,23 @@ export function parseRelease(v: unknown, platform: NodeJS.Platform, repo: Repo =
   if (v.html_url !== page) return null
 
   const name = assetName(platform)
-  let asset: Asset | null = null
-  if (name && Array.isArray(v.assets)) {
-    const a = v.assets.find((x) => isObj(x) && x.name === name)
-    if (isObj(a)) {
-      const url = `${repo.download}${tag}/${name}`
-      const digest = typeof a.digest === 'string' ? DIGEST.exec(a.digest) : null
-      const size = a.size
-      if (a.browser_download_url === url && digest && typeof size === 'number' && Number.isInteger(size) && size > 0 && size <= MAX_ASSET_BYTES) {
-        asset = { url, size, sha256: digest[1] }
-      }
-    }
+  const assets = Array.isArray(v.assets) ? v.assets : []
+  /** 이 이름의 파일: 주소가 태그로 만든 주소와 같고 크기가 1..max인 것만 */
+  const find = (n: string, max: number) => {
+    const a = assets.find((x) => isObj(x) && x.name === n)
+    const url = `${repo.download}${tag}/${n}`
+    if (!isObj(a) || a.browser_download_url !== url) return null
+    const size = a.size
+    return typeof size === 'number' && Number.isInteger(size) && size > 0 && size <= max ? { a, url, size } : null
   }
-  return { version, page, asset }
+  let asset: Asset | null = null
+  const zip = name ? find(name, MAX_ASSET_BYTES) : null
+  const digest = zip && typeof zip.a.digest === 'string' ? DIGEST.exec(zip.a.digest) : null
+  if (zip && digest) asset = { url: zip.url, size: zip.size, sha256: digest[1] }
+  const sums = find(SUMS_NAME, MAX_SIGNED_BYTES)
+  const sig = find(SIG_NAME, MAX_SIGNED_BYTES)
+  const signed = sums && sig ? { sums: { url: sums.url, size: sums.size }, sig: { url: sig.url, size: sig.size } } : null
+  return { version, page, asset, signed }
 }
 
 /**
@@ -223,19 +227,13 @@ export function createUpdater({ version, platform = process.platform, get = node
     }
   }
 
-  /**
-   * 받아서 file에 둔다. 임시 이름으로 받고, 크기와 SHA-256이 맞을 때만 제 이름으로 바꾼다.
-   * file은 부르는 쪽이 정한 고정 경로다. 네트워크에서 온 이름은 경로에 쓰지 않는다.
-   */
-  async function download(asset: Asset, file: string, onProgress: (received: number) => void): Promise<'ok' | DownloadError> {
-    const part = `${file}.part`
-    const deadline = Date.now() + DOWNLOAD_TIMEOUT_MS
-    let url = new URL(asset.url)
+  /** 릴리스 파일의 첫 주소에서 넘겨주기를 한 단계씩 확인하며 따라가 200인 답을 연다 */
+  async function follow(first: string): Promise<Hop | 'network' | 'verify'> {
+    let url = new URL(first)
     if (!allowedHop(url, true)) return 'verify'
-    let hop: Hop | null = null
     try {
       for (let i = 0; ; i++) {
-        hop = await get(url, { Accept: 'application/octet-stream', 'User-Agent': userAgent }, IDLE_TIMEOUT_MS)
+        const hop = await get(url, { Accept: 'application/octet-stream', 'User-Agent': userAgent }, IDLE_TIMEOUT_MS)
         if ([301, 302, 303, 307, 308].includes(hop.status)) {
           hop.close()
           if (i >= MAX_REDIRECTS || !hop.location) return 'network'
@@ -246,11 +244,44 @@ export function createUpdater({ version, platform = process.platform, get = node
           continue
         }
         if (hop.status !== 200) return hop.close(), 'network'
-        break
+        return hop
       }
     } catch {
       return 'network'
     }
+  }
+
+  /** 작은 파일(지문 목록, 서명)을 받는다. 알려 준 크기와 다르거나 늦으면 null */
+  async function fetchSmall(s: Small): Promise<Buffer | null> {
+    let hop: Hop | null = null
+    const work = (async () => {
+      const h = await follow(s.url)
+      if (typeof h === 'string') return null
+      hop = h
+      const body = await readLimited(h.body, s.size)
+      return body && body.length === s.size ? body : null
+    })().catch(() => null)
+    let t: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<null>((resolve) => {
+      t = setTimeout(() => ((hop as Hop | null)?.close(), resolve(null)), CHECK_TIMEOUT_MS)
+    })
+    try {
+      return await Promise.race([work, timeout])
+    } finally {
+      clearTimeout(t)
+    }
+  }
+
+  /**
+   * 받아서 file에 둔다. 임시 이름으로 받고, 크기와 SHA-256이 맞을 때만 제 이름으로 바꾼다.
+   * file은 부르는 쪽이 정한 고정 경로다. 네트워크에서 온 이름은 경로에 쓰지 않는다.
+   */
+  async function download(asset: Asset, file: string, onProgress: (received: number) => void): Promise<'ok' | DownloadError> {
+    const part = `${file}.part`
+    const deadline = Date.now() + DOWNLOAD_TIMEOUT_MS
+    const opened = await follow(asset.url)
+    if (typeof opened === 'string') return opened
+    const hop: Hop = opened
 
     try {
       mkdirSync(dirname(file), { recursive: true })
@@ -310,5 +341,5 @@ export function createUpdater({ version, platform = process.platform, get = node
     return 'ok'
   }
 
-  return { latest, download }
+  return { latest, download, fetchSmall }
 }

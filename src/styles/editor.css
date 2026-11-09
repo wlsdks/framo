@@ -44,6 +44,22 @@
   color: var(--ink);
 }
 
+/* 새 버전 표시: 받는 중은 옅은 글자 하나, 할 일(업데이트, 다시 시작)은 단추 하나. 색 면 없이 글자만 굵게 */
+.ed-update {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ed-top-r .ed-update-go {
+  flex: none;
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* 위 막대의 묶음 사이 가는 선. 단추 높이(36)의 반쯤만 그어 막대를 칸으로 나누지 않고 쉼표처럼 */
 .ed-top-sep {
   flex: none;

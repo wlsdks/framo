@@ -1,15 +1,17 @@
 // 새 버전 확인과 받기. 네트워크에는 닿지 않는다: GitHub 대신 흉내 낸 GET(fake)을 넣는다.
 
 import { createHash } from 'node:crypto'
-import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer, request, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { UpdateStatus } from '../src/update/protocol'
-import { allowedHop, compareVersions, createUpdater, MAX_ASSET_BYTES, parseRelease, REPOS, type Getter } from './update'
-import { createUpdateHandler, type UpdateSetup } from './updateRoutes'
+import { allowedHop, createUpdater, MAX_ASSET_BYTES, parseRelease, REPOS, type Getter } from './update'
+import { compareVersions, FAILED_FILE, READY_FILE, requiredFiles } from './versions'
+import { fakePackage, markReady, testKey } from './zipFixture'
+import { createUpdateHandler, dropFile, type UpdateSetup } from './updateRoutes'
 
 const ZIP = Buffer.from('지어낸 배포본 내용 '.repeat(200))
 const SHA = createHash('sha256').update(ZIP).digest('hex')
@@ -66,6 +68,24 @@ function renamed() {
   return JSON.parse(JSON.stringify(release()).replaceAll('wlsdks/gyeol', 'wlsdks/framo'))
 }
 
+describe('릴리스의 서명 파일', () => {
+  const sumsUrl = 'https://github.com/wlsdks/gyeol/releases/download/v0.9.0/SHA256SUMS.txt'
+  const sigUrl = 'https://github.com/wlsdks/gyeol/releases/download/v0.9.0/SHA256SUMS.txt.sig'
+  const withSigned = (sums: Record<string, unknown>, sig: Record<string, unknown>) => {
+    const r = release() as ReturnType<typeof release> & { assets: unknown[] }
+    r.assets.push({ name: 'SHA256SUMS.txt', size: 200, browser_download_url: sumsUrl, ...sums }, { name: 'SHA256SUMS.txt.sig', size: 89, browser_download_url: sigUrl, ...sig })
+    return r
+  }
+
+  it('지문 목록과 서명은 같은 릴리스의 download 경로 그대로인 것만 고른다', () => {
+    expect(parseRelease(withSigned({}, {}), 'win32')?.signed).toEqual({ sums: { url: sumsUrl, size: 200 }, sig: { url: sigUrl, size: 89 } })
+    expect(parseRelease(withSigned({ browser_download_url: 'https://evil.example/SHA256SUMS.txt' }, {}), 'win32')?.signed).toBeNull()
+    expect(parseRelease(withSigned({}, { browser_download_url: 'https://github.com/someone/gyeol/releases/download/v0.9.0/SHA256SUMS.txt.sig' }), 'win32')?.signed).toBeNull()
+    expect(parseRelease(withSigned({ size: 10 * 1024 * 1024 }, {}), 'win32')?.signed).toBeNull()
+    expect(parseRelease(release(), 'win32')?.signed).toBeNull()
+  })
+})
+
 describe('버전 견주기', () => {
   it('X.Y.Z를 숫자로 견준다', () => {
     expect(compareVersions('0.10.0', '0.9.9')).toBe(1)
@@ -85,6 +105,7 @@ describe('릴리스 정보 고르기', () => {
       version: '0.9.0',
       page: 'https://github.com/wlsdks/gyeol/releases/tag/v0.9.0',
       asset: { url: DL, size: ZIP.length, sha256: SHA },
+      signed: null,
     })
   })
 
@@ -409,5 +430,178 @@ describe('새 버전 창구', () => {
     expect((await call('check')).body.check).toMatchObject({ state: 'available', download: false, page: 'https://github.com/wlsdks/gyeol/releases/tag/v0.9.0' })
     expect((await call('download')).status).toBe(409)
     expect(calls).toHaveLength(1)
+  })
+  describe('저절로 바꾸기(시작 프로그램으로 켠 Framo)', () => {
+    /** 지어낸 배포본 zip을 0.9.0 릴리스로 내놓는 가짜 GitHub */
+    /** 앱에 든 키(시험용). 진짜 릴리스는 이 PC에만 있는 비밀 키로 서명한다 */
+    const key = testKey()
+    const SUMS_URL = 'https://github.com/wlsdks/gyeol/releases/download/v0.9.0/SHA256SUMS.txt'
+    const SIG_URL = 'https://github.com/wlsdks/gyeol/releases/download/v0.9.0/SHA256SUMS.txt.sig'
+
+    /**
+     * 지어낸 배포본 zip을 0.9.0 릴리스로 내놓는 가짜 GitHub. 지문 목록과 그 서명도 같은 릴리스 경로에서(파일 보관소로 넘겨) 내준다.
+     * sign: 서명하는 키(null이면 서명 파일을 올리지 않은 릴리스), sumsFor: 목록에 적을 zip(받는 zip과 다르게 하려고)
+     */
+    function packaged(zip = fakePackage('0.9.0', 'win32'), { sign = key.sign as ((d: Buffer) => string) | null, sumsFor = zip } = {}) {
+      const sha = createHash('sha256').update(zip).digest('hex')
+      const sums = Buffer.from(`${createHash('sha256').update(sumsFor).digest('hex')}  gyeol-windows.zip\n${'0'.repeat(64)}  gyeol-mac.zip\n`)
+      const sig = sign ? Buffer.from(sign(sums)) : null
+      const body = release({}, { size: zip.length, digest: `sha256:${sha}` }) as ReturnType<typeof release> & { assets: unknown[] }
+      body.assets.push({ name: 'SHA256SUMS.txt', size: sums.length, browser_download_url: SUMS_URL })
+      if (sig) body.assets.push({ name: 'SHA256SUMS.txt.sig', size: sig.length, browser_download_url: SIG_URL })
+      return fake({
+        [API]: { status: 200, body: JSON.stringify(body) },
+        [DL]: { status: 302, location: ASSET_HOST },
+        [ASSET_HOST]: { status: 200, body: zip },
+        [SUMS_URL]: { status: 302, location: `${ASSET_HOST}-sums` },
+        [`${ASSET_HOST}-sums`]: { status: 200, body: sums },
+        ...(sig ? { [SIG_URL]: { status: 302, location: `${ASSET_HOST}-sig` }, [`${ASSET_HOST}-sig`]: { status: 200, body: sig } } : {}),
+      })
+    }
+
+    function app() {
+      const home = mkdtempSync(join(tmpdir(), 'gyeol-update-app-'))
+      return { home, downloadDir: join(home, '새 버전') }
+    }
+
+    async function until(call: Awaited<ReturnType<typeof serve>>, ok: (s: UpdateStatus) => boolean) {
+      for (let i = 0; i < 200; i++) {
+        const s = (await call('status', { method: 'GET' })).body
+        if (ok(s)) return s
+        await new Promise((r) => setTimeout(r, 10))
+      }
+      throw new Error('기다린 상태가 오지 않았어요')
+    }
+
+    it('업데이트: 받고, 풀고, 확인을 마치면 다시 시작을 권한다. 받은 zip은 지우고 폴더를 열지 않는다', async () => {
+      const { home, downloadDir } = app()
+      const opened: string[] = []
+      let restarts = 0
+      const call = await serve({ get: packaged().get, downloadDir, home, restart: () => restarts++, reveal: (f) => opened.push(f), keys: [key.pub] })
+      const first = await call('check')
+      expect(first.body).toMatchObject({ auto: true, check: { state: 'available', version: '0.9.0', download: true } })
+      expect((await call('download')).status).toBe(202)
+      const done = await until(call, (s) => s.download.state === 'ready')
+      expect(done.download).toEqual({ state: 'ready', version: '0.9.0' })
+      expect(existsSync(join(home, 'versions', '0.9.0', READY_FILE))).toBe(true)
+      expect(existsSync(join(downloadDir, 'gyeol-windows.zip'))).toBe(false)
+      expect(opened).toEqual([])
+      // 다시 확인해도 같은 버전이면 다시 시작 권유가 그대로다
+      expect((await call('check/now')).body.download).toEqual({ state: 'ready', version: '0.9.0' })
+      expect(restarts).toBe(0)
+      const res = await call('restart')
+      expect(res.status).toBe(202)
+      await new Promise((r) => setTimeout(r, 20))
+      // 답을 다 보낸 뒤에 한 번만
+      expect(restarts).toBe(1)
+      expect(res.body.boot).toBe(first.body.boot)
+    })
+
+    it('누가 올렸는지 확인: 서명이 없거나, 앱이 모르는 키로 서명했거나, 서명된 지문이 받은 zip과 다르면 풀지 않고 사람이 풀게 한다', async () => {
+      const attacker = testKey()
+      const cases = [
+        { name: '서명 없음', get: packaged(undefined, { sign: null }).get, auto: false },
+        { name: '다른 키', get: packaged(undefined, { sign: attacker.sign }).get, auto: true },
+        { name: '목록과 다른 zip', get: packaged(undefined, { sumsFor: fakePackage('0.9.0', 'win32', { 'dist/index.html': '다른 것' }) }).get, auto: true },
+      ]
+      for (const c of cases) {
+        const { home, downloadDir } = app()
+        const opened: string[] = []
+        const call = await serve({ get: c.get, downloadDir, home, restart: () => {}, reveal: (f) => opened.push(f), keys: [key.pub] })
+        // 서명 파일이 없는 릴리스는 단추부터 '받기'(사람이 푸는 길)다
+        expect([c.name, (await call('check')).body.auto]).toEqual([c.name, c.auto])
+        await call('download')
+        const s = await until(call, (x) => x.download.state === 'done')
+        expect([c.name, s.download]).toEqual([c.name, { state: 'done', why: 'unsigned' }])
+        expect(existsSync(join(home, 'versions'))).toBe(false)
+        expect(opened).toEqual([join(downloadDir, 'gyeol-windows.zip')])
+      }
+    })
+
+    it('앱에 키가 없으면(아직 넣지 않았으면) 자동으로 풀지 않는다', async () => {
+      const { home, downloadDir } = app()
+      const call = await serve({ get: packaged().get, downloadDir, home, restart: () => {}, keys: [] })
+      expect((await call('check')).body.auto).toBe(false)
+      await call('download')
+      expect((await until(call, (x) => x.download.state === 'done')).download).toEqual({ state: 'done', why: 'unsigned' })
+    })
+
+    it('다시 시작은 풀어 둔 새 버전이 있고, 시작 프로그램으로 켰을 때만 받는다', async () => {
+      const { home, downloadDir } = app()
+      let restarts = 0
+      const call = await serve({ get: packaged().get, downloadDir, home, restart: () => restarts++, keys: [key.pub] })
+      expect((await call('restart')).status).toBe(409)
+      expect((await call('restart', { headers: {} })).status).toBe(403)
+      // 시작 프로그램 없이 켠 서버(restart 없음)는 풀지 않고 사람이 푸는 길로
+      const manual = await serve({ get: packaged().get, downloadDir: app().downloadDir, home, keys: [key.pub] })
+      expect((await manual('status', { method: 'GET' })).body.auto).toBe(false)
+      expect((await manual('restart')).status).toBe(409)
+      expect(restarts).toBe(0)
+    })
+
+    it('풀지 못하면(배포본과 꼴이 다르면) 받은 폴더를 열어 사람이 풀게 하고 까닭을 알린다', async () => {
+      const { home, downloadDir } = app()
+      const opened: string[] = []
+      const call = await serve({ get: packaged(fakePackage('0.9.0', 'win32', { 'node/node.exe': null })).get, downloadDir, home, restart: () => {}, reveal: (f) => opened.push(f), keys: [key.pub] })
+      await call('check')
+      await call('download')
+      const s = await until(call, (x) => x.download.state === 'done')
+      expect(s.download).toEqual({ state: 'done', why: 'layout' })
+      expect(opened).toEqual([join(downloadDir, 'gyeol-windows.zip')])
+      expect(existsSync(join(home, 'versions', '0.9.0'))).toBe(false)
+    })
+
+    /** 받아 둔 버전 폴더 */
+    function put(home: string, version: string, failed = false) {
+      const dir = join(home, 'versions', version)
+      for (const f of requiredFiles('win32', process.arch)) {
+        mkdirSync(join(dir, ...f.split('/').slice(0, -1)), { recursive: true })
+        writeFileSync(join(dir, ...f.split('/')), 'x')
+      }
+      markReady(dir, version)
+      if (failed) writeFileSync(join(dir, FAILED_FILE), '{}')
+    }
+
+    it('켤 때 받아 둔 새 버전이 있으면 GitHub에 묻지 않고도 다시 시작을 권한다', async () => {
+      const { home, downloadDir } = app()
+      put(home, '0.9.0')
+      const { get, calls } = packaged()
+      const call = await serve({ get, downloadDir, home, restart: () => {}, keys: [key.pub] })
+      expect((await call('status', { method: 'GET' })).body.download).toEqual({ state: 'ready', version: '0.9.0' })
+      expect(calls).toHaveLength(0)
+    })
+
+    it('받아 둔 새 버전이 켜지지 않았으면 알리고, 다시 받으면 풀지 않고 사람이 풀게 한다(또 켜지지 않게)', async () => {
+      const { home, downloadDir } = app()
+      put(home, '0.9.0', true)
+      const opened: string[] = []
+      const call = await serve({ get: packaged().get, downloadDir, home, restart: () => {}, reveal: (f) => opened.push(f), keys: [key.pub] })
+      expect((await call('status', { method: 'GET' })).body.download).toEqual({ state: 'failed', reason: 'start' })
+      // 같은 버전이 나와 있다고 확인해도 켜지지 않았다는 알림은 그대로
+      expect((await call('check')).body.download).toEqual({ state: 'failed', reason: 'start' })
+      await call('download')
+      const s = await until(call, (x) => x.download.state === 'done')
+      expect(s.download).toEqual({ state: 'done', why: 'start' })
+      expect(opened).toHaveLength(1)
+      expect(readFileSync(join(home, 'versions', '0.9.0', FAILED_FILE), 'utf8')).toBe('{}')
+    })
+  })
+})
+
+describe('받은 zip 지우기', () => {
+  it('지우지 못해도(막힌 폴더) 던지지 않는다: 받기가 끝난 뒤에 불러 서버가 꺼지지 않게', () => {
+    if (process.platform === 'win32' || process.getuid?.() === 0) return
+    const dir = mkdtempSync(join(tmpdir(), 'gyeol-drop-'))
+    const file = join(dir, 'gyeol-mac.zip')
+    writeFileSync(file, 'zip')
+    chmodSync(dir, 0o500)
+    try {
+      expect(() => dropFile(file)).not.toThrow()
+      expect(existsSync(file)).toBe(true)
+    } finally {
+      chmodSync(dir, 0o700)
+    }
+    dropFile(file)
+    expect(existsSync(file)).toBe(false)
   })
 })

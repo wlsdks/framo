@@ -62,23 +62,34 @@
   gap: 4px;
 }
 
-/* 새 버전 알림: 이름 옆에 한 줄로 조용히. 색 면이나 강조색 없이 글자색과 밑줄 단추만 */
+/* 머리말 오른쪽: 새 버전 알림과 파일 열기. 좁은 창에서는 알림 글이 줄어들고 단추는 그대로 */
+.home-top-end {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* 새 버전 알림: 한 줄로 조용히. 색 면이나 강조색 없이 글자색과 밑줄 단추만, 파일 열기와는 옅은 세로선 하나로 나눈다 */
 .home-update {
   display: flex;
   align-items: center;
   gap: 14px;
   min-width: 0;
-  margin: 0 0 0 10px;
-  padding-left: 14px;
-  border-left: 1px solid var(--line);
+  margin: 0;
+  padding-right: 16px;
+  border-right: 1px solid var(--line);
   color: var(--ink-2);
   font-size: 13px;
   white-space: nowrap;
 }
 
 .home-update-t {
+  overflow: hidden;
+  min-width: 0;
   color: var(--ink);
   font-weight: 600;
+  text-overflow: ellipsis;
 }
 
 .home-update-progress {
@@ -88,6 +99,11 @@
 
 .home-update .btn-link {
   font-size: 13px;
+}
+
+/* 이 알림에서 누를 것 하나(업데이트, 지금 다시 시작)는 글자를 굵게. 색은 다른 링크와 같다 */
+.home-update .home-update-go {
+  font-weight: 600;
 }
 
 .home-main {
