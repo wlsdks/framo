@@ -98,6 +98,9 @@ export function MotionStudio({
   if (rev.current.slide !== slide) rev.current = { slide, n: rev.current.n + 1 }
   const [root, setRoot] = useState<HTMLDivElement | null>(null)
   const boxes = useBoxes(root)
+  // 아직 틀의 지어낸 예시 글인 칸이 있는 컴포넌트: 무대는 발표 모습 그대로라 예시 글이 진하게(답은 강조색으로) 보여 실제 내용으로 읽혔다.
+  // 글을 옅게 하면 움직임 미리 보기가 발표와 달라지므로, 멈춘 동안의 번호 옆에 '예시 글'이라고만 단다(움직이는 동안은 번호와 함께 숨는다)
+  const exampled = new Set((slide.blocks ?? []).filter((b) => b.examples?.length).map((b) => b.id))
   const player = usePlayer(root, slide, level)
   const small = useLowWindow()
   const reduced = useReducedMotion()
@@ -248,6 +251,7 @@ export function MotionStudio({
                     style={{ left: b.x, top: b.y, width: b.w, height: b.h } as CSSProperties}
                   >
                     <b className="ms-mark-n">{n}</b>
+                    {exampled.has(b.id) && <span className="ms-mark-ex">예시 글 · 편집 화면에서 바꿔 써요</span>}
                   </span>
                 )
               })}
