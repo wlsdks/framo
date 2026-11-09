@@ -61,18 +61,24 @@ const S_IFDIR = 0o040000
 const DOS_DIR = 0x10
 const DOS_REPARSE = 0x400
 
-const RESERVED = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³]|conin\$|conout\$)(\.|$)/i
+// 'CON .txt'처럼 이름 뒤에 빈칸을 두어도 윈도우는 장치로 읽는다
+const RESERVED = /^(con|prn|aux|nul|com[0-9]|lpt[0-9]|conin\$|conout\$) *(\.|$)/i
+/**
+ * 이름에 쓸 수 있는 글자: 영문, 숫자, 빈칸, '.', '_', '-', 한글 음절(가–힣). 배포본의 이름은 모두 이 안에 있다(묶은 이름의 글자를 셌다).
+ * 그 밖의 글자는 OS마다 대소문자 접기와 정규화가 달라(ſ와 s, 켈빈 기호와 k, 폭 없는 빈칸) 서로 다른 이름이 한 자리를 가리킬 수 있다.
+ * 이 안의 글자는 대소문자 접기가 영문 A–Z뿐이라 toLowerCase로 같은 자리를 정확히 찾는다
+ */
+const NAME_PART = /^[A-Za-z0-9 ._\-가-힣]+$/
 
 /**
  * zip 안의 이름이 이 PC의 어느 OS에서 풀어도 정한 폴더 안의 같은 자리 하나만 가리키는지.
  * /로만 나누고, 폴더 이름은 끝에 /가 붙는다
  */
 export function safeName(name: string): boolean {
-  if (!name || name.length > 240 || name !== name.normalize('NFC')) return false
-  if (/[\\:*?"<>|\u0000-\u001f\u007f]/.test(name) || name.startsWith('/')) return false
+  if (!name || name.length > 240 || name !== name.normalize('NFC') || name.startsWith('/')) return false
   const parts = (name.endsWith('/') ? name.slice(0, -1) : name).split('/')
-  // 윈도우의 짧은 이름(8.3, DIST-N~1)은 다른 폴더와 같은 자리를 가리킬 수 있다. 배포본 이름에는 ~가 없다
-  return parts.every((p) => p !== '' && p !== '.' && p !== '..' && !/[. ]$/.test(p) && !RESERVED.test(p) && !/~\d/.test(p))
+  // 허락한 글자만 받으므로 역슬래시, 드라이브의 ':', 제어 문자, 윈도우 짧은 이름(8.3, DIST-N~1)의 '~'는 들어올 수 없다
+  return parts.every((p) => NAME_PART.test(p) && p !== '.' && p !== '..' && !/^ |[. ]$/.test(p) && !RESERVED.test(p))
 }
 
 class Fail extends Error {
