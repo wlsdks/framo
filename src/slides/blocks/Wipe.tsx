@@ -56,7 +56,7 @@ export function Wipe() {
                 <IT i={i} k="title" className="bk-wp-old" multiline enterNext />
               </span>
               <IT i={i} k="body" className="bk-wp-new" multiline enterNext />
-              <ItemTools i={i} />
+              <ItemTools i={i} pair />
             </li>
           ))}
         </ol>

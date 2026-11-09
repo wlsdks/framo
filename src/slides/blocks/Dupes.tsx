@@ -26,7 +26,7 @@ export function Dupes() {
             <span className="bk-dp-was">
               <IT i={i} k="body" className="bk-dp-what" multiline />
             </span>
-            <ItemTools i={i} />
+            <ItemTools i={i} pair />
           </li>
         ))}
       </ol>

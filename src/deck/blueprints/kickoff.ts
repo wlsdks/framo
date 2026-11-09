@@ -27,7 +27,7 @@ export const kickoff: Blueprint = {
       priority: 2,
       focus: 'context',
       guide: '왜 지금 이 일을 하는지 한 문장으로 적어요.',
-      hints: { title: '이 프로젝트를 하는 이유를 한 문장으로', lead: '그렇게 보는 근거' },
+      hints: { title: '이 프로젝트를 하는 이유를 한 문장으로 (예: 종이 점검표로는 고장을 미리 알 수 없어요)', lead: '그렇게 보는 근거 (예: 지난해 멈춘 설비 열두 대 가운데 아홉 대가 점검 뒤 한 달 안에 멈췄어요)' },
     },
     {
       layout: 'kpi',
@@ -72,7 +72,7 @@ export const kickoff: Blueprint = {
           type: 'gantt',
           hints: {
             cols: '11월, 12월, 1월, 2월, 3월, 4월',
-            now: '지금이 어느 칸인지 (예: 11월)',
+            now: '예: 11월',
             ...each({
               title: ['설계', '개발', '시범 운영', '모두 적용'],
               body: ['11월~12월', '12월~2월', '2월~3월', '4월'],

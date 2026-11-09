@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { asksDecision, AUDIENCES, BLUEPRINTS, DECK_GROUPS, DURATIONS, METHODS } from '../deck/blueprints'
 import { pageInfo } from '../deck/fields'
+import { filledFromHints } from '../deck/filled'
 import { createDeck, formatDate, makeSlide, recipeSlide } from '../deck/generate'
 import { LAYOUTS } from '../deck/layouts'
 import { THEMES, THEME_ORDER } from '../deck/themes'
@@ -80,9 +81,10 @@ function filmOf(type: DeckType): { deck: Deck; slides: Slide[] } {
     presenter: '',
     theme: 'white',
   })
+  // 예시대로 채운 모습으로: 안내 문구('짧은 설명이나 원인', '출처나 기준 시점')가 예시 값 대신 보이면 어떤 장이 되는지 알아보기 어려웠다
   const slides = (bp.showcase ?? []).flatMap((purpose) => {
     const recipe = bp.recipes.find((r) => r.purpose === purpose)
-    return recipe ? [recipeSlide(recipe)] : []
+    return recipe ? [filledFromHints(recipeSlide(recipe), true)] : []
   })
   return { deck: { ...deck, slides }, slides }
 }
@@ -146,6 +148,9 @@ export function Wizard() {
     [type, audience, minutes, method, theme],
   )
   const previewInfo = useMemo(() => pageInfo(preview.slides, preview), [preview])
+  // 미리 보기의 작은 장들은 예시대로 채운 발표 모습으로(deck/filled.ts): 칸마다 들어갈 예시가 보여야 어떤 장인지 알아본다.
+  // 안내를 진하게 그리던 때는 예시 대신 '짧은 설명이나 원인' 같은 안내 문구가 채운 글처럼 섞였다. 설명만 있는 칸은 비워 보이지 않는다
+  const filled = useMemo(() => preview.slides.map((s) => filledFromHints(s, true)), [preview])
   const plan = usePlanColumns(preview.slides.length)
 
   // 단계를 넘기면 맨 위부터 보이게. 앞 단계에서 내려 둔 스크롤이 남으면 제목과 단계 표시가 가려진다
@@ -202,7 +207,7 @@ export function Wizard() {
     }
   }
 
-  const rest = preview.slides.slice(1)
+  const rest = filled.slice(1)
 
   return (
     <div className="wz">
@@ -246,12 +251,12 @@ export function Wizard() {
               <PlanGroup legend="발표 방식" options={METHODS} value={method} onChange={setMethod} />
             </nav>
             <div className="wzx-hero">
-              <ol ref={plan.ref} className="wzp-grid wz-real" style={{ '--cols': plan.cols ?? 4 }}>
-                {planKeys(preview.slides).map(([key, s], i) => (
+              <ol ref={plan.ref} className="wzp-grid" style={{ '--cols': plan.cols ?? 4 }}>
+                {planKeys(filled).map(([key, s], i) => (
                   <li key={key} className={cx(s.layout === 'section' && 'is-section')} title={LAYOUTS[s.layout].name}>
                     <span className="wz-shot" aria-hidden="true">
                       <FitSlide>
-                        <Later><SlideCanvas deck={preview} slide={s} mode="preview" {...pageProps(previewInfo, s.id)} /></Later>
+                        <Later><SlideCanvas deck={preview} slide={s} mode="final" {...pageProps(previewInfo, s.id)} /></Later>
                       </FitSlide>
                     </span>
                     <span className="wz-plan-name">
@@ -361,11 +366,11 @@ export function Wizard() {
               </span>
               {/* 표지 뒤에 이어질 장을 작게: 표지만 크게 두면 칸 아래가 비고, 무엇이 더 만들어지는지도 보인다 */}
               {rest.length > 0 && (
-                <ol className="wz-strip wz-real" style={{ '--n': strip }} aria-label={`표지 뒤에 ${rest.length}장이 더 만들어져요`}>
+                <ol className="wz-strip" style={{ '--n': strip }} aria-label={`표지 뒤에 ${rest.length}장이 더 만들어져요`}>
                   {rest.slice(0, rest.length > strip ? strip - 1 : strip).map((s) => (
                     <li key={s.id} className="wz-shot" aria-hidden="true">
                       <FitSlide>
-                        <Later><SlideCanvas deck={preview} slide={s} mode="preview" {...pageProps(previewInfo, s.id)} /></Later>
+                        <Later><SlideCanvas deck={preview} slide={s} mode="final" {...pageProps(previewInfo, s.id)} /></Later>
                       </FitSlide>
                     </li>
                   ))}
@@ -528,18 +533,18 @@ function Catalog({ type, onPick, onNext }: { type: DeckType; onPick: (t: DeckTyp
       <div className="wzx-hero" aria-live="polite">
         <div className="wzx-stage">
           {big && (
-            <span className="wz-shot wzx-big wz-real" key={`${type}-${big.id}`} aria-hidden="true">
+            <span className="wz-shot wzx-big" key={`${type}-${big.id}`} aria-hidden="true">
               <FitSlide>
-                <SlideCanvas deck={film.deck} slide={big} mode="preview" {...pageProps(info, big.id)} />
+                <SlideCanvas deck={film.deck} slide={big} mode="final" {...pageProps(info, big.id)} />
               </FitSlide>
             </span>
           )}
           {film.slides.length > 1 && (
-            <ol className="wzx-strip wz-real" aria-hidden="true">
+            <ol className="wzx-strip" aria-hidden="true">
               {film.slides.map((s, i) => (
                 <li key={s.id} className={cx('wz-shot', i === shown && 'is-on')} onMouseEnter={() => setShown(i)}>
                   <FitSlide>
-                    <Later><SlideCanvas deck={film.deck} slide={s} mode="preview" {...pageProps(info, s.id)} /></Later>
+                    <Later><SlideCanvas deck={film.deck} slide={s} mode="final" {...pageProps(info, s.id)} /></Later>
                   </FitSlide>
                 </li>
               ))}

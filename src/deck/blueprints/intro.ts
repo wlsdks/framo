@@ -20,7 +20,7 @@ export const intro: Blueprint = {
       purpose: '한 줄 소개',
       priority: 1,
       guide: '우리 팀을 한 문장으로 먼저 말해요.',
-      hints: { title: '우리 팀을 한 문장으로 (예: 회사의 숫자를 모아 결정을 돕는 팀이에요)', lead: '누구를, 무엇으로 돕는지' },
+      hints: { title: '우리 팀을 한 문장으로 (예: 회사의 숫자를 모아 결정을 돕는 팀이에요)', lead: '누구를, 무엇으로 돕는지 (예: 본부마다 경영 숫자를 모아 매주 알려 드려요)' },
     },
     {
       layout: 'kpi',

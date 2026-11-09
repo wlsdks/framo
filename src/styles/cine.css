@@ -1,5 +1,5 @@
 /* ---------- 모션 그래픽 (screens/editor/CineLibrary.tsx, studio/CineKnobs.tsx) ----------
-   내 컴포넌트의 '모션 그래픽' 묶음(내가 만든 장면, 새로 만들기의 틀 넷)과 모션 편집의 손잡이. 카드는 내 컴포넌트와 같은 꼴이다 */
+   컴포넌트의 '모션 그래픽' 묶음(틀 여섯), 내 컴포넌트의 '모션 그래픽'(내가 고친 장면)과 모션 편집의 손잡이. 카드는 내 컴포넌트와 같은 꼴이다 */
 
 .cn-lib {
   margin: 0 0 22px;
@@ -53,6 +53,12 @@
   box-shadow: 0 0 0 1px var(--line);
   aspect-ratio: 16 / 9;
   transition: box-shadow 0.16s;
+}
+
+/* 컴포넌트 카드와 한 줄에 서는 틀 카드: 3:2 그림(.lib-thumb) 가운데에 장(16:9)을 두고 위아래는 장의 바탕색으로 잇는다(fit) */
+.cn-fit {
+  display: grid;
+  align-content: center;
 }
 
 .cn-card:hover .cn-thumb {

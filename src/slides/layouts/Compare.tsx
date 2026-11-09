@@ -28,7 +28,7 @@ export function Compare() {
             <IT i={i} k="title" className="cp-l" multiline />
             <IT i={i} k="body" className="cp-r" multiline />
             <Arrow />
-            <ItemTools i={i} />
+            <ItemTools i={i} pair />
           </div>
         ))}
         {/* 두 면 사이의 화살표 하나 (표 모양은 줄마다의 화살표를 쓴다) */}

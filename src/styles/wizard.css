@@ -169,15 +169,6 @@ button.wz-step:hover {
   border-radius: 4px;
 }
 
-/* 고르는 동안의 그림은 칸마다 들어갈 예시를 진하게: 흐린 안내만 있으면 어떤 장인지 알아보기 어렵다 */
-.wz-real .slide .is-hint {
-  opacity: 1;
-}
-
-.wz-real .slide .is-demo :is(.br-fill, .sk-fill, .sk-diff, .sk-mark, .sk-rate) {
-  opacity: 1;
-}
-
 .wz-blank {
   align-self: center;
 }

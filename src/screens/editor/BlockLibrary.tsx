@@ -1,10 +1,11 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { blockPrefH, BLOCK_COL_GAP, BLOCK_GROUPS, BLOCK_LINKS, BLOCKS, canCompose, findBlocks, linkTargets, makeBlock, MAX_BLOCKS, suggestBlocks, type NoRoom } from '../../deck/blocks'
+import { blockPrefH, BLOCK_COL_GAP, BLOCK_GROUPS, BLOCK_LINKS, BLOCKS, canCompose, findBlocks, findCines, linkTargets, makeBlock, MAX_BLOCKS, suggestBlocks, suggestCine, type NoRoom } from '../../deck/blocks'
 import { sampleBlock } from '../../deck/blockSamples'
+import { CINE_PRESETS } from '../../deck/cine'
 import { emptyItem } from '../../deck/generate'
 import { motionOf } from '../../deck/themes'
-import type { BlockLink, BlockType, Deck, Slide } from '../../deck/types'
+import type { BlockLink, BlockType, CinePresetId, Deck, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { josa } from '../../lib/josa'
 import { motionEngine } from '../../motion/engine'
@@ -14,6 +15,7 @@ import { useDeck } from '../../store/deckStore'
 import { loadSaved, useSaved } from '../../store/saved'
 import { soloSlide, type BlockEditing } from './BlockEditor'
 import { COL_W } from './canvas'
+import { CinePresetCard } from './CineLibrary'
 import { CloseIcon, dialogOpen, isTyping, NewSlideIcon, type Toast } from '../ui'
 import { useLook, type Look } from './look'
 import { noRoomText } from './noRoom'
@@ -189,6 +191,13 @@ const TYPES = BLOCK_GROUPS.flatMap((g) => g.types)
 /** 칩 줄에서 '내 컴포넌트'를 가리키는 id (묶음 이름과 겹치지 않게) */
 const MINE = '$mine'
 
+/**
+ * 모션 그래픽 묶음(틀 여섯). 대표 기능이라 칩 줄의 '전체' 바로 뒤와 '전체'의 맨 위에 둔다: 예전에는 내 컴포넌트 → 새 모션 그래픽을
+ * 눌러야 틀이 나와서 처음 쓰는 사람이 찾지 못했다. 내가 고친 버전은 그대로 내 컴포넌트에 쌓인다
+ */
+const CINE_GROUP = { name: '모션 그래픽', description: '영화 타이틀처럼 움직이는 한 장면이에요. 슬라이드 한 장을 다 써서, 내용이 있는 슬라이드면 바로 뒤에 새 슬라이드로 넣어요' }
+const CINE_IDS: CinePresetId[] = CINE_PRESETS.map((p) => p.id)
+
 const LINK_GROUP = { name: '연결 기호', short: '연결', description: '컴포넌트 사이에 끼워 둘이 어떻게 이어지는지 보여 줘요' }
 
 type Issues = ReadonlyMap<BlockType, NoRoom | null>
@@ -237,9 +246,17 @@ function useIdleIssues(slide: Slide, areaH: number | undefined, issueFor: (t: Bl
 
 export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide: Slide; blocks: BlockEditing; toast: Toast }) {
   const [group, setGroup] = useState<string | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  /** 묶음을 고른다. 목록은 그 묶음의 처음부터: 굴려 둔 자리에 그대로 서면 고른 묶음의 앞 카드들이 위로 지나가 보이지 않았다 */
+  const pickGroup = (id: string | null) => {
+    blocks.setLibraryView('base')
+    setGroup(id)
+    listRef.current?.scrollTo({ top: 0 })
+  }
   // 찾는 말. 있으면 묶음 칩과 어울리는 것 대신 찾은 카드만
   const [query, setQuery] = useState('')
   const found = useMemo(() => findBlocks(query), [query])
+  const foundCines = useMemo(() => findCines(query), [query])
   const searching = query.trim().length > 0
   // 이 장에 넣을 수 없는 카드를 눌렀을 때 그 까닭을 보여 줄 부품
   const [why, setWhy] = useState<{ type: BlockType; card: HTMLElement } | null>(null)
@@ -327,7 +344,7 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
     return why?.kind === 'height' && why.noBody
   })
   // 알림은 상자 없이 한 줄로 (목록이 위에서부터 바로 보이게). 무엇이 어디에 들어가는지만 말한다
-  const note = closed
+  const slideNote = closed
     ? '표지와 섹션 슬라이드에는 컴포넌트를 넣지 않아요'
     : slide.layout === 'compose'
       ? full
@@ -340,14 +357,19 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
             : '이 슬라이드는 자리가 다 찼어요. 하나를 지우면 더 넣을 수 있어요'
         : null
       : '넣으면 컴포넌트 슬라이드가 돼요'
+  // 모션 그래픽 묶음에서는 장에 대한 알림을 두지 않는다: 모션 그래픽은 장 하나를 다 써서, 넣을 수 없는 장이나 내용이 있는 장이면 다음 장에 넣는다
+  const note = group === CINE_GROUP.name && !mine ? null : slideNote
   const groups = searching ? [] : group ? BLOCK_GROUPS.filter((g) => g.name === group) : BLOCK_GROUPS
   const showLinks = !searching && (!group || group === LINK_GROUP.name)
-  // 이 장에 어울리는 것: 장에 적힌 글로 고른 넷(넣을 수 없는 것은 빼고). 표지와 섹션처럼 컴포넌트를 넣지 않는 장에는 두지 않는다
-  const suggested = useMemo(() => (closed || full ? [] : suggestBlocks(slide, 4, (t) => !!issues.get(t))), [slide, issues, closed, full])
+  // 이 장에 어울리는 것: 장에 적힌 글로 고른 넷(넣을 수 없는 것은 빼고). 글이나 짜임에 맞는 모션 그래픽 틀이 있으면 그것이 맨 앞의 하나다
+  // (모션 그래픽은 장 하나를 다 쓰므로 자리가 다 찬 장이어도 다음 장에 넣는다). 표지와 섹션처럼 컴포넌트를 넣지 않는 장에는 두지 않는다
+  const cineFit = useMemo(() => (closed ? null : suggestCine(slide)), [slide, closed])
+  const suggested = useMemo(() => (closed || full ? [] : suggestBlocks(slide, cineFit ? 3 : 4, (t) => !!issues.get(t))), [slide, issues, closed, full, cineFit])
   // 찾은 연결 기호 (이름과 설명에 찾는 말이 다 들어 있으면)
   const foundLinks = searching ? BLOCK_LINKS.filter((l) => query.trim().split(/\s+/).every((w) => `${l.name} ${l.description} ${LINK_GROUP.name}`.includes(w))) : []
   const chips: { id: string | null; name: string; title?: string }[] = [
     { id: null, name: '전체' },
+    { id: CINE_GROUP.name, name: CINE_GROUP.name, title: `${CINE_GROUP.name}: ${CINE_GROUP.description}` },
     ...BLOCK_GROUPS.map((g) => ({ id: g.name, name: g.short, title: `${g.name}: ${g.description}` })),
     { id: LINK_GROUP.name, name: LINK_GROUP.short, title: `${LINK_GROUP.name}: ${LINK_GROUP.description}` },
     { id: MINE, name: saved ? `내 컴포넌트 ${saved}` : '내 컴포넌트', title: '내가 만든 모션 그래픽과 저장해 둔 컴포넌트, 줄, 슬라이드를 어느 발표에서든 다시 넣어요' },
@@ -403,6 +425,9 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
       </button>
     )
   }
+
+  /** 모션 그래픽 틀 카드 하나 (묶음, 어울리는 것, 찾은 것이 같이 쓴다) */
+  const cineCard = (id: CinePresetId) => <CinePresetCard key={`cine-${id}`} deck={deck} slide={slide} toast={toast} preset={id} />
 
   /** 연결 기호 카드 하나 */
   const linkCard = (l: (typeof BLOCK_LINKS)[number]) => {
@@ -465,8 +490,7 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
                 onClick={() => {
                   setWhy(null)
                   if (c.id === MINE) return blocks.setLibraryView('mine')
-                  blocks.setLibraryView('base')
-                  setGroup(c.id)
+                  pickGroup(c.id)
                 }}
               >
                 {c.name}
@@ -491,21 +515,31 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
         </div>
       )}
 
-      {mine && <SavedParts deck={deck} slide={slide} blocks={blocks} toast={toast} />}
+      {mine && (
+        <SavedParts
+          deck={deck}
+          slide={slide}
+          blocks={blocks}
+          toast={toast}
+          onNewCine={() => pickGroup(CINE_GROUP.name)}
+        />
+      )}
 
       {!mine && (
         <>
-          <div className="lib-list">
+          <div ref={listRef} className="lib-list">
             {searching ? (
               <section className="lib-sec">
                 <h3 className="lib-group">
-                  찾은 것<span className="lib-group-n">{found.length + foundLinks.length}</span>
+                  찾은 것<span className="lib-group-n">{foundCines.length + found.length + foundLinks.length}</span>
                 </h3>
-                {found.length + foundLinks.length === 0 ? (
+                {foundCines.length + found.length + foundLinks.length === 0 ? (
                   <p className="lib-group-d">‘{query.trim()}’에 맞는 컴포넌트가 없어요. 막대, 순서, 사람처럼 다른 말로 찾아보세요.</p>
                 ) : (
                   <div className="lib-grid is-found">
-                    {/* 이 슬라이드에 넣을 수 있는 것을 먼저: 찾자마자 맨 앞에 잠긴 카드가 서면 찾은 것이 없는 것처럼 보였다 */}
+                    {/* 이 슬라이드에 넣을 수 있는 것을 먼저: 찾자마자 맨 앞에 잠긴 카드가 서면 찾은 것이 없는 것처럼 보였다.
+                        모션 그래픽은 늘 넣을 수 있다(다른 내용이 있으면 다음 장에) */}
+                    {foundCines.map(cineCard)}
                     {[...found.filter((t) => !issues.get(t)), ...found.filter((t) => issues.get(t))].map(card)}
                     {foundLinks.map(linkCard)}
                   </div>
@@ -513,13 +547,26 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
               </section>
             ) : (
               !group &&
-              suggested.length > 0 && (
+              (suggested.length > 0 || cineFit) && (
                 <section className="lib-sec lib-suggest">
                   <h3 className="lib-group">이 슬라이드에 어울리는 것</h3>
                   <p className="lib-group-d">슬라이드에 적힌 글을 보고 골랐어요</p>
-                  <div className="lib-grid">{suggested.map(card)}</div>
+                  <div className="lib-grid">
+                    {cineFit && cineCard(cineFit)}
+                    {suggested.map(card)}
+                  </div>
                 </section>
               )
+            )}
+            {!searching && (!group || group === CINE_GROUP.name) && (
+              <section className="lib-sec">
+                <h3 className="lib-group">
+                  {CINE_GROUP.name}
+                  <span className="lib-group-n">{CINE_IDS.length}</span>
+                </h3>
+                <p className="lib-group-d">{CINE_GROUP.description}</p>
+                <div className="lib-grid">{CINE_IDS.map(cineCard)}</div>
+              </section>
             )}
             {groups.map((g) => (
               <section key={g.name} className="lib-sec">
