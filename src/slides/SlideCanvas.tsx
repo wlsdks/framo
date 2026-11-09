@@ -77,6 +77,14 @@ function afterFonts(refit: () => void) {
   window.setTimeout(pump)
 }
 
+/** 장(.slide)의 클래스에서 넘침 재기(overflow.ts)가 재는 동안만 다는 표시(is-measuring)를 달고 뗀 것뿐인지 */
+function measuredOnly(r: MutationRecord): boolean {
+  const el = r.target
+  if (r.type !== 'attributes' || r.attributeName !== 'class' || !(el instanceof Element) || !el.classList.contains('slide')) return false
+  const bare = (c: string | null) => (c ?? '').split(' ').filter((x) => x && x !== 'is-measuring').join(' ')
+  return bare(r.oldValue) === bare(el.getAttribute('class'))
+}
+
 /** 1920×1080 슬라이드 한 장. 크기 맞춤은 바깥 프레임이 한다. */
 export const SlideCanvas = memo(function SlideCanvas({
   deck,
@@ -143,17 +151,24 @@ export const SlideCanvas = memo(function SlideCanvas({
   // 그릴 때마다 맞추던 때는 쪽 번호만 바뀐 그림(장을 더하거나 빼면 목록의 모든 그림)도 장마다 다시 맞춰서, 느린 PC에서 장 하나를
   // 더하는 데 0.2초 넘게 걸렸다. 맞추기는 앞의 값을 지우고 처음부터 재므로, 장 안(아래 띠 밖)의 글, 칸, 클래스, 스타일과 장의 크기,
   // 받은 글꼴이 그대로면 다시 맞춰도 같은 값이다. 그래서 그것이 바뀐 때만 맞춘다. 장 안이 바뀐 것은 MutationObserver로 안다:
-  // 무엇이 바뀌는지 값으로 늘어놓으면(글, 레이아웃, 테마, 글꼴, 글자 크기 …) 새 값을 더할 때 빠뜨리기 쉽다
-  const watch = useRef<{ mo: MutationObserver; changed: boolean; sign: string } | null>(null)
+  // 무엇이 바뀌는지 값으로 늘어놓으면(글, 레이아웃, 테마, 글꼴, 글자 크기 …) 새 값을 더할 때 빠뜨리기 쉽다.
+  // 받은 글꼴은 글꼴을 받는 중에 맞춘 장만 본다(fonts): 받는 중이 아닐 때 맞춘 장은 쓰는 글자의 글꼴 조각이 다 와 있던 것이라(맞추기가 글을
+  // 재면서 없는 조각을 부르면 받는 중이 된다) 뒤에 다른 조각이 와도 같은 값이다. 예전에는 글꼴 조각이 하나라도 더 오면 그 뒤에 다시 그린
+  // 그림을 모두 다시 맞춰서, 새 슬라이드 창의 예시 그림이 글꼴 조각을 부른 뒤 장을 하나 더하면 쪽 번호만 바뀐 목록 그림 스무 장 남짓을 한
+  // 일에서 다시 맞췄다(느린 PC에서 0.2초 넘게)
+  const watch = useRef<{ mo: MutationObserver; changed: boolean; sign: string; fonts: number | null } | null>(null)
   // 글꼴을 기다리는 중인지 (같은 기다림을 여러 번 걸지 않게)
   const waiting = useRef(false)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el || given.layout === 'compose' || solo) return
-    // 아래 띠(쪽 번호, 단락 지도, 출처)는 장의 틀 밖에 따로 서서(position: absolute) 본문 맞추기에 닿지 않는다
-    const counts = (records: MutationRecord[]) => records.some((r) => !(r.target instanceof Element ? r.target : r.target.parentElement)?.closest('.s-foot'))
-    // 장을 줄여 그리는 배율(감싼 상자의 transform)과 받은 글꼴도 맞추기에 닿는다
-    const signOf = (el: HTMLElement) => `${el.parentElement?.getAttribute('style') ?? ''}|${fontsLoaded()}`
+    // 아래 띠(쪽 번호, 단락 지도, 출처)는 장의 틀 밖에 따로 서서(position: absolute) 본문 맞추기에 닿지 않는다.
+    // 넘침 재기(overflow.ts)가 재는 동안만 장에 다는 표시(is-measuring)도 바뀐 것이 아니다: 그것까지 세면 넘침을 잰 목록 그림이 모두
+    // 바뀐 장이 되어, 장을 하나 더해 쪽 번호만 바뀐 그림까지 다시 맞췄다
+    const counts = (records: MutationRecord[]) =>
+      records.some((r) => !(r.target instanceof Element ? r.target : r.target.parentElement)?.closest('.s-foot') && !measuredOnly(r))
+    // 장을 줄여 그리는 배율(감싼 상자의 transform)도 맞추기에 닿는다
+    const signOf = (el: HTMLElement) => el.parentElement?.getAttribute('style') ?? ''
     const fit = (el: HTMLElement) => {
       fitBlocks(el)
       if (typeof MutationObserver === 'undefined') return
@@ -162,13 +177,13 @@ export const SlideCanvas = memo(function SlideCanvas({
         new MutationObserver((records) => {
           if (watch.current && counts(records)) watch.current.changed = true
         })
-      if (!watch.current) mo.observe(el, { subtree: true, childList: true, characterData: true, attributes: true })
+      if (!watch.current) mo.observe(el, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true })
       // 맞추며 바꾼 값은 바뀐 것으로 세지 않는다
       mo.takeRecords()
-      watch.current = { mo, changed: false, sign: signOf(el) }
+      watch.current = { mo, changed: false, sign: signOf(el), fonts: document.fonts?.status === 'loading' ? fontsLoaded() : null }
     }
     const w = watch.current
-    if (!w || counts(w.mo.takeRecords()) || w.changed || w.sign !== signOf(el)) fit(el)
+    if (!w || counts(w.mo.takeRecords()) || w.changed || w.sign !== signOf(el) || (w.fonts !== null && w.fonts !== fontsLoaded())) fit(el)
     // 글꼴을 받는 중이면 다 온 뒤에 한 번 더. 맞추기가 글을 재면서 새로 쓸 글자의 글꼴 조각을 부르므로 그 뒤에 본다.
     // 예전에는 그릴 때마다 물어서, 글꼴이 다 왔어도 바로 이어서 한 번 더 맞췄고(그림마다 두 번) fonts.ready를 읽는 것만으로 스타일을 다시 계산했다.
     // 다음 그림에서 건너뛰어도 기다림은 그대로 둔다(그 사이에 다시 그리지 않으면 글꼴이 와도 맞추지 않게 된다)
