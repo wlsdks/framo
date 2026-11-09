@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { asksDecision, AUDIENCES, BLUEPRINTS, DECK_GROUPS, DURATIONS, METHODS } from '../deck/blueprints'
 import { pageInfo } from '../deck/fields'
 import { createDeck, formatDate, makeSlide, recipeSlide } from '../deck/generate'
@@ -10,6 +10,7 @@ import { go } from '../lib/router'
 import { FitSlide, pageProps, SlideCanvas } from '../slides/SlideCanvas'
 import { persistNow } from '../store/persist'
 import { useDrawSoon } from './drawSoon'
+import { planColumns } from './planColumns'
 import { BackIcon, Brand, CheckIcon, ChevronIcon, Info, SAVE_HELP, useToast } from './ui'
 
 // 발표 상황: 누구에게, 얼마나, 어떻게 발표하는지. 표지: 제목, 결정 요청(또는 부제), 발표자와 테마
@@ -33,6 +34,38 @@ function useMedia(query: string) {
     },
     () => matchMedia(query).matches,
   )
+}
+
+/**
+ * 2단계 구성 미리 보기의 단 수. 칸의 크기를 재어 작은 장 그림이 가장 크게 보이는 단 수를 고른다(planColumns). 창 크기를 바꾸거나
+ * 장 수가 바뀌면 다시 잰다. 그림 아래 장 이름 줄은 그려진 첫 칸에서 잰다(글꼴과 화면 크기마다 다르다)
+ */
+function usePlanColumns(n: number) {
+  const [el, setEl] = useState<HTMLOListElement | null>(null)
+  const [cols, setCols] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    if (!el) return
+    const measure = () => {
+      const cs = getComputedStyle(el)
+      const px = (v: string) => parseFloat(v) || 0
+      const li = el.querySelector<HTMLElement>(':scope > li')
+      const shot = li?.querySelector<HTMLElement>('.wz-shot')
+      setCols(
+        planColumns(n, {
+          width: el.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight),
+          height: el.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom),
+          gapX: px(cs.columnGap),
+          gapY: px(cs.rowGap),
+          label: li && shot ? li.offsetHeight - shot.offsetHeight : 22,
+        }),
+      )
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [el, n])
+  return { ref: setEl, cols }
 }
 
 /** 발표 종류 미리 보기의 작은 그림들: 이야기 흐름의 차례마다 그 구성에서 만들어지는 장 하나 (blueprints의 showcase) */
@@ -113,6 +146,7 @@ export function Wizard() {
     [type, audience, minutes, method, theme],
   )
   const previewInfo = useMemo(() => pageInfo(preview.slides, preview), [preview])
+  const plan = usePlanColumns(preview.slides.length)
 
   // 단계를 넘기면 맨 위부터 보이게. 앞 단계에서 내려 둔 스크롤이 남으면 제목과 단계 표시가 가려진다
   useEffect(() => {
@@ -212,7 +246,7 @@ export function Wizard() {
               <PlanGroup legend="발표 방식" options={METHODS} value={method} onChange={setMethod} />
             </nav>
             <div className="wzx-hero">
-              <ol className="wzp-grid wz-real" style={{ '--cols': preview.slides.length > 12 ? 5 : preview.slides.length > 6 ? 4 : 3 }}>
+              <ol ref={plan.ref} className="wzp-grid wz-real" style={{ '--cols': plan.cols ?? 4 }}>
                 {planKeys(preview.slides).map(([key, s], i) => (
                   <li key={key} className={cx(s.layout === 'section' && 'is-section')} title={LAYOUTS[s.layout].name}>
                     <span className="wz-shot" aria-hidden="true">
