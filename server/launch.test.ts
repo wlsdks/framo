@@ -119,10 +119,13 @@ describe('시작 프로그램', () => {
     expect(r.code).toBe(1)
   })
 
-  it('사람이 끈 서버(신호)는 돌아가지 않는다', async () => {
-    const r = await play(() => [v9], { '0.9.0': [ran({ listening: false, code: null, signal: 'SIGINT' })] })
-    expect(r.failed).toEqual([])
-    expect(r.runs).toHaveLength(1)
+  it('시작 프로그램은 살아 있는데 서버만 신호로 죽으면(맥의 보안 검사가 SIGKILL로 막을 때) 켜지지 않은 것으로 보고 앞 버전으로', async () => {
+    const r = await play(() => [v9], {
+      '0.9.0': [ran({ listening: false, code: null, signal: 'SIGKILL' })],
+      '0.8.0': [ran({ code: 0 })],
+    })
+    expect(r.failed).toEqual(['0.9.0'])
+    expect(r.runs.map((x) => x.version)).toEqual(['0.9.0', '0.8.0'])
   })
 
   it('자리를 잡지 않고 다시 켜기 코드로 끝나면 끝없이 다시 켜지 않는다', async () => {
@@ -164,6 +167,13 @@ describe('시작 프로그램이 띄우는 진짜 자식', () => {
     const r = await runServer({ version: '0.9.0', dir, node: process.execPath }, false)
     expect(r.listening).toBe(false)
     expect(r.code).not.toBe(0)
+  })
+
+  it('신호로 죽은 서버는 신호를 그대로 알린다', async () => {
+    if (process.platform === 'win32') return
+    const dir = fakeVersion(`process.kill(process.pid, 'SIGKILL')`)
+    const r = await runServer({ version: '0.9.0', dir, node: process.execPath }, false)
+    expect(r).toMatchObject({ listening: false, signal: 'SIGKILL' })
   })
 
   it('node가 없으면(백신이 지웠을 때) 띄우지 못했다고 알린다', async () => {

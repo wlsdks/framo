@@ -45,11 +45,15 @@ interface SuperviseOptions {
   say(message: string): void
 }
 
-/** 버전 탓으로 켜지지 않았는지: 자리를 잡기 전에, 사람이 끄지 않았는데, 까닭을 보이지 않고 끝났다 */
+/**
+ * 버전 탓으로 켜지지 않았는지: 자리를 잡기 전에 까닭을 보이지 않고 끝났다.
+ * 신호로 끝난 것도 넣는다: 사람이 창을 닫거나 Ctrl+C를 누르면 이 시작 프로그램도 같이 끝나 이 결과를 보지 못한다.
+ * 이 프로그램은 살아 있는데 서버만 신호로 죽었으면(맥의 보안 검사나 백신이 SIGKILL로 막을 때) 그 버전이 켜지지 않는 것이다
+ */
 function broken(r: Ran): boolean {
   if (r.listening) return false
-  if (r.spawnFailed) return true
-  return r.signal === null && r.code !== 0 && r.code !== FAIL_CODE
+  if (r.spawnFailed || r.signal !== null) return true
+  return r.code !== 0 && r.code !== FAIL_CODE
 }
 
 /** 서버를 켜고 지켜본다. 이 프로그램이 끝날 코드를 돌려준다 */
