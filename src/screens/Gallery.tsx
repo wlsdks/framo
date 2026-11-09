@@ -199,7 +199,7 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
 }
 
 /** '(예: …)'가 든 안내는 그 예시를, 아니면 안내 그대로 */
-const exampleOf = (hint: string) => /\(예: ([^)]+)\)/.exec(hint)?.[1] ?? hint
+const exampleOf = (hint: string) => /\(예: ([^)]+)\)/.exec(hint)?.[1] ?? /^예: (.+)$/.exec(hint)?.[1] ?? hint
 
 /**
  * &filled=1: 구성의 안내를 그 칸의 글로 채운 장. 쓰는 사람이 안내대로 채웠을 때의 끝 모습과 짜임을 본다(빈 장은 발표 화면에 안내가 없다).

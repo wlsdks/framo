@@ -72,7 +72,7 @@ export const kickoff: Blueprint = {
           type: 'gantt',
           hints: {
             cols: '11월, 12월, 1월, 2월, 3월, 4월',
-            now: '지금이 어느 칸인지 (예: 11월)',
+            now: '예: 11월',
             ...each({
               title: ['설계', '개발', '시범 운영', '모두 적용'],
               body: ['11월~12월', '12월~2월', '2월~3월', '4월'],
