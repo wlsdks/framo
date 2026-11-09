@@ -251,7 +251,7 @@ export function MotionStudio({
                     style={{ left: b.x, top: b.y, width: b.w, height: b.h } as CSSProperties}
                   >
                     <b className="ms-mark-n">{n}</b>
-                    {exampled.has(b.id) && <span className="ms-mark-ex">예시 글 · 편집 화면에서 바꿔 써요</span>}
+                    {exampled.has(b.id) && <span className="ms-mark-ex">예시 글 · ‘편집으로’를 눌러 바꿔 써요</span>}
                   </span>
                 )
               })}

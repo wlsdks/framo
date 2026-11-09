@@ -77,7 +77,7 @@ export function CinePresetCard({ deck, slide, toast, preset }: { deck: Deck; sli
   const hover = usePlayOnHover(motionOf(deck, slide))
   const p = presetSpec(preset)
   const recipe = useMemo(() => presetRecipe(preset, `preset-${preset}`), [preset])
-  const where = cineGoesNext(slide) ? '슬라이드 한 장을 다 쓰는 장면이라 이 슬라이드 다음에 새 슬라이드를 만들어 넣어요' : '이 슬라이드에 넣어요'
+  const where = cineGoesNext(slide) ? '슬라이드 한 장을 다 쓰는 장면이라 이 슬라이드 바로 뒤에 새 슬라이드를 만들어 넣어요' : '이 슬라이드에 넣어요'
   return (
     <button
       type="button"
@@ -131,7 +131,7 @@ export function CineSection({ deck, slide, toast, onNew }: { deck: Deck; slide: 
           모션 그래픽<span className="lib-group-n">{entries.length || ''}</span>
         </h3>
         <Info label="모션 그래픽 도움말">
-          영화 타이틀처럼 한 장면을 짠 컴포넌트예요. 틀은 컴포넌트의 ‘모션 그래픽’에 있어요. 넣고 모션 편집에서 고치면 여기에 버전이 남아요. 넣은 발표는 그때의 버전 그대로 보여요.
+          영화 타이틀처럼 움직이는 한 장면이에요. 틀은 컴포넌트의 ‘모션 그래픽’에 있어요. 넣고 모션 편집에서 고치면 여기에 버전이 남아요. 넣은 발표는 그때의 버전 그대로 보여요.
         </Info>
         <button type="button" className="mine-head-btn cn-new" title="틀 여섯 가운데 골라요" onClick={onNew}>
           <PlusIcon />

@@ -195,7 +195,7 @@ const MINE = '$mine'
  * 모션 그래픽 묶음(틀 여섯). 대표 기능이라 칩 줄의 '전체' 바로 뒤와 '전체'의 맨 위에 둔다: 예전에는 내 컴포넌트 → 새 모션 그래픽을
  * 눌러야 틀이 나와서 처음 쓰는 사람이 찾지 못했다. 내가 고친 버전은 그대로 내 컴포넌트에 쌓인다
  */
-const CINE_GROUP = { name: '모션 그래픽', description: '영화 타이틀처럼 한 장면을 짠 컴포넌트예요. 슬라이드 한 장을 다 써서, 내용이 있는 슬라이드면 다음에 새 슬라이드로 넣어요' }
+const CINE_GROUP = { name: '모션 그래픽', description: '영화 타이틀처럼 움직이는 한 장면이에요. 슬라이드 한 장을 다 써서, 내용이 있는 슬라이드면 바로 뒤에 새 슬라이드로 넣어요' }
 const CINE_IDS: CinePresetId[] = CINE_PRESETS.map((p) => p.id)
 
 const LINK_GROUP = { name: '연결 기호', short: '연결', description: '컴포넌트 사이에 끼워 둘이 어떻게 이어지는지 보여 줘요' }

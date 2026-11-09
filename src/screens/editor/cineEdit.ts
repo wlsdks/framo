@@ -50,7 +50,7 @@ export function insertCine(recipe: CineRecipe, slide: Slide, isFresh: boolean, t
   const store = useDeck.getState()
   if (cineGoesNext(slide)) {
     store.addComposeSlide([block], slide.id)
-    toast.show('모션 그래픽은 슬라이드 한 장을 다 써서, 다음에 새 슬라이드로 넣었어요', undoAction(toast), 6000)
+    toast.show('모션 그래픽은 슬라이드 한 장을 다 써서, 바로 뒤에 새 슬라이드로 넣었어요', undoAction(toast), 6000)
   } else if (slide.layout === 'compose') {
     store.setBlocks(slide.id, [block])
   } else {
