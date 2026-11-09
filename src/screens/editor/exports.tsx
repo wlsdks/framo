@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { pageInfo } from '../../deck/fields'
+import { leaveOut, pageInfo } from '../../deck/fields'
 import type { Deck } from '../../deck/types'
 import { downloadHtml } from '../../export/exportHtml'
 import { downloadPptx } from '../../export/exportPptx'
@@ -18,10 +18,12 @@ type ExportKind = 'html' | 'pdf' | 'ppt'
 /**
  * 내보내기 메뉴(HTML, PDF, PPT, 작업 파일)의 할 일. 내보내기 전에는 버전을 남긴다.
  * 발표 파일(HTML, PDF, PPT)은 빈칸이나 넘친 글이 남았으면 발표하기처럼 먼저 묻는다(CheckDialog). 예전에는 바로 내보내서
- * 빈칸이 많은 발표가 거의 빈 슬라이드로 파일에 담겼다. 작업 파일은 이어서 고칠 원본이라 묻지 않는다
+ * 빈칸이 많은 발표가 거의 빈 슬라이드로 파일에 담겼다. 묻는 창에서 빈 슬라이드를 빼고 내보내면 그 장을 숨긴 사본(leaveOut)을 내보낸다.
+ * 작업 파일은 이어서 고칠 원본이라 묻지 않는다
  */
 export function useExports(deck: Deck, markVersion: (reason: VersionReason) => void, toast: Toast) {
-  const [printing, setPrinting] = useState(false)
+  // PDF로 인쇄할 발표 (인쇄하는 동안만)
+  const [printing, setPrinting] = useState<Deck | null>(null)
   const [confirm, setConfirm] = useState<{ kind: ExportKind; check: PresentCheck } | null>(null)
 
   /** 빈칸이 남았으면 묻고 멈춘다. 물었으면 true */
@@ -34,22 +36,23 @@ export function useExports(deck: Deck, markVersion: (reason: VersionReason) => v
     return true
   }
 
+  // out: 내보낼 발표. 묻는 창에서 빈 슬라이드를 빼고 내보내면 그 장을 숨긴 사본
   const printPdf = useCallback(
-    (force = false) => {
+    (force = false, out = deck) => {
       if (asked('pdf', force)) return
       markVersion('export')
-      setPrinting(true)
+      setPrinting(out)
     },
     // asked는 deck만 쓴다
     [markVersion, deck],
   )
 
-  const exportHtml = async (force = false) => {
+  const exportHtml = async (force = false, out = deck) => {
     if (asked('html', force)) return
     markVersion('export')
     toast.show('발표 파일을 만들고 있어요')
     try {
-      await downloadHtml(deck)
+      await downloadHtml(out)
       toast.show('발표 파일을 저장했어요. 다운로드 폴더를 확인해 주세요.')
     } catch {
       toast.show('발표 파일을 만들지 못했어요. 다시 시도해 주세요.')
@@ -58,12 +61,12 @@ export function useExports(deck: Deck, markVersion: (reason: VersionReason) => v
 
   // PPT는 장마다 그림을 그려서 장이 많으면 오래 걸린다. 지금 몇 장째인지 보이고, 두 번 눌러도 한 번만 만든다
   const pptBusy = useRef(false)
-  const exportPpt = async (force = false) => {
+  const exportPpt = async (force = false, out = deck) => {
     if (pptBusy.current) {
       toast.show('PPT를 만들고 있어요. 다 되면 알려 드릴게요.')
       return
     }
-    const total = deck.slides.filter((s) => !s.hidden).length
+    const total = out.slides.filter((s) => !s.hidden).length
     if (!total) {
       toast.show('모든 슬라이드를 숨겨서 PPT에 넣을 슬라이드가 없어요. 슬라이드 하나 이상의 숨기기를 풀어 주세요.')
       return
@@ -72,7 +75,7 @@ export function useExports(deck: Deck, markVersion: (reason: VersionReason) => v
     pptBusy.current = true
     markVersion('export')
     try {
-      await downloadPptx(deck, (done, all) => toast.show(`PPT를 만드는 중이에요 (${done}/${all})`, undefined, 60000))
+      await downloadPptx(out, (done, all) => toast.show(`PPT를 만드는 중이에요 (${done}/${all})`, undefined, 60000))
       toast.show('PPT 파일을 저장했어요. 다운로드 폴더를 확인해 주세요.')
     } catch {
       toast.show('PPT 파일을 만들지 못했어요. 다시 시도해 주세요.')
@@ -91,11 +94,13 @@ export function useExports(deck: Deck, markVersion: (reason: VersionReason) => v
     toast.show('작업 파일을 저장했어요. 다운로드 폴더를 확인해 주세요.')
   }
 
-  const proceed = () => {
+  /** 묻는 창에서 고른 대로 내보낸다. skip: 이번 파일에서만 빼는 빈 슬라이드 */
+  const proceed = (skip: string[]) => {
     if (!confirm) return
-    if (confirm.kind === 'html') void exportHtml(true)
-    else if (confirm.kind === 'pdf') printPdf(true)
-    else void exportPpt(true)
+    const out = leaveOut(deck, skip)
+    if (confirm.kind === 'html') void exportHtml(true, out)
+    else if (confirm.kind === 'pdf') printPdf(true, out)
+    else void exportPpt(true, out)
   }
 
   return {
@@ -108,7 +113,7 @@ export function useExports(deck: Deck, markVersion: (reason: VersionReason) => v
     proceed,
     closeConfirm: () => setConfirm(null),
     /** PDF로 내보내는 동안 인쇄할 장들 (body에 붙는다) */
-    print: printing ? <PrintDeck deck={deck} onDone={() => setPrinting(false)} /> : null,
+    print: printing ? <PrintDeck deck={printing} onDone={() => setPrinting(null)} /> : null,
   }
 }
 

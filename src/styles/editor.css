@@ -1749,6 +1749,12 @@
   color: var(--danger);
 }
 
+/* 빈칸 때문에 제목만 보이는 장: 'N장 건너뛰고 …'로 건너뛸 장이라 옅은 줄 가운데 짙게 (틀린 것은 아니라 위험 색은 쓰지 않는다) */
+.pck-bare {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 /* 왼쪽 목록에서 오른쪽 클릭한 슬라이드의 메뉴 (SlideMenu.tsx). 누른 자리에 화면 기준으로 */
 .slide-ctx {
   position: fixed;
