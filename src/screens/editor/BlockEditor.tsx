@@ -1043,7 +1043,9 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
         ? `${refuseText(drag.blocked, drag.block.type, compose || canCompose(slide.layout))} 놓아도 넣지 않아요.`
         : drag.kind === 'new' && !drag.plan
           ? '슬라이드 위로 끌어 오세요'
-          : drag.kind === 'move' && drag.target?.kind === 'stay' && !drag.base.length
+          : // 혼자인 컴포넌트는 어디로 끌어도 제자리다. 손을 움직이면 놓을 자리를 다시 고르느라 'stay'가 아니게 되어, 예전에는 곧
+            // '다른 컴포넌트의 옆이나 위아래로 끌어 보세요'로 바뀌었다 (옆에 둘 다른 컴포넌트가 없는데)
+            drag.kind === 'move' && !drag.base.length && drag.plan === 'place'
             ? '컴포넌트가 하나뿐이라 자리가 그대로예요. 다른 컴포넌트를 넣으면 그 옆이나 위아래로 옮길 수 있어요.'
             : drag.kind === 'move' && drag.plan === 'place' && drag.result
               ? drag.target?.kind === 'stay' || (drag.moving && sameBoard(drag.moving, drag.result))
