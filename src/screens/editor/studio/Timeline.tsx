@@ -16,6 +16,9 @@ const tickStep = (span: number) => (span > 6000 ? 1000 : 500)
 
 const sec = (ms: number) => `${(ms / 1000).toFixed(1)}초`
 
+/** 줄 끌기를 시작하는 거리. 늘 같은 값을 넘긴다: 그릴 때마다 새 값을 넘기면 dnd-kit이 끌기 손잡이가 바뀐 것으로 알아 줄을 모두 다시 그린다 */
+const DRAG_AFTER = { activationConstraint: { distance: 4 } }
+
 export function Timeline({
   player,
   order,
@@ -84,7 +87,7 @@ export function Timeline({
   }
   const now = () => Number(scrubRef.current?.getAttribute('aria-valuenow') ?? 0)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const sensors = useSensors(useSensor(PointerSensor, DRAG_AFTER))
   const drag = useListDrag()
   const onDragEnd = (e: DragEndEvent) => {
     drag.end()

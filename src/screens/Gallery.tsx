@@ -5,7 +5,7 @@ import { pageInfo } from '../deck/fields'
 import { createDeck, makeSlide } from '../deck/generate'
 import { hintFor, LAYOUTS } from '../deck/layouts'
 import { createSampleDeck } from '../deck/sample'
-import { extraSlides, withItems, withOptions } from '../deck/showcase'
+import { showcaseSlides, withItems, withOptions } from '../deck/showcase'
 import type { Block, BlockLook, BlockType, Deck, DeckTheme, DeckType, Slide, ThemeId, Tone } from '../deck/types'
 import type { SlideMode } from '../slides/context'
 import type { SlideActions } from '../slides/context'
@@ -46,6 +46,7 @@ import { cines } from '../slides/blocks/Cine'
 // set=combos&seed=1&n=60 은 규칙이 받아들인 부품 조합을 seed마다 정해진 차례로 만들어 본다 (combos.ts의 checkCombos).
 // &blank=1이면 부품마다 반쯤은 첫 항목만 채운 채로 발표하는 모습(빈 항목이 빠진다).
 // set=cine 는 모션 그래픽의 틀마다 한 장(cineSlides.ts). 콘솔의 cineStats()가 마지막 장면의 성능 기록을 돌려준다.
+// set=sample(기본)은 레이아웃마다의 예시 장(장 모음과 같다), set=example 은 홈의 '완성된 예시 보기'가 여는 예시 발표 그대로다.
 // set=backdrops 는 배경마다 어울리는 장 하나(backdropSlides.ts). &bd=diffuse 는 어느 갤러리든 모든 장에 그 배경을, &bdat=right &bds=soft 는 자리와 짙기를.
 
 /** set=edge: 차트 장이 무너지기 쉬운 값들 (음수, 빈 값, 많은 항목, 모두 같은 값, 긴 이름) */
@@ -261,7 +262,9 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
   if (set === 'backdrops' || set === 'bdsheet') return { ...deck, theme: { id: theme }, slides: backdropSlides(params) }
   if (set === 'cine') return { ...deck, theme: { id: theme }, ...cineSlides(params) }
   if (set === 'combos') return { ...deck, theme: { id: theme }, slides: comboSlides(Number(params.get('seed')) || 1, Number(params.get('n')) || 40, look, params.get('mode') === 'edit', params.get('blank') === '1').map((c) => c.slide) }
-  return { ...deck, theme: { id: theme }, slides: [...deck.slides, ...extraSlides()] }
+  // set=example: 홈의 '완성된 예시 보기'가 여는 예시 발표 그대로(모션 그래픽, 장면, 배경 모션까지)
+  if (set === 'example') return { ...deck, theme: { id: theme } }
+  return { ...deck, theme: { id: theme }, slides: showcaseSlides() }
 }
 
 /** &count: 레이아웃 장의 항목 수를 바꿔 본다. 모자라면 예시 항목을 되풀이한다 */
@@ -298,7 +301,7 @@ export function Gallery() {
   if (params.get('set') === 'blocks') Object.assign(window, { measureAll, measureAllFonts, measureBlocks, mergeHeights, heightsSource, clashes, failingHeights, spanWidth, fitBlocks })
   // 부품 조합 시험 (combos.ts). 콘솔에서 await checkCombos()
   // 프레임 잡기가 만드는 구성(set=blank, &filled=1이면 안내대로 채운 모습)의 부품 장도 같은 검사로
-  if (['combos', 'review', 'dirs', 'scenarios', 'blank'].includes(params.get('set') ?? '')) Object.assign(window, { checkCombos, comboSlides, checkAssembly })
+  if (['combos', 'review', 'dirs', 'scenarios', 'blank', 'example'].includes(params.get('set') ?? '')) Object.assign(window, { checkCombos, comboSlides, checkAssembly })
   // 잘림과 짜임 검사는 레이아웃 장 갤러리에서도 (레이아웃 장은 잘림만 본다)
   else Object.assign(window, { checkAssembly })
   // 부품 하나를 항목 수와 칸 크기마다 재는 시험 (stress.ts). 콘솔에서 await checkStress()
@@ -360,8 +363,8 @@ export function Gallery() {
       },
     })),
   }
-  // 구성(set=blank)은 처음 만들 때의 판이라, 글자 크기(&size)나 테마를 바꾼 모습은 편집기처럼 판을 다시 맞춰 본다
-  const deck = ['hideHead', 'hideFoot', 'blankHead'].some((key) => params.get(key) === '1') || params.get('set') === 'blank' ? settleDeck(raw) : raw
+  // 구성(set=blank)과 예시 발표(set=example)는 처음 만들 때의 판이라, 글자 크기(&size)나 테마를 바꾼 모습은 편집기처럼 판을 다시 맞춰 본다
+  const deck = ['hideHead', 'hideFoot', 'blankHead'].some((key) => params.get(key) === '1') || ['blank', 'example'].includes(params.get('set') ?? '') ? settleDeck(raw) : raw
   const info = pageInfo(picked)
   if (params.get('set') === 'bdsheet') return <BackdropSheet deck={deck} params={params} />
   return (

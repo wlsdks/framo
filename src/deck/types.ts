@@ -105,7 +105,7 @@ export interface Backdrop {
  * 해시 id뿐이다. 뜻과 값의 범위, 기본값, 시간표는 deck/cine.ts 한 곳이 정한다
  */
 /** 처음 고른 틀 */
-export type CinePresetId = 'light' | 'diffuse' | 'gather' | 'stroke'
+export type CinePresetId = 'light' | 'diffuse' | 'gather' | 'stroke' | 'fork' | 'fill'
 /** 글의 짜임: 큰 글자와 옆의 제목(mark), 가운데 하나(center), 가로로 그어지는 선과 두 끝(line) */
 export type CineFrame = 'mark' | 'center' | 'line'
 /** 구간: 한 점이 맺힘, 번짐, 모임, 또렷해짐, 글이 써짐, 카메라가 물러남, 머묾 */
@@ -118,9 +118,10 @@ export type CineFieldKey = 'glyph' | 'title' | 'lead' | 'label' | 'text' | 'sub'
 export type CineEnter = 'settle' | 'write' | 'letters' | 'count' | 'carry'
 /**
  * 재료: 틀마다 다른 몸짓이라 한 발표에 함께 나와도 서로 다르게 읽힌다. 입자(빛에서 글자로), 번지는 먹의 면(확산),
- * 모여드는 가는 선(모여 맺힘), 그어지는 선과 그 위를 건너가는 값(그어지는 선)
+ * 모여드는 가는 선(모여 맺힘), 그어지는 선과 그 위를 건너가는 값(그어지는 선), 뻗어 나가 갈라지는 갈래(갈림길),
+ * 떨어져 모여 차오르는 물(차오름)
  */
-export type CineMaterial = 'particles' | 'wash' | 'threads' | 'line'
+export type CineMaterial = 'particles' | 'wash' | 'threads' | 'line' | 'branches' | 'pool'
 export type CineAmount = 'few' | 'normal' | 'many'
 /** 번지는 모양: 둥글게, 옆으로 길게, 위로 */
 export type CineSpread = 'round' | 'side' | 'rise'
@@ -163,7 +164,10 @@ interface CineParticles {
 }
 
 export interface CineRecipe {
-  /** 이 레시피를 쓴 엔진 번호(deck/cine.ts의 CINE_ENGINE). 더 새 번호면 이 버전은 아는 층만 그리고 레시피는 그대로 둔다 */
+  /**
+   * 이 레시피를 읽는 데 필요한 엔진 번호(틀마다 정한다, deck/cine.ts의 CINE_PRESETS). 이 버전의 CINE_ENGINE보다 크면 이 버전은 아는 층만
+   * 그리고 레시피는 그대로 둔다(손잡이는 잠근다)
+   */
   engine: number
   /** 내 라이브러리에서 같은 갈래(처음 만든 것과 고친 버전들)를 묶는 id */
   lineage: string

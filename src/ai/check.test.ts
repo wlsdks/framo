@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { asCompose, autoPlace, insertAt, makeBlock, settleDeck } from '../deck/blocks'
 import { makeSlide } from '../deck/generate'
-import type { Block } from '../deck/types'
-import { createSampleDeck } from '../deck/sample'
+import type { Block, Slide } from '../deck/types'
+import { createSampleDeck, layoutSampleDeck } from '../deck/sample'
 import { checkOps, standInDeck } from './check'
 import { applyOps, parseOp, type Op } from './ops'
 import { SECRET, secretDeck } from './secretDeck'
@@ -12,8 +12,8 @@ import { shapeBlockId, shapeSlideId, toShape as shapeOf, type ShapeBlock, type S
 type OpenShape = Omit<ShapeDeck, 'slides'> & { slides: (Omit<ShapeSlide, 'blocks'> & { blocks?: ShapeBlock[] })[] }
 const toShape = (...a: Parameters<typeof shapeOf>) => shapeOf(...a) as unknown as OpenShape
 
-// 예시 발표에 부품 장 둘(점 목록, 핵심 숫자를 부품 장으로 바꾼 것)을 두고 본다
-const deck = createSampleDeck()
+// 예시 발표를 레이아웃 장으로 짠 판에 부품 장 둘(점 목록, 핵심 숫자를 부품 장으로 바꾼 것)을 두고 본다
+const deck = layoutSampleDeck()
 const at = (layout: string) => deck.slides.findIndex((s) => s.layout === layout)
 const POINTS = at('points')
 const KPI = at('kpi')
@@ -84,6 +84,25 @@ describe('미리 돌려 보기', () => {
     expect(checked.map((r) => r.code)).toEqual(real)
     // 고르는 일이 골고루 들어갔는지 (모두 되거나 모두 안 되면 이 시험이 아무것도 보지 않는다)
     expect(new Set(real).size).toBeGreaterThan(5)
+  })
+
+  it('배경이 있는 장도 앱과 같은 결과 코드가 나온다: 대역이 장의 배경을 이어받는다', () => {
+    // 표지에 확산, 마지막 장에 모여들기(또렷하게) 배경을 깐 발표
+    const base = createSampleDeck()
+    const last = base.slides.length - 1
+    const backdrop = (i: number): Slide['backdrop'] => (i === 0 ? { kind: 'diffuse' } : i === last ? { kind: 'gather', strength: 'strong' } : undefined)
+    const real = { ...base, slides: base.slides.map((s, i) => ({ ...s, backdrop: backdrop(i) })) }
+    const shown = shapeOf(real) as unknown as OpenShape
+    const [first, end] = [shown.slides[0].id, shown.slides[last].id]
+    expect(withoutIds(toShape(standInDeck(shown)))).toEqual(withoutIds(shown))
+    const ops: Op[] = [
+      { op: 'set_backdrop', slide: first, backdrop: 'diffuse' },
+      { op: 'set_backdrop', slide: end, backdrop: 'flow' },
+      { op: 'set_backdrop', slide: first, backdrop: null },
+    ]
+    const codes = applyOps(real, ops).results.map((r) => r.code)
+    expect(codes[0]).toBe('no_change')
+    expect(checkOps(shown, ops).map((r) => r.code)).toEqual(codes)
   })
 
   it('여러 값을 담은 op가 빠지면 까닭이 된 키를 알려 준다', () => {

@@ -76,7 +76,7 @@
 | 장의 배경: 목록, 이름, 어울리는 장, 자주 쓰는 자리, 처음 자리(`BACKDROPS`, `backdropOf`, `baseBackdrop`) | `src/deck/backdrops.ts`. 편집기, 장 모음, AI 카탈로그(`backdrops`), 모양(`backdrop`), 제안(`set_backdrop`)이 같이 쓴다 |
 | 배경의 그림과 움직임(끝 모습 SVG와 발표할 때의 캔버스가 같은 함수) | `src/motion/backdrop.ts`. 엔진은 `mo-backdrop` 알림 하나만 보낸다. 내보낸 HTML에 소스째 들어간다 |
 | 모션 그래픽을 그리는 도구(시간의 순수 함수, 이징, 정해진 씨앗의 난수, 점과 선만 그리는 SVG·캔버스 그리기, 캔버스 재생기) | `src/motion/draw.ts`의 `drawKit`. 배경과 모션 그래픽 엔진이 인자로 받아 쓴다(배경은 같은 그림 `Scene`: 때 e의 모습을 그리는 순수 함수). 내보낸 HTML에 소스째 들어간다(뷰어는 하나를 만들어 둘에 넘긴다) |
-| 모션 그래픽(cine)의 레시피: 틀 넷, 값의 범위와 기본값, 버전 id(내용 해시), 쉬운 손잡이, 시간표, 받은 레시피 바로잡기 | `src/deck/cine.ts`. 엔진에는 레시피가 아니라 아는 것만 채운 대본(`cineScript`)을 넘긴다(칸의 `data-script`). 발표를 열 때(`migrateDeck`)와 고칠 때(`deckStore.commit`) 쓰지 않는 버전을 뺀다(`tidyCines`) |
+| 모션 그래픽(cine)의 레시피: 틀 여섯, 값의 범위와 기본값, 버전 id(내용 해시), 쉬운 손잡이, 시간표, 받은 레시피 바로잡기 | `src/deck/cine.ts`. 엔진에는 레시피가 아니라 아는 것만 채운 대본(`cineScript`)을 넘긴다(칸의 `data-script`). 발표를 열 때(`migrateDeck`)와 고칠 때(`deckStore.commit`) 쓰지 않는 버전을 뺀다(`tidyCines`) |
 | 모션 그래픽의 그리기와 움직임(빛, 먹, 입자, 카메라, 글의 들어오기, WebGL2와 Canvas2D, 성능 단계) | `src/motion/cine.ts`. 엔진은 `mo-cine` 알림 하나만 보내고, 시계(Web Animations 하나)를 끝맺음(`anims`)과 건너뛰기(`skips`)로 받는다. 내보낸 HTML에 소스째 들어간다 |
 | 내 모션 그래픽(갈래와 버전, 이름) | `src/store/cines.ts`(브라우저와 보관 폴더의 `내 모션 그래픽.cines`), 파일 꼴은 `src/store/cinesFile.ts`. 편집기에서 넣기, 손잡이, 봉인은 `screens/editor/cineEdit.ts` |
 | 편집 화면에서 다시 맞춘 자리로 미끄러지기(쓰는 동안의 조립. 부품 칸의 FLIP도 같은 시간과 곡선) | `src/slides/liveMotion.ts` |
@@ -86,6 +86,7 @@
 | 발표의 사본(복제, 버전 꺼내기): 새 id, AI 공유 끄기 | `src/store/copy.ts`의 `copyDeck` |
 | 컴포넌트를 놓을 자리(끌어 놓기, 눌러 넣기, 넣을 수 없음) | `src/screens/editor/planDrop.ts`의 `planDrop` |
 | 파일 이름 | `src/store/deckFile.ts`의 `safeFileName` |
+| 발표 파일(HTML)에 담는 것(듣는 분께 보이는 것만)과, 그 파일을 열 때 이 PC의 같은 발표에서 이어받는 것(노트, 숨긴 장, 가려진 칸) | `src/deck/fields.ts`의 `sendable`, `withUnsent`. 내보내기(`deckData`)와 파일 열기(`store/persist.ts`의 `importDeck`)가 같이 쓴다 |
 | CSP | `server/csp.ts`, 내보낸 HTML은 `src/export/exportHtml.tsx`의 `exportCsp` |
 | ‘AI 공유’ 폴더의 파일 읽기(링크, 하드 링크, 큰 파일, 링크인 하위 폴더 거르기) | `server/shareFiles.ts`. 로컬 서버와 MCP 서버가 같이 쓴다 |
 

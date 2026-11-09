@@ -1,11 +1,11 @@
 import { BLOCKS, boardAreaH, boardFit, boardFromRows, composeFrom } from './blocks'
 import { emptyItem, makeSlide } from './generate'
-import { createSampleDeck, SAMPLE_LOGOS } from './sample'
+import { layoutSampleDeck, SAMPLE_LOGOS } from './sample'
 import type { Block, BlockType, Item, Slide } from './types'
 
 /*
  * 레이아웃마다 내용을 채운 예시 장. 장 모음 화면과 개발용 갤러리가 같이 쓴다.
- * 예시 발표(sample.ts)에 없는 레이아웃을 채운다. 회사, 사람, 숫자는 모두 지어낸 것이다.
+ * 예시 발표를 레이아웃 장으로 짠 판(sample.ts의 layoutSampleDeck)에 없는 레이아웃을 채운다. 회사, 사람, 숫자는 모두 지어낸 것이다.
  */
 
 export function withItems(slide: Slide, items: Partial<Item>[], fields: Record<string, string> = {}): Slide {
@@ -16,7 +16,7 @@ export function withOptions(slide: Slide, options: Slide['options']): Slide {
   return { ...slide, options: { ...slide.options, ...options } }
 }
 
-export function extraSlides(): Slide[] {
+function extraSlides(): Slide[] {
   return [
     withOptions(withItems(
       makeSlide('bars'),
@@ -233,7 +233,7 @@ function composeExample(): Slide {
   return { ...slide, blocks: boardFromRows(rows, boardFit(boardAreaH(slide))) }
 }
 
-/** 예시 발표의 장과 덧붙인 예시 장. 모든 레이아웃이 적어도 한 번 나온다. */
+/** 예시 발표를 레이아웃 장으로 짠 판의 장과 덧붙인 예시 장. 모든 레이아웃이 적어도 한 번 나온다. */
 export function showcaseSlides(): Slide[] {
-  return [...createSampleDeck().slides, ...extraSlides()]
+  return [...layoutSampleDeck().slides, ...extraSlides()]
 }

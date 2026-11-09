@@ -45,9 +45,9 @@ describe('녹화를 묻는 창의 걸리는 시간', () => {
     expect(recordSeconds(deck, slides) * 1000).toBeGreaterThan(holds)
   })
 
-  it('예시 발표(17장)는 3분쯤: 장마다 글을 읽을 만큼 머문다', () => {
-    expect(slides).toHaveLength(17)
-    expect(recordTime(recordSeconds(deck, slides))).toBe('3분')
+  it('예시 발표(15장)는 2분쯤: 장마다 글을 읽을 만큼 머문다', () => {
+    expect(slides).toHaveLength(15)
+    expect(recordTime(recordSeconds(deck, slides))).toBe('2분')
   })
 
   it('누르면 나오는 컴포넌트가 있으면 그만큼 더 걸린다', () => {
