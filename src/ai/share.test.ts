@@ -292,9 +292,9 @@ describe('모양만 고르기', () => {
 })
 
 describe('칸의 글 길이 (글자 수 구간)', () => {
-  // 한 장 요약: 장의 결론(title)과 항목의 내용(body)은 여러 줄로 쓰는 칸, 항목의 이름(title)은 한 줄 칸
+  // 한 장 요약: 장의 결론(title)과 항목의 내용(body)은 여러 줄로 쓰는 칸, 항목의 이름(title)은 한 줄 칸 (레이아웃 장으로 짠 예시의 한 장 요약)
   const summaryWith = (title: string, name: string, body: string) => {
-    const deck = createSampleDeck()
+    const deck = layoutSampleDeck()
     const at = deck.slides.findIndex((s) => s.layout === 'summary')
     const s = deck.slides[at]
     deck.slides[at] = { ...s, fields: { ...s.fields, title }, items: s.items.map((it, i) => (i ? it : { ...it, title: name, body })) }
@@ -341,7 +341,7 @@ describe('칸의 글 길이 (글자 수 구간)', () => {
   })
 
   it('칸의 꼴에 맞지 않는 상태는 받지 않는다', () => {
-    const shape = toShape(createSampleDeck())
+    const shape = toShape(layoutSampleDeck())
     const at = shape.slides.findIndex((s) => s.layout === 'summary')
     const cover = shape.slides.findIndex((s) => s.layout === 'cover')
     const bad = (fn: (s: { fields: Record<string, string>; items: Record<string, string>[] }[]) => void) => {

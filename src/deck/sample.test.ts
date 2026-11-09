@@ -45,7 +45,7 @@ describe('예시 발표(홈의 완성된 예시 보기)', () => {
     for (const s of deck.slides) expect(s.notes.length, s.purpose).toBeGreaterThan(10)
   })
 
-  it('숫자가 서로 맞는다: 회의 시간의 조각, 몇 중 몇, 한 해에 돌려받는 시간', () => {
+  it('숫자가 서로 맞는다: 회의 시간의 조각, 몇 중 몇, 바뀌는 회의 시간, 한 해에 돌려받는 시간', () => {
     const split = block('split')
     const slide = deck.slides.find((s) => s.blocks?.includes(split))!
     const total = split.items.reduce((n, it) => n + num(it.value), 0)
@@ -58,6 +58,14 @@ describe('예시 발표(홈의 완성된 예시 보기)', () => {
     const { value, sub } = cine('diffuse').fields
     const [hours, people, weeks] = [...sub.matchAll(/(\d+)(시간|명|주)/g)].map((m) => Number(m[1]))
     expect(num(value)).toBe(hours * people * weeks)
+    // 한 주 회의가 9시간(조각의 합)에서 바뀐 만큼이 한 사람이 한 주에 돌려받는 시간이다
+    const { before, after } = cine('stroke').fields
+    expect(num(before)).toBe(total)
+    expect(num(before) - num(after)).toBe(hours)
+    // 한 장 요약의 숫자도 같은 셈이다
+    const summary = deck.slides[1].items.map((it) => it.value)
+    expect(summary).toContain(`${hours}시간`)
+    expect(summary).toContain(value)
   })
 })
 
