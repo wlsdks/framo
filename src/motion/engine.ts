@@ -3042,16 +3042,36 @@ export function motionEngine(): MotionEngine {
             items('.bk-ra-it', 120, (el, at) => fade(el, at, 420))
             break
           }
+          // 강조할 항목(기본은 지금 1위)이 제 박자를 갖는다: 그 선이 먼저 홀로 그어져 닿으면 '이번 분기' 머리말과 그 줄이 함께 맺히고
+          // 바뀐 만큼(▲3)이 켜진다. 나머지 선은 강조 선이 다 닿기 전에 함께 그어지고(밀려난 길), 닿으면 나머지 줄이 위부터 맺힌다.
+          // 모든 선을 한꺼번에 열던 때는 답과 나머지가 같은 박자였고, 머리말만 줄보다 0.12초 먼저 혼자 섰고, 마지막에 바뀐 만큼이 모두
+          // 함께 켜져 ▼1이 줄마다 되풀이되었다(검수). 선은 획을 긋는다(dashK: 늘어난 그림의 길이 단위)
           fade(one('.bk-ra-when.is-from'), 40, 500)
           const was = $('.bk-ra-wi')
-          was.forEach((el, i) => fade(el, 80 + i * 70, 420))
-          const go = 80 + was.length * 70 + 300
-          const travel = levelName === 'lively' ? 1100 : 900
-          run(anims, links!, [{ clipPath: 'inset(-8px 100% -8px 0)' }, { clipPath: 'inset(-8px 0 -8px 0)' }], s(go), { easing: CARRY, duration: d(travel) })
-          const land = go + travel * 0.8
-          fade(one('.bk-ra-when.is-to'), land - 120, 400)
-          now.forEach((el, k) => fade(el, land + k * 60, 420))
-          for (const mv of $('.bk-ra-mv')) fade(mv, land + now.length * 60 + 160, 500)
+          was.forEach((el, i) => fade(el, 80 + i * 50, 420))
+          const go = 80 + was.length * 50 + 200
+          const lead = levelName === 'lively' ? 1000 : 800
+          const paths = Array.from(links!.querySelectorAll<SVGPathElement>('.bk-ra-ln'))
+          const hlPath = paths.find((p) => p.classList.contains('is-hl')) ?? null
+          const stroke = (p: SVGPathElement, at: number, ms: number) => {
+            if (still) return
+            const k = dashK(p) * 100
+            run(anims, p, [{ strokeDasharray: `${k} ${k}`, strokeDashoffset: k }, { strokeDasharray: `${k} ${k}`, strokeDashoffset: 0 }], s(at), { easing: CARRY, duration: d(ms) })
+          }
+          // 강조 선이 없으면(새로 든 항목이거나 강조하지 않음) 모든 선이 함께
+          const restAt = hlPath ? go + lead * 0.65 : go
+          const restMs = hlPath ? lead * 0.75 : lead
+          if (hlPath) stroke(hlPath, go, lead)
+          for (const p of paths) if (p !== hlPath) stroke(p, restAt, restMs)
+          const hlRow = now.find((el) => el.classList.contains('is-hl') && hlPath) ?? null
+          const hlLand = go + lead * 0.85
+          const restLand = restAt + restMs * 0.85
+          fade(one('.bk-ra-when.is-to'), hlRow ? hlLand : restLand, 400)
+          if (hlRow) {
+            fade(hlRow, hlLand, 420)
+            pop(hlRow.querySelector('.bk-ra-mv'), hlLand + 160)
+          }
+          now.filter((el) => el !== hlRow).forEach((el, k) => fade(el, restLand + k * 60, 420))
           break
         }
         case 'spread': {
