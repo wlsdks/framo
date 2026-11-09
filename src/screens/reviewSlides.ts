@@ -179,6 +179,29 @@ function marketLong(look?: Look): Slide {
   ] }
 }
 
+/**
+ * 판을 혼자 쓰는 바뀌기: 짝 넷에 글이 긴 편(바뀐 뒤 18자 남짓)과 짝 셋에 짧은 글. 짝마다 한 단으로 세우던 짜임은 긴 글을 칸마다 두세 줄로
+ * 꺾고 끝 줄에 낱말 하나를 남겼다(검수). 글은 지어낸 것이다
+ */
+function wipeAlone(look?: Look, long = true): Slide {
+  const pairs = long
+    ? [
+        ['회의록을 폴더마다 뒤져 찾음', '흩어진 회의록을 한 번에 찾아 주는 검색'],
+        ['같은 질문을 팀마다 되풀이', '처음 답한 내용을 바로 다시 보여 주는 창'],
+        ['현황을 사람마다 따로 확인', '팀 현황을 한 화면에 모아 주는 보드'],
+        ['결정한 이유가 메일에 묻힘', '결정과 그 이유를 함께 남기는 기록'],
+      ]
+    : [
+        ['회의록을 폴더에서 찾아요', '검색 한 번에 찾아요'],
+        ['같은 질문을 매번 해요', '처음 한 번만 물어요'],
+        ['현황을 사람마다 물어요', '한 화면에서 봐요'],
+      ]
+  const id = long ? 'wipe-long' : 'wipe-short'
+  const slide = scene(id, { title: long ? '공용 보드로 찾는 시간을 줄여요' : '찾는 시간이 줄어요' }, [{ type: 'wipe', fields: { from: '지금', to: long ? '공용 보드를 쓰면' : '바뀐 뒤' }, n: pairs.length }], look)
+  const [wipe] = slide.blocks!
+  return { ...slide, blocks: [{ ...wipe, items: wipe.items.map((item, i) => ({ ...item, title: pairs[i][0], body: pairs[i][1] })) }] }
+}
+
 /** 높이가 긴 단계 차트 옆에 숫자와 글을 쌓은 장 */
 function funnelStat(): Slide {
   const puts: Put[] = [
@@ -368,6 +391,8 @@ export function reviewSlides(look?: Look): Slide[] {
       scene(`ring-unit-${variant}`, { title: '가상의 단위를 확인해요' }, [{ type: 'ring', variant, fields: { value: '10건', label: '확인할 값' } }, { type: 'note', fields: { text: '비율이 아닌 값은 원문으로 확인해요.' } }], look),
     ]),
     marketLong(look),
+    wipeAlone(look),
+    wipeAlone(look, false),
     funnelStat(),
     chartSummary(),
     goalStack(),

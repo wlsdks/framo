@@ -19,7 +19,8 @@ import { blockDrawn, blockEdgeSeen, blockFigures, blockTextLines } from '../slid
  * - 떠 있는 칸: 바탕 없는 칸에서 칸 높이의 절반도 안 되는 내용이 칸 가운데에 내려가 있는 것
  * - 이음표: 앞 부품과 선 건너편 부품이 뜻이 서는 짝인지 (links.ts의 linkFits)
  * - 짜임: 높이가 넉넉한데 단을 나눈 목록, 내용이 적은데 본문의 왼쪽 위에 몰린 장(너비의 절반도 안 쓰고 아래 3분의 1 넘게 빈)
- * - 글 폭: 글 부품(TEXT_TYPES)의 한 줄이 MEASURE_EM(그 글자 크기의 배수)보다 긴 것, 여러 줄 글의 끝 줄에 낱말 하나만 남은 것(그림의 이름표도)
+ * - 글 폭: 글 부품(TEXT_TYPES)의 한 줄이 MEASURE_EM(그 글자 크기의 배수)보다 긴 것, 여러 줄 글의 끝 줄에 낱말 하나만 남은 것(그림의 이름표도),
+ *   바뀌기의 바뀐 뒤 글이 두 줄 넘게 꺾인 것
  * - 짧은 이름표: 흐름의 단계 이름이 꺾였는데 흐름의 이름을 모두 한 단계 작게 하면 모두 한 줄에 드는 것
  * #/gallery?set=combos&seed=1&n=60 (또는 set=review) → 콘솔에서 await checkAssembly()
  */
@@ -35,7 +36,9 @@ const ORPHAN = 0.22
 /** 그림의 이름표는 줄이 짧아(여덟 글자 남짓) 두 글자 낱말 하나만 남아도 끝 줄이 가장 긴 줄의 4분의 1이다: '결과를 시스템에 / 기록' */
 const ORPHAN_LABEL = 0.34
 /** 글 폭과 끝 줄을 보는 부품: 문장을 쓰는 글 부품 */
-const TEXT_TYPES = new Set(['message', 'text', 'quote', 'callout', 'bullets', 'note', 'faq', 'heading'])
+const TEXT_TYPES = new Set(['message', 'text', 'quote', 'callout', 'bullets', 'note', 'faq', 'heading', 'wipe'])
+/** 바뀌기의 바뀐 뒤 글이 이만큼 넘는 줄로 꺾이면 짜임이 글을 받지 못한 것: 짝마다 한 단으로 세운 긴 글이 서너 줄로 꺾였다(검수) */
+const WIPE_LINES = 2
 
 /** 글이 문장이 아니라 그림의 이름표인 부품 (흐름, 연결도, 나누기, 모으기, 칸 조립) */
 const FIGURE_TYPES = new Set(['flow', 'network', 'merge', 'split', 'tiles', 'hub', 'gather', 'search', 'layers', 'gate', 'dupes', 'aliases', 'adoption', 'spread', 'rank', 'cine'])
@@ -263,6 +266,7 @@ function measure(area: HTMLElement, k: number): string[] {
       rows.sort((a, b) => a.t - b.t)
       const tail = (rows.at(-1)!.r - rows.at(-1)!.l) / k
       if (rows.length >= 2 && tail < most * (prose ? ORPHAN : ORPHAN_LABEL)) out.add(`${cell.dataset.type}: 끝 줄에 낱말 하나만 남았어요 「${text}」`)
+      if (el.classList.contains('bk-wp-new') && rows.length > WIPE_LINES) out.add(`wipe: 바뀐 뒤 글이 ${rows.length}줄로 꺾였어요 「${text}」`)
     })
   }
   return [...out]
