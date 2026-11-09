@@ -278,15 +278,16 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
   {
     id: 'fill',
     name: '차오름',
-    description: '물방울이 하나씩 떨어져 모이는 만큼 물이 차오르고 숫자가 굴러가며, 물결이 잦아들면 그 수가 답으로 맺혀요.',
+    description: '물방울이 하나씩 떨어질 때마다 물이 차오르고 숫자가 오르다가, 마지막 방울과 함께 숫자 아래까지 차요.',
     fits: '쌓아 온 것, 작은 것이 모여 이룬 것, 누적 성과',
     engine: 2,
     sample: { title: '세 해 동안 모은 개선 제안', value: '2,400건', sub: '한 주에 열다섯 건 남짓' },
     recipe: {
       frame: 'center',
       material: 'pool',
-      // 차오르는 구간은 1.2초: 숫자 굴리기의 느린 끝자락 동안 물 낯만 고요히 서 있으면 기다리게 했다(필름)
-      phases: phases(['seed', 300], ['gather', 1200, 150], ['resolve', 600, 100], ['write', 600, 300]),
+      // 차오르는 구간은 1.5초: 처음 몇 방울이 하나씩 보이고, 잦아졌다가, 마지막 몇 방울이 다시 하나씩 보일 만큼. 너울이 잦아들자 물이
+      // 걷히고, 덧붙이는 말은 물이 다 걷힌 뒤에(물 안에서 맺히면 글과 물 낯이 닿았다, 감성 검수)
+      phases: phases(['seed', 300], ['gather', 1500, 150], ['resolve', 600], ['write', 600, 100]),
       particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.3, trail: false, spread: 'round' },
       shape: { kind: 'point' },
       light: false,
@@ -294,9 +295,10 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       camera: 'none',
       pace: 'normal',
       texts: [
-        // 무엇이 모이는지가 먼저(처음 0.5초 안에 읽힌다), 숫자는 차오르는 물과 같은 곡선으로 굴러간다
+        // 무엇이 모이는지가 먼저(처음 0.5초 안에 읽힌다), 숫자는 물방울이 닿을 때마다 물과 함께 오른다. 강조색 없이: 다 찼다는 것은 숫자
+        // 아래까지 찬 물이 말한다
         { key: 'title', enter: 'settle', on: 'seed' },
-        { key: 'value', enter: 'count', on: 'gather', answer: true },
+        { key: 'value', enter: 'count', on: 'gather' },
         { key: 'sub', enter: 'settle', on: 'write' },
       ],
       handoff: false,

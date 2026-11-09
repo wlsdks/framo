@@ -163,7 +163,7 @@ describe('모션 그래픽 레시피', () => {
   })
 
   it('강조색은 값이 맺히는 장면의 답 하나에만, 다 들어온 뒤 한 번: 이름·문장 장면은 글자색으로 끝난다', () => {
-    const answered = { light: 0, diffuse: 1, gather: 0, stroke: 1, fork: 0, fill: 1 }
+    const answered = { light: 0, diffuse: 1, gather: 0, stroke: 1, fork: 0, fill: 0 }
     for (const p of CINE_PRESETS) {
       const s = cineScript(presetRecipe(p.id, 'l'))!
       const answers = s.texts.filter((t) => t.accent !== undefined)
@@ -233,13 +233,13 @@ describe('모션 그래픽 레시피', () => {
     expect(knobsFor(presetRecipe('fork', 'l'))).toEqual(['amount', 'camera', 'pace', 'enter', 'bleed', 'headAfter'])
   })
 
-  it('차오름: 숫자가 물과 같은 때에 굴러 답이 되고, 무엇이 모이는지는 처음 0.5초 안에 맺힌다', () => {
+  it('차오름: 숫자가 물과 함께 오르고(강조색 없이: 다 찼다는 것은 물이 숫자에 닿는 그림이 말한다), 무엇이 모이는지는 처음 0.5초 안에 맺힌다', () => {
     const s = cineScript(presetRecipe('fill', 'l'))!
     const title = s.texts.find((t) => t.key === 'title')!
     const value = s.texts.find((t) => t.key === 'value')!
     expect(title.start).toBe(0)
     expect(value.enter).toBe('count')
-    expect(value.accent).toBeGreaterThan(value.end)
+    expect(value.accent).toBeUndefined()
     // 숫자는 2초 안에 맺힌다(docs/MOTION.md 4절)
     expect(value.end).toBeLessThanOrEqual(2000)
     expect(knobsFor(presetRecipe('fill', 'l'))).toEqual(['amount', 'camera', 'pace', 'enter', 'bleed', 'headAfter'])

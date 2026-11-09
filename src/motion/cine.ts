@@ -475,61 +475,77 @@ export function cineMotion(kit: DrawKit): CineRuntime {
   }
 
   /**
-   * 물(차오름): 장의 위에서 물방울이 하나씩 떨어져 아래에 고인 물로 들어가고, 들어간 만큼 물이 차오른다(작은 것이 모여 이만큼이 됐다).
-   * 수위는 숫자 굴리기와 같은 곡선(reveal)이라 차오른 높이와 숫자가 움직이는 동안에도 같은 값을 말한다. 물방울은 그 곡선이 오르는
-   * 빠르기만큼 떨어진다: 처음에는 소나기처럼 잦고 끝으로 갈수록 드문드문, 마지막 몇 방울은 하나씩 보인다. 물방울은 글 칸의 옆에서만
-   * 떨어져 글 위를 지나지 않는다. 물방울이 닿은 자리에서 잔물결이 양옆으로 퍼지며 잦아든다(시간의 순수 함수: 닿은 때와 자리만 안다)
+   * 물(차오름): 글 칸 곁에서 물방울이 하나씩 떨어져 아래에 고인 물로 들어가고, 들어간 만큼 물이 차오르며 숫자가 오른다(작은 것이 모여
+   * 이만큼이 됐다). 물방울이 닿을 때마다 수위와 숫자가 그 방울만큼 함께 오른다(poured): 처음의 몇 방울은 숫자가 한 칸씩 오르는 것이
+   * 보이고, 잦아지면 이어 굴러가며, 마지막 몇 방울은 다시 하나씩 보인다. 방울이 닿는 때는 S자(carry)로 흩는다: 숫자 굴리기의 곡선(reveal)은
+   * 처음에 쏟아져 '하나씩'이 보이지 않았다(감성 검수). 물은 숫자의 바닥 바로 아래까지 차서 마지막 방울과 함께 다 찬다
    */
   interface Pool {
-    /** 물방울마다 [x, 닿는 때, 떨어지기 시작하는 높이, 떨어지는 시간, 물결 세기] */
+    /** 물방울마다 [x, 닿는 때, 떨어지기 시작하는 높이, 떨어지는 시간, 크기] */
     drops: Float32Array
     n: number
-    /** 바닥(장 아래 끝 너머), 다 찬 수위, 물이 찰 가로 범위 */
+    /** 물방울 크기의 합 */
+    sum: number
+    /** 바닥(장 아래 끝 너머), 다 찬 수위(숫자의 바닥), 물이 찰 가로 범위 */
     base: number
     full: number
     x0: number
     x1: number
-    /** 숫자 굴리기의 때 [시작, 끝] */
-    win: number[]
   }
   const DROP = 5
+  /** 물방울 하나가 닿고 수위와 숫자가 그만큼 오르는 데 걸리는 때(ms) */
+  const RISE = 170
 
-  function poolOf(R: () => number, c: { ox: number; oy: number; cw: number; ch: number; W: number; H: number }, band: number[] | null, win: number[], dense: number): Pool {
+  function poolOf(R: () => number, c: { ox: number; oy: number; cw: number; ch: number; W: number; H: number }, band: number[] | null, vb: number[] | null, win: number[], dense: number): Pool {
     const x0 = Math.min(0, c.ox) - 20
     const x1 = Math.max(c.W, c.ox + c.cw) + 20
     const base = Math.max(c.H, c.oy + c.ch) + 24
-    // 다 찬 수위: 글 띠 바로 아래(글이 물에 잠기지 않는다)
-    const full = band ? Math.min(base - 80, band[3] + 40) : c.oy + c.ch * 0.72
+    // 다 찬 수위: 숫자의 바닥에서 숨 쉴 틈(72px)만큼 아래. 숫자가 없으면 글 띠 아래. 글 띠 아래까지만 차던 시안은 숫자와 따로 놀았고
+    // 화면 아래 4분의 1이라 프로젝터에서 보이지 않았으며, 숫자의 바닥에 붙이면 답을 읽는 동안 물 낯이 숫자의 밑줄로 섰다(감성 검수)
+    const full = vb ? vb[1] + vb[3] + 72 : band ? band[3] + 40 : c.oy + c.ch * 0.6
     const [c0, c1] = win
     const inv = (q: number) => {
       let lo = 0
       let hi = 1
       for (let j = 0; j < 22; j++) {
         const m = (lo + hi) / 2
-        if (reveal(m) < q) lo = m
+        if (carry(m) < q) lo = m
         else hi = m
       }
       return (lo + hi) / 2
     }
-    const n = dense === 0 ? 18 : dense === 2 ? 52 : 32
-    // 글 칸 옆의 두 기둥에서만 떨어진다(글 칸 둘레를 띄워)
-    const gl = band ? band[0] - 60 : c.ox + c.cw * 0.3
-    const gr = band ? band[2] + 60 : c.ox + c.cw * 0.7
-    const L = Math.max(0, gl - (c.ox + c.cw * 0.04))
-    const Rw = Math.max(0, c.ox + c.cw * 0.96 - gr)
+    const n = dense === 0 ? 12 : dense === 2 ? 30 : 18
+    // 글 띠 바로 옆의 두 기둥에서 떨어진다: 숫자 곁이라 떨어지는 것과 오르는 숫자가 한눈에 든다
+    const l1 = band ? band[0] - 50 : c.ox + c.cw * 0.3
+    const l0 = Math.max(c.ox + c.cw * 0.03, l1 - 320)
+    const r0 = band ? band[2] + 50 : c.ox + c.cw * 0.7
+    const r1 = Math.min(c.ox + c.cw * 0.97, r0 + 320)
+    const lw = Math.max(0, l1 - l0)
+    const rw = Math.max(0, r1 - r0)
     const drops = new Float32Array(n * DROP)
+    let sum = 0
     for (let j = 0; j < n; j++) {
       const o = j * DROP
-      const u = R() * (L + Rw)
-      drops[o] = u < L ? c.ox + c.cw * 0.04 + u : gr + (u - L)
-      // j번째 방울이 닿는 때: 수위(숫자)가 (j+0.5)/n만큼 오른 때. 조금씩 흩어 고른 박자가 되지 않게
-      drops[o + 1] = c0 + (c1 - c0) * inv(Math.min(1, (j + 0.3 + 0.4 * R()) / n))
-      drops[o + 2] = c.oy + c.ch * (0.02 + 0.2 * R())
-      drops[o + 3] = 300 + 160 * R()
-      // 큰 방울은 드물게(모두 같은 세기면 고른 빗소리 무늬가 된다)
-      drops[o + 4] = 0.55 + 0.9 * R() * R()
+      const u = R() * (lw + rw || 1)
+      drops[o] = u < lw ? l0 + u : r0 + (u - lw)
+      // j번째 방울이 닿는 때(마지막 방울이 오르기를 마칠 때가 숫자가 맺히는 때)
+      drops[o + 1] = c0 + (c1 - c0 - RISE) * inv((j + 0.5) / n)
+      drops[o + 2] = c.oy + c.ch * (0.03 + 0.16 * R())
+      drops[o + 3] = 380 + 120 * R()
+      drops[o + 4] = 0.75 + 0.5 * R()
+      sum += drops[o + 4]
     }
-    return { drops, n, base, full, x0, x1, win }
+    return { drops, n, sum, base, full, x0, x1 }
+  }
+
+  /** 그때까지 들어온 물의 몫(0~1): 수위와 숫자가 함께 쓴다. 물방울은 닿은 뒤 RISE 동안 제 크기만큼 올린다 */
+  function poured(P: Pool, e: number) {
+    let f = 0
+    for (let j = 0; j < P.n; j++) {
+      const dt = e - P.drops[j * DROP + 1]
+      if (dt > 0) f += P.drops[j * DROP + 4] * smooth(0, RISE, dt)
+    }
+    return f / P.sum
   }
 
   /** 글이 설 띠: 글이 있는 모든 글 칸을 두른 상자 [왼, 위, 오른, 아래](판 좌표). 글 칸이 없으면 null */
@@ -799,8 +815,7 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       // 숫자 굴리기와 같은 때(숫자가 없으면 모임 구간)
       const cue = texts.find((t) => t.cue.enter === 'count')?.cue
       const win = cue ? [cue.start, cue.end] : spans.gather ? [spans.gather.start, spans.gather.end] : [0, s.total * 0.6]
-      // 물방울은 글이 설 띠의 옆으로만, 물은 그 아래까지
-      pool = poolOf(R, { ox, oy, cw, ch, W: host.w, H: host.h }, bandOf(texts), win, dense)
+      pool = poolOf(R, { ox, oy, cw, ch, W: host.w, H: host.h }, bandOf(texts), bigBox, win, dense)
     }
     return { s, W: host.w, H: host.h, ox, oy, cw, ch, fx, fy, gr, gb, reach, shaped: sampled, cz: 0, edge, threads, threadW, arm, arms, br, pool, mode, N: n, ang, rad, z, size, alpha, tone, delay, bow, ph, w, sx, sy, tx, ty, pu, texts, spans, dark }
   }
@@ -1004,8 +1019,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
    * 글 하나의 그 때 모습. 장의 답이면 다 들어온 순간 글자색에서 강조색으로 한 번 바뀌고 그대로 둔다(끝 모습의 강조색과 같다). 강조색은
    * 장면 전체에서 이때 한 번만 들어온다
    */
-  function textAt(t: TextBox, e: number, lively: boolean) {
-    enterAt(t, e, lively)
+  function textAt(t: TextBox, e: number, lively: boolean, fill?: number) {
+    enterAt(t, e, lively, fill)
     const cue = t.cue
     if (cue.accent === undefined) return
     const a = clamp((e - cue.end) / Math.max(1, cue.accent - cue.end))
@@ -1029,7 +1044,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     if (c.node.nodeValue !== next) c.node.nodeValue = next
   }
 
-  function enterAt(t: TextBox, e: number, lively: boolean) {
+  /** fill이 있으면 숫자 굴리기는 그 몫(차오른 물의 몫)을 따른다: 물방울이 닿을 때마다 숫자가 그만큼 오르고, 첫 방울 전에는 보이지 않는다 */
+  function enterAt(t: TextBox, e: number, lively: boolean, fill?: number) {
     const st = t.el.style
     const cue = t.cue
     const p = clamp((e - cue.start) / Math.max(1, cue.end - cue.start))
@@ -1056,8 +1072,9 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       return
     }
     if (cue.enter === 'count') {
-      st.opacity = String(out(clamp(p * 3)))
-      if (t.count) rollTo(t.count, t.count.value * reveal(p))
+      // 0인 숫자가 답처럼 서 있지 않게: 물을 따르는 숫자는 첫 방울이 닿을 때 나타난다
+      st.opacity = String(out(fill === undefined ? clamp(p * 3) : clamp(fill / 0.04)))
+      if (t.count) rollTo(t.count, t.count.value * (fill ?? reveal(p)))
       return
     }
     // 써지기, 한 글자씩: 줄마다 가림을 하나씩 두고, 펜 끝이 지나간 만큼 왼쪽부터 드러낸다
@@ -1747,90 +1764,85 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
     }
 
     /**
-     * 물(차오름): 수위(숫자와 같은 곡선) 위에 물방울이 닿은 자리마다 잔물결 둘이 양옆으로 퍼지며 잦아든다. 물은 옅은 먹의 면(어두운 바탕은
-     * 옅은 빛), 물 낯은 또렷한 가는 선. 떨어지는 물방울은 빠를수록 길게 늘어난 짧은 획이다(3~5m에서 점 하나는 보이지 않는다). 다 차고
-     * 숫자가 맺히면 물은 조금 가라앉으며 걷힌다(끝 모습은 글뿐이다). 강조색은 쓰지 않는다
+     * 물(차오름): 물방울이 글 칸 곁에서 떨어지고(둥근 머리와 꼬리의 물방울 꼴), 닿은 자리는 잠깐 오목해지며 낮고 긴 너울 둘이 양옆으로
+     * 퍼져 잦아든다. 물은 바탕에 글자색을 섞은 면(프로젝터에서도 보이게 크기로: 장의 절반 가까이)과 또렷한 물 낯. 마지막 방울과 함께 숫자
+     * 바로 아래까지 차고, 너울이 잦아들자 물은 조금 가라앉으며 걷힌다(끝 모습은 글뿐이다). 강조색은 쓰지 않는다: 다 찼다는 것은 그림이
+     * 말한다(확산과 같은 '검은 숫자가 파랗게'로 끝나면 한 발표에서 같은 틀로 읽혔다, 감성 검수)
      */
     const drawPool = (x: CanvasRenderingContext2D, c: Scene, e: number) => {
       const P = c.pool
       if (!P) return
       const RS = c.spans.resolve
-      const gone = RS ? clamp(prog(RS, e)) : 0
+      const gone = RS ? clamp((Math.max(0, prog(RS, e)) - 0.15) / 0.7) : 0
       if (gone >= 1) return
-      const [c0, c1] = P.win
-      const rise = reveal(clamp((e - c0) / Math.max(1, c1 - c0)))
-      const fade = 1 - smooth(0, 1, gone)
-      const level = lerp(P.base, P.full, rise) + 22 * carry(gone)
       const D = P.drops
-      // 물결: 닿은 때부터 양옆으로 퍼지며(초당 700px) 잦아든다(0.48초)
+      const fade = 1 - smooth(0, 1, gone)
+      const level = lerp(P.base, P.full, poured(P, e)) + 26 * carry(gone)
+      // 물결: 닿은 때부터 양옆으로 퍼지며(초당 600px) 잦아든다(0.6초). 물결 하나는 낮고 긴 너울 하나(짧은 굽이가 겹치면 지진계의 잡음으로,
+      // 높은 봉우리는 소리의 파형으로 읽혔다, 필름과 감성 검수)
       const wave = (px: number) => {
         let y = 0
         for (let j = 0; j < P.n; j++) {
           const o = j * DROP
           const dt = e - D[o + 1]
-          if (dt <= 0 || dt > 1600) continue
-          const reach = 0.7 * dt
-          const amp = 12 * D[o + 4] * Math.exp(-dt / 480)
-          // 물결 하나는 긴 굽이 한두 개(짧은 굽이가 겹치면 지진계의 잡음으로 읽혔다, 필름)
+          if (dt <= 0 || dt > 1800) continue
+          const amp = 10 * D[o + 4] * Math.exp(-dt / 600)
           for (const sg of [-1, 1]) {
-            const u = px - (D[o] + sg * reach)
-            if (Math.abs(u) > 240) continue
-            y += amp * Math.sin(u * 0.038) * Math.exp(-(u * u) / 9000)
+            const u = px - (D[o] + sg * 0.6 * dt)
+            if (Math.abs(u) > 340) continue
+            y += amp * Math.sin(u * 0.026) * Math.exp(-(u * u) / 20000)
           }
-          // 닿은 자리는 잠깐 오목하게
           const u0 = px - D[o]
-          if (dt < 280 && Math.abs(u0) < 80) y += amp * (1 - dt / 280) * Math.exp(-(u0 * u0) / 900)
+          if (dt < 300 && Math.abs(u0) < 110) y += amp * 1.2 * (1 - dt / 300) * Math.exp(-(u0 * u0) / 1800)
         }
         return y
       }
-      if (rise > 0 && level < P.base) {
+      if (level < P.base - 1) {
         const N = 160
         const sx = (P.x1 - P.x0) / N
+        const surf = new Float32Array(N + 1)
+        for (let i = 0; i <= N; i++) surf[i] = level + wave(P.x0 + i * sx)
         x.beginPath()
         for (let i = 0; i <= N; i++) {
-          const px = P.x0 + i * sx
-          const py = level + wave(px)
-          if (i) x.lineTo(px, py)
-          else x.moveTo(px, py)
+          if (i) x.lineTo(P.x0 + i * sx, surf[i])
+          else x.moveTo(P.x0, surf[0])
         }
-        // 물: 물 낯에서 바닥까지
         x.lineTo(P.x1, P.base + 40)
         x.lineTo(P.x0, P.base + 40)
         x.closePath()
-        x.fillStyle = rgbCss(ink.c, (c.dark ? 0.09 : 0.06) * fade)
+        x.fillStyle = rgbCss(ink.c, (c.dark ? 0.16 : 0.12) * fade)
         x.fill()
-        // 물 낯: 닫힌 경로의 윗변만 다시 긋는다
         x.beginPath()
         for (let i = 0; i <= N; i++) {
-          const px = P.x0 + i * sx
-          const py = level + wave(px)
-          if (i) x.lineTo(px, py)
-          else x.moveTo(px, py)
+          if (i) x.lineTo(P.x0 + i * sx, surf[i])
+          else x.moveTo(P.x0, surf[0])
         }
-        x.strokeStyle = rgbCss(ink.c, (c.dark ? 0.62 : 0.58) * fade)
-        x.lineWidth = 2.4
+        x.strokeStyle = rgbCss(ink.c, (c.dark ? 0.6 : 0.55) * fade)
+        x.lineWidth = 2.2
         x.lineJoin = 'round'
         x.stroke()
       }
-      // 떨어지는 물방울: 위에서 옅게 나타나 빨라지며(자유 낙하) 물 낯에 닿는다
-      x.strokeStyle = rgbCss(ink.c, c.dark ? 0.78 : 0.7)
-      x.lineCap = 'round'
+      // 떨어지는 물방울: 위에서 옅게 나타나 빨라지며(자유 낙하) 그때의 물 낯에 닿는다. 둥근 머리와 위로 가늘어지는 꼬리의 물방울 꼴이고,
+      // 빨라질수록 꼬리가 늘어난다. 짧은 획은 먼지나 불티로, 길게 늘인 획은 검은 바탕에서 필름의 긁힌 자국으로 읽혔다(감성 검수)
+      x.fillStyle = rgbCss(ink.c, c.dark ? 0.85 : 0.78)
       for (let j = 0; j < P.n; j++) {
         const o = j * DROP
         const t1 = D[o + 1]
         const t0 = t1 - D[o + 3]
         if (e <= t0 || e >= t1) continue
         const u = (e - t0) / (t1 - t0)
-        const yEnd = lerp(P.base, P.full, reveal(clamp((t1 - c0) / Math.max(1, c1 - c0))))
+        const yEnd = lerp(P.base, P.full, poured(P, t1))
         const y = lerp(D[o + 2], yEnd, u * u)
-        // 빠를수록 길게(떨어지는 거리 × 빠르기)
-        const len = 10 + 70 * u * D[o + 4]
-        x.globalAlpha = smooth(0, 0.25, u)
-        x.lineWidth = 3.5 + 2 * D[o + 4]
+        const r = 6 * D[o + 4]
+        const tail = r * (1.6 + 2.6 * u)
+        const px = D[o]
+        x.globalAlpha = smooth(0, 0.2, u)
         x.beginPath()
-        x.moveTo(D[o], y - len)
-        x.lineTo(D[o], y)
-        x.stroke()
+        x.moveTo(px, y - tail)
+        x.quadraticCurveTo(px + r * 0.95, y - r * 0.9, px + r, y)
+        x.arc(px, y, r, 0, Math.PI)
+        x.quadraticCurveTo(px - r * 0.95, y - r * 0.9, px, y - tail)
+        x.fill()
       }
       x.globalAlpha = 1
     }
@@ -1905,7 +1917,8 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
 
     const applyDom = (c: Scene | null, e: number) => {
       if (c) {
-        for (const t of c.texts) textAt(t, e, lively)
+        const fill = c.pool ? poured(c.pool, e) : undefined
+        for (const t of c.texts) textAt(t, e, lively, t.cue.enter === 'count' ? fill : undefined)
         applyCam(zoom(s, e), c.fx - c.ox, c.fy - c.oy, s.bleed ? host : null, bx, by)
       }
     }
