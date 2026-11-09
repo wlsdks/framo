@@ -19,6 +19,7 @@ import { useEscape } from '../ui'
 import { BackdropFrame } from './BackdropFrame'
 import type { BlockEditing } from './BlockEditor'
 import { PREVIEW_MOTION } from './DeckMenus'
+import { FOCUS_FIELD, type FieldFocus } from './focusField'
 import { layoutPreview } from './Inspector'
 import { useLook } from './look'
 import { SelectionBar, StageSlot } from './SelectionBar'
@@ -97,6 +98,26 @@ export function SlideStage({
     setPeek(true)
     setPreview((n) => n + 1)
   }
+  const [focusRequest, setFocusRequest] = useState<FieldFocus | null>(null)
+  useEffect(() => {
+    const onFocus = (event: Event) => {
+      const request = (event as CustomEvent<FieldFocus>).detail
+      if (request.slideId !== slide.id) return
+      setPeek(false)
+      setPreview(0)
+      setFocusRequest(request)
+    }
+    window.addEventListener(FOCUS_FIELD, onFocus)
+    return () => window.removeEventListener(FOCUS_FIELD, onFocus)
+  }, [slide.id])
+  useLayoutEffect(() => {
+    if (!focusRequest || focusRequest.slideId !== slide.id) return
+    const input = canvasRef.current?.querySelector<HTMLElement>(`[data-field="${CSS.escape(focusRequest.key)}"]`)
+    if (!input) return
+    input.focus({ preventScroll: true })
+    input.scrollIntoView({ block: 'nearest' })
+    setFocusRequest(null)
+  }, [focusRequest, slide.id, peek, preview])
   // 쓰는 동안 손을 움직이기 전까지 손 아래 칸에 손을 올린 테를 두르지 않는다
   useTypingStill(canvasRef)
   // 두 번 누르기가 쓰는 칸 바로 밖(글자가 칸 상자 위아래로 나온 곳)에 닿아도 그 칸의 낱말을 고른다.

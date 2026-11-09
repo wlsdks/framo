@@ -569,6 +569,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  width: 170px;
   overflow: hidden;
   color: var(--ink-2);
   font-size: 12px;
@@ -577,12 +578,19 @@
   transition: color var(--t-fast);
 }
 
-.thumb-dot {
+.thumb-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 점의 색만으로는 예시가 채워진 장과 작성한 장을 구분하기 어려웠다. 이름보다 빈칸 수가 먼저 잘리지 않게 한다. */
+.thumb-missing {
   flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--blank);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-2);
 }
 
 /* 글이 넘친 장 (장 아래 '글이 넘쳤어요'와 같은 색) */
@@ -1261,6 +1269,15 @@
 .ins-cur-go .icon {
   width: 15px;
   height: 15px;
+}
+
+.ins-example {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
 }
 
 /* 빈칸: 몇 곳 남았는지 한 줄. 목록은 펼쳐야 보인다 */

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { applyOps, type ChangeRequest } from '../../ai/ops'
 import { useAiAsk } from '../../ai/useAiAsk'
 import { useAiShare } from '../../ai/useAiShare'
-import { blockFieldPrefix } from '../../deck/blocks'
 import { knownOnly, unknownParts } from '../../deck/compat'
 import type { Missing } from '../../deck/fields'
 import type { Deck, LayoutId, Slide } from '../../deck/types'
@@ -27,6 +26,7 @@ import { BlockLibrary } from './BlockLibrary'
 import { ExportMenu, PresentButton, ThemeMenu } from './DeckMenus'
 import { DeckSettings } from './DeckSettings'
 import { useExports } from './exports'
+import { focusField } from './focusField'
 import { Inspector } from './Inspector'
 import { MotionPanel } from './MotionPanel'
 import { MotionStudio } from './studio/MotionStudio'
@@ -441,14 +441,4 @@ function EditorBody({ deck }: { deck: Deck }) {
       {toast.node}
     </div>
   )
-}
-
-function focusField(slideId: string, m: Missing) {
-  const key = (m.block ? blockFieldPrefix(m.block) : '') + (m.item !== undefined ? `${m.item}.${m.key}` : m.key)
-  const inCanvas = document.querySelector<HTMLElement>(`.ed-canvas [data-field="${CSS.escape(key)}"]`)
-  const inDoc = document.querySelector<HTMLElement>(`[data-doc-field="${CSS.escape(`${slideId}:${key}`)}"]`)
-  const el = inCanvas ?? inDoc
-  if (!el) return
-  el.focus()
-  el.scrollIntoView({ block: 'nearest' })
 }

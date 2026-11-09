@@ -267,8 +267,7 @@ const Thumb = memo(function Thumb(props: ThumbProps) {
           {ready && <SlideCanvas deck={look} slide={shown} mode="preview" page={page} total={total} sections={sections} sectionIndex={sectionIndex} />}
         </ScaledSlide>
         {/* 이 장에 무엇을 쓰면 되는지는 이름에 마우스를 올리면 (오른쪽 칸에 늘 펼쳐 두지 않는다) */}
-        <span className="thumb-label" title={slide.guide || undefined} aria-hidden="true">
-          {missing > 0 && <span className="thumb-dot" aria-hidden="true" />}
+        <span className="thumb-label" title={[slideName(slide), slide.guide].filter(Boolean).join('\n')} aria-hidden="true">
           {over && (
             <span className="thumb-over" title="글이 슬라이드 밖으로 넘쳤어요">
               <AlertIcon />
@@ -279,7 +278,8 @@ const Thumb = memo(function Thumb(props: ThumbProps) {
               <LockIcon />
             </span>
           )}
-          {slideName(slide)}
+          <span className="thumb-name">{slideName(slide)}</span>
+          {missing > 0 && <span className="thumb-missing">빈칸 {missing}곳</span>}
         </span>
       </button>
     </div>

@@ -227,7 +227,9 @@ function Blanks({ deck, slide, onFocusField, onGoSlide }: { deck: Deck; slide: S
   }, [deck, slide.id, missing.length])
   const [open, setOpen] = useState(false)
   const [next, setNext] = useState(0)
-  useEffect(() => setNext(0), [slide.id])
+  // 채운 칸이 목록에서 빠졌는데 예전 번호로 계속 가면 바로 다음 칸을 건너뛴다. 남은 칸이 달라지면 첫 빈칸부터 잇는다.
+  const missingKeys = JSON.stringify(missing.map((m) => [m.block, m.item, m.key]))
+  useEffect(() => setNext(0), [slide.id, missingKeys])
   // 컴포넌트가 하나도 없는 장은 채울 칸이 없을 뿐이지 다 채운 것이 아니다
   if (slide.layout === 'compose' && !slide.blocks?.length) {
     return <p className="ins-blank">아직 넣은 컴포넌트가 없어요</p>
@@ -272,6 +274,13 @@ function Blanks({ deck, slide, onFocusField, onGoSlide }: { deck: Deck; slide: S
           다음 빈칸
         </button>
       </div>
+      <p className="ins-example">
+        빈칸의 흐린 글·차트는 작성 안내예요
+        <Info label="작성 안내와 발표 내용의 차이" align="start">
+          빈칸에는 무엇을 쓸지 알려 주는 글과 예시 차트가 흐리게 보여요. 이 안내는 발표와 내보낸 파일에는 나오지 않아요.
+          슬라이드 아래의 ‘이 슬라이드 미리 보기’를 누르면 실제로 발표할 모습을 볼 수 있어요.
+        </Info>
+      </p>
       {open && (
         <ul className="ins-missing">
           {missing.map((m) => (
