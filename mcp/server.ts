@@ -46,6 +46,7 @@ import { LAYOUT_ORDER } from '../src/deck/layouts'
 import { SCENE_IDS } from '../src/deck/scenes'
 import { FONTS, FOOTERS, MOTIONS, PLACES, TEXT_SIZES, THEME_ORDER, TONES, TRANSITIONS } from '../src/deck/themes'
 import { readJson, realDir } from '../server/shareFiles'
+import { appHome, nodeIn, readyVersions } from '../server/versions'
 
 // 판 번호는 package.json에서 빌드할 때 넣는다. 예전에는 따로 적어 두어 0.1.0에 멈춰 있었다
 const VERSION = version
@@ -617,10 +618,26 @@ export function sandboxTight(
   return execArgv.every((a) => !a.startsWith('--allow-') || own.has(a)) && !nodeOptions.includes('--allow-')
 }
 
-/** 권한 모델 밖에서 시작했으면, 'AI 공유' 폴더와 이 서버 코드만 읽을 수 있게 스스로를 다시 띄운다. */
+/** 앱 폴더의 MCP 서버가 새 버전의 MCP 서버에 맡겼다는 표시 */
+const NEWER_ENV = 'FRAMO_MCP_NEWER'
+
+/**
+ * 이 파일보다 새 MCP 서버. Claude Code, Codex에는 앱 폴더의 이 파일을 등록하므로(로컬 서버가 알려 주는 경로),
+ * 새 버전을 받아 풀어 두었으면 그 가운데 가장 새것에 맡긴다: 등록을 다시 하지 않아도 앱과 같은 새 규칙(카탈로그, 모양)을 쓴다.
+ * 고르는 규칙은 시작 프로그램과 같다(server/versions.ts: 다 풀고 확인을 마쳤고, 켜지지 않았던 것이 아닌 버전).
+ * 이 파일의 버전보다 새것만 고르므로, 맡긴 쪽이 다시 자기에게 맡기지 않는다. 없으면 null
+ */
+export function newerMcp(here: string, own: string, platform: NodeJS.Platform, arch: string): { node: string; entry: string } | null {
+  const newest = readyVersions(appHome(join(here, '..')), own, platform, arch)[0]
+  const node = newest && nodeIn(newest.dir, platform, arch)
+  return newest && node ? { node, entry: join(newest.dir, 'dist-node', 'gyeol-mcp.mjs') } : null
+}
+
+/** 권한 모델 밖에서 시작했으면, 'AI 공유' 폴더와 이 서버 코드만 읽을 수 있게 스스로를(새 버전이 있으면 그 버전을) 다시 띄운다. */
 function launch() {
   const here = dirname(fileURLToPath(import.meta.url))
-  const share = process.env.GYEOL_SHARE || join(here, '..', SHARE_DIR_NAME)
+  // 'AI 공유'는 앱 폴더의 것 하나다. 새 버전 폴더(versions/X.Y.Z) 안에서 돌아도 앱 폴더의 것을 쓴다
+  const share = process.env.GYEOL_SHARE || join(appHome(join(here, '..')), SHARE_DIR_NAME)
   const permission = (process as { permission?: NodeJS.ProcessPermission }).permission
 
   if (permission) {
@@ -631,9 +648,14 @@ function launch() {
   }
 
   for (const d of SHARE_SUBDIRS) mkdirSync(join(share, d), { recursive: true })
-  const child = spawn(process.execPath, sandboxArgs(share, here, fileURLToPath(import.meta.url)), {
+  // 새 버전에는 권한 인자 없이 맡긴다. 그 버전이 제 권한 인자(sandboxArgs)로 스스로를 권한 모델 안에서 다시 띄운다:
+  // 권한 인자는 버전마다 그 버전의 것이어야 해서(sandboxTight가 제 것만 받는다) 이 파일이 대신 붙이지 않는다
+  // 맡은 쪽은 다시 맡기지 않는다(버전 폴더 이름과 안의 코드 버전이 어긋나도 서로 끝없이 맡기지 않게)
+  const newer = process.env[NEWER_ENV] ? null : newerMcp(here, VERSION, process.platform, process.arch)
+  const [node, args] = newer ? [newer.node, [newer.entry]] : [process.execPath, sandboxArgs(share, here, fileURLToPath(import.meta.url))]
+  const child = spawn(node, args, {
     stdio: 'inherit',
-    env: { ...process.env, GYEOL_SHARE: share },
+    env: { ...process.env, GYEOL_SHARE: share, ...(newer ? { [NEWER_ENV]: '1' } : {}) },
   })
   for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => child.kill(sig))
   child.on('exit', (code) => process.exit(code ?? 0))
