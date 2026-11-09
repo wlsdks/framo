@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BACKDROP_IDS, baseBackdrop } from '../deck/backdrops'
-import { createSampleDeck } from '../deck/sample'
+import { layoutSampleDeck } from '../deck/sample'
 import type { Deck, Slide } from '../deck/types'
 import { applyOps, parseOp, type Op } from './ops'
 import { secretDeck, SECRET } from './secretDeck'
@@ -8,7 +8,8 @@ import { catalog, checkShape, onlyKnownStrings, shapeSlideId, TEXT_STATES, toSha
 
 // 배경: AI는 모양(고른 배경 id, 자리, 짙기)만 보고, 고르는 값만 바꾼다
 
-const deck: Deck = createSampleDeck()
+// 배경을 고르지 않은 표지가 있는 발표: 예시 발표(쇼룸)는 표지에 이미 배경이 있어서 레이아웃 장으로 짠 판을 쓴다
+const deck: Deck = layoutSampleDeck()
 const cover = deck.slides.findIndex((s) => s.layout === 'cover')
 /** 모양의 장 하나의 배경 (AI에게 숨긴 장이면 배경이 없다) */
 const bdOf = (s: unknown) => (s as { backdrop?: unknown }).backdrop

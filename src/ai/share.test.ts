@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { autoPlace, insertAt, makeBlock, tiles, withLink } from '../deck/blocks'
 import { AUDIENCES, BLUEPRINTS, DECK_TYPES } from '../deck/blueprints'
 import { createDeck, makeSlide } from '../deck/generate'
-import { createSampleDeck } from '../deck/sample'
+import { createSampleDeck, layoutSampleDeck } from '../deck/sample'
 import { SCENE_IDS, sceneFits, sceneOf, withScenes } from '../deck/scenes'
 import { LAYOUTS } from '../deck/layouts'
 import type { Block, LayoutId, Slide } from '../deck/types'
@@ -65,13 +65,40 @@ describe('모양만 고르기', () => {
   })
 
   it('원래 덱에서는 장 역할과 칸 상태가 보인다', () => {
-    const shape = toShape(createSampleDeck())
+    const shape = toShape(layoutSampleDeck())
     expect(shape.slides[1]).toMatchObject({ layout: 'summary', role: '한 장 요약', fields: { title: '21-40' } })
     expect(shape.slides[1].items).toHaveLength(4)
     expect(shape.slides.find((s) => s.layout === 'kpi')?.items[0]).toEqual({ value: '1-10', title: '11-20', body: '11-20' })
     // 비운 이미지 칸은 empty (이미지 칸은 있는지만 보인다)
     expect(shape.slides[0].fields.$logo).toBe('empty')
     expect(checkShape(shape)).toBe(true)
+  })
+
+  it('예시 발표의 컴포넌트와 모션 그래픽 장도 종류와 칸 상태만 보인다: 칸에 심은 비밀, 레시피는 나가지 않는다', () => {
+    const deck = createSampleDeck()
+    const s = (k: string) => `${SECRET}-${k}`
+    const planted = {
+      ...deck,
+      slides: deck.slides.map((slide) => ({
+        ...slide,
+        notes: s('notes'),
+        blocks: slide.blocks?.map((b) => ({
+          ...b,
+          fields: Object.fromEntries(Object.keys(b.fields).map((k) => [k, s(k)])),
+          items: b.items.map((it) => ({ ...it, title: s('t'), body: s('b'), value: s('v'), meta: s('m') })),
+        })),
+      })),
+    }
+    const shape = toShape(planted)
+    expect(checkShape(shape)).toBe(true)
+    expect(JSON.stringify(shape)).not.toContain(SECRET)
+    const blocks = shape.slides.flatMap((x) => x.blocks ?? [])
+    expect(blocks.filter((b) => b.type === 'cine')).toHaveLength(3)
+    // 레시피(틀, 갈래 id)와 버전 id는 모양에 없다
+    expect(JSON.stringify(shape)).not.toMatch(/sample-(stroke|diffuse|fork)|"cine":"c/)
+    // 장면과 배경은 고르는 값이라 그대로 보인다
+    expect(shape.slides[0].options.scene).toBe('opening')
+    expect(shape.slides[0].backdrop?.id).toBe('diffuse')
   })
 
   it('비밀을 심은 덱에서 만든 모양도 꼴은 맞다', () => {
@@ -265,9 +292,9 @@ describe('모양만 고르기', () => {
 })
 
 describe('칸의 글 길이 (글자 수 구간)', () => {
-  // 한 장 요약: 장의 결론(title)과 항목의 내용(body)은 여러 줄로 쓰는 칸, 항목의 이름(title)은 한 줄 칸
+  // 한 장 요약: 장의 결론(title)과 항목의 내용(body)은 여러 줄로 쓰는 칸, 항목의 이름(title)은 한 줄 칸 (레이아웃 장으로 짠 예시의 한 장 요약)
   const summaryWith = (title: string, name: string, body: string) => {
-    const deck = createSampleDeck()
+    const deck = layoutSampleDeck()
     const at = deck.slides.findIndex((s) => s.layout === 'summary')
     const s = deck.slides[at]
     deck.slides[at] = { ...s, fields: { ...s.fields, title }, items: s.items.map((it, i) => (i ? it : { ...it, title: name, body })) }
@@ -314,7 +341,7 @@ describe('칸의 글 길이 (글자 수 구간)', () => {
   })
 
   it('칸의 꼴에 맞지 않는 상태는 받지 않는다', () => {
-    const shape = toShape(createSampleDeck())
+    const shape = toShape(layoutSampleDeck())
     const at = shape.slides.findIndex((s) => s.layout === 'summary')
     const cover = shape.slides.findIndex((s) => s.layout === 'cover')
     const bad = (fn: (s: { fields: Record<string, string>; items: Record<string, string>[] }[]) => void) => {

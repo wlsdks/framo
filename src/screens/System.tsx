@@ -5,7 +5,7 @@ import { BLUEPRINTS, DECK_TYPES } from '../deck/blueprints'
 import { pageInfo } from '../deck/fields'
 import { emptyItem } from '../deck/generate'
 import { LAYOUTS, LAYOUT_GROUPS, LAYOUT_ORDER } from '../deck/layouts'
-import { createSampleDeck } from '../deck/sample'
+import { layoutSampleDeck } from '../deck/sample'
 import { showcaseSlides } from '../deck/showcase'
 import { ACCENT_COMBOS, comboSwatch, FONTS, fontPreview, THEMES, THEME_ORDER, TONES, isDarkLook, themeStyle } from '../deck/themes'
 import type { BlockType, Deck, DeckTheme, LayoutId, Slide, ThemeId } from '../deck/types'
@@ -111,7 +111,7 @@ export function System() {
   const [active, setActive] = useState('sys-tokens')
   const [mainRef, width] = useWidth<HTMLDivElement>()
 
-  const base = useMemo(() => createSampleDeck(), [])
+  const base = useMemo(() => layoutSampleDeck(), [])
   const all = useMemo(() => showcaseSlides(), [])
   // 단락 번호와 목차는 예시 발표 전체의 순서로 센다
   const info = useMemo(() => pageInfo(all), [all])
