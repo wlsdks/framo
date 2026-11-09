@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { ARRANGE_MAX, arrangeRequest, boardAreaH } from '../../deck/blocks'
 import { missingFields, optionalBlanks, unshownCount, visibleItems, type Missing } from '../../deck/fields'
 import { emptyItem } from '../../deck/generate'
@@ -9,6 +9,7 @@ import { cx } from '../../lib/cx'
 import { BOLD_LAYOUTS } from '../../slides/layouts'
 import { sideName } from '../../slides/panes'
 import { ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
+import { useDrawSoon } from '../drawSoon'
 import { BackdropSection } from './BackdropPicker'
 import { useAfterPaint, useLook, type Look } from './look'
 import { BackIcon, CheckIcon, ChevronIcon, EyeOffIcon, Info, Segmented, Toggle, useEscape } from '../ui'
@@ -72,7 +73,7 @@ export function Inspector({
   }, [slide.id])
   const look = useLook(deck)
   // 장 그림(지금 레이아웃, 모양 고르기)은 고친 것이 화면에 그려진 다음에 고친다 (look.ts의 useAfterPaint).
-  // 다른 장을 골랐을 때는 바로 그 장으로 (앞 장 그림이 잠깐 남지 않게)
+  // 다른 장을 골랐을 때는 그 장으로 (앞 장 그림이 잠깐 남지 않게). 그 장의 그림은 화면이 그려진 뒤에 그린다(SoonCanvas)
   const later = useAfterPaint(slide)
   const shown = later.id === slide.id ? later : slide
 
@@ -100,7 +101,7 @@ export function Inspector({
       <section className="ins-sec ins-top">
         <button type="button" className="ins-cur" title="레이아웃 바꾸기" onClick={() => setPicking(true)}>
           <ScaledSlide width={104} decorative>
-            <SlideCanvas deck={look} slide={shown} mode="preview" sections={PREVIEW_SECTIONS} sectionIndex={0} />
+            <SoonCanvas key={slide.id} deck={look} slide={shown} mode="preview" sections={PREVIEW_SECTIONS} sectionIndex={0} />
           </ScaledSlide>
           <span className="ins-cur-t">
             <span className="ins-cur-k">레이아웃</span>
@@ -469,6 +470,17 @@ function LayoutPicker({
   )
 }
 
+/**
+ * 이 칸의 작은 장 그림. 처음 그릴 때(다른 장을 고르면 key로 새로 그린다) 화면이 한 번 그려진 뒤에 차례로 그린다(drawSoon.ts).
+ * 고치는 장과 이 칸의 그림(지금 레이아웃, 모양 셋 남짓)을 누른 그 일에서 같이 그리면 그림마다 장을 그리고 글을 맞춰서(레이아웃 장의
+ * 채움 맞추기, 부품 장의 판 맞추기), 느린 PC에서 장을 고르거나 더할 때 고치는 장이 그만큼 늦게 보였다. 레이아웃 바꾸기의 그림 서른 장 남짓도
+ * 창이 먼저 뜨고 차례로 채워진다. 같은 장에서 고친 것은 바로 그린다
+ */
+function SoonCanvas(props: ComponentProps<typeof SlideCanvas>) {
+  const ready = useDrawSoon()
+  return ready ? <SlideCanvas {...props} /> : null
+}
+
 /** 이 장을 다른 레이아웃(이나 모양)으로 그린 모습. 항목이 모자라면 미리 보기에서만 빈 항목을 채워 모양을 보인다 */
 export function layoutPreview(slide: Slide, id: LayoutId, variant?: string): Slide {
   const spec = LAYOUTS[id].items
@@ -511,7 +523,7 @@ export function LayoutChoice({
       onBlur={onPeek && (() => onPeek(false))}
     >
       <ScaledSlide width={width} decorative>
-        <SlideCanvas deck={look} slide={preview} mode="preview" sections={PREVIEW_SECTIONS} sectionIndex={0} />
+        <SoonCanvas key={slide.id} deck={look} slide={preview} mode="preview" sections={PREVIEW_SECTIONS} sectionIndex={0} />
       </ScaledSlide>
       <span>{name}</span>
     </button>
