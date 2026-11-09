@@ -62,11 +62,14 @@ export function requiredFiles(platform: NodeJS.Platform, arch: string): string[]
 
 /**
  * 코드가 든 폴더에서 앱 폴더를 찾는다. <앱>/versions/X.Y.Z 안에서 돌면 <앱>, 아니면 그 폴더 자신.
- * 'AI 공유'와 받은 파일, AI에 등록한 MCP 서버 경로는 버전이 바뀌어도 그대로여야 해서 늘 앱 폴더를 쓴다
+ * 'AI 공유'와 받은 파일, AI에 등록한 MCP 서버 경로는 버전이 바뀌어도 그대로여야 해서 늘 앱 폴더를 쓴다.
+ * 이름만 보지 않고 준비 표시(.framo-ready)가 있을 때만 버전 폴더로 본다: 사람이 zip을 versions\0.9.0 같은 곳에 직접 풀었으면
+ * 그 위의 위는 앱 폴더가 아니다(그곳의 versions를 치우거나 받은 파일을 두면 앱 밖의 폴더를 건드린다)
  */
 export function appHome(codeRoot: string): string {
   const parent = dirname(codeRoot)
-  return basename(parent) === VERSIONS_DIR && VERSION_NAME.test(basename(codeRoot)) ? dirname(parent) : codeRoot
+  const inVersions = basename(parent) === VERSIONS_DIR && VERSION_NAME.test(basename(codeRoot)) && realFile(join(codeRoot, READY_FILE))
+  return inVersions ? dirname(parent) : codeRoot
 }
 
 /** 링크가 아닌 진짜 파일인지. 링크를 따라가면 버전 폴더 밖의 것을 켜게 된다 */

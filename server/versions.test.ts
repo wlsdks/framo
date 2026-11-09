@@ -29,9 +29,16 @@ function put(h: string, name: string, { ready = true, mark = name, missing = '',
 }
 
 describe('앱 폴더', () => {
-  it('versions/X.Y.Z 안에서 돌면 그 위의 위, 아니면 그 폴더 자신', () => {
+  it('준비 표시가 있는 versions/X.Y.Z 안에서 돌면 그 위의 위, 아니면 그 폴더 자신', () => {
+    const real = home()
+    const dir = put(real, '0.9.0')
+    expect(appHome(dir)).toBe(real)
+    // 표시가 없으면(사람이 zip을 versions\0.9.0에 직접 풀었으면) 그 폴더가 앱 폴더다
+    const bare = join(real, 'versions', '0.8.0')
+    mkdirSync(bare)
+    expect(appHome(bare)).toBe(bare)
     const h = join('/apps', 'Framo')
-    expect(appHome(join(h, 'versions', '0.9.0'))).toBe(h)
+    expect(appHome(join(h, 'versions', '0.9.0'))).toBe(join(h, 'versions', '0.9.0'))
     expect(appHome(h)).toBe(h)
     expect(appHome(join(h, 'versions', 'latest'))).toBe(join(h, 'versions', 'latest'))
     expect(appHome(join(h, 'other', '0.9.0'))).toBe(join(h, 'other', '0.9.0'))
