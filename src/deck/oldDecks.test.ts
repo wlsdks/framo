@@ -9,6 +9,7 @@ import v053 from './fixtures/deck-v0.5.3.json'
 import v054 from './fixtures/deck-v0.5.4.json'
 import v055 from './fixtures/deck-v0.5.5.json'
 import v060 from './fixtures/deck-v0.6.0.json'
+import v070 from './fixtures/deck-v0.7.0.json'
 import { migrateDeck } from './migrate'
 import type { Deck } from './types'
 
@@ -18,7 +19,8 @@ import type { Deck } from './types'
 // v0.5.3부터는 고른 값(테마의 글꼴·글자 크기·아래 표시·전환, 장마다의 바탕·강조·모양·장면·차례, 컴포넌트의 바탕·움직임·
 // 이음표)을 모두 넣은 발표(chosen)도 그 버전의 코드로 만들어 둔다. 예시 발표는 기본값뿐이라 고른 값이 사라져도 몰랐다.
 // v0.6.0부터는 장의 배경(종류·자리·짙기), AI에게 숨긴 장과 컴포넌트, 발표에서 숨긴 장, 내 PC 글꼴, 컴포넌트의 항목 하나씩 보이기,
-// 모션 그래픽(틀 넷의 레시피와 손잡이, 장 제목은 모션 그래픽 다음에)도 고른 값에 든다
+// 모션 그래픽(틀 넷의 레시피와 손잡이, 장 제목은 모션 그래픽 다음에)도 고른 값에 든다. v0.7.0은 모션 그래픽의 새 틀 둘(갈림길, 차오름)과
+// 그 손잡이, 순환의 강조할 단계를 더했다
 type Release = { rich: Deck; made: Deck[]; chosen?: Deck }
 const RELEASES: [string, Release][] = [
   ['v0.4.0', v040 as unknown as Release],
@@ -30,6 +32,7 @@ const RELEASES: [string, Release][] = [
   ['v0.5.4', v054 as unknown as Release],
   ['v0.5.5', v055 as unknown as Release],
   ['v0.6.0', v060 as unknown as Release],
+  ['v0.7.0', v070 as unknown as Release],
 ]
 
 /** 사람이 고른 값: 발표 전체(모션 그래픽의 레시피도), 장마다(배경, 숨기기도), 컴포넌트마다(쓰는 레시피의 버전도) */
@@ -97,6 +100,13 @@ describe('예전 버전의 발표', () => {
     // 틀 넷의 레시피를 모두 쓰고, 손잡이(장 제목은 모션 그래픽 다음에도)를 고른 값으로
     expect(new Set(blocks.filter((b) => b.type === 'cine').map((b) => cines?.[b.cine!]?.preset))).toEqual(new Set(['light', 'diffuse', 'gather', 'stroke']))
     expect(Object.values(cines!).every((r) => r.headAfter)).toBe(true)
+  })
+
+  it('v0.7.0부터는 고른 값에 모션 그래픽 틀 여섯과 순환의 강조할 단계가 들어 있다', () => {
+    const { slides, cines } = RELEASES.find(([v]) => v === 'v0.7.0')![1].chosen!
+    const blocks = slides.flatMap((s) => s.blocks ?? [])
+    expect(new Set(blocks.filter((b) => b.type === 'cine').map((b) => cines?.[b.cine!]?.preset))).toEqual(new Set(['light', 'diffuse', 'gather', 'stroke', 'fork', 'fill']))
+    expect(blocks.some((b) => b.type === 'cycle' && b.highlight !== undefined)).toBe(true)
   })
 
   for (const [version, { rich, made, chosen }] of RELEASES) {
