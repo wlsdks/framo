@@ -62,10 +62,16 @@ export const CINE_SHAPES: Choice<CineShape>[] = [
   { id: 'wave', name: '물결', description: '굽이치는 선이 돼요' },
   { id: 'point', name: '한 점', description: '한 점으로 모였다가 사라져요' },
 ]
-export const CINE_AMOUNTS: Choice<CineAmount>[] = [
+const CINE_AMOUNTS: Choice<CineAmount>[] = [
   { id: 'few', name: '적게', description: '성글고 가벼워요' },
   { id: 'normal', name: '보통', description: '' },
   { id: 'many', name: '많이', description: '촘촘하고 또렷해요' },
+]
+/** 갈림길에서 같은 값(amount)은 안의 수다 */
+const CINE_OPTION_COUNTS: Choice<CineAmount>[] = [
+  { id: 'few', name: '둘', description: '두 안 가운데 하나를 골라요' },
+  { id: 'normal', name: '셋', description: '세 안 가운데 하나를 골라요' },
+  { id: 'many', name: '넷', description: '네 안 가운데 하나를 골라요' },
 ]
 export const CINE_SPREADS: Choice<CineSpread>[] = [
   { id: 'round', name: '둥글게', description: '한 점에서 사방으로 번져요' },
@@ -589,15 +595,19 @@ export function knobValue(r: CineRecipe, knob: CineKnob): string | boolean {
   }
 }
 
+/** 레시피의 재료(없으면 틀의 재료) */
+const materialOf = (r: CineRecipe) => oneOf(MATERIALS, r.material, presetSpec(oneOf(PRESET_IDS, r.preset, 'light')).recipe.material ?? 'particles')
+
 /** 이 레시피에서 뜻이 있는 손잡이만(번지는 구간이 없으면 번지는 모양은 고를 것이 없다) */
 export function knobsFor(r: CineRecipe): CineKnob[] {
   const has = (k: CinePhaseKind) => r.phases?.some((p) => p.kind === k)
-  const material = oneOf(MATERIALS, r.material, presetSpec(oneOf(PRESET_IDS, r.preset, 'light')).recipe.material ?? 'particles')
-  // 재료마다 뜻이 있는 손잡이만: 입자가 아닌 재료에 모일 모양, 번지는 모양, 빛, 잔상을 보이면 눌러도 바뀌는 것이 없다
+  const material = materialOf(r)
+  // 재료마다 뜻이 있는 손잡이만: 입자가 아닌 재료에 모일 모양, 번지는 모양, 빛, 잔상을 보이면 눌러도 바뀌는 것이 없다. 수(amount)는 엔진이
+  // 읽는 재료에만(입자 수, 갈림길의 안의 수, 물방울 수): 먹의 면과 가는 선은 읽지 않아 눌러도 바뀌지 않았다
   const out: CineKnob[] = []
   if (material === 'particles') out.push('shape', 'amount')
   else if (material === 'line') out.push('shape')
-  else out.push('amount')
+  else if (material === 'branches' || material === 'pool') out.push('amount')
   if (material === 'particles' && has('spread')) out.push('spread')
   if (material === 'particles') out.push('light')
   if (material !== 'line') out.push('camera')
@@ -607,6 +617,13 @@ export function knobsFor(r: CineRecipe): CineKnob[] {
   if (material !== 'line') out.push('bleed')
   out.push('headAfter')
   return out
+}
+
+/** 수(amount) 손잡이의 이름과 고를 것: 재료마다 뜻이 다르다(입자 수, 갈림길의 안의 수, 물방울 수) */
+export function amountKnob(r: CineRecipe): { label: string; options: Choice<CineAmount>[] } {
+  const material = materialOf(r)
+  if (material === 'branches') return { label: '안의 수', options: CINE_OPTION_COUNTS }
+  return { label: material === 'pool' ? '물방울' : '입자', options: CINE_AMOUNTS }
 }
 
 /** 글 칸마다 고를 수 있는 들어오기(숫자 굴리기는 숫자 칸에만) */

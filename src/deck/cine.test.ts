@@ -5,6 +5,7 @@ import {
   CINE_FIELDS,
   CINE_MAX_MS,
   CINE_PRESETS,
+  amountKnob,
   cineId,
   cineScript,
   cleanCines,
@@ -160,6 +161,13 @@ describe('모션 그래픽 레시피', () => {
     expect(knobsFor(presetRecipe('gather', 'l'))).not.toContain('light')
     expect(knobsFor(presetRecipe('stroke', 'l'))).toEqual(expect.arrayContaining(['shape', 'pace', 'headAfter']))
     expect(knobsFor(presetRecipe('stroke', 'l'))).not.toContain('bleed')
+    // 수(amount)는 엔진이 읽는 재료에만: 먹의 면과 가는 선은 읽지 않으므로 보이지 않는다
+    expect(knobsFor(presetRecipe('diffuse', 'l'))).not.toContain('amount')
+    expect(knobsFor(presetRecipe('gather', 'l'))).not.toContain('amount')
+    // 갈림길의 수는 안의 수
+    expect(amountKnob(presetRecipe('fork', 'l'))).toMatchObject({ label: '안의 수' })
+    expect(amountKnob(presetRecipe('fork', 'l')).options.map((o) => o.name)).toEqual(['둘', '셋', '넷'])
+    expect(amountKnob(presetRecipe('light', 'l')).label).toBe('입자')
   })
 
   it('강조색은 값이 맺히는 장면의 답 하나에만, 다 들어온 뒤 한 번: 이름·문장 장면은 글자색으로 끝난다', () => {
