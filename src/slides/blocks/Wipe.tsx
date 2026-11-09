@@ -7,7 +7,8 @@ import { useSlide } from "../context";
 import { IT, ItemTools, T } from "../fields";
 
 /**
- * 바뀌기: 지금의 모습이 바뀐 뒤의 모습으로 넘어가는 장면. 줄마다 지금(옅은 글, 가는 취소선)과 바뀐 뒤(크고 굵게)를 한 줄에 둔다.
+ * 바뀌기: 지금의 모습이 바뀐 뒤의 모습으로 넘어가는 장면. 짝마다 지금(옅은 글, 가는 취소선)과 바뀐 뒤(크고 굵게)를 둔다: 넓은 칸은 짝마다
+ * 한 단(위에 지금, 아래에 바뀐 뒤)으로 칸 너비를 나눠 쓰고, 보통 칸은 짝마다 한 줄(왼쪽에 지금, 오른쪽에 바뀐 뒤)로(wipe.css).
  * 비교(두 단의 표)와 달리 '넘어간다'가 주인공이라, 발표할 때 세로 선 하나가 왼쪽에서 오른쪽으로 훑고 지나가며 지금에 줄을 긋고
  * 바뀐 뒤를 드러낸다(engine.ts). 다 보인 모습에서도 취소선과 크기로 앞뒤가 읽힌다
  */
@@ -19,7 +20,7 @@ export function Wipe() {
   const shown =
     mode === "final" ? all.filter(({ it }) => !isBlankItem(it)) : all;
   return (
-    <div className="bk-wp" data-n={shown.length}>
+    <div className="bk-wp" data-n={shown.length} style={{ "--wp-n": shown.length } as CSSProperties}>
       <div className="bk-wp-frame">
         <div className="bk-wp-head">
           <T k="from" className="bk-wp-hf" oneLine />
