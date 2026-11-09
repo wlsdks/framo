@@ -269,6 +269,8 @@ interface FieldProps extends TextProps {
    * 이기는 것을 보인다. 마우스를 올리면 '자동 계산'이라고 알린다
    */
   auto?: string
+  /** auto 값에 마우스를 올리면 보이는 말. 없으면 계산식의 '자동 계산' 말풍선 */
+  autoTip?: string
 }
 
 /** 셈해 보이는 칸의 말풍선 */
@@ -289,7 +291,7 @@ function clean(text: string, multiline?: boolean): string {
   return multiline ? t : t.replace(/\s*\n\s*/g, ' ')
 }
 
-function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional, onPasteLines, keepParens, example, auto }: FieldProps) {
+function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional, onPasteLines, keepParens, example, auto, autoTip }: FieldProps) {
   const { mode } = useSlide()
   if (mode === 'final') {
     const text = value.trim() || auto?.trim() || ''
@@ -301,8 +303,9 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
       </Tag>
     )
   }
-  // 접어 둔 빈칸은 발표할 때처럼 자리를 차지하지 않는다. 고른 부품의 '칸 더하기'로 연다
-  if (fold && !value) return null
+  // 접어 둔 빈칸은 발표할 때처럼 자리를 차지하지 않는다. 고른 부품의 '칸 더하기'로 연다. 셈하거나 짐작해 보이는 값(auto)이 있으면
+  // 발표할 때도 보이므로 접지 않는다(진행 현황 컴포넌트의 비운 상태가 편집할 때만 빠졌다)
+  if (fold && !value && !auto) return null
   const shown = value || auto || hint
   const one = oneLineProps(shown, oneLine, units, numeral)
   if (mode === 'preview' || !onChange) {
@@ -317,6 +320,7 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
       value={value}
       hint={(!value && auto) || hint}
       auto={!value && !!auto}
+      autoTip={autoTip}
       label={label}
       fieldId={fieldId}
       onChange={onChange}
@@ -351,6 +355,7 @@ function Editable({
   keepParens,
   example,
   auto,
+  autoTip = AUTO_TIP,
 }: Omit<FieldProps, 'auto'> & { style?: CSSProperties; auto?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null)
   // 이 칸이 마지막으로 저장소에 보낸 값. 쓰는 동안 값이 이것과 다르게 바뀌면 바깥에서 바꾼 것이다(쓰다가 누른 되돌리기)
@@ -378,7 +383,7 @@ function Editable({
   }, [value, numeral, multiline, keepParens])
 
   return (
-    <Tag className={cx(className, 'ed', !value && 'is-empty', optional && 'is-optional', example && 'is-example', auto && 'is-auto')} style={style} title={auto ? AUTO_TIP : undefined}>
+    <Tag className={cx(className, 'ed', !value && 'is-empty', optional && 'is-optional', example && 'is-example', auto && 'is-auto')} style={style} title={auto ? autoTip : undefined}>
       {/* 칸에 두르는 면과 점선. 넓이는 이웃한 칸과의 틈에 맞춘다 (halos.ts) */}
       <span className="ed-halo" aria-hidden="true" />
       <span className="ed-hint" aria-hidden="true">
@@ -614,7 +619,7 @@ export function T({ k, auto, ...props }: TextProps & { k: string; auto?: string 
 }
 
 /** 항목 칸 */
-export function IT({ i, k, ...props }: TextProps & { i: number; k: ItemKey }) {
+export function IT({ i, k, ...props }: TextProps & { i: number; k: ItemKey; auto?: string; autoTip?: string }) {
   const { slide, mode, actions, fieldPrefix = '', folds, labels } = useSlide()
   // 글자 수 단계는 목록에서 가장 긴 항목으로 모두 같이 고른다: 항목마다 고르면 긴 이름만 한 단계 작아져
   // 나란한 항목의 제목 크기가 줄마다 달랐다(핵심 포인트의 세 제목이 44, 44, 52px)

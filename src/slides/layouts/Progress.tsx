@@ -13,9 +13,12 @@ import { Head, useItems } from './parts'
 const STATUS_ORDER: Status[] = ['done', 'doing', 'late', 'todo']
 const LANE_ORDER: Lane[] = [...STATUS_ORDER, 'unknown']
 
+/** 상태 칸을 비워 진행률로 짐작한 상태에 마우스를 올리면 */
+const GUESS_TIP = '진행률로 짐작한 상태예요. 상태를 직접 적으면 적은 대로 보여요.'
+
 /**
  * 진행 현황: 과제마다 진행률 막대와 상태. 위에는 상태별 과제 수를 모아 '지연'이 먼저 눈에 들어오게.
- * 상태 칸을 비우면 발표할 때 진행률로 짐작한 상태(100%는 완료, 0%는 예정)를 보여 준다.
+ * 상태 칸을 비우면 진행률로 짐작한 상태(100%는 완료, 0%는 예정)를 보여 준다(편집할 때는 안내 자리에 옅게).
  * 상태별 모양은 과제를 상태마다 한 단에 모은다(있는 상태만, 완료 → 진행 중 → 지연 → 예정).
  */
 export function Progress() {
@@ -27,9 +30,11 @@ export function Progress() {
     const valueText = demo ? hintFor(slide.layout, slide.hints, 'value', 'value', i) : it.value
     const stateText = demo ? hintFor(slide.layout, slide.hints, 'body', 'body', i) : it.body
     const pct = readPercent(valueText)
-    // 편집할 때 상태 칸이 비어 있으면 색을 짐작하지 않는다. 안내 글과 색이 어긋나 보이지 않게
-    const status = !final && !demo && !it.body.trim() ? null : statusOf(stateText, pct)
-    return { pct, status, lane: laneOf(stateText, pct) }
+    // 상태 칸을 비우면 진행률로 짐작한 상태(100%는 완료, 0%는 예정)를 보인다: 발표할 때는 적은 글처럼, 편집할 때는 안내 자리에 옅게
+    // (fields.tsx의 auto, 계산식의 자동 결과와 같은 모습). 편집할 때는 짐작하지 않고 구성의 안내('진행 중')를 두었더니, 30%에 상태를
+    // 비운 과제가 머리줄의 상태별 수에서 편집할 때만 빠졌고, 0%여도 안내는 '진행 중'이라 발표 모습('예정')과 달랐다
+    const status = statusOf(stateText, pct)
+    return { pct, status, lane: laneOf(stateText, pct), guess: !demo && !it.body.trim() && status ? STATUS_NAMES[status] : undefined }
   })
   const counts = STATUS_ORDER.map((s) => ({ s, n: rows.filter((r) => r.status === s).length })).filter((c) => c.n > 0)
   // 발표할 때 칸을 하나도 채우지 않은 과제(가장 적은 수를 채우려 남긴 빈 칸)는 단에 넣지 않는다: 단을 짐작하면 예정으로 들어가
@@ -38,7 +43,6 @@ export function Progress() {
   const allBlank = blank.length > 0 && blank.every(Boolean)
   const row = (it: (typeof items)[number], i: number) => {
     const r = rows[i]
-    const derived = final && !it.body.trim()
     return (
       <div key={it.id} className={cx('it ps-row', r.status && `is-${r.status}`, noDelayDoing(it.body) && 'has-detail')} style={{ '--p': String(r.pct ?? 0) }}>
         <div className="ps-name">
@@ -50,7 +54,7 @@ export function Progress() {
         </div>
         <IT i={i} k="value" className="ps-pct" oneLine />
         <div className="ps-state">
-          {derived ? r.status && <span className="ps-chip">{STATUS_NAMES[r.status]}</span> : <IT i={i} k="body" as="span" className="ps-chip" oneLine />}
+          <IT i={i} k="body" as="span" className="ps-chip" oneLine auto={r.guess} autoTip={GUESS_TIP} />
         </div>
         <ItemTools i={i} />
       </div>

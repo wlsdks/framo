@@ -40,6 +40,22 @@ describe('진행 현황의 상태와 진행률', () => {
     expect(html).toContain('검토 중')
   })
 
+  it.each([false, true])('상태를 비운 과제는 편집할 때도 진행률로 짐작한 상태를 세고 보인다 (컴포넌트: %s)', (inBlock) => {
+    const items = [
+      { ...emptyItem(), id: 'a', title: '가상의 준비', value: '100%' },
+      { ...emptyItem(), id: 'b', title: '가상의 실행', value: '30%' },
+    ]
+    const slide = inBlock
+      ? { ...makeSlide('compose'), blocks: autoPlace([], { ...makeBlock('progress'), variant: 'base', items })! }
+      : { ...makeSlide('progress'), items }
+    const html = (mode: 'edit' | 'final') => renderToStaticMarkup(createElement(SlideCanvas, { deck: createSampleDeck(), slide, mode }))
+    const sum = (h: string) => /class="ps-sum">(.*?)<\/p>/.exec(h)?.[1]
+    // 편집할 때만 짐작하지 않으면 머리줄의 상태별 수에서 그 과제가 빠져 발표 모습과 달랐다
+    expect(sum(html('edit'))).toBe(sum(html('final')))
+    expect(sum(html('edit'))).toContain('ps-count is-doing')
+    expect(html('edit')).toContain('진행 중')
+  })
+
   it.each(['edit', 'final'] as const)('알 수 없는 상태를 다른 상태로 잘못 분류하지 않는다: %s', (mode) => {
     const html = render('board', mode)
     expect(html).toContain('ps-lane is-unknown')
