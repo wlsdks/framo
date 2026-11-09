@@ -27,7 +27,7 @@ export function Risks() {
               <ArrowMark />
             </span>
             <IT i={i} k="body" className="bk-rk-b" multiline />
-            <ItemTools i={i} />
+            <ItemTools i={i} pair />
           </li>
         ))}
       </ul>

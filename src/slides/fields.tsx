@@ -775,7 +775,7 @@ const barRect = () => document.querySelector('.ed-canvas .bk.is-selected > .bk-h
  * 붙여 둔다: 손이 항목을 떠나면 도구가 숨으므로 항목과 도구 사이를 띄우지 않는다.
  * 그런 곳이 없으면 테두리 안 오른쪽 위 (clear가 거짓)
  */
-function toolsSpot(item: HTMLElement): { right: number; top: number; out: number; clear: boolean } | null {
+function toolsSpot(item: HTMLElement, pair = false): { right: number; top: number; out: number; clear: boolean } | null {
   const cell = item.closest<HTMLElement>('.bk')
   const size = toolsSize(item)
   if (!cell || !size) return null
@@ -796,9 +796,18 @@ function toolsSpot(item: HTMLElement): { right: number; top: number; out: number
   const top = ir.top + pad
   const bottom = Math.max(top, ir.bottom - pad - h)
   const bar = barRect()
-  const lines = [...textLines(item), ...(bar ? [bar] : [])]
+  const words = textLines(item)
+  const lines = [...words, ...(bar ? [bar] : [])]
   const figures = figureRects(item)
   const hits = (list: DOMRect[], x: number, y: number) => list.some((r) => r.left < x + 2 && r.right > x - w - 2 && r.top < y + h + 2 && r.bottom > y - 2)
+  // 두 칸 짝의 줄(pair: 바뀌기의 지금 | 바뀐 뒤 같은)은 같은 줄의 글 사이(왼쪽에도 오른쪽에도 글이 있는 자리)에 서지 않는다: 가장 긴 줄은 두 칸
+  // 사이의 빈 곳에 서서 오른쪽 칸의 첫 글자에 붙었다(그 칸의 도구로 읽히고 첫 글자를 가렸다). 그 줄은 항목 바로 오른쪽 밖으로 간다(아래 near).
+  // 모든 항목에 두면 표처럼 양 끝까지 글이 찬 줄(목표 대비 실적)은 밖에 자리가 없어 도구가 숫자를 덮었다
+  const between = (x: number, y: number) => {
+    if (!pair) return false
+    const band = words.filter((r) => r.top < y + h && r.bottom > y)
+    return band.some((r) => r.right <= x - w + 2) && band.some((r) => r.left >= x - 2)
+  }
   const spot = (x: number, y: number, clear = true) => ({
     right: (ir.right - x) / k,
     top: (y - ir.top) / k,
@@ -811,16 +820,17 @@ function toolsSpot(item: HTMLElement): { right: number; top: number; out: number
     for (let x = right; x - w >= left; x -= 4) {
       if (x > anchor && x - w < frame.right + TOOL_PAD) continue
       const cost = (x > anchor ? x - anchor + 30 : anchor - x) + 3 * (y - top) + (hits(figures, x, y) ? 400 : 0)
-      if (cost < best.cost && !hits(lines, x, y)) best = { x, y, cost }
+      if (cost < best.cost && !hits(lines, x, y) && !between(x, y)) best = { x, y, cost }
     }
   if (Number.isFinite(best.cost)) return spot(best.x, best.y)
   // 상자 안에 자리가 없으면(좁은 단의 예상 질문처럼 첫 줄이 꽉 찬 항목) 항목 바로 오른쪽, 왼쪽, 그다음 바로 위, 아래(오른쪽 끝에 맞춰).
   // 장 안이고 장의 다른 글(이웃 컴포넌트의 글도)과 도구 막대를 덮지 않는 곳에. 장만 넘친 것을 자르고 칸은 자르지 않는다
   const ink = [...textLines(item.closest('.slide') ?? cell), ...(bar ? [bar] : [])]
   const end = Math.min(ir.right, frame.right) - TOOL_PAD
+  // 옆은 항목에서 조금 띄운다: 붙여 두면 항목 끝까지 찬 글(두 칸 짝의 가장 긴 줄)에 닿아 글을 덮는 것으로 보고 아래로 내렸다
   const near = [
-    [ir.right + w, top],
-    [ir.left, top],
+    [ir.right + TOOL_PAD + w, top],
+    [ir.left - TOOL_PAD, top],
     [end, ir.top - h],
     [end, ir.bottom],
   ]
@@ -859,7 +869,8 @@ function itemsAcross(item: HTMLElement): boolean {
  * 자리가 값으로 정해지는 항목(위치 비교의 점)은 순서가 보이지 않아 손잡이를 두지 않는다.
  * keepBlank면 발표할 때 칸이 빈 항목도 감추지 않는다: 단계 표시의 점, 막대 차트의 빈 칸(축)처럼 빈 항목의 자리도 뜻이 있는 부품
  */
-export function ItemTools({ i, sort = true, keepBlank = false }: { i: number; sort?: boolean; keepBlank?: boolean }) {
+/** pair: 한 줄이 두 칸 짝(지금 | 바뀐 뒤)인 항목. 도구를 두 칸 사이가 아니라 줄 끝(오른쪽 칸 밖)에 둔다(toolsSpot) */
+export function ItemTools({ i, sort = true, keepBlank = false, pair = false }: { i: number; sort?: boolean; keepBlank?: boolean; pair?: boolean }) {
   const { mode, actions, canRemoveItem, slide } = useSlide()
   const move = actions?.moveItem
   const grip = mode === 'edit' && sort && !!move && slide.items.length > 1
@@ -879,7 +890,7 @@ export function ItemTools({ i, sort = true, keepBlank = false }: { i: number; so
       // 누르는 순간 ✕가 옆으로 옮겨 가서, 손을 뗄 때는 ✕ 밖이라 눌리지 않았다. 키보드로 들어올 때(손이 항목 밖)만 잰다
       if (e?.type === 'focus' && item.matches(':hover')) return
       // 컴포넌트 안에서는 글을 덮지 않고 테두리 안에 서는 자리로 (toolsSpot)
-      const spot = item.closest('.bk') ? toolsSpot(item) : null
+      const spot = item.closest('.bk') ? toolsSpot(item, pair) : null
       // 가로로 놓인 낮은 항목(차트 아래의 기간 이름 같은)에 그런 자리가 없으면 도구를 항목 밖 가운데로 낸다: 항목이 도구보다
       // 낮으면 안쪽 오른쪽 위의 도구가 글을 덮어 이름을 눌러 고칠 수 없었다(화면 px로 잰다, 도구는 22px).
       // 위에 자리가 있으면 위로, 없으면 아래로, 둘 다 막혔으면 안쪽 그대로 (roomBeside)
@@ -917,7 +928,7 @@ export function ItemTools({ i, sort = true, keepBlank = false }: { i: number; so
       item.removeEventListener('focusout', done)
       tools.forEach((t) => t.removeEventListener('focus', look))
     }
-  }, [grip, canRemoveItem])
+  }, [grip, canRemoveItem, pair])
   // 발표할 때는 도구 대신, 칸을 하나도 채우지 않은 항목에 표시를 둔다. 그런 항목은 가장 적은 항목 수를 채우려고 남긴 자리라
   // (deck/fields.ts의 presentable) 빈 칸이 다 빠지고 번호, 글머리, 점, 꺾쇠 같은 표시만 덩그러니 남았다.
   // 표시가 든 항목은 자리만 남기고 감춘다(styles/base.css의 .it-empty)
