@@ -151,6 +151,23 @@
   }
 }
 
+/* 판을 혼자 쓰는 넓고 높은 칸(전과 후와 같은 1200px, 660px 넘게): 숫자를 칸 너비를 따라 키운다. 숫자들과 기호가 칸의 90%를 쓰는
+   크기(키운 단계까지 184px). 보통 크기(74px를 키운 106px)로 두면 셋짜리 식이 왼쪽 64%에 서고 오른쪽과 아래가 통째로 비었다
+   (감성 검수). 넷짜리 식은 그 크기로 이미 84%를 써서 거의 그대로다. 기호 칸도 숫자를 따라 넓힌다(키운 숫자 크기의 0.6배): 84px에
+   큰 숫자의 기호를 두면 기호가 앞뒤 단위에 붙었다 */
+@container bk (min-width: 1200px) and (min-height: 660px) {
+  .bk-ca {
+    --ca-v: 128px;
+  }
+
+  @container not style(--ca-stack: 1) {
+    .bk-ca-row {
+      --ca-opw: max(84px, var(--ca-vs) * 0.6);
+      --ca-fit: min(var(--ca-vs), (90cqi - (var(--ca-n) - 1) * var(--ca-opw)) / (var(--ca-sum, 8) * var(--glyph-k, 1)));
+    }
+  }
+}
+
 /* ---------- 쌓은 꼴 ---------- */
 .bk-ca[data-need='stack'] {
   --ca-stack: 1;
