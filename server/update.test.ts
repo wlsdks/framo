@@ -8,7 +8,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { UpdateStatus } from '../src/update/protocol'
-import { allowedHop, compareVersions, createUpdater, MAX_ASSET_BYTES, parseRelease, REPOS, type Getter } from './update'
+import { allowedHop, createUpdater, MAX_ASSET_BYTES, parseRelease, REPOS, type Getter } from './update'
+import { compareVersions } from './versions'
 import { createUpdateHandler, type UpdateSetup } from './updateRoutes'
 
 const ZIP = Buffer.from('지어낸 배포본 내용 '.repeat(200))

@@ -250,7 +250,7 @@ export const ALLOW = {
   },
   /** 소스로는 아무도 가져가지 않지만 바깥에서 쓰는 내보내기 */
   exports: {
-    'server/serve.ts#main': 'Framo.exe(launch/framo-exe.cjs)가 빌드한 dist-node/serve.mjs를 불러 부른다',
+    'server/launch.ts#main': 'Framo.exe(launch/framo-exe.cjs)가 빌드한 dist-node/launch.mjs를 불러 부른다',
     'server/serve.ts#CSP_META': 'scripts/pack.mjs가 빌드한 dist-node/serve.mjs에서 읽어 index.html의 CSP와 견준다',
   },
   /** package.json에 없어도 되는 패키지 */

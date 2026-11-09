@@ -14,7 +14,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { join } from 'node:path'
 import { UPDATE_PREFIX, type DownloadState, type UpdateCheck, type UpdateStatus } from '../src/update/protocol'
 import { fromApp } from './guard'
-import { assetName, compareVersions, createUpdater, type Getter, type Release } from './update'
+import { assetName, createUpdater, type Getter, type Release } from './update'
+import { compareVersions } from './versions'
 
 /** 앱 폴더 안에 받은 파일을 두는 폴더. 쓰는 사람이 보는 이름이라 한국어다 */
 export const UPDATE_DIR_NAME = '새 버전'

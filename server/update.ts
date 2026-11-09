@@ -66,18 +66,6 @@ export function assetName(platform: NodeJS.Platform): string | null {
   return null
 }
 
-/** 'X.Y.Z'를 견준다. a가 새것이면 양수. 꼴이 틀리면 NaN이라 어느 비교도 참이 아니다(새 버전으로 보지 않는다) */
-export function compareVersions(a: string, b: string): number {
-  const pa = /^(\d+)\.(\d+)\.(\d+)$/.exec(a)
-  const pb = /^(\d+)\.(\d+)\.(\d+)$/.exec(b)
-  if (!pa || !pb) return NaN
-  for (let i = 1; i <= 3; i++) {
-    const d = Number(pa[i]) - Number(pb[i])
-    if (d) return Math.sign(d)
-  }
-  return 0
-}
-
 interface Asset {
   /** 받을 첫 주소. https://github.com/<REPOS의 저장소>/releases/download/<태그>/<이름> 그대로인 것만 */
   url: string
