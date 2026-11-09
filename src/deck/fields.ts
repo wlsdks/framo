@@ -96,11 +96,21 @@ function hiddenField(slide: Slide, key: string): boolean {
   return (slide.options.hideHead === true && (key === 'title' || key === 'lead')) || (slide.options.hideFoot === true && key === 'source')
 }
 
+/**
+ * 비워 둬도 되는 칸인지. 컴포넌트 장의 제목은 비워 둬도 되지만(컴포넌트가 제 소제목을 갖는 장도 있다), 프레임 잡기가 그 장의 말을 제목 안내로
+ * 정해 준 장(원인, 바뀌는 모습, 기대 효과 …)은 레이아웃 장처럼 채울 칸이다. 비워 둬도 되는 칸으로 두던 때는 컴포넌트만 채우면
+ * '꼭 채울 칸은 모두 채웠어요'가 떴는데, 편집 화면에 흐리게 보이던 제목 안내가 발표에서는 사라져 장의 결론 한 줄이 없었다
+ */
+function optionalHere(slide: Slide, f: { key: string; optional?: boolean }): boolean {
+  if (slide.layout === 'compose' && f.key === 'title' && slide.hints?.title?.trim()) return false
+  return !!f.optional
+}
+
 export function missingFields(slide: Slide, meta: DeckMeta): Missing[] {
   const spec = LAYOUTS[slide.layout]
   const out: Missing[] = []
   for (const f of spec.fields) {
-    if (f.optional || hiddenField(slide, f.key)) continue
+    if (optionalHere(slide, f) || hiddenField(slide, f.key)) continue
     if (!readField(slide, meta, f.key).trim()) out.push({ key: f.key, label: f.label })
   }
   if (slide.layout === 'compose') {
@@ -128,7 +138,7 @@ export function missingFields(slide: Slide, meta: DeckMeta): Missing[] {
  */
 export function optionalBlanks(slide: Slide, meta: DeckMeta): Missing[] {
   return LAYOUTS[slide.layout].fields
-    .filter((f) => f.optional && !f.named && !hiddenField(slide, f.key) && !readField(slide, meta, f.key).trim())
+    .filter((f) => optionalHere(slide, f) && !f.named && !hiddenField(slide, f.key) && !readField(slide, meta, f.key).trim())
     .filter((f) => !(slide.layout === 'cover' && f.key === 'ask' && !asksDecision(meta.type)))
     .map((f) => ({ key: f.key, label: f.label }))
 }
