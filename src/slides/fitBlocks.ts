@@ -1475,12 +1475,22 @@ export function blockFitter() {
     }
     if (new Set(vals.map((v) => v.c)).size < 2) return
     const size = (el: HTMLElement) => parseFloat(getComputedStyle(el).fontSize)
-    const base = vals.map((v) => ({ fs: parseFloat(getComputedStyle(v.el).getPropertyValue('--fs')), now: size(v.el) }))
-    if (base.some((b) => !(b.fs > 0) || !(b.now > 0))) return
+    // 글자 크기는 --fs에 칸의 배율을 곱한 값이지만, 한 줄 맞추기(.one-line)는 칸 너비로 그 값을 자른다. 잘린 크기로 배율을 재면
+    // 맞출 크기를 --fs로 되돌릴 때 너무 크게 적어서, 좁은 칸의 큰 숫자는 잘린 크기(86)에 그대로 남고 옆 숫자 한 줄만 72로 줄었다
+    // (두 숫자의 크기가 달랐다). 배율은 너비 한도를 잠시 걷고 잰다
+    const base = vals.map((v) => {
+      const fs = parseFloat(getComputedStyle(v.el).getPropertyValue('--fs'))
+      const now = size(v.el)
+      v.el.style.setProperty('--line-room', '100000px')
+      const free = size(v.el)
+      v.el.style.removeProperty('--line-room')
+      return { fs, now, k: free / fs }
+    })
+    if (base.some((b) => !(b.fs > 0) || !(b.now > 0) || !(b.k > 0))) return
     const top = Math.max(...base.map((b) => b.now))
     const low = Math.min(...base.map((b) => b.now))
     const set = (px: number) => {
-      vals.forEach((v, i) => v.el.style.setProperty('--fs', (base[i].fs * px) / base[i].now + 'px'))
+      vals.forEach((v, i) => v.el.style.setProperty('--fs', px / base[i].k + 'px'))
       for (const v of vals) place(v.inner)
     }
     const tries = Array.from(new Set(base.flatMap((b) => [-2, -1, 0, 1, 2, 3].map((n) => Math.round(b.now * Math.pow(1.2, n))))))
@@ -1489,9 +1499,9 @@ export function blockFitter() {
     const inners = Array.from(new Set(vals.map((v) => v.inner)))
     for (const px of tries) {
       set(px)
-      // 한 줄 맞추기가 너비로 줄인 칸이 있으면 그 크기가 한도다
-      const got = Math.min(...vals.map((v) => size(v.el)))
-      if (got < px - 1) continue
+      // 한 줄 맞추기가 너비로 줄인 칸이 있으면 그 크기가 한도다(모두 그 크기가 되지 않으면 다음 크기로)
+      const got = vals.map((v) => size(v.el))
+      if (Math.min(...got) < px - 1 || Math.max(...got) > px + 1) continue
       if (!inners.some((inner) => crowded(inner))) return
     }
     set(low)
