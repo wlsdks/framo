@@ -1,5 +1,5 @@
-import { BLOCKS, MAX_BLOCKS, MAX_LARGE, type NoRoom, type SpanLimit } from '../../deck/blocks'
-import type { BlockType } from '../../deck/types'
+import { BLOCKS, BOARD_COLS, MAX_BLOCKS, MAX_LARGE, type NoRoom, type SpanLimit } from '../../deck/blocks'
+import type { Block, BlockType } from '../../deck/types'
 import { josa } from '../../lib/josa'
 
 // 부품을 넣을 수 없는 까닭(deck/blocks.ts의 NoRoom)을 쓰는 사람이 읽는 말로.
@@ -20,6 +20,16 @@ export function narrowText(limit: SpanLimit): string {
   return limit.minSpan
     ? `${name} ${needWidth(limit.minSpan)} 해서 더 좁힐 수 없어요.`
     : `${name} 더 낮으면 글이 잘려서 더 줄일 수 없어요.`
+}
+
+/**
+ * 컴포넌트 테두리의 옆 끝을 끌었는데 그쪽이 슬라이드 끝이라 넓힐 수 없을 때 (BlockEditor의 widenAt).
+ * 혼자 슬라이드 너비를 다 쓰면 더 넓어질 데가 없고 긴 글은 칸 안에서 줄이 바뀐다는 것을, 옆에 컴포넌트가 있으면 그쪽 끝을 끌면 된다는 것을
+ */
+export function edgeText(b: Block): string {
+  return (b.at?.w ?? BOARD_COLS) >= BOARD_COLS
+    ? `‘${BLOCKS[b.type].name}’ 컴포넌트는 이미 슬라이드 너비를 다 써서 더 넓힐 수 없어요. 긴 글은 칸 안에서 줄이 바뀌어요.`
+    : '이쪽은 슬라이드 끝이라 더 넓힐 수 없어요. 옆 컴포넌트 쪽 끝을 끌면 너비가 바뀌어요.'
 }
 
 export interface NoRoomText {
