@@ -1,4 +1,5 @@
 import { execFileSync, spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { constants, copyFileSync } from 'node:fs'
 import { linkSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, parse, resolve } from 'node:path'
@@ -13,7 +14,9 @@ import { TEXT_STATES, toShape } from '../src/ai/share'
 import { autoPlace, insertAt, makeBlock } from '../src/deck/blocks'
 import { makeSlide } from '../src/deck/generate'
 import { createSampleDeck } from '../src/deck/sample'
-import { sandboxArgs, sandboxTight } from './server'
+import { newerMcp, sandboxArgs, sandboxTight } from './server'
+import { nodeIn, requiredFiles } from '../server/versions'
+import { markReady } from '../server/zipFixture'
 
 // 빌드한 MCP 서버를 실제로 띄워서 Claude Code처럼 이야기해 본다.
 const repo = join(import.meta.dirname, '..')
@@ -477,4 +480,71 @@ describe('MCP 서버를 가두는 권한', () => {
       expect(res.stderr).not.toContain(realShare)
     }
   })
+})
+
+describe('새 버전을 받아 둔 앱의 MCP 서버', () => {
+  /** 앱 폴더와 그 안에 다 풀어 둔 새 버전 하나. 새 버전의 MCP 서버 자리에 대역(newer)을 둔다 */
+  function appWith(version: string, newer: string) {
+    const app = mkdtempSync(join(tmpdir(), 'gyeol-mcp-app-'))
+    const dir = join(app, 'versions', version)
+    for (const f of requiredFiles(process.platform, process.arch)) {
+      mkdirSync(join(dir, ...f.split('/').slice(0, -1)), { recursive: true })
+      writeFileSync(join(dir, ...f.split('/')), '')
+    }
+    writeFileSync(join(dir, 'dist-node', 'gyeol-mcp.mjs'), newer)
+    markReady(dir, version)
+    return { app, dir }
+  }
+
+  it('가장 새 버전에 맡기고, 자기보다 새것이 없으면 맡기지 않는다', () => {
+    if (!nodeIn('', process.platform, process.arch)) return
+    const { app, dir } = appWith('9.9.9', '')
+    const here = join(app, 'dist-node')
+    expect(newerMcp(here, '0.8.0', process.platform, process.arch)).toEqual({ node: nodeIn(dir, process.platform, process.arch), entry: join(dir, 'dist-node', 'gyeol-mcp.mjs') })
+    // 맡은 9.9.9가 다시 고르면 자기보다 새것이 없다
+    expect(newerMcp(join(dir, 'dist-node'), '9.9.9', process.platform, process.arch)).toBeNull()
+  })
+
+  it('새 버전의 node를 띄우지 못하면(백신) 정해진 말만 남기고 이 버전이 권한 모델 안에서 켠다', async () => {
+    if (!nodeIn('', process.platform, process.arch)) return
+    // 새 버전의 node 자리에 실행할 수 없는 파일(글)이 있다
+    const { app } = appWith('9.9.9', '')
+    mkdirSync(join(app, 'dist-node'))
+    for (const f of readdirSync(built)) copyFileSync(join(built, f), join(app, 'dist-node', f))
+    const mcp = spawn(process.execPath, [join(app, 'dist-node', 'gyeol-mcp.mjs')], { env: { ...process.env, GYEOL_SHARE: '' } })
+    let err = ''
+    mcp.stderr.on('data', (d) => (err += d))
+    const line = new Promise<string>((resolve) => createInterface({ input: mcp.stdout }).once('line', resolve))
+    mcp.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } } }) + '\n')
+    // 답이 없으면 60초를 기다리지 않고 MCP 서버가 남긴 말과 함께 실패한다(윈도우에서만 멈춘 까닭을 CI 기록으로 보려고)
+    let code: number | null | undefined
+    mcp.once('exit', (c) => (code = c))
+    const got = await Promise.race([line, new Promise<null>((r) => setTimeout(() => r(null), 30000))])
+    mcp.kill()
+    if (got === null) throw new Error(`답이 없었어요(끝 코드 ${code}). stderr: ${err}`)
+    const reply = JSON.parse(got)
+    expect(reply.result.serverInfo.name).toBe('gyeol')
+    expect(err).toContain('새 버전의 AI 연결을 켜지 못해서')
+    // 경로나 오류 글은 내보내지 않는다
+    expect(err).not.toContain(app)
+    expect(err).not.toMatch(/Error|spawn|EACCES|ENOENT/)
+  }, 60000)
+
+  it('등록한 앱 폴더의 MCP 서버를 띄우면 새 버전의 node로 새 버전의 MCP 서버를 띄운다(권한 인자는 새 버전이 스스로 붙인다)', async () => {
+    if (!nodeIn('', process.platform, process.arch)) return
+    // 새 버전 대역: 받은 것을 그대로 돌려준다
+    const { app, dir } = appWith(
+      '9.9.9',
+      `process.stdout.write(JSON.stringify({ share: process.env.GYEOL_SHARE, argv: process.execArgv, newer: process.env.FRAMO_MCP_NEWER, exec: process.execPath }) + '\\n')`,
+    )
+    const node = nodeIn(dir, process.platform, process.arch)!
+    copyFileSync(process.execPath, node, constants.COPYFILE_FICLONE)
+    // 진짜 node로 바꿨으니 풀린 파일 목록(크기)도 다시 적는다
+    markReady(dir, '9.9.9')
+    mkdirSync(join(app, 'dist-node'))
+    for (const f of readdirSync(built)) copyFileSync(join(built, f), join(app, 'dist-node', f))
+    const out = spawnSync(process.execPath, [join(app, 'dist-node', 'gyeol-mcp.mjs')], { encoding: 'utf8', env: { ...process.env, GYEOL_SHARE: undefined } })
+    const got = JSON.parse(out.stdout.trim())
+    expect(got).toEqual({ share: join(realpathSync(app), 'AI 공유'), argv: [], newer: '1', exec: realpathSync(node) })
+  }, 60000)
 })

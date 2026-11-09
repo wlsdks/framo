@@ -14,7 +14,7 @@ import { useDeck } from '../store/deckStore'
 import { listDecks } from '../store/library'
 import { importDeck, persistNow, removeDeck, syncWithFolder, useStorage } from '../store/persist'
 import { Brand, FOLDER_TIP, FOLDER_WHY, FolderIcon, Info, Modal, MoreIcon, noticeAfterGo, PlusIcon, Popover, SAVE_HELP, UploadIcon, useToast } from './ui'
-import { UpdateNote } from './UpdateNote'
+import { UpdateNotice, UpdateVersion, useUpdate } from './UpdateNote'
 
 const SAMPLE_ID = 'sample'
 
@@ -40,6 +40,7 @@ export function Home() {
   const [toDelete, setToDelete] = useState<Deck | null>(null)
   const folder = useStorage((s) => s.folder)
   const toast = useToast()
+  const update = useUpdate(toast)
 
   const refresh = () => listDecks().then(setDecks)
   useEffect(() => {
@@ -125,12 +126,16 @@ export function Home() {
       <header className="home-top">
         <div className="home-brand">
           <Brand />
-          <UpdateNote />
+          <UpdateVersion u={update} />
         </div>
-        <button type="button" className="btn btn-ghost" onClick={openFile}>
-          <UploadIcon />
-          파일 열기
-        </button>
+        {/* 새 버전 알림은 오른쪽에: 처음 쓰는 분이 늘 보는 '파일 열기' 옆에서 한 줄로 */}
+        <div className="home-top-end">
+          <UpdateNotice u={update} />
+          <button type="button" className="btn btn-ghost" onClick={openFile}>
+            <UploadIcon />
+            파일 열기
+          </button>
+        </div>
       </header>
 
       <main className="home-main">

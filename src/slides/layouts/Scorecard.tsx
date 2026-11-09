@@ -52,9 +52,13 @@ export function Scorecard() {
           // 음수 실적은 이 막대의 0~목표 축으로 표현할 수 없어 원문만 남긴다. 낮을수록 좋은 지표('7분 이하')는 목표 ÷ 실적
           const { known, met, rate, target, actual } = scoreOf(meta, value)
           const percent = rate === null ? null : rate * 100
-          // 목표와 실적 중 큰 쪽이 막대 끝. 목표를 넘으면 목표 줄이 막대 안으로 들어간다.
-          const scale = Math.max(target, actual) || 1
-          const bar = { '--a': known ? ((actual / scale) * 100).toFixed(2) : '0', '--t': known ? ((target / scale) * 100).toFixed(2) : '0' }
+          // 막대는 값이 아니라 달성률을 그린다: 목표 줄이 100%, 달성률과 100% 중 큰 쪽이 막대 끝(넘으면 목표 줄이 막대 안으로 들어간다).
+          // 값으로 그리면 낮을수록 좋은 지표('6.5주 이하'에 6주, 108%)의 막대가 목표 줄 앞에서 끝나 못 미친 줄(90%)과 똑같이 읽혔다.
+          // 높을수록 좋은 지표는 달성률이 실적 ÷ 목표라 값으로 그린 것과 같다. 실적 0으로 낮을수록 좋은 목표를 이뤘으면(달성률을 셀 수 없다)
+          // 목표 줄까지, 셈이 넘친 큰 달성률은 100배에서 멈춘다
+          const r = known ? Math.min(rate ?? (met ? 1 : 0), 100) : 0
+          const scale = Math.max(r, 1)
+          const bar = { '--a': ((r / scale) * 100).toFixed(2), '--t': known ? ((1 / scale) * 100).toFixed(2) : '0' }
           return (
             <div key={it.id} className={cx('it sk-row', highlight === i && 'is-hl', known && (met ? 'is-met' : 'is-miss'), demo && 'is-demo')}>
               <div className="sk-name">

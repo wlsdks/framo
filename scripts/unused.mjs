@@ -239,19 +239,22 @@ export const ALLOW = {
   /** 손으로 돌리는 스크립트(package.json, 워크플로, 훅이 부르지 않는다) */
   manualRoots: {
     'scripts/icon.mjs': 'Framo.exe의 아이콘(launch/framo.ico)을 홍보 페이지의 표시로 다시 만들 때 손으로 돌린다',
+    'scripts/fake-release.mjs': '자동 업데이트 시험(scripts/ci-update.mjs)이 node --import로 서버에 끼우는 가짜 GitHub 릴리스. 가져오지 않고 경로로 넘긴다',
   },
   /** 시험만 쓰는 도우미 파일 */
   testHelpers: {
     'src/ai/secretDeck.ts': '비밀 심기 시험의 발표. share.test.ts와 mcp/server.test.ts가 같이 쓴다',
     'src/export/zipReader.ts': '내보낸 zip과 pptx를 다시 열어 보는 시험용 읽기',
+    'server/zipFixture.ts': '새 버전 풀기 시험의 나쁜 zip과 지어낸 배포본 zip. unzip, install, update 시험이 같이 쓴다',
     'src/slides/cssSource.ts': 'CSS를 @import까지 풀어 읽는 시험용 도구',
     'scripts/unused.mjs': '이 검사. unused.test.ts가 돌린다',
     'scripts/readSource.mjs': '이 검사의 소스 읽기. unused.mjs와 시험이 쓴다',
   },
   /** 소스로는 아무도 가져가지 않지만 바깥에서 쓰는 내보내기 */
   exports: {
-    'server/serve.ts#main': 'Framo.exe(launch/framo-exe.cjs)가 빌드한 dist-node/serve.mjs를 불러 부른다',
+    'server/launch.ts#main': 'Framo.exe(launch/framo-exe.cjs)가 빌드한 dist-node/launch.mjs를 불러 부른다',
     'server/serve.ts#CSP_META': 'scripts/pack.mjs가 빌드한 dist-node/serve.mjs에서 읽어 index.html의 CSP와 견준다',
+    'server/serve.ts#PACKAGE_TOP': 'scripts/pack.mjs가 빌드한 dist-node/serve.mjs에서 읽어 배포본 맨 위의 이름과 견준다',
   },
   /** package.json에 없어도 되는 패키지 */
   undeclared: {

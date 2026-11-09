@@ -158,6 +158,23 @@
   line-height: 1;
 }
 
+/* 아직 틀의 예시 글인 컴포넌트: 내용 바로 아래 왼쪽에(번호 옆에 두면 첫 줄 글을 가렸다). 무대의 글은 발표 모습 그대로 둔다(MotionStudio.tsx의 exampled) */
+.ms-mark-ex {
+  position: absolute;
+  top: calc(100% + 10px / var(--vs, 1));
+  left: 0;
+  height: calc(20px / var(--vs, 1));
+  padding: 0 calc(8px / var(--vs, 1));
+  border-radius: calc(var(--r-sm) / var(--vs, 1));
+  background: var(--panel);
+  box-shadow: 0 0 0 calc(1px / var(--vs, 1)) var(--line);
+  color: var(--ink-2);
+  font-size: calc(11.5px / var(--vs, 1));
+  font-weight: 600;
+  line-height: calc(20px / var(--vs, 1));
+  white-space: nowrap;
+}
+
 .ms-mark.is-on .ms-mark-n {
   background: var(--sel);
 }

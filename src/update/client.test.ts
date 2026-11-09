@@ -7,7 +7,7 @@ function stubFetch() {
   const calls: { url: string; method: string }[] = []
   vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
     calls.push({ url, method: init.method ?? 'GET' })
-    return new Response(JSON.stringify({ current: '0.4.2', check: { state: 'unknown' }, download: { state: 'idle' } }), { status: 200 })
+    return new Response(JSON.stringify({ current: '0.4.2', boot: 'b1', auto: false, check: { state: 'unknown' }, download: { state: 'idle' } }), { status: 200 })
   })
   return calls
 }

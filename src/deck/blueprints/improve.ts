@@ -26,7 +26,7 @@ export const improve: Blueprint = {
       priority: 1,
       section: '문제',
       guide: '겪는 사람이 "맞아"라고 할 만큼 구체적으로 적어요.',
-      hints: { title: '지금 가장 큰 문제를 한 문장으로', lead: '누가, 얼마나 자주 겪는지' },
+      hints: { title: '지금 가장 큰 문제를 한 문장으로 (예: 팀마다 구매 요청 양식이 달라 매번 다시 맞춰요)', lead: '누가, 얼마나 자주 겪는지 (예: 구매 담당 다섯 명이 하루 열 건 넘게 겪어요)' },
     },
     {
       layout: 'bars',

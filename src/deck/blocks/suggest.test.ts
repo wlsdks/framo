@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeSlide } from '../generate'
 import { BLOCK_EFFECT_IDS, BLOCKS, effectChoices } from './catalog'
-import { findBlocks, suggestBlocks } from './suggest'
+import { findBlocks, findCines, suggestBlocks, suggestCine } from './suggest'
 import type { Block, Slide } from '../types'
 
 const slideWith = (title: string, lead = '', blocks?: Block[]): Slide => {
@@ -60,6 +60,31 @@ describe('이 슬라이드에 어울리는 것', () => {
 
   it('차트만 든 장에는 결론 한 줄을 먼저 권한다', () => {
     expect(suggestBlocks(slideWith('', '', [block('bars')]))[0]).toBe('message')
+  })
+})
+
+describe('모션 그래픽 틀 찾기와 어울리는 틀', () => {
+  it('모션 그래픽이나 영화로 찾으면 틀 여섯이, 틀 이름이나 어울리는 장으로 찾으면 그 틀이 나온다', () => {
+    expect(findCines('모션 그래픽')).toHaveLength(6)
+    expect(findCines('영화')).toHaveLength(6)
+    expect(findCines('갈림길')).toEqual(['fork'])
+    expect(findCines('누적')).toEqual(['fill'])
+    expect(findCines('')).toEqual([])
+    expect(findCines('막대')).toEqual([])
+  })
+
+  it('장의 글에 맞는 틀: 고른 안은 갈림길, 바뀐 값은 그어지는 선, 쌓아 온 것은 차오름', () => {
+    expect(suggestCine(slideWith('세 안 가운데 B안을 골랐어요'))).toBe('fork')
+    expect(suggestCine(slideWith('적응 기간', '10주에서 6주로 줄었어요'))).toBe('stroke')
+    expect(suggestCine(slideWith('세 해 동안 모은 제안 2,400건'))).toBe('fill')
+    expect(suggestCine(slideWith('전사로 확산됐어요'))).toBe('diffuse')
+  })
+
+  it('글이 없으면 짜임으로: 큰 숫자 장은 확산, 맞는 것이 없거나 이미 모션 그래픽이 있으면 없다', () => {
+    expect(suggestCine(makeSlide('kpi'))).toBe('diffuse')
+    expect(suggestCine(slideWith('', '', [block('delta')]))).toBe('stroke')
+    expect(suggestCine(slideWith(''))).toBeNull()
+    expect(suggestCine(slideWith('세 안 가운데 B안을 골랐어요', '', [block('cine')]))).toBeNull()
   })
 })
 

@@ -27,7 +27,7 @@ export const deal: Blueprint = {
       priority: 1,
       section: '사업 기회',
       guide: '고객이 지금 하려는 일을 한 문장으로 적어요.',
-      hints: { title: '고객이 지금 하려는 일을 한 문장으로 (예: 한빛제조가 품질 관리 시스템 교체를 검토 중)', lead: '언제, 누가 결정하는지' },
+      hints: { title: '고객이 지금 하려는 일을 한 문장으로 (예: 한빛제조가 품질 관리 시스템 교체를 검토 중)', lead: '언제, 누가 결정하는지 (예: 12월에 생산본부장이 정해요)' },
     },
     {
       layout: 'kpi',
@@ -102,9 +102,20 @@ export const deal: Blueprint = {
       focus: 'detail',
       section: '제안 전략',
       guide: '고객에게 보여 줄 화면이나 구성도를 넣어요.',
-      hints: { title: '고객에게 보여줄 화면', body: '이 화면으로 고객이 무엇을 할 수 있는지' },
+      hints: { title: '고객에게 보여줄 화면', body: '이 화면으로 고객이 무엇을 할 수 있는지 (예: 라인마다 불량률을 한눈에 봐요)' },
     },
-    { layout: 'case', purpose: '비슷한 수주 사례', priority: 3, section: '제안 전략', guide: '비슷한 고객에게 수주한 사례가 있으면 넣어요.' },
+    {
+      layout: 'case',
+      purpose: '비슷한 수주 사례',
+      priority: 3,
+      section: '제안 전략',
+      guide: '비슷한 고객에게 수주한 사례가 있으면 넣어요.',
+      hints: {
+        client: '고객사 이름 (예: 대성정밀)',
+        title: '얻은 결과를 한 문장으로 (예: 검사 기록을 한곳에 모아 검사 시간을 40% 줄였어요)',
+        body: '어떤 과제를 어떻게 해결했는지 (예: 종이 검사표를 태블릿 입력으로 바꾸고 석 달 만에 모든 라인에 넣었어요)',
+      },
+    },
     section('실행 계획', '수주까지 무엇을 할지'),
     {
       layout: 'timeline',

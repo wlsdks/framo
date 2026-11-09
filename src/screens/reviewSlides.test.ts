@@ -55,6 +55,8 @@ describe('대표 조합', () => {
       'list-ring-very-long': ['bullets', 'ring'],
       ...Object.fromEntries(['base', 'gauge'].flatMap((variant) => [[`ring-range-${variant}`, ['ring', 'note']], [`ring-unit-${variant}`, ['ring', 'note']]])),
       'market-long': ['market', 'text'],
+      'wipe-long': ['wipe'],
+      'wipe-short': ['wipe'],
       'funnel-stat': ['funnel', 'stat', 'text'],
       'chart-summary': ['diverge', 'summary'],
       'goal-stack': ['ring', 'stat', 'goal', 'stack'],

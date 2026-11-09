@@ -83,7 +83,7 @@ export function SaveStatus({ deck, onOpenVersions }: { deck: Deck; onOpenVersion
     setAsking(false)
   }
   // 바깥을 누르면 접기만 한다 (머리줄의 '보관 폴더 고르기'는 남는다). 다른 일을 하다 무심코 누른 것일 수 있어 답으로 치지 않는다.
-  // 누를 때까지 떠 있으면 장 목록의 첫 장을 가렸다
+  // 누를 때까지 떠 있으면 오른쪽 칸 아래를 가린다(장 목록과 슬라이드는 가리지 않게 화면 오른쪽 아래에 뜬다, editor.css의 .save-ask)
   const askRef = useRef<HTMLDivElement>(null)
   // 글 칸에서 누른 Esc는 쓰기를 마치는 키라서 답으로 치지 않는다
   useEscape(answer, { active: asking, typing: false })

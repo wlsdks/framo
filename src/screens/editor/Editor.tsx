@@ -32,6 +32,7 @@ import { MotionPanel } from './MotionPanel'
 import { MotionStudio } from './studio/MotionStudio'
 import { OPEN_STUDIO } from './cineEdit'
 import { CheckDialog, PresentDialogs, usePresentLaunch } from './presentLaunch'
+import { UpdateBadge } from '../UpdateNote'
 import { SaveStatus } from './SaveStatus'
 import { pressShortcut, SHORTCUT, useEditorShortcuts } from './shortcuts'
 import { ShortcutHelp } from './ShortcutHelp'
@@ -321,6 +322,8 @@ function EditorBody({ deck }: { deck: Deck }) {
         </div>
 
         <div className="ed-top-r">
+          {/* 새 버전: 할 일이 있을 때만(업데이트, 받는 중, 다시 시작). 다시 시작하면 고친 것을 바로 저장하고 새로 연다 */}
+          <UpdateBadge toast={toast} beforeReload={saveNow} />
           <button type="button" className="icon-btn" aria-label="되돌리기" title={`되돌리기 (${keys('mod+Z')})`} disabled={!canUndo} onClick={store.undo}>
             <UndoIcon />
           </button>

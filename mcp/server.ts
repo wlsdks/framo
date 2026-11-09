@@ -10,7 +10,7 @@
 //
 // 바꾸는 것은 제안(requests)으로만 남기고, 사람이 앱에서 보고 적용하거나 거절한다.
 
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, realpathSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, parse, resolve } from 'node:path'
@@ -46,6 +46,7 @@ import { LAYOUT_ORDER } from '../src/deck/layouts'
 import { SCENE_IDS } from '../src/deck/scenes'
 import { FONTS, FOOTERS, MOTIONS, PLACES, TEXT_SIZES, THEME_ORDER, TONES, TRANSITIONS } from '../src/deck/themes'
 import { readJson, realDir } from '../server/shareFiles'
+import { appHome, nodeIn, readyVersions } from '../server/versions'
 
 // 판 번호는 package.json에서 빌드할 때 넣는다. 예전에는 따로 적어 두어 0.1.0에 멈춰 있었다
 const VERSION = version
@@ -617,10 +618,26 @@ export function sandboxTight(
   return execArgv.every((a) => !a.startsWith('--allow-') || own.has(a)) && !nodeOptions.includes('--allow-')
 }
 
-/** 권한 모델 밖에서 시작했으면, 'AI 공유' 폴더와 이 서버 코드만 읽을 수 있게 스스로를 다시 띄운다. */
+/** 앱 폴더의 MCP 서버가 새 버전의 MCP 서버에 맡겼다는 표시 */
+const NEWER_ENV = 'FRAMO_MCP_NEWER'
+
+/**
+ * 이 파일보다 새 MCP 서버. Claude Code, Codex에는 앱 폴더의 이 파일을 등록하므로(로컬 서버가 알려 주는 경로),
+ * 새 버전을 받아 풀어 두었으면 그 가운데 가장 새것에 맡긴다: 등록을 다시 하지 않아도 앱과 같은 새 규칙(카탈로그, 모양)을 쓴다.
+ * 고르는 규칙은 시작 프로그램과 같다(server/versions.ts: 다 풀고 확인을 마쳤고, 켜지지 않았던 것이 아닌 버전).
+ * 이 파일의 버전보다 새것만 고르므로, 맡긴 쪽이 다시 자기에게 맡기지 않는다. 없으면 null
+ */
+export function newerMcp(here: string, own: string, platform: NodeJS.Platform, arch: string): { node: string; entry: string } | null {
+  const newest = readyVersions(appHome(join(here, '..')), own, platform, arch)[0]
+  const node = newest && nodeIn(newest.dir, platform, arch)
+  return newest && node ? { node, entry: join(newest.dir, 'dist-node', 'gyeol-mcp.mjs') } : null
+}
+
+/** 권한 모델 밖에서 시작했으면, 'AI 공유' 폴더와 이 서버 코드만 읽을 수 있게 스스로를(새 버전이 있으면 그 버전을) 다시 띄운다. */
 function launch() {
   const here = dirname(fileURLToPath(import.meta.url))
-  const share = process.env.GYEOL_SHARE || join(here, '..', SHARE_DIR_NAME)
+  // 'AI 공유'는 앱 폴더의 것 하나다. 새 버전 폴더(versions/X.Y.Z) 안에서 돌아도 앱 폴더의 것을 쓴다
+  const share = process.env.GYEOL_SHARE || join(appHome(join(here, '..')), SHARE_DIR_NAME)
   const permission = (process as { permission?: NodeJS.ProcessPermission }).permission
 
   if (permission) {
@@ -631,12 +648,50 @@ function launch() {
   }
 
   for (const d of SHARE_SUBDIRS) mkdirSync(join(share, d), { recursive: true })
-  const child = spawn(process.execPath, sandboxArgs(share, here, fileURLToPath(import.meta.url)), {
-    stdio: 'inherit',
-    env: { ...process.env, GYEOL_SHARE: share },
-  })
-  for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => child.kill(sig))
-  child.on('exit', (code) => process.exit(code ?? 0))
+  // 새 버전에는 권한 인자 없이 맡긴다. 그 버전이 제 권한 인자(sandboxArgs)로 스스로를 권한 모델 안에서 다시 띄운다:
+  // 권한 인자는 버전마다 그 버전의 것이어야 해서(sandboxTight가 제 것만 받는다) 이 파일이 대신 붙이지 않는다
+  // 맡은 쪽은 다시 맡기지 않는다(버전 폴더 이름과 안의 코드 버전이 어긋나도 서로 끝없이 맡기지 않게)
+  const newer = process.env[NEWER_ENV] ? null : newerMcp(here, VERSION, process.platform, process.arch)
+  const start = (node: string, args: string[], delegated: boolean): ChildProcess => {
+    let child: ChildProcess
+    try {
+      child = spawn(node, args, {
+        stdio: 'inherit',
+        env: { ...process.env, GYEOL_SHARE: share, ...(delegated ? { [NEWER_ENV]: '1' } : {}) },
+      })
+    } catch {
+      // 윈도우는 실행할 수 없는 node를 띄우면 'error' 알림 대신 그 자리에서 던진다(spawn EFTYPE, CI에서 확인)
+      if (delegated) {
+        process.stderr.write('Framo: 새 버전의 AI 연결을 켜지 못해서 이 버전으로 켤게요.\n')
+        return start(...own, false)
+      }
+      process.stderr.write('Framo: AI 연결을 켜지 못했어요. Framo 폴더를 통째로 다시 풀어 주세요.\n')
+      process.exit(1)
+    }
+    // 띄우지도 못했을 때(새 버전의 node를 백신이 지웠거나 막았을 때). 오류에는 경로가 들어 있어 내보내지 않고 정해진 말만 쓴다.
+    // 띄웠는지는 'spawn' 알림으로 안다: 윈도우는 띄우지 못해도 'exit'를 보내는데, 그것을 받아 끝내면 이 버전으로 다시 켜기 전에
+    // MCP 서버가 꺼졌다(CI의 윈도우에서 시험이 답 없이 멈췄다)
+    let spawned = false
+    child.once('spawn', () => (spawned = true))
+    child.on('error', () => {
+      if (spawned) return
+      if (delegated) {
+        process.stderr.write('Framo: 새 버전의 AI 연결을 켜지 못해서 이 버전으로 켤게요.\n')
+        running = start(...own, false)
+        return
+      }
+      process.stderr.write('Framo: AI 연결을 켜지 못했어요. Framo 폴더를 통째로 다시 풀어 주세요.\n')
+      process.exit(1)
+    })
+    child.on('exit', (code) => {
+      if (spawned) process.exit(code ?? 0)
+    })
+    return child
+  }
+  // 새 버전에 맡기지 못하면 이 버전이 제 권한 인자로 권한 모델 안에서 다시 띄운다(지금까지의 길)
+  const own: [string, string[]] = [process.execPath, sandboxArgs(share, here, fileURLToPath(import.meta.url))]
+  let running = newer ? start(newer.node, [newer.entry], true) : start(...own, false)
+  for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => running.kill(sig))
 }
 
 function isMain(): boolean {

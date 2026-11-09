@@ -166,6 +166,34 @@
   opacity: 0.85;
 }
 
+/* 일부러 옅게 그리는 글(바뀌기의 지금, 겹친 수고의 하던 일, 전과 후의 전, 시장 규모의 설명, 원인 캐기의 덧붙임): 끝 모습의 옅은 글자색이
+   다른 칸의 안내(글자색을 반쯤 옅게)와 같은 회색이라, 편집 화면에서 적은 글과 안내가 갈리지 않았다(바뀌기의 줄 1에 적은 지금과 줄 3의
+   안내가 똑같았고, 검은 테마에서는 바뀐 뒤 열의 안내가 적은 지금과 같은 밝기였다). 편집 화면에서만 적은 글을 한 단계 짙게 두고 취소선은
+   화면 1px로 그린다(장 크기로 줄면 0.3px라 보이지 않았다). 안내는 다른 칸의 안내와 같은 규칙: 글자색을 반쯤 옅게, 취소선 없이.
+   취소선은 칸에서 걷고 적은 글에만 다시 긋는다(칸에 그은 줄은 안의 안내까지 내려가 걷을 수 없다). 발표와 내보내기의 모습은 그대로다 */
+.slide.m-edit :is(.bk-wp-old, .bk-dp-what, .bk-dl-from .bk-dl-v, .bk-mk-b, .bk-wy-m).ed {
+  text-decoration: none;
+}
+
+.slide.m-edit :is(.bk-wp-old, .bk-dp-what, .bk-dl-from .bk-dl-v, .bk-mk-b, .bk-wy-m).ed > .ed-input {
+  color: var(--ink-2);
+}
+
+/* 검은 바탕의 한 단계 짙은 글자색은 안내와 밝기가 가까워(전과 후의 적은 전 값과 후의 안내가 비슷한 회색이었다) 글자색 쪽으로 반을 더 올린다 */
+.slide.m-edit.is-dark :is(.bk-wp-old, .bk-dp-what, .bk-dl-from .bk-dl-v, .bk-mk-b, .bk-wy-m).ed > .ed-input {
+  color: color-mix(in srgb, var(--ink) 50%, var(--ink-2));
+}
+
+.slide.m-edit :is(.bk-wp-old, .bk-dp-what).ed > .ed-input {
+  text-decoration: line-through;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: max(var(--rule-hair), calc(1px / var(--vs, 0.5)));
+}
+
+.slide.m-edit :is(.bk-wp-old, .bk-dp-what, .bk-dl-from .bk-dl-v, .bk-mk-b, .bk-wy-m).ed > .ed-hint {
+  color: var(--ink);
+}
+
 .one-line > .ed-input {
   white-space: nowrap;
 }

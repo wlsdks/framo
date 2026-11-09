@@ -3,17 +3,19 @@
 코드를 어디에 두고, 무엇이 무엇에 기대는지 정한 문서다. 계속 고쳐 나갈 수 있게, 한 가지 규칙은 한 곳에만 두고 그 약속을 테스트로 지킨다.
 지킬 보안 규칙은 [AGENTS.md](../AGENTS.md)의 ‘꼭 지킬 것’, 슬라이드와 화면의 디자인은 [DESIGN.md](DESIGN.md), 움직임은 [MOTION.md](MOTION.md)에 있다.
 
-## 1. 세 프로그램
+## 1. 네 프로그램
 
 | 프로그램 | 소스 | 빌드 결과 | 기대는 것 |
 |---|---|---|---|
 | 화면(브라우저 앱) | `src/` | `dist/` | React, zustand, idb-keyval, dnd-kit, 글꼴 패키지 |
 | 로컬 서버 | `server/` | `dist-node/serve.mjs` | Node 내장만. `src/ai`, `src/deck`의 일부를 함께 묶는다 |
 | MCP 서버 | `mcp/server.ts` | `dist-node/gyeol-mcp.mjs` | Node 내장만. 위와 같다 |
+| 시작 프로그램 | `server/launch.ts` | `dist-node/launch.mjs` | Node 내장만. 켤 버전을 고르고 서버를 자식으로 띄운다. Framo.exe, `.bat`, `.command`가 이것을 켠다 |
 
 - 로컬 서버는 `dist/`를 `127.0.0.1`로 내주고, ‘AI 공유’ 창구(`server/ai.ts`)와 ‘AI에게 부탁’(`server/agent.ts`)을 연다. 개발 서버(`npm run dev`)는 같은 창구를 Vite 안에서 연다(`vite.config.ts`).
 - 서버와 MCP 서버는 모양 확인(`checkShape`), 제안 읽기(`parseRequest`), 부탁 목록, 부품과 테마의 목록을 화면과 같은 소스에서 가져간다. 그래서 그 파일들은 React, DOM, 바깥 패키지 없이 돌아야 한다(`architecture.test.ts`가 확인).
 - 나눠 줄 폴더는 `scripts/pack.mjs`가, 더블클릭 실행 파일은 `launch/`가 맡는다.
+- 시작 프로그램과 Framo.exe의 시작 코드는 처음 푼 앱 폴더의 것을 계속 쓴다(새 버전은 `versions/X.Y.Z/`에 풀린다). 그래서 둘 사이와 서버, MCP 서버가 같이 쓰는 약속(`server/versions.ts`)은 바꾸지 않고 더하기만 한다.
 
 ## 2. 층
 
@@ -92,6 +94,9 @@
 | 발표 파일(HTML)에 담는 것(듣는 분께 보이는 것만)과, 그 파일을 열 때 이 PC의 같은 발표에서 이어받는 것(노트, 숨긴 장, 가려진 칸) | `src/deck/fields.ts`의 `sendable`, `withUnsent`. 내보내기(`deckData`)와 파일 열기(`store/persist.ts`의 `importDeck`)가 같이 쓴다 |
 | CSP | `server/csp.ts`, 내보낸 HTML은 `src/export/exportHtml.tsx`의 `exportCsp` |
 | ‘AI 공유’ 폴더의 파일 읽기(링크, 하드 링크, 큰 파일, 링크인 하위 폴더 거르기) | `server/shareFiles.ts`. 로컬 서버와 MCP 서버가 같이 쓴다 |
+| 버전 폴더의 약속(폴더 이름, 준비·실패 표시, 다시 켜기 끝 코드, 켤 버전 고르기, 앱 폴더 찾기) | `server/versions.ts`. 시작 프로그램, 로컬 서버, MCP 서버가 같이 쓴다 |
+| 받은 zip 읽기와 풀기(이름, 종류, 크기 검사) | `server/unzip.ts`. 배포본 꼴의 확인과 버전 폴더 내놓기, 치우기는 `server/install.ts` |
+| 릴리스 서명 확인과 앱이 믿는 공개 키 | `server/signature.ts`, `server/releaseKey.ts`. 키 만들기와 서명은 관리하는 PC의 `scripts/release-key.mjs`, `scripts/release-sign.mjs` |
 
 ## 4. 파일 나누기
 
@@ -150,6 +155,8 @@
 | `src/ai/share.test.ts` | 모양에 사람이 적은 글이 한 글자도 없다(비밀 심기). 장 역할 이름이 몰래 바뀌지 않는다(스냅숏, 바꾸면 `migrate.ts`) |
 | `src/ai/ops.test.ts` | 칸의 글을 쓰는 제안이 없다. 내용이 있는 장, 항목, 부품은 지우지 못한다 |
 | `mcp/server.test.ts` | MCP 서버를 실제로 띄워 도구, 권한 모델, 내보내는 글자가 정해진 말뿐인지 본다 |
+| `server/signature.test.ts`, `scripts/release-sign.test.ts` | 앱이 모르는 키로 한 서명, 바꾼 목록, 서명 없는 릴리스는 자동으로 풀지 않는다. 키 파일은 권한 600이고 덮지 않는다 |
+| `server/unzip.test.ts`, `server/install.test.ts`, `server/versions.test.ts`, `server/launch.test.ts` | 받은 zip의 zip-slip, 링크, 폭탄, 겹치는 항목, 틀린 CRC를 막는다. 꼴이 다른 배포본은 준비됨으로 두지 않는다. 시작 프로그램은 준비된 가장 새 버전을 켜고, 켜지지 않으면 앞 버전으로 돌아간다. 실제 흐름은 `scripts/ci-update.mjs`(검수의 윈도우 배포본) |
 | `server/serve.test.ts`, `server/agent.test.ts`, `server/ai.test.ts` | `127.0.0.1`, Host 검사, CSP, AI 창구, Claude Code를 띄우는 인자. ‘AI 공유’ 폴더 안의 링크를 따라가 밖의 파일을 읽거나 지우지 않는다 |
 | `src/export/exportHtml.test.ts` | 내보낸 HTML의 CSP, 다시 열기 |
 | `src/deck/blocks.test.ts`, `src/deck/blocks/board.test.ts` | 부품 장으로 바꿔도 글을 잃지 않는다. 판이 늘 빈틈없이 덮이고 넣고 빼고 옮겨도 잘리지 않는다. 모든 부품의 높이를 쟀다 |

@@ -316,7 +316,8 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       { key: 'heading', label: '소제목', hint: '예: 추진 일정', optional: true },
       // 안내 문구가 편집할 때의 예시 칸이기도 해서, 설명 대신 쉼표로 나눈 꼴을 보여 준다 ('10월 1주, 10월 2주'처럼 띄어 쓴 이름도 되게)
       { key: 'cols', label: '기간 칸', hint: '11월, 12월, 1월, 2월, 3월' },
-      { key: 'now', label: '지금', hint: '지금이 어느 칸인지 (예: 12월)', optional: true },
+      // 머리 줄의 '지금' 이름 옆 좁은 칸이라 예시만: '지금이 어느 칸인지 (예: 11월)'는 두 줄로 꺾였다. 무엇을 적는지는 이름이 말한다
+      { key: 'now', label: '지금', hint: '예: 12월', optional: true },
     ],
     items: {
       label: '할 일',

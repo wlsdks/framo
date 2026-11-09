@@ -44,6 +44,22 @@
   color: var(--ink);
 }
 
+/* 새 버전 표시: 받는 중은 옅은 글자 하나, 할 일(업데이트, 다시 시작)은 단추 하나. 색 면 없이 글자만 굵게 */
+.ed-update {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ed-top-r .ed-update-go {
+  flex: none;
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* 위 막대의 묶음 사이 가는 선. 단추 높이(36)의 반쯤만 그어 막대를 칸으로 나누지 않고 쉼표처럼 */
 .ed-top-sep {
   flex: none;
@@ -144,19 +160,20 @@
   color: var(--ink);
 }
 
-/* 처음 고친 때 한 번 묻는 창. 저장 상태 바로 아래에 붙고, 쓰는 데 방해되지 않게 초점을 가져가지 않는다 */
+/* 처음 고친 때 한 번 묻는 창. 쓰는 데 방해되지 않게 초점을 가져가지 않고, 화면 오른쪽 아래(오른쪽 칸 안, 336px)에 알림처럼 아래에서
+   떠오른다. 저장 상태 바로 아래에 붙던 때는 손을 쉬는 사이 장 목록과 슬라이드 제목 위를 덮어, 쓰던 슬라이드를 가렸다 */
 .save-ask {
-  position: absolute;
+  position: fixed;
   z-index: 40;
-  top: calc(100% + 6px);
-  left: 0;
-  width: 360px;
+  right: 8px;
+  bottom: 8px;
+  width: 320px;
   padding: 16px 18px;
   border: 1px solid var(--line);
   border-radius: var(--r);
   background: var(--panel);
   box-shadow: var(--shadow-pop);
-  animation: pop-in var(--t) var(--ease-out);
+  animation: toast-in var(--t) var(--ease-out);
 }
 
 .save-dot {

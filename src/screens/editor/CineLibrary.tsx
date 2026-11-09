@@ -1,8 +1,8 @@
 import { memo, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { makeBlock } from '../../deck/blocks'
-import { CINE_PRESETS, cineId, presetRecipe, presetSpec } from '../../deck/cine'
+import { cineId, presetRecipe, presetSpec } from '../../deck/cine'
 import { makeSlide, uid } from '../../deck/generate'
-import { motionOf } from '../../deck/themes'
+import { motionOf, themeStyle } from '../../deck/themes'
 import type { CinePresetId, CineRecipe, Deck, Slide } from '../../deck/types'
 import { particle } from '../../lib/josa'
 import { cines } from '../../slides/blocks/Cine'
@@ -10,17 +10,19 @@ import { ScaledSlide, SlideCanvas } from '../../slides/SlideCanvas'
 import { CINE_NAME_MAX, CINES_EXT, decodeCinesFile, encodeCinesFile, type CineEntry } from '../../store/cinesFile'
 import { importCines, loadCines, removeCine, renameCine, restoreCine, useCines } from '../../store/cines'
 import { downloadText } from '../../store/deckFile'
-import { BackIcon, DownloadIcon, Info, MoreIcon, PlusIcon, Popover, UploadIcon, type Toast } from '../ui'
-import type { BlockEditing } from './BlockEditor'
-import { insertCine } from './cineEdit'
+import { DownloadIcon, Info, MoreIcon, PlusIcon, Popover, UploadIcon, type Toast } from '../ui'
+import { cineGoesNext, insertCine } from './cineEdit'
 import { useLook, type Look } from './look'
 
-// 내 컴포넌트의 '모션 그래픽': 내가 만든 모션 그래픽(갈래마다 가장 새 버전)과 '새 모션 그래픽'(틀 여섯 가운데 고르기).
+// 모션 그래픽 카드: 컴포넌트 고르기의 '모션 그래픽' 묶음(틀 여섯)과 내 컴포넌트의 '모션 그래픽'(내가 고친 모션 그래픽, 갈래마다 가장 새 버전).
 // 카드에 마우스를 올리면 그 장면이 작게 한 번 움직인다(카드는 여럿이라 GPU 없이 캔버스로. 장면은 발표할 때와 같은 엔진).
-// 누르면 이 장에 넣고 모션 편집이 열린다: 장면을 바로 보이고 손잡이로 고치게. 카드의 글은 틀의 지어낸 예시다(라이브러리에는 글이 없다)
+// 누르면 넣고(cineEdit.ts의 insertCine) 모션 편집이 열린다: 장면을 바로 보이고 손잡이로 고치게. 카드의 글은 틀의 지어낸 예시다(라이브러리에는 글이 없다)
 
-/** 카드 그림: 제목을 숨긴 컴포넌트 장에 그 모션 그래픽 하나를 판 가득 */
-const CineThumb = memo(function CineThumb({ look, recipe }: { look: Look; recipe: CineRecipe }) {
+/**
+ * 카드 그림: 제목을 숨긴 컴포넌트 장에 그 모션 그래픽 하나를 판 가득. fit이면 컴포넌트 카드와 같은 3:2 그림에 장(16:9)을 가운데 두고
+ * 위아래는 장의 바탕색으로 잇는다(컴포넌트 카드와 한 줄에 서도 이름의 높이가 맞게. 장면의 비율은 바꾸지 않는다)
+ */
+const CineThumb = memo(function CineThumb({ look, recipe, fit }: { look: Look; recipe: CineRecipe; fit?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   useEffect(() => {
@@ -41,8 +43,9 @@ const CineThumb = memo(function CineThumb({ look, recipe }: { look: Look; recipe
     }
     return { slide, deck: { ...look, cines: { [id]: recipe } } }
   }, [look, recipe])
+  const bg = fit ? (themeStyle(look.theme) as Record<string, string>)['--bg'] : undefined
   return (
-    <div ref={ref} className="cn-thumb">
+    <div ref={ref} className={fit ? 'lib-thumb cn-fit' : 'cn-thumb'} style={bg ? { background: bg } : undefined}>
       {width > 0 && (
         <ScaledSlide width={width} decorative>
           <SlideCanvas deck={deck} slide={slide} mode="final" />
@@ -65,20 +68,41 @@ function usePlayOnHover(level: string) {
   }
 }
 
-export function CineSection({ deck, slide, blocks, toast }: { deck: Deck; slide: Slide; blocks: BlockEditing; toast: Toast }) {
+/**
+ * 틀 카드 하나(컴포넌트 고르기의 '모션 그래픽' 묶음, 어울리는 것, 찾은 것). 누르면 그 틀을 넣는다: 장에 다른 내용이 있으면 다음에 새
+ * 슬라이드를 만들어 판 가득(insertCine). 그림은 컴포넌트 카드와 같은 3:2
+ */
+export function CinePresetCard({ deck, slide, toast, preset }: { deck: Deck; slide: Slide; toast: Toast; preset: CinePresetId }) {
+  const look = useLook(deck)
+  const hover = usePlayOnHover(motionOf(deck, slide))
+  const p = presetSpec(preset)
+  const recipe = useMemo(() => presetRecipe(preset, `preset-${preset}`), [preset])
+  const where = cineGoesNext(slide) ? '슬라이드 한 장을 다 쓰는 장면이라 이 슬라이드 바로 뒤에 새 슬라이드를 만들어 넣어요' : '이 슬라이드에 넣어요'
+  return (
+    <button
+      type="button"
+      className="lib-card cn-card"
+      title={`${p.name}: ${p.description}\n${where}. 넣으면 모션 편집에서 고쳐요`}
+      onPointerEnter={(e) => hover(e.currentTarget)}
+      onFocus={(e) => hover(e.currentTarget)}
+      onClick={() => insertCine(presetRecipe(preset, uid()), slide, true, toast)}
+    >
+      <CineThumb look={look} recipe={recipe} fit />
+      <span className="lib-name">{p.name}</span>
+      <span className="lib-desc">{p.fits}</span>
+    </button>
+  )
+}
+
+export function CineSection({ deck, slide, toast, onNew }: { deck: Deck; slide: Slide; toast: Toast; onNew: () => void }) {
   const entries = useCines((s) => s.entries)
   const look = useLook(deck)
-  const [picking, setPicking] = useState(false)
   const [renaming, setRenaming] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const hover = usePlayOnHover(motionOf(deck, slide))
   useEffect(() => void loadCines(), [])
 
-  const pick = (id: CinePresetId) => {
-    setPicking(false)
-    insertCine(presetRecipe(id, uid()), blocks, slide, true)
-  }
-  const use = (e: CineEntry) => insertCine(e.versions[e.versions.length - 1].recipe, blocks, slide, false)
+  const use = (e: CineEntry) => insertCine(e.versions[e.versions.length - 1].recipe, slide, false, toast)
   const remove = async (e: CineEntry) => {
     const gone = await removeCine(e.lineage)
     if (gone) toast.show(`‘${e.name}’${particle(e.name, '을', '를')} 지웠어요. 이미 넣은 발표에서는 그대로 보여요`, { label: '되돌리기', run: () => void restoreCine(gone.entry, gone.index) }, 6000)
@@ -99,31 +123,6 @@ export function CineSection({ deck, slide, blocks, toast }: { deck: Deck; slide:
     toast.show(n ? `모션 그래픽 ${n}개를 가져왔어요` : '이미 모두 있는 모션 그래픽이에요', undefined, 5000)
   }
 
-  if (picking)
-    return (
-      <section className="cn-lib" aria-label="새 모션 그래픽">
-        <div className="cn-lib-h">
-          <button type="button" className="mine-head-btn" onClick={() => setPicking(false)}>
-            <BackIcon />
-            내 컴포넌트
-          </button>
-        </div>
-        <h3 className="lib-group">틀 고르기</h3>
-        <p className="lib-group-d">누르면 이 슬라이드에 넣고 모션 편집에서 고쳐요</p>
-        <ul className="cn-grid">
-          {CINE_PRESETS.map((p) => (
-            <li key={p.id}>
-              <button type="button" className="lib-card cn-card" title={p.description} onPointerEnter={(e) => hover(e.currentTarget)} onFocus={(e) => hover(e.currentTarget)} onClick={() => pick(p.id)}>
-                <CineThumb look={look} recipe={presetRecipe(p.id, `preset-${p.id}`)} />
-                <span className="cn-card-n">{p.name}</span>
-                <span className="cn-card-d">{p.fits}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-    )
-
   return (
     <section className="cn-lib" aria-label="모션 그래픽">
       <input ref={fileRef} type="file" accept={`${CINES_EXT},application/json`} hidden onChange={(e) => void onFile(e)} />
@@ -132,9 +131,9 @@ export function CineSection({ deck, slide, blocks, toast }: { deck: Deck; slide:
           모션 그래픽<span className="lib-group-n">{entries.length || ''}</span>
         </h3>
         <Info label="모션 그래픽 도움말">
-          영화 타이틀처럼 한 장면을 짠 컴포넌트예요. 틀을 골라 넣고 모션 편집에서 고치면 여기에 버전이 남아요. 넣은 발표는 그때의 버전 그대로 보여요.
+          영화 타이틀처럼 움직이는 한 장면이에요. 틀은 컴포넌트의 ‘모션 그래픽’에 있어요. 넣고 모션 편집에서 고치면 여기에 버전이 남아요. 넣은 발표는 그때의 버전 그대로 보여요.
         </Info>
-        <button type="button" className="mine-head-btn cn-new" onClick={() => setPicking(true)}>
+        <button type="button" className="mine-head-btn cn-new" title="틀 여섯 가운데 골라요" onClick={onNew}>
           <PlusIcon />
           새 모션 그래픽
         </button>

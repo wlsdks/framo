@@ -5,9 +5,11 @@
 // - 화면 파일(dist)을 내주고, 'AI 공유' 폴더에 발표의 모양(글 없음)만 주고받는다. 발표 내용은 받지 않는다.
 // - CSP로 브라우저가 이 PC 밖으로 연결하지 못하게 막는다.
 // - 새 버전 확인과 받기는 이 서버가 한다(updateRoutes.ts, 바깥 연결은 update.ts 하나). 브라우저는 바깥으로 연결하지 않는다.
+// - 시작 프로그램(launch.ts)이 이 서버를 자식으로 띄운다. 새 버전은 앱 폴더의 versions/X.Y.Z에서 돌고,
+//   발표와 이어지는 것(AI 공유, 받은 파일, AI에 등록한 MCP 서버 경로)은 버전이 바뀌어도 앱 폴더의 것을 쓴다.
 
 import { spawn } from 'node:child_process'
-import { createReadStream, existsSync, realpathSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, lstatSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { createServer, get, type IncomingMessage, type ServerResponse } from 'node:http'
 import { dirname, extname, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -16,16 +18,23 @@ import { createAiHandler } from './ai'
 import { browserTries, windowsBrowsers } from './browser'
 import { CSP, CSP_META } from './csp'
 import { createUpdateHandler, UPDATE_DIR_NAME, type UpdateSetup } from './updateRoutes'
+import { appHome, FAIL_CODE, LAUNCHER_ENV, LISTENING, nodeIn, RESTART_CODE, RESTARTED_ENV } from './versions'
 import { version } from '../package.json'
 
-// 묶는 스크립트(scripts/pack.mjs)가 빌드한 index.html의 CSP를 이것과 견준다(빌드한 dist-node/serve.mjs에서 읽는다)
+// 묶는 스크립트(scripts/pack.mjs)가 빌드한 index.html의 CSP를 이것과 견주고, 배포본 맨 위의 이름이 새 버전 풀기가 받는 이름
+// (PACKAGE_TOP)뿐인지 본다(빌드한 dist-node/serve.mjs에서 읽는다)
 export { CSP_META }
+export { PACKAGE_TOP } from './install'
 export const HOST = '127.0.0.1'
 const PORT = Number(process.env.GYEOL_PORT) || 41580
 const ORIGIN = `http://${HOST}:${PORT}`
 const HERE = dirname(fileURLToPath(import.meta.url))
-/** 빌드하면 dist-node/ 안에 들어가므로 한 단계 위가 앱 폴더다 */
-const APP_ROOT = join(HERE, '..')
+/** 이 코드가 든 폴더. 빌드하면 dist-node/ 안에 들어가므로 한 단계 위다. 새 버전이면 <앱 폴더>/versions/X.Y.Z */
+const CODE_ROOT = join(HERE, '..')
+/** 앱 폴더(처음 푼 Framo). 버전이 바뀌어도 이어지는 것은 여기에 둔다 */
+const APP_ROOT = appHome(CODE_ROOT)
+/** 시작 프로그램이 띄웠다: 다시 켜 줄 곳이 있다 */
+const SUPERVISED = !!process.env[LAUNCHER_ENV]
 const HEALTH = '/__html-maker'
 
 const SECURITY_HEADERS = {
@@ -62,15 +71,36 @@ interface ServerOptions {
   share?: string
   /** 새 버전 창구. 시험에서 네트워크 대신 흉내 낸 것을 넣는다 */
   update?: Partial<UpdateSetup>
-  /** MCP 서버를 띄울 node. 없으면 이 서버를 돌리는 node (Framo.exe로 켰을 때는 옆의 node\node.exe) */
-  nodePath?: string
 }
 
-export function createAppServer({ root = join(APP_ROOT, 'dist'), share = join(APP_ROOT, SHARE_DIR_NAME), update = {}, nodePath }: ServerOptions = {}) {
+/** 앱 폴더의 node. 윈도우, 맥 배포본에 들어 있다. 없으면(저장소에서 켰을 때) 이 서버를 돌리는 node */
+function appNode(): string | undefined {
+  const node = nodeIn(APP_ROOT, process.platform, process.arch)
+  try {
+    return node && lstatSync(node).isFile() ? node : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** 앱 폴더의 버전(처음 푼 버전). 읽지 못하면 이 서버의 버전 */
+function appVersion(): string {
+  try {
+    const v = (JSON.parse(readFileSync(join(APP_ROOT, 'package.json'), 'utf8')) as { version?: unknown }).version
+    return typeof v === 'string' ? v : version
+  } catch {
+    return version
+  }
+}
+
+export function createAppServer({ root = join(CODE_ROOT, 'dist'), share = join(APP_ROOT, SHARE_DIR_NAME), update = {} }: ServerOptions = {}) {
   root = normalize(root)
-  const ai = createAiHandler(share, { mcpPath: join(HERE, 'gyeol-mcp.mjs'), nodePath })
+  // Claude Code, Codex 설정에 넣는 MCP 서버 경로는 앱 폴더의 것이다. 새 버전으로 바뀌어도 등록한 연결이 끊기지 않고,
+  // 앱 폴더의 MCP 서버가 가장 새 버전의 MCP 서버를 권한 모델 안에서 띄운다(mcp/server.ts). node도 앱 폴더의 것
+  // (Framo.exe로 켜도 MCP 서버는 Framo.exe가 아니라 같이 든 node로 띄운다)
+  const ai = createAiHandler(share, { mcpPath: join(APP_ROOT, 'dist-node', 'gyeol-mcp.mjs'), nodePath: appNode() })
   // 받은 새 배포본은 앱 폴더 안의 고정된 폴더에 둔다
-  const updates = createUpdateHandler({ version, downloadDir: join(APP_ROOT, UPDATE_DIR_NAME), ...update })
+  const updates = createUpdateHandler({ version, downloadDir: join(APP_ROOT, UPDATE_DIR_NAME), home: APP_ROOT, base: appVersion(), ...update })
 
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
     // 다른 이름으로 들어온 요청은 받지 않는다 (DNS 리바인딩 방어).
@@ -153,9 +183,11 @@ function openBrowser(url: string) {
 /**
  * 켜지 못한 이유를 보여 주고 끝낸다. 윈도우에서는 작게 내린 창에서 돌기 때문에
  * 바로 닫히면 이유를 볼 수 없어서, 키를 누를 때까지 창을 남긴다. 그때는 돌아오므로 부르는 곳은 return fail(...)로 끝낸다.
+ * 시작 프로그램 아래에서는 바로 FAIL_CODE로 끝낸다: 버전 탓이 아니라는 뜻이고, 창은 시작 프로그램이 남긴다
  */
 function fail(message: string): never {
   console.error(`\n  ${message}\n`)
+  if (SUPERVISED) process.exit(FAIL_CODE)
   if (process.platform === 'win32' && process.stdin.isTTY) {
     console.error('  아무 키나 누르면 이 창이 닫혀요.')
     process.stdin.setRawMode(true)
@@ -166,25 +198,22 @@ function fail(message: string): never {
   process.exit(1)
 }
 
-interface MainOptions {
-  /**
-   * MCP 서버를 띄울 node. Framo.exe(launch/framo-exe.cjs)가 이 파일을 불러 켤 때 옆의 node\node.exe를 넘긴다.
-   * Framo.exe는 명령줄 인자를 node 인자로 읽지 않아서, MCP 서버가 스스로를 권한 모델(--permission) 안에서 다시 띄우는 길이
-   * node와 달라진다. 그 길을 새로 만들지 않고 검수해 온 node.exe 길을 그대로 쓴다.
-   */
-  nodePath?: string
-}
-
-export async function main({ nodePath }: MainOptions = {}) {
-  if (!existsSync(join(APP_ROOT, 'dist', 'index.html'))) return fail('화면 파일이 없어요. 받은 zip 파일을 통째로 다시 풀어 주세요.')
+async function main() {
+  if (!existsSync(join(CODE_ROOT, 'dist', 'index.html'))) return fail('화면 파일이 없어요. 받은 zip 파일을 통째로 다시 풀어 주세요.')
   if (await alreadyRunning()) {
     console.log(`Framo가 이미 켜져 있어요. 브라우저에서 엽니다: ${ORIGIN}`)
     openBrowser(ORIGIN)
     return
   }
   let server: ReturnType<typeof createAppServer>
+  // '지금 다시 시작': 자리를 비우고 RESTART_CODE로 끝나면 시작 프로그램이 가장 새 버전으로 다시 켠다
+  const restart = () => {
+    server.close()
+    server.closeAllConnections()
+    process.exit(RESTART_CODE)
+  }
   try {
-    server = createAppServer({ nodePath })
+    server = createAppServer({ update: SUPERVISED ? { restart } : {} })
   } catch {
     // 'AI 공유' 폴더를 만들지 못했을 때. 읽기만 되는 곳(압축 파일 안, 막힌 폴더)에서 켜면 그렇다
     return fail("'AI 공유' 폴더를 만들지 못했어요. 받은 zip 파일을 바탕 화면이나 문서 폴더에 풀고 그 안에서 다시 실행해 주세요.")
@@ -196,10 +225,17 @@ export async function main({ nodePath }: MainOptions = {}) {
     fail(err.message)
   })
   server.listen(PORT, HOST, () => {
-    console.log(`\n  Framo가 켜져 있어요: ${ORIGIN}`)
+    // 시작 프로그램에 자리를 잡았다고 알린다. 이 말 없이 끝나면 시작 프로그램은 이 버전이 켜지지 않은 것으로 본다.
+    // 시작 프로그램이 끝나면(창을 닫거나 작업 관리자에서 끄면) 이 서버도 끝난다: 창 없이 남아 포트를 붙잡지 않게
+    if (process.send) {
+      process.send(LISTENING)
+      process.on('disconnect', () => process.exit(0))
+    }
+    console.log(`\n  Framo가 켜져 있어요: ${ORIGIN} (버전 ${version})`)
     console.log('  이 창을 닫으면 꺼져요. 발표를 만드는 동안에는 닫지 말고 내려 두세요.')
     console.log('  이 PC 안에서만 열리고, 발표 내용은 어디로도 보내지 않아요.\n')
-    openBrowser(ORIGIN)
+    // 새 버전으로 다시 켰으면 창을 새로 열지 않는다. 열려 있던 창이 같은 주소로 다시 붙는다
+    if (!process.env[RESTARTED_ENV]) openBrowser(ORIGIN)
   })
 }
 
@@ -211,4 +247,4 @@ function isMain(): boolean {
   }
 }
 
-if (isMain()) main()
+if (isMain()) void main()

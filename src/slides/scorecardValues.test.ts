@@ -26,6 +26,21 @@ describe('목표 대비 실적', () => {
     expect(html).not.toMatch(/--a:-/)
   })
 
+  it('막대는 달성률을 그려 낮을수록 좋은 지표를 이루면 목표 줄을 넘는다', () => {
+    const bar = (html: string) => {
+      const m = /--a:([\d.]+);--t:([\d.]+)/.exec(html)
+      return m ? { a: Number(m[1]), t: Number(m[2]) } : null
+    }
+    // 6.5주 이하를 6주로: 108%라 막대가 목표 줄을 넘는다(값으로 그리면 92%에서 끝나 못 미친 줄과 같아 보였다)
+    const met = bar(render('6.5주 이하', '6주'))!
+    expect(met.a).toBeGreaterThan(met.t)
+    // 5분 이하를 6분으로: 못 미쳐 목표 줄 앞에서 끝난다
+    const miss = bar(render('5분 이하', '6분'))!
+    expect(miss.a).toBeLessThan(miss.t)
+    // 높을수록 좋은 지표는 값으로 그린 것과 같다: 80%에 72%면 90%에서 끝난다
+    expect(bar(render('80%', '72%'))).toEqual({ a: 90, t: 100 })
+  })
+
   it('계산 범위를 넘는 달성률은 무한대로 표시하지 않는다', () => {
     const html = render(`${'1' + '0'.repeat(307)}건 이하`, '0.00000001건')
     expect(html).not.toContain('Infinity')

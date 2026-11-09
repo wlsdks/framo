@@ -1,7 +1,8 @@
 // 컴포넌트 고르기의 '찾기'와 '이 슬라이드에 어울리는 것'. AI를 부르지 않고 이름, 설명, 묶음의 낱말과 장에 적힌 글의 낱말로만 정한다.
 // 예순 개 넘는 카드를 묶음 칩으로만 고르면, 무엇을 보여 주고 싶은지는 알아도 그것이 어느 묶음에 있는지 몰라 끝까지 굴려 봐야 했다
 
-import type { BlockType, Slide } from '../types'
+import { CINE_PRESETS } from '../cine'
+import type { BlockType, CinePresetId, Slide } from '../types'
 import { BLOCK_GROUPS, BLOCKS } from './catalog'
 
 /**
@@ -34,10 +35,11 @@ const INDEX = BLOCK_GROUPS.flatMap((g) =>
  * 찾는 말에 맞는 컴포넌트. 띄어 쓴 말은 모두 맞아야 한다. 비슷한 말(ALIKE)도 맞는 것으로 본다.
  * 이름에 맞은 것, 설명에 맞은 것, 묶음에만 맞은 것 차례로 (같으면 묶음 차례)
  */
+const alike = (w: string) => [w, ...ALIKE.filter(([test]) => test.test(w)).flatMap(([, list]) => list.map((a) => a.toLowerCase()))]
+
 export function findBlocks(query: string): BlockType[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   if (!words.length) return []
-  const alike = (w: string) => [w, ...ALIKE.filter(([test]) => test.test(w)).flatMap(([, list]) => list.map((a) => a.toLowerCase()))]
   const scored = INDEX.map((c) => {
     let score = 0
     for (const w of words) {
@@ -54,6 +56,52 @@ export function findBlocks(query: string): BlockType[] {
     .filter((c) => c.score > 0)
     .sort((a, b) => b.score - a.score)
     .map((c) => c.type)
+}
+
+/** 모션 그래픽 틀을 찾을 때 보는 글: 묶음의 이름과 비슷한 말, 틀의 이름, 움직임, 어울리는 장 */
+const CINE_INDEX = CINE_PRESETS.map((p) => ({ id: p.id, text: `모션 그래픽 영화 장면 타이틀 애니메이션 ${p.name} ${p.description} ${p.fits}`.toLowerCase() }))
+
+/** 찾는 말에 맞는 모션 그래픽 틀. 띄어 쓴 말은 모두 맞아야 한다(비슷한 말도). 틀의 차례대로 */
+export function findCines(query: string): CinePresetId[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return []
+  return CINE_INDEX.filter((c) => words.every((w) => alike(w).some((a) => c.text.includes(a)))).map((c) => c.id)
+}
+
+/** 장에 적힌 글의 낱말과 어울리는 모션 그래픽 틀. 앞의 것이 먼저 (DESIGN.md '모션 그래픽'의 틀마다 어울리는 장) */
+const CINE_WORDS: [RegExp, CinePresetId][] = [
+  [/고른|골랐|선택|추천|대안|[A-D]안|안 가운데|집중/, 'fork'],
+  [/누적|모은|모아 온|쌓|합계|모두 합/, 'fill'],
+  [/에서\s*\S+\s*(으)?로|→|전후|바뀌|바꾼|줄었|줄어|줄인|늘었|단축|개선/, 'stroke'],
+  [/확산|퍼지|퍼졌|퍼져|가입|사용자|도입|성장|늘어/, 'diffuse'],
+  [/결론|하나로|통합|한곳|모으|모았/, 'gather'],
+  [/출시|새로운|새 이름|소개|시작|런칭|오픈/, 'light'],
+]
+
+/** 글이 없어도 짜임으로 어울리는 틀: 고르는 장은 갈림길, 바뀐 값은 그어지는 선, 큰 숫자는 확산, 한 문장은 모여 맺힘 */
+const CINE_SHAPES: [ReadonlySet<string>, CinePresetId][] = [
+  [new Set(['versus', 'compare', 'decision', 'pricing']), 'fork'],
+  [new Set(['delta', 'wipe', 'rank']), 'stroke'],
+  [new Set(['number', 'stat', 'kpi', 'ring', 'goal', 'attain']), 'diffuse'],
+  [new Set(['statement', 'message', 'callout']), 'gather'],
+]
+
+/**
+ * 이 장에 어울리는 모션 그래픽 틀 하나(없으면 null). 장의 글(제목, 칸, 항목, 컴포넌트의 글)에 있는 낱말이 먼저이고, 맞는 낱말이
+ * 없으면 레이아웃과 컴포넌트의 짜임으로 본다. 대표 기능인 모션 그래픽이 '내 컴포넌트' 안에만 있어 찾지 못했다(처음 쓰는 사람 검수)
+ */
+export function suggestCine(slide: Slide): CinePresetId | null {
+  const blocks = slide.blocks ?? []
+  if (blocks.some((b) => b.type === 'cine')) return null
+  const text = [
+    ...Object.values(slide.fields ?? {}),
+    ...(slide.items ?? []).flatMap((i) => [i.title, i.body, i.value]),
+    ...blocks.flatMap((b) => [...Object.values(b.fields ?? {}), ...(b.items ?? []).flatMap((i) => [i.title, i.body, i.value])]),
+  ].join(' ')
+  const word = CINE_WORDS.find(([test]) => test.test(text))
+  if (word) return word[1]
+  const kinds = new Set<string>([slide.layout, ...blocks.map((b) => b.type)])
+  return CINE_SHAPES.find(([set]) => [...kinds].some((k) => set.has(k)))?.[1] ?? null
 }
 
 /** 장에 적힌 글의 낱말과 어울리는 컴포넌트. 앞에 둔 것일수록 먼저. 셋째 값은 무게(없으면 1): 숫자는 어느 글에나 흔해서 가볍게 */
