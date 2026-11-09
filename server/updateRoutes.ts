@@ -3,8 +3,9 @@
 //   GET  status     지금 아는 것 (확인 결과, 받는 중인지, 풀어 둔 새 버전)
 //   POST check      확인한다. 24시간 안에 확인했으면 그 결과를 그대로 쓴다
 //   POST check/now  '다시 확인': 바로 확인한다
-//   POST download   이 OS의 배포본을 받는다. 지문을 맞춘 뒤, 시작 프로그램으로 켠 Framo면 앱 폴더의 versions/에 풀어 둔다(install.ts).
-//                   풀지 못하면(쓰기 권한, 디스크 자리, 백신) 받은 파일이 든 폴더를 열어 사람이 직접 풀게 한다
+//   POST download   이 OS의 배포본을 받는다. 지문을 맞춘 뒤, 시작 프로그램으로 켠 Framo면 같은 릴리스의 지문 목록과 그 서명을 받아
+//                   앱에 든 공개 키로 확인하고(signature.ts), 서명된 목록의 지문과 받은 zip이 같을 때만 앱 폴더의 versions/에 풀어 둔다
+//                   (install.ts). 서명이 없거나 틀리거나, 풀지 못하면(쓰기 권한, 디스크 자리, 백신) 받은 파일이 든 폴더를 열어 사람이 직접 풀게 한다
 //   POST reveal     받은 파일이 있는 폴더를 다시 연다
 //   POST restart    풀어 둔 새 버전으로 다시 켠다: 이 서버가 끝나고, 시작 프로그램(launch.ts)이 가장 새 버전을 켠다
 //
@@ -19,6 +20,8 @@ import { join } from 'node:path'
 import { UPDATE_PREFIX, type DownloadState, type UpdateCheck, type UpdateStatus } from '../src/update/protocol'
 import { fromApp } from './guard'
 import { cleanVersions, installVersion, newerVersion } from './install'
+import { RELEASE_KEYS } from './releaseKey'
+import { signedSums } from './signature'
 import { assetName, createUpdater, type Getter, type Release } from './update'
 import { compareVersions, listVersions } from './versions'
 
@@ -43,6 +46,8 @@ export interface UpdateSetup {
   arch?: string
   /** 시험에서 네트워크 대신 쓴다 */
   get?: Getter
+  /** 릴리스 서명을 확인할 공개 키. 시험에서 바꾼다(늘 releaseKey.ts의 것) */
+  keys?: readonly string[]
   /** 받은 파일을 탐색기, Finder에서 보여 준다. 시험에서 바꾼다 */
   reveal?: (file: string) => void
   now?: () => number
@@ -95,6 +100,7 @@ export function createUpdateHandler(setup: UpdateSetup) {
   /** 받은 새 버전을 저절로 바꿀 수 있는지: 시작 프로그램으로 켰다 */
   const home = setup.home && setup.restart ? setup.home : null
   const boot = randomBytes(8).toString('hex')
+  const keys = setup.keys ?? RELEASE_KEYS
 
   let check: UpdateCheck = { state: 'unknown' }
   let release: Release | null = null
@@ -116,7 +122,8 @@ export function createUpdateHandler(setup: UpdateSetup) {
   const busy = () => download.state === 'downloading' || download.state === 'preparing'
 
   function status(): UpdateStatus {
-    return { current: setup.version, boot, auto: !!home, check, download }
+    // 저절로 바꿀 수 있는지: 시작 프로그램으로 켰고, 서명을 확인할 키가 있고, 알고 있는 릴리스에 서명이 있다
+    return { current: setup.version, boot, auto: !!home && keys.length > 0 && (!release || !!release.signed), check, download }
   }
 
   function run(force: boolean): Promise<void> {
@@ -182,10 +189,19 @@ export function createUpdateHandler(setup: UpdateSetup) {
     }
   }
 
+  /** 서명이 맞는 지문 목록에서 이 OS의 zip 지문. 서명이 없거나 맞지 않거나 받지 못하면 null */
+  async function signedHash(r: Release): Promise<string | null> {
+    if (!r.signed || !keys.length || !name) return null
+    const [sums, sig] = await Promise.all([updater.fetchSmall(r.signed.sums), updater.fetchSmall(r.signed.sig)])
+    if (!sums || !sig) return null
+    return signedSums(sums, sig, keys)?.get(name) ?? null
+  }
+
   function startDownload(res: ServerResponse) {
-    const asset = release?.asset
-    const version = release?.version
-    if (!asset || !file || !version) return json(res, 409, { error: 'unavailable' })
+    const rel = release
+    const asset = rel?.asset
+    const version = rel?.version
+    if (!rel || !asset || !file || !version) return json(res, 409, { error: 'unavailable' })
     if (busy() || download.state === 'ready') return json(res, 202, status())
     const target = file
     // 예전에 켜지지 않았던 버전은 다시 풀어 켜지 않는다(또 켜지지 않는다). 사람이 직접 풀게 한다
@@ -199,7 +215,13 @@ export function createUpdateHandler(setup: UpdateSetup) {
       .then(
         async (r) => {
           if (r !== 'ok') return void (download = { state: 'failed', reason: r })
-          if (home && !failedBefore) return prepare(home, asset, target, version)
+          if (home && !failedBefore) {
+            // 누가 올렸는지까지 확인한다: GitHub의 지문은 올라온 파일로 셈한 값이라, 서명이 맞는 목록의 지문과 같아야 푼다
+            download = { state: 'preparing', done: 0, total: 0 }
+            if ((await signedHash(rel)) === asset.sha256) return prepare(home, asset, target, version)
+            download = { state: 'done', why: 'unsigned' }
+            return reveal(target)
+          }
           download = failedBefore ? { state: 'done', why: 'start' } : { state: 'done' }
           reveal(target)
         },

@@ -39,15 +39,18 @@ export type DownloadState =
 /** 받기가 안 된 까닭. 화면은 이 말에 맞춰 안내한다. start: 받아 둔 새 버전이 켜지지 않아 시작 프로그램이 이 버전으로 켰다 */
 export type DownloadError = 'network' | 'verify' | 'write' | 'start'
 
-/** 받은 새 버전을 저절로 바꾸지 못한 까닭(server/install.ts). start는 그 버전이 예전에 켜지지 않았던 것 */
-export type InstallError = 'verify' | 'layout' | 'space' | 'write' | 'blocked' | 'start'
+/**
+ * 받은 새 버전을 저절로 바꾸지 못한 까닭(server/install.ts). start는 그 버전이 예전에 켜지지 않았던 것,
+ * unsigned는 릴리스 서명(SHA256SUMS.txt.sig)이 없거나 앱에 든 키로 맞지 않거나, 서명된 지문이 받은 zip과 다른 것
+ */
+export type InstallError = 'verify' | 'layout' | 'space' | 'write' | 'blocked' | 'start' | 'unsigned'
 
 export interface UpdateStatus {
   /** 지금 이 앱의 버전 */
   current: string
   /** 이 서버를 켤 때마다 새로 정하는 표시. 다시 켠 뒤 화면이 새 서버가 떴는지 알아본다 */
   boot: string
-  /** 받은 새 버전을 서버가 풀어 두고 다시 켤 수 있는지(시작 파일로 켠 Framo). 아니면 받기만 하고 사람이 푼다 */
+  /** 받은 새 버전을 서버가 풀어 두고 다시 켤 수 있는지(시작 파일로 켠 Framo이고, 릴리스에 서명이 있다). 아니면 받기만 하고 사람이 푼다 */
   auto: boolean
   check: UpdateCheck
   download: DownloadState

@@ -4,6 +4,8 @@
 # 윈도우용은 윈도우 러너에서 묶어 Framo.exe의 파일 정보를 윈도우에서 직접 읽어 확인한다(scripts/exe.mjs, resedit는 어디서나 돈다).
 # 올리는 법: package.json의 version을 고치고 커밋한 뒤 `git tag v0.5.0 && git push origin v0.5.0`
 # 쓰기 권한은 릴리스를 만드는 일(publish) 하나만 받는다. 그 일은 저장소의 코드나 npm 꾸러미를 돌리지 않고 받은 zip과 gh만 쓴다.
+# 서명(SHA256SUMS.txt.sig)은 여기서 하지 않는다: 비밀 키는 이 워크플로에도 저장소의 비밀 값에도 두지 않고, 릴리스가 끝난 뒤
+# 관리하는 PC에서 `npm run release-sign -- vX.Y.Z`로 올린다(scripts/release-sign.mjs). 그 전까지 앱은 이 버전을 자동으로 풀지 않는다.
 # PR에서 이 파일, 검수, 묶는 스크립트를 고치면 릴리스 연습을 돈다: 릴리스만 만들지 않고 나머지를 다 해 본다.
 
 name: 릴리스
@@ -40,6 +42,12 @@ jobs:
           want="v$(jq -r .version package.json)"
           echo "package.json: $want"
           if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_NAME" != "$want" ]; then echo "태그 $GITHUB_REF_NAME 와 package.json 버전 $want 이 달라요"; exit 1; fi
+      - name: 앱에 릴리스 서명 공개 키가 있는지
+        if: github.event_name == 'push'
+        run: |
+          # 키가 없는 버전은 다음 새 버전의 서명을 확인할 수 없어 자동으로 풀지 못한다(늘 사람이 푸는 길로).
+          # 키는 관리하는 PC에서 npm run release-key로 만들고 공개 키만 server/releaseKey.ts에 넣는다
+          grep -Eq "'[A-Za-z0-9+/]{43}='" server/releaseKey.ts || { echo "server/releaseKey.ts의 RELEASE_KEYS에 공개 키가 없어요"; exit 1; }
 
   check:
     name: 검수

@@ -93,6 +93,7 @@
 | ‘AI 공유’ 폴더의 파일 읽기(링크, 하드 링크, 큰 파일, 링크인 하위 폴더 거르기) | `server/shareFiles.ts`. 로컬 서버와 MCP 서버가 같이 쓴다 |
 | 버전 폴더의 약속(폴더 이름, 준비·실패 표시, 다시 켜기 끝 코드, 켤 버전 고르기, 앱 폴더 찾기) | `server/versions.ts`. 시작 프로그램, 로컬 서버, MCP 서버가 같이 쓴다 |
 | 받은 zip 읽기와 풀기(이름, 종류, 크기 검사) | `server/unzip.ts`. 배포본 꼴의 확인과 버전 폴더 내놓기, 치우기는 `server/install.ts` |
+| 릴리스 서명 확인과 앱이 믿는 공개 키 | `server/signature.ts`, `server/releaseKey.ts`. 키 만들기와 서명은 관리하는 PC의 `scripts/release-key.mjs`, `scripts/release-sign.mjs` |
 
 ## 4. 파일 나누기
 
@@ -151,6 +152,7 @@
 | `src/ai/share.test.ts` | 모양에 사람이 적은 글이 한 글자도 없다(비밀 심기). 장 역할 이름이 몰래 바뀌지 않는다(스냅숏, 바꾸면 `migrate.ts`) |
 | `src/ai/ops.test.ts` | 칸의 글을 쓰는 제안이 없다. 내용이 있는 장, 항목, 부품은 지우지 못한다 |
 | `mcp/server.test.ts` | MCP 서버를 실제로 띄워 도구, 권한 모델, 내보내는 글자가 정해진 말뿐인지 본다 |
+| `server/signature.test.ts`, `scripts/release-sign.test.ts` | 앱이 모르는 키로 한 서명, 바꾼 목록, 서명 없는 릴리스는 자동으로 풀지 않는다. 키 파일은 권한 600이고 덮지 않는다 |
 | `server/unzip.test.ts`, `server/install.test.ts`, `server/versions.test.ts`, `server/launch.test.ts` | 받은 zip의 zip-slip, 링크, 폭탄, 겹치는 항목, 틀린 CRC를 막는다. 꼴이 다른 배포본은 준비됨으로 두지 않는다. 시작 프로그램은 준비된 가장 새 버전을 켜고, 켜지지 않으면 앞 버전으로 돌아간다. 실제 흐름은 `scripts/ci-update.mjs`(검수의 윈도우 배포본) |
 | `server/serve.test.ts`, `server/agent.test.ts`, `server/ai.test.ts` | `127.0.0.1`, Host 검사, CSP, AI 창구, Claude Code를 띄우는 인자. ‘AI 공유’ 폴더 안의 링크를 따라가 밖의 파일을 읽거나 지우지 않는다 |
 | `src/export/exportHtml.test.ts` | 내보낸 HTML의 CSP, 다시 열기 |

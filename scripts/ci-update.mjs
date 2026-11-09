@@ -3,7 +3,8 @@
 //   node scripts/ci-update.mjs <푼 배포본 폴더> [--exe] [--port 41590] [--keep]
 //
 // 1. 푼 배포본을 새 폴더(이전 버전 앱)로 복사하고, 같은 배포본의 버전 표시만 바꾼 '새 버전' zip을 만든다(scripts/zip.mjs).
-// 2. 이전 버전을 시작 프로그램(node dist-node/launch.mjs)으로 켠다. GitHub 대신 scripts/fake-release.mjs가 새 버전 zip을 내준다.
+// 2. 이전 버전을 시작 프로그램(node dist-node/launch.mjs)으로 켠다. GitHub 대신 scripts/fake-release.mjs가 새 버전 zip과, 시험용 키로
+//    서명한 지문 목록을 내준다. 이전 버전 앱(사본)의 공개 키 자리(RELEASE_KEYS)만 그 시험용 키로 바꾼다: 진짜 비밀 키는 쓰지 않는다.
 // 3. 확인 → 업데이트(받기, 지문 확인, 풀기) → versions/<새 버전>이 준비됨 → '지금 다시 시작' → 같은 주소에 새 버전이 뜬다.
 //    AI(MCP) 연결 경로는 앱 폴더의 것 그대로인지 본다. 시작 프로그램을 끄면 서버도 꺼지는지 본다.
 // 4. 다시 처음부터 켠다(--exe면 Framo.exe로, 가짜 릴리스 없이): 받아 둔 새 버전이 켜진다.
@@ -17,6 +18,7 @@ import { request } from 'node:http'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { makeKey } from './release-key.mjs'
 import { zipDir } from './zip.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -126,12 +128,24 @@ try {
   console.log(`이전 버전 ${oldVersion} → 새 버전 ${newVersion} (${useExe ? 'Framo.exe' : 'node'}로 다시 켜 보기)`)
   cpSync(source, app, { recursive: true, filter: (f) => !/[\\/](versions|AI 공유|새 버전)$/.test(f) })
   const zip = await makeNewZip()
+  // 시험용 서명 키: 이전 버전 앱(사본)이 이 키만 믿게 한다
+  const keyFile = join(work, 'test-signing-key.pem')
+  const pub = makeKey(keyFile)
+  let trusted = 0
+  for (const f of readdirSync(join(app, 'dist-node'))) {
+    const file = join(app, 'dist-node', f)
+    const text = readFileSync(file, 'utf8')
+    const next = text.replace(/(RELEASE_KEYS\s*=\s*)\[[^\]]*\]/, (_m, head) => `${head}[${JSON.stringify(pub)}]`)
+    if (next !== text) trusted++, writeFileSync(file, next)
+  }
+  if (!trusted) fail('이전 버전 앱에서 공개 키 자리(RELEASE_KEYS)를 찾지 못했어요')
 
   // 1) 이전 버전을 켜고, 가짜 릴리스로 업데이트를 받는다
   first = start('이전', {
     NODE_OPTIONS: `--import=${pathToFileURL(join(here, 'fake-release.mjs')).href}`,
     FRAMO_FAKE_RELEASE: zip,
     FRAMO_FAKE_VERSION: newVersion,
+    FRAMO_FAKE_SIGN_KEY: keyFile,
   })
   await until('이전 버전이 켜진다', up)
   const before = await status()

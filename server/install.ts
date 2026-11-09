@@ -22,8 +22,8 @@ import type { InstallError as UpdateInstallError } from '../src/update/protocol'
 import { extractZip, readZip, type ZipLimits } from './unzip'
 import { compareVersions, listVersions, requiredFiles, VERSION_NAME, VERSIONS_DIR, writeReady } from './versions'
 
-/** 풀지 못한 까닭(약속은 화면과 같이 쓰는 protocol.ts). 'start'는 시작 프로그램이 정하는 것이라 여기서는 쓰지 않는다 */
-type InstallError = Exclude<UpdateInstallError, 'start'>
+/** 풀지 못한 까닭(약속은 화면과 같이 쓰는 protocol.ts). 'start'는 시작 프로그램이, 'unsigned'는 서명 확인(updateRoutes)이 정한다 */
+type InstallError = Exclude<UpdateInstallError, 'start' | 'unsigned'>
 
 /**
  * 배포본 zip의 맨 위 폴더 안에 둘 수 있는 이름. 지우거나 바꾸지 않는다: 이미 깔린 버전은 이 목록에 없는 이름이 든 새 zip을

@@ -1,6 +1,7 @@
 // 시험용 zip 만들기. 배포본 zip(scripts/zip.mjs)과 같은 꼴을 기본으로, 항목마다 머리를 일부러 비틀 수 있다(나쁜 zip을 만들려고).
 // 새 버전 풀기 시험(unzip, install, updateRoutes)이 같이 쓴다. 배포본에는 들어가지 않는다.
 
+import { generateKeyPairSync, sign } from 'node:crypto'
 import { lstatSync, readdirSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { crc32, deflateRawSync } from 'node:zlib'
@@ -127,4 +128,14 @@ export function markReady(dir: string, version: string) {
   }
   walk(dir)
   writeReady(dir, version, files)
+}
+
+/** 시험용 서명 키: 앱에 넣을 꼴의 공개 키와, 지문 목록에 서명(SHA256SUMS.txt.sig의 꼴)하는 함수 */
+export function testKey() {
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519')
+  return {
+    pub: Buffer.from(publicKey.export({ format: 'jwk' }).x as string, 'base64url').toString('base64'),
+    pem: privateKey.export({ type: 'pkcs8', format: 'pem' }) as string,
+    sign: (data: Buffer | string) => `${sign(null, Buffer.from(data), privateKey).toString('base64')}\n`,
+  }
 }
