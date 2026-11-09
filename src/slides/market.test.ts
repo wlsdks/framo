@@ -9,12 +9,12 @@ describe('시장 규모의 원 크기', () => {
     expect(inner * inner).toBeCloseTo(3200 / 24000, 2)
   })
 
-  it('아주 작은 목표도 보이게 안쪽 원은 지름 14%까지만, 그 바깥 원은 그 두 배까지만 줄인다', () => {
+  it('아주 작은 목표도 보이게 안쪽 원은 지름 10%까지만, 그 바깥 원은 그 두 배까지만 줄인다', () => {
     const sizes = marketSizes(['2.4조 원', '3,200억 원', '180억 원'])
-    expect(sizes[2]).toBe(0.14)
+    expect(sizes[2]).toBe(0.1)
     expect(sizes[1]).toBeCloseTo(Math.sqrt(3200 / 24000), 2)
     const tiny = marketSizes(['999,999억 원', '10억 원', '1억 원'])
-    expect(tiny).toEqual([1, 0.28, 0.14])
+    expect(tiny).toEqual([1, 0.2, 0.1])
   })
 
   it('읽을 수 없거나 단위가 다르거나 안쪽이 더 크면 정해 둔 크기', () => {
