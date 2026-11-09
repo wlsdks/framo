@@ -449,9 +449,10 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const y0 = ty + (R() < 0.5 ? -1 : 1) * ch * (0.07 + 0.03 * R())
     const F = [x0 + Math.min(L * 0.3, c.W * 0.06), y0]
     // 고른 안은 가운데: 답의 첫머리에서 멈췄다가(고르기 전), 고른 뒤 그 끝이 펜이 되어 답을 끝까지 써 나간다(답보다 멀리 가는 길은 없다).
-    // 고르지 않은 안은 글 띠의 위와 아래로 휘어 답의 첫머리를 조금 지나서 멈춘다: 모든 안을 답의 첫머리 앞에서 멈추게 하던 시안은 장 왼쪽
-    // 10%의 화살 깃 그림 문자로 읽혔고(필름), 장 가운데 너머까지 보내면 고른 안이 그 7분의 1인 곁가지라 '작은 샛길을 골랐다'로 읽혔다(감성 검수).
-    // 안들은 같은 굵기로 같은 무게다
+    // 고르지 않은 안은 글 띠의 위와 아래로 크게 휘어 장의 위아래 가까이, 답의 첫머리보다 장 폭의 15% 남짓 더 가서 멈춘다: 모든 안을 답의
+    // 첫머리 앞에서 멈추게 하던 시안은 장 왼쪽 10%의 화살 깃 그림 문자로 읽혔고(필름), 장 가운데 너머까지 보내면 고른 안이 그 7분의 1인
+    // 곁가지라 '작은 샛길을 골랐다'로, 답의 첫머리를 조금 지나서 멈추게 하면 장 왼쪽 4분의 1의 삼지창 기호로 읽혔다(감성 검수). 안들은 같은
+    // 굵기로 같은 무게다
     const fork = flow([x0, y0], F, 0, 15, 13, 0)
     const end = flow(F, [tx, ty], fork, 12.5, 9.5, 0)
     const stop = end
@@ -466,9 +467,9 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       const j = upper ? k : k - up
       const m = upper ? up : others - up
       // 위는 글 띠 위의 자리를, 아래는 글 띠 아래의 자리를 고르지 않게 나눠 갖는다(거울에 비친 꼴이 되지 않게)
-      const f = (j + 0.35 + 0.3 * R()) / m
+      const f = m === 1 ? 0.6 + 0.25 * R() : (j + 0.45 + 0.3 * R()) / m
       const y = upper ? lerp(bt, top, f) : lerp(bb, oy + ch * 0.92, f)
-      const x = tx + c.W * (0.07 + 0.05 * R()) + (upper ? 0 : c.W * 0.03)
+      const x = tx + c.W * (0.13 + 0.05 * R()) + (upper ? 0 : c.W * 0.03)
       ends.push(flow(F, [x, y], fork, 12.5, 7, g++))
     }
     return { pts: new Float32Array(pts), segs: new Int32Array(segs), ends, fork, stop, end, joint: [F[0], F[1], 6.5] }
