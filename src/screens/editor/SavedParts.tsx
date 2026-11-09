@@ -212,7 +212,7 @@ export function SavedParts({ deck, slide, blocks, toast }: { deck: Deck; slide: 
       <input ref={fileRef} type="file" accept={`${PARTS_EXT},application/json`} hidden onChange={(e) => void onFile(e)} />
       <div className="lib-list mine-list">
         {/* 모션 그래픽: 내가 만든 장면들과 새로 만들기(틀 고르기). 저장한 컴포넌트와 같은 목록에서 스크롤된다(CineLibrary.tsx) */}
-        <CineSection deck={deck} slide={slide} blocks={blocks} toast={toast} />
+        <CineSection deck={deck} slide={slide} toast={toast} />
         {loaded && !parts.length ? (
           <div className="mine-empty">
             <p className="mine-empty-t">자주 쓰는 조합을 저장해 두세요</p>

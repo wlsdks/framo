@@ -11,7 +11,6 @@ import { CINE_NAME_MAX, CINES_EXT, decodeCinesFile, encodeCinesFile, type CineEn
 import { importCines, loadCines, removeCine, renameCine, restoreCine, useCines } from '../../store/cines'
 import { downloadText } from '../../store/deckFile'
 import { BackIcon, DownloadIcon, Info, MoreIcon, PlusIcon, Popover, UploadIcon, type Toast } from '../ui'
-import type { BlockEditing } from './BlockEditor'
 import { insertCine } from './cineEdit'
 import { useLook, type Look } from './look'
 
@@ -65,7 +64,7 @@ function usePlayOnHover(level: string) {
   }
 }
 
-export function CineSection({ deck, slide, blocks, toast }: { deck: Deck; slide: Slide; blocks: BlockEditing; toast: Toast }) {
+export function CineSection({ deck, slide, toast }: { deck: Deck; slide: Slide; toast: Toast }) {
   const entries = useCines((s) => s.entries)
   const look = useLook(deck)
   const [picking, setPicking] = useState(false)
@@ -76,9 +75,9 @@ export function CineSection({ deck, slide, blocks, toast }: { deck: Deck; slide:
 
   const pick = (id: CinePresetId) => {
     setPicking(false)
-    insertCine(presetRecipe(id, uid()), blocks, slide, true)
+    insertCine(presetRecipe(id, uid()), slide, true, toast)
   }
-  const use = (e: CineEntry) => insertCine(e.versions[e.versions.length - 1].recipe, blocks, slide, false)
+  const use = (e: CineEntry) => insertCine(e.versions[e.versions.length - 1].recipe, slide, false, toast)
   const remove = async (e: CineEntry) => {
     const gone = await removeCine(e.lineage)
     if (gone) toast.show(`‘${e.name}’${particle(e.name, '을', '를')} 지웠어요. 이미 넣은 발표에서는 그대로 보여요`, { label: '되돌리기', run: () => void restoreCine(gone.entry, gone.index) }, 6000)
