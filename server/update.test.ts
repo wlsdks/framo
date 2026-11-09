@@ -1,7 +1,7 @@
 // 새 버전 확인과 받기. 네트워크에는 닿지 않는다: GitHub 대신 흉내 낸 GET(fake)을 넣는다.
 
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer, request, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -11,7 +11,7 @@ import type { UpdateStatus } from '../src/update/protocol'
 import { allowedHop, createUpdater, MAX_ASSET_BYTES, parseRelease, REPOS, type Getter } from './update'
 import { compareVersions, FAILED_FILE, READY_FILE, READY_FORMAT, requiredFiles } from './versions'
 import { fakePackage } from './zipFixture'
-import { createUpdateHandler, type UpdateSetup } from './updateRoutes'
+import { createUpdateHandler, dropFile, type UpdateSetup } from './updateRoutes'
 
 const ZIP = Buffer.from('지어낸 배포본 내용 '.repeat(200))
 const SHA = createHash('sha256').update(ZIP).digest('hex')
@@ -520,5 +520,23 @@ describe('새 버전 창구', () => {
       expect(opened).toHaveLength(1)
       expect(readFileSync(join(home, 'versions', '0.9.0', FAILED_FILE), 'utf8')).toBe('{}')
     })
+  })
+})
+
+describe('받은 zip 지우기', () => {
+  it('지우지 못해도(막힌 폴더) 던지지 않는다: 받기가 끝난 뒤에 불러 서버가 꺼지지 않게', () => {
+    if (process.platform === 'win32' || process.getuid?.() === 0) return
+    const dir = mkdtempSync(join(tmpdir(), 'gyeol-drop-'))
+    const file = join(dir, 'gyeol-mac.zip')
+    writeFileSync(file, 'zip')
+    chmodSync(dir, 0o500)
+    try {
+      expect(() => dropFile(file)).not.toThrow()
+      expect(existsSync(file)).toBe(true)
+    } finally {
+      chmodSync(dir, 0o700)
+    }
+    dropFile(file)
+    expect(existsSync(file)).toBe(false)
   })
 })

@@ -67,6 +67,18 @@ function revealFile(file: string) {
   }
 }
 
+/**
+ * 받은 zip을 지운다. 지우지 못해도(윈도우에서 백신이나 탐색기가 붙잡고 있으면 EBUSY, EPERM) 그대로 둔다:
+ * 요청 밖(받기가 끝난 뒤)에서 부르므로 여기서 던지면 서버가 꺼진다. 남은 zip은 다음 받기가 덮어쓴다
+ */
+export function dropFile(file: string) {
+  try {
+    rmSync(file, { force: true })
+  } catch {
+    // 그대로 둔다
+  }
+}
+
 function json(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
   res.end(JSON.stringify(body))
@@ -159,10 +171,10 @@ export function createUpdateHandler(setup: UpdateSetup) {
     }).catch(() => 'write' as const)
     if (result === 'ok') {
       // 풀어 둔 것으로 충분하다. zip은 앱 폴더의 자리만 차지한다
-      rmSync(zip, { force: true })
+      dropFile(zip)
       download = { state: 'ready', version }
     } else if (result === 'verify') {
-      rmSync(zip, { force: true })
+      dropFile(zip)
       download = { state: 'failed', reason: 'verify' }
     } else {
       download = { state: 'done', why: result }
@@ -193,6 +205,8 @@ export function createUpdateHandler(setup: UpdateSetup) {
         },
         () => (download = { state: 'failed', reason: 'network' }),
       )
+      // 받은 뒤의 일(풀기, 폴더 열기)에서 생각지 못한 예외가 나도 서버는 꺼지지 않고 쓰기 실패로 알린다
+      .catch(() => (download = { state: 'failed', reason: 'write' }))
     json(res, 202, status())
   }
 
