@@ -371,7 +371,9 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
             ? '이 슬라이드는 이미 넘쳤어요. 항목이나 컴포넌트를 줄이면 더 넣을 수 있어요'
             : '이 슬라이드는 자리가 다 찼어요. 하나를 지우면 더 넣을 수 있어요'
         : null
-      : '넣으면 컴포넌트 슬라이드가 돼요'
+      : // 무엇이 바뀌는지를 쓰는 사람의 말로: '넣으면 컴포넌트 슬라이드가 돼요'는 처음 쓰는 사람이 무엇이 되는지, 지금 내용이 어떻게
+        // 되는지 알 수 없었다(처음 쓰는 사람 검수). 넣으면 지금 내용은 같은 모습의 컴포넌트가 되어 새 컴포넌트와 한 슬라이드에 선다
+        '넣으면 지금 내용은 그대로 두고 함께 놓아요'
   // 모션 그래픽 묶음에서는 장에 대한 알림을 두지 않는다: 모션 그래픽은 장 하나를 다 써서, 넣을 수 없는 장이나 내용이 있는 장이면 다음 장에 넣는다
   const note = group === CINE_GROUP.name && !mine ? null : slideNote
   const groups = searching ? [] : group ? BLOCK_GROUPS.filter((g) => g.name === group) : BLOCK_GROUPS
@@ -518,8 +520,9 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
         <div className="lib-note">
           <p className="lib-note-t">{note}</p>
           {slide.layout !== 'compose' && canCompose(slide.layout) && (
-            <button type="button" className="lib-note-btn" title="지금 내용은 그대로 남고, 내용이 컴포넌트로 나뉘어 하나씩 옮길 수 있게 돼요" onClick={blocks.convert}>
-              지금 바꾸기
+            // 단추는 하는 일을 그대로: '지금 바꾸기'는 무엇을 바꾸는지 말하지 않았다. 대부분 같은 모습의 컴포넌트 하나가 되므로 '나뉜다'고 하지 않는다
+            <button type="button" className="lib-note-btn" title="넣기 전에 지금 내용을 컴포넌트로 바꿔요. 글은 그대로이고, 끌어서 옮기거나 크기를 바꿀 수 있어요" onClick={blocks.convert}>
+              컴포넌트로 바꾸기
             </button>
           )}
           {(closed || full) && (
