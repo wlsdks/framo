@@ -245,16 +245,16 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
   {
     id: 'fork',
     name: '갈림길',
-    description: '한 줄기가 여러 갈래로 뻗어 나가다가 한 길만 남고, 그 길이 닿은 자리에서 답이 맺혀요.',
+    description: '한 줄기가 안의 수만큼 갈라져 뻗다가 잠깐 멈추고, 고른 길만 끝까지 그어져 답을 써 나가요.',
     fits: '여러 안 가운데 고른 것, 선택과 집중',
     engine: 2,
     sample: { label: '여러 안 가운데', title: '작게 시작해 넓혀 가요', sub: '비용과 일정을 함께 보고 골랐어요' },
     recipe: {
       frame: 'center',
       material: 'branches',
-      // 갈래가 다 뻗기 전에 고르기 시작하고(뻗은 채 서 있는 박자를 두지 않는다), 고르는 동안 남는 길 끝에서 답이 맺힌다: 남는 길이
-      // 홀로 선 박자가 있으면 갈 곳 없는 물결 밑줄로 읽혔다(필름)
-      phases: phases(['spread', 1200], ['resolve', 800, 200], ['write', 600, 400]),
+      // 안들이 함께 뻗어 멈추고(펼쳐 보이기), 머묾(고르기 직전의 숨) 뒤에 고른 안이 끝까지 그어져 답을 써 나간다. 고르는 박자가 0.15초뿐이던
+      // 첫 시안은 '골랐다'가 보이지 않았다(감성 검수)
+      phases: phases(['spread', 700], ['hold', 280], ['resolve', 700], ['write', 700, 260]),
       particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.3, trail: false, spread: 'side' },
       shape: { kind: 'point' },
       light: false,
@@ -263,10 +263,10 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       camera: 'push',
       pace: 'normal',
       texts: [
-        // 칸의 차례가 곧 글의 차례(이름표, 답, 덧붙이는 말). 답(고른 길)이 먼저 맺힌다: 다른 갈래가 걷히는 동안 남는 길 끝에서.
-        // 무엇 가운데서 골랐는지와 까닭은 덧붙임으로
-        { key: 'label', enter: 'settle', on: 'write', lag: 0.2 },
-        { key: 'title', enter: 'settle', on: 'resolve', lag: 0.4 },
+        // 칸의 차례가 곧 글의 차례(이름표, 답, 덧붙이는 말). 무엇 가운데서 고르는지(이름표)는 갈래와 함께 처음 0.5초 안에 맺혀 갈래의 뜻이 되고,
+        // 답은 고른 길이 닿는 때부터 그 펜 끝을 따라 써진다. 까닭은 덧붙임으로
+        { key: 'label', enter: 'settle', on: 'spread', lag: 0.35 },
+        { key: 'title', enter: 'write', on: 'resolve', lag: 0.4 },
         { key: 'sub', enter: 'settle', on: 'write', lag: 0.5 },
       ],
       handoff: false,

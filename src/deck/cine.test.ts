@@ -214,14 +214,18 @@ describe('모션 그래픽 레시피', () => {
     expect((cleanRecipe(r) as unknown as { material: string }).material).toBe('smoke')
   })
 
-  it('갈림길: 다른 갈래가 걷히는 동안 남는 길 끝에서 답이 맺히고, 이름표와 까닭은 그 뒤에. 강조색 없이 글자색으로', () => {
+  it('갈림길: 무엇 가운데서 고르는지가 갈래와 함께 0.5초 안에, 머묾 뒤에 고르고, 답은 고른 길의 펜 끝으로 써진다. 강조색 없이', () => {
     const s = cineScript(presetRecipe('fork', 'l'))!
-    const resolve = s.spans.find((x) => x.kind === 'resolve')!
+    const span = (k: string) => s.spans.find((x) => x.kind === k)!
     const at = (k: string) => s.texts.find((t) => t.key === k)!
-    expect(at('title').start).toBeGreaterThan(resolve.start)
-    expect(at('title').start).toBeLessThan(resolve.end)
-    expect(at('label').start).toBeGreaterThan(at('title').start)
-    expect(at('sub').start).toBeGreaterThan(at('label').start)
+    expect(at('label').start).toBeLessThan(500)
+    // 펼쳐 보이기 → 머묾(고르기 직전의 숨) → 고르기
+    expect(span('hold').start).toBe(span('spread').end)
+    expect(span('resolve').start).toBe(span('hold').end)
+    expect(span('hold').end - span('hold').start).toBeGreaterThanOrEqual(250)
+    expect(at('title').enter).toBe('write')
+    expect(at('title').start).toBeGreaterThan(span('resolve').start)
+    expect(at('sub').start).toBeGreaterThan(at('title').start)
     // 칸의 차례가 곧 글의 차례(이름표가 답 위에)
     expect(s.texts.map((t) => t.key)).toEqual(['label', 'title', 'sub'])
     expect(s.total * 0.78).toBeLessThanOrEqual(3000)
