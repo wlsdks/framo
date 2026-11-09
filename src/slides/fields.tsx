@@ -866,6 +866,37 @@ function roomBeside(item: HTMLElement, side: 'above' | 'below'): boolean {
   return ![...textLines(cell), ...(bar ? [bar] : [])].some((r) => r.left < spot.right && r.right > spot.left && r.top < spot.bottom && r.bottom > spot.top)
 }
 
+/**
+ * 레이아웃 장의 세로 줄: 빼기를 줄 오른쪽 바깥, 높이 가운데(왼쪽 손잡이와 마주 보는 자리, 줄 끝에서 16px)에 둘 자리가 있는지.
+ * 장 안이고 다른 항목이나 글 칸에 닿지 않아야 한다: 두 단 레이아웃의 왼쪽 단은 그 자리가 옆 단이라 모서리 그대로 둔다
+ */
+function roomRight(item: HTMLElement, remove: HTMLElement): boolean {
+  const slide = item.closest<HTMLElement>('.slide')
+  const d = remove.getBoundingClientRect().width
+  if (!slide || !d) return false
+  const ir = item.getBoundingClientRect()
+  const spot = new DOMRect(ir.right + 16, ir.top + (ir.height - d) / 2, d, d)
+  if (spot.right > slide.getBoundingClientRect().right - 2) return false
+  return ![...slide.querySelectorAll<HTMLElement>('.it, .ed')]
+    .filter((el) => !item.contains(el) && !el.contains(item))
+    .some((el) => {
+      const r = el.getBoundingClientRect()
+      return r.left < spot.right + 2 && r.right > spot.left - 2 && r.top < spot.bottom + 2 && r.bottom > spot.top - 2
+    })
+}
+
+/**
+ * 항목 안 글 칸들의 높이 가운데(항목 위에서, 장의 px). 줄 오른쪽 바깥의 빼기를 상자가 아니라 글에 맞춘다: 끝 줄은 아래 여백이 없어
+ * 상자의 가운데가 글보다 위였다
+ */
+function textMiddle(item: HTMLElement): number | undefined {
+  const ir = item.getBoundingClientRect()
+  const k = ir.width / (item.offsetWidth || ir.width || 1)
+  const eds = [...item.querySelectorAll<HTMLElement>('.ed')].map((e) => e.getBoundingClientRect()).filter((r) => r.height > 0)
+  if (!eds.length || !k) return undefined
+  return ((Math.min(...eds.map((r) => r.top)) + Math.max(...eds.map((r) => r.bottom))) / 2 - ir.top) / k
+}
+
 /** 이 항목이 든 목록이 가로로 놓였는지 (앞의 두 항목이 옆으로 놓였으면) */
 function itemsAcross(item: HTMLElement): boolean {
   const list = [...(item.parentElement?.children ?? [])].filter((c) => c.classList.contains('it'))
@@ -902,12 +933,19 @@ export function ItemTools({ i, sort = true, keepBlank = false, pair = false }: {
       // 누르는 순간 ✕가 옆으로 옮겨 가서, 손을 뗄 때는 ✕ 밖이라 눌리지 않았다. 키보드로 들어올 때(손이 항목 밖)만 잰다
       if (e?.type === 'focus' && item.matches(':hover')) return
       // 컴포넌트 안에서는 글을 덮지 않고 테두리 안에 서는 자리로 (toolsSpot)
-      const spot = item.closest('.bk') ? toolsSpot(item, pair) : null
+      const inBlock = !!item.closest('.bk')
+      const spot = inBlock ? toolsSpot(item, pair) : null
       // 가로로 놓인 낮은 항목(차트 아래의 기간 이름 같은)에 그런 자리가 없으면 도구를 항목 밖 가운데로 낸다: 항목이 도구보다
       // 낮으면 안쪽 오른쪽 위의 도구가 글을 덮어 이름을 눌러 고칠 수 없었다(화면 px로 잰다, 도구는 22px).
       // 위에 자리가 있으면 위로, 없으면 아래로, 둘 다 막혔으면 안쪽 그대로 (roomBeside)
       const low = axis === 'x' && item.getBoundingClientRect().height < 48
-      const side = !low || spot?.clear ? '' : roomBeside(item, 'above') ? 'above' : roomBeside(item, 'below') ? 'below' : ''
+      // 레이아웃 장의 세로 줄은 빼기를 줄 오른쪽 바깥 높이 가운데로(edit.css의 data-tools='side'): 오른쪽 위 모서리에 반쯤 걸치면 줄 사이
+      // 선 위에 서서, 아래 줄에 손을 올렸는데 위 줄(고른 줄이면 그 옅은 면의 모서리)을 지우는 단추로 읽혔다. 자리가 없으면 모서리 그대로
+      const rm = removeRef.current
+      const side =
+        !inBlock && axis === 'y'
+          ? rm && roomRight(item, rm) ? 'side' : ''
+          : !low || spot?.clear ? '' : roomBeside(item, 'above') ? 'above' : roomBeside(item, 'below') ? 'below' : ''
       if ((item.dataset.tools ?? '') !== side) {
         if (side) item.dataset.tools = side
         else delete item.dataset.tools
@@ -918,6 +956,7 @@ export function ItemTools({ i, sort = true, keepBlank = false, pair = false }: {
         ['--it-tools-r', at?.right],
         ['--it-tools-t', at?.top],
         ['--it-out-r', at?.out],
+        ['--it-side-y', side === 'side' ? textMiddle(item) : undefined],
       ] as const) {
         const value = v === undefined ? '' : `${Math.round(v)}px`
         if (item.style.getPropertyValue(name) === value) continue

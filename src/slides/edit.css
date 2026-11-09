@@ -1005,6 +1005,38 @@ body.is-block-resizing .bk-area.is-live:not(.is-dragging) .bk:hover:not(.is-sele
   pointer-events: none !important;
 }
 
+/* 세로로 쌓인 줄(한 장 요약, 목록)의 빼기는 자리가 있으면 왼쪽 손잡이와 마주 보게 줄 오른쪽 바깥, 높이 가운데에(fields.tsx의
+   ItemTools가 재서 data-tools='side'): 오른쪽 위 모서리에 반쯤 걸치면 줄 사이 선 위에 서서, 아래 줄에 손을 올렸는데 위 줄(고른
+   줄이면 그 옅은 면의 모서리)을 지우는 단추로 읽혔다. 줄 안 가운데에 두면 줄 끝의 번호나 값(보고 순서의 1, 2, 3)을 덮었다 */
+.slide.m-edit .it:not(.bk .it)[data-tools='side'] > .it-remove {
+  /* 상자가 아니라 글의 높이 가운데(fields.tsx의 textMiddle) */
+  top: var(--it-side-y, 50%);
+  right: calc((var(--d) + 16px / var(--vs, 0.5)) * -1);
+  translate: 0 -50%;
+}
+
+/* 항목 밖에 둔 도구까지 손을 옮기는 길: 단추에서 항목 끝까지 손을 받는다(단추가 보일 때만 받는다). 없으면 항목과 단추 사이 16px
+   틈에서 항목을 떠나 단추가 사라져서, 손을 천천히 옮기면 줄의 손잡이를 잡을 수 없었다(고른 줄만 손잡이가 남았다) */
+.slide.m-edit .it:not(.bk .it) > .it-grip::before,
+.slide.m-edit .it:not(.bk .it)[data-tools='side'] > .it-remove::before {
+  position: absolute;
+  inset: calc(-2px / var(--vs, 0.5));
+  content: '';
+}
+
+.slide.m-edit .it:not(.bk .it) > .it-grip::before {
+  right: calc(-18px / var(--vs, 0.5));
+}
+
+.slide.m-edit .it:not(.bk .it)[data-tools='side'] > .it-remove::before {
+  left: calc(-18px / var(--vs, 0.5));
+}
+
+.slide.m-edit .it:not(.bk .it):is([data-sel-axis='x'], :not([data-sel-axis]):has(> .it-grip[data-axis='x'])) > .it-grip::before {
+  right: calc(-2px / var(--vs, 0.5));
+  bottom: calc(-8px / var(--vs, 0.5));
+}
+
 .slide.m-edit .it:not(.bk .it):is([data-sel-axis='x'], :not([data-sel-axis]):has(> .it-grip[data-axis='x'])) > .it-grip {
   top: calc((var(--d) + 6px / var(--vs, 0.5)) * -1);
   left: 0;
