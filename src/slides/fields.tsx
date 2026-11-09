@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ElementType } from 'react'
 import { listLines } from '../deck/edits'
-import { isBlankItem, readField } from '../deck/fields'
+import { isBlankItem, looksOptional, readField } from '../deck/fields'
 import { hintFor, labelIn, LAYOUTS, rowHint } from '../deck/layouts'
 import type { ItemKey } from '../deck/types'
 import { cx } from '../lib/cx'
@@ -590,7 +590,9 @@ export function T({ k, ...props }: TextProps & { k: string }) {
       value={readField(slide, meta, k)}
       hint={hintFor(slide.layout, slide.hints, k)}
       label={labelIn(labels ?? LAYOUTS[slide.layout], k)}
-      optional={isOptional(labels ?? LAYOUTS[slide.layout], k)}
+      // 장의 칸은 빈칸을 세는 규칙(deck/fields.ts)으로: 프레임 잡기가 안내를 정해 준 컴포넌트 장의 제목은 이제 빈칸으로 세는데도 '비워도 되는
+      // 칸'의 옅은 회색으로 그려졌다(처음 쓰는 사람 검수). 컴포넌트의 칸은 그 컴포넌트의 칸 목록으로
+      optional={fieldPrefix ? isOptional(labels ?? LAYOUTS[slide.layout], k) : looksOptional(slide, k)}
       fieldId={fieldPrefix + k}
       onChange={actions && ((v) => actions.setField(k, v))}
       fold={folds?.has(k)}

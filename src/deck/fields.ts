@@ -106,6 +106,15 @@ function optionalHere(slide: Slide, f: { key: string; optional?: boolean }): boo
   return !!f.optional
 }
 
+/**
+ * 장의 칸(key)을 비워 둬도 되는 칸으로 그리는지(편집 화면의 옅은 안내). 빈칸을 세는 규칙(optionalHere)과 같게: 프레임 잡기가 제목 안내를
+ * 정해 준 컴포넌트 장의 제목은 채울 칸이라 옅게 그리지 않는다. 비워 두면 정해진 이름으로 보이는 칸(named)은 이름이 글처럼 보여야 해서 옅게 하지 않는다
+ */
+export function looksOptional(slide: Slide, key: string): boolean {
+  const f = LAYOUTS[slide.layout].fields.find((x) => x.key === key)
+  return !!f && optionalHere(slide, f) && !f.named
+}
+
 export function missingFields(slide: Slide, meta: DeckMeta): Missing[] {
   const spec = LAYOUTS[slide.layout]
   const out: Missing[] = []

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deckBlanks, dropIndex, isBlankItem, missingFields, optionalBlanks, presentable, sendable, shownChars, shownOnly, unshownCount, withUnsent } from './fields'
+import { deckBlanks, dropIndex, isBlankItem, looksOptional, missingFields, optionalBlanks, presentable, sendable, shownChars, shownOnly, unshownCount, withUnsent } from './fields'
 import { createDeck, emptyItem, makeSlide } from './generate'
 import { BLOCKS, withLayout } from './blocks'
 import { labelIn, LAYOUT_ORDER, LAYOUTS } from './layouts'
@@ -215,6 +215,9 @@ describe('빈칸과 비워 둬도 되는 칸', () => {
     const added = makeSlide('compose')
     expect(own(added)).not.toContain('title')
     expect(optionalBlanks(added, improve.meta).map((m) => m.key)).toContain('title')
+    // 편집 화면의 옅은 안내(비워도 되는 칸)도 같은 규칙으로 그린다
+    expect(looksOptional(made, 'title')).toBe(false)
+    expect(looksOptional(added, 'title')).toBe(true)
   })
 
   it('발표의 빈칸 수는 장마다 센 빈칸을 더한 것 (숨긴 장은 빼고)', () => {
