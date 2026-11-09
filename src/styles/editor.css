@@ -160,19 +160,20 @@
   color: var(--ink);
 }
 
-/* 처음 고친 때 한 번 묻는 창. 저장 상태 바로 아래에 붙고, 쓰는 데 방해되지 않게 초점을 가져가지 않는다 */
+/* 처음 고친 때 한 번 묻는 창. 쓰는 데 방해되지 않게 초점을 가져가지 않고, 화면 오른쪽 아래(오른쪽 칸 안, 336px)에 알림처럼 아래에서
+   떠오른다. 저장 상태 바로 아래에 붙던 때는 손을 쉬는 사이 장 목록과 슬라이드 제목 위를 덮어, 쓰던 슬라이드를 가렸다 */
 .save-ask {
-  position: absolute;
+  position: fixed;
   z-index: 40;
-  top: calc(100% + 6px);
-  left: 0;
-  width: 360px;
+  right: 8px;
+  bottom: 8px;
+  width: 320px;
   padding: 16px 18px;
   border: 1px solid var(--line);
   border-radius: var(--r);
   background: var(--panel);
   box-shadow: var(--shadow-pop);
-  animation: pop-in var(--t) var(--ease-out);
+  animation: toast-in var(--t) var(--ease-out);
 }
 
 .save-dot {
