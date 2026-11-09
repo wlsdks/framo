@@ -513,8 +513,11 @@
   grid-column: 2 / -1;
 }
 
+/* 줄 선은 축을 걷은 세로 일정에서 차례를 나누는 유일한 데이터 선이라 한 단계 진한 선색으로(VISUAL-RULES 2-1): 옅은 선색(--line)이면
+   흰 바탕에서 거의 보이지 않아 줄들이 한 덩어리 글로 읽혔다(검수: 줄 사이 선이 거의 안 보인다) */
 .va-steps .tl-item:not(:last-child)::after {
   grid-column: 1 / -1;
+  background: var(--line-strong);
 }
 
 .va-steps .tl-item.is-now :is(.tl-meta, .tl-title) {
