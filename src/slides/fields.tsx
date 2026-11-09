@@ -264,7 +264,15 @@ interface FieldProps extends TextProps {
   onPasteLines?: (lines: string[]) => boolean
   /** 아직 예시 글인 칸: 안내 색으로 그리고, 누르면 글 전체를 골라 처음 친 글자가 예시를 덮어 쓰게 한다 */
   example?: boolean
+  /**
+   * 비워 두면 셈해 보이는 값(계산식의 결과). 발표 모습에는 적은 글처럼 그리고, 편집할 때는 안내 자리에 옅게 그려 직접 적으면 적은 글이
+   * 이기는 것을 보인다. 마우스를 올리면 '자동 계산'이라고 알린다
+   */
+  auto?: string
 }
+
+/** 셈해 보이는 칸의 말풍선 */
+const AUTO_TIP = '자동 계산: 값들을 셈한 결과예요. 값을 고치면 따라 바뀌고, 직접 적으면 적은 대로 보여요.'
 
 /**
  * 줄을 나누는 제어 문자(PowerPoint와 Word에서 Shift+Enter로 나눈 줄인 세로 탭 U+000B, 쪽 나눔, 줄 구분 문자)는 줄바꿈으로,
@@ -281,10 +289,10 @@ function clean(text: string, multiline?: boolean): string {
   return multiline ? t : t.replace(/\s*\n\s*/g, ' ')
 }
 
-function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional, onPasteLines, keepParens, example }: FieldProps) {
+function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', className, fit, multiline, oneLine, units, numeral, fold, fitText, enterNext, optional, onPasteLines, keepParens, example, auto }: FieldProps) {
   const { mode } = useSlide()
   if (mode === 'final') {
-    const text = value.trim()
+    const text = value.trim() || auto?.trim() || ''
     if (!text) return null
     const one = oneLineProps(text, oneLine, units, numeral)
     return (
@@ -295,11 +303,11 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
   }
   // 접어 둔 빈칸은 발표할 때처럼 자리를 차지하지 않는다. 고른 부품의 '칸 더하기'로 연다
   if (fold && !value) return null
-  const shown = value || hint
+  const shown = value || auto || hint
   const one = oneLineProps(shown, oneLine, units, numeral)
   if (mode === 'preview' || !onChange) {
     return (
-      <Tag className={cx(className, fitClass(fitText ?? shown, fit), one.cls, !value && 'is-hint')} style={one.style}>
+      <Tag className={cx(className, fitClass(fitText ?? shown, fit), one.cls, !value && !auto && 'is-hint')} style={one.style}>
         <Shown text={shown} numeral={numeral} parens={keepParens} />
       </Tag>
     )
@@ -307,7 +315,8 @@ function Field({ value, hint, label, fieldId, onChange, as: Tag = 'div', classNa
   return (
     <Editable
       value={value}
-      hint={hint}
+      hint={(!value && auto) || hint}
+      auto={!value && !!auto}
       label={label}
       fieldId={fieldId}
       onChange={onChange}
@@ -341,7 +350,8 @@ function Editable({
   onPasteLines,
   keepParens,
   example,
-}: FieldProps & { style?: CSSProperties }) {
+  auto,
+}: Omit<FieldProps, 'auto'> & { style?: CSSProperties; auto?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null)
   // 이 칸이 마지막으로 저장소에 보낸 값. 쓰는 동안 값이 이것과 다르게 바뀌면 바깥에서 바꾼 것이다(쓰다가 누른 되돌리기)
   const sent = useRef(value)
@@ -368,7 +378,7 @@ function Editable({
   }, [value, numeral, multiline, keepParens])
 
   return (
-    <Tag className={cx(className, 'ed', !value && 'is-empty', optional && 'is-optional', example && 'is-example')} style={style}>
+    <Tag className={cx(className, 'ed', !value && 'is-empty', optional && 'is-optional', example && 'is-example', auto && 'is-auto')} style={style} title={auto ? AUTO_TIP : undefined}>
       {/* 칸에 두르는 면과 점선. 넓이는 이웃한 칸과의 틈에 맞춘다 (halos.ts) */}
       <span className="ed-halo" aria-hidden="true" />
       <span className="ed-hint" aria-hidden="true">
@@ -582,7 +592,7 @@ function isOptional(spec: { fields: { key: string; optional?: boolean; named?: b
 }
 
 /** 슬라이드 칸 또는 덱 단위 값(`$org` 등) */
-export function T({ k, ...props }: TextProps & { k: string }) {
+export function T({ k, auto, ...props }: TextProps & { k: string; auto?: string }) {
   const { slide, meta, actions, fieldPrefix = '', folds, labels, examples } = useSlide()
   if (!fieldPrefix && slide.options.hideHead === true && (k === 'title' || k === 'lead')) return null
   return (
@@ -597,6 +607,7 @@ export function T({ k, ...props }: TextProps & { k: string }) {
       onChange={actions && ((v) => actions.setField(k, v))}
       fold={folds?.has(k)}
       example={!!fieldPrefix && !!examples?.includes(k)}
+      auto={auto}
       {...props}
     />
   )

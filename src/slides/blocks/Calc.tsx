@@ -1,11 +1,12 @@
-// 부품: 계산식 (calc). 모양은 styles/blocks/calc.css, 움직임은 motion/engine.ts의 nativeAuto, 셈은 slides/calc.ts
+// 부품: 계산식 (calc). 모양은 styles/blocks/calc.css, 움직임은 motion/engine.ts의 nativeAuto, 셈은 deck/calc.ts
 
 import type { CSSProperties } from 'react'
 import { BLOCKS } from '../../deck/blocks'
 import { readField } from '../../deck/fields'
 import { hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
-import { calcCheck, calcNeed, opOf } from '../calc'
+import { calcAutoOf, calcCheck, opOf } from '../../deck/calc'
+import { calcNeed } from '../calc'
 import { demoOf, useSlide } from '../context'
 import { IT, ItemTools, numberUnits, T } from '../fields'
 
@@ -13,7 +14,8 @@ import { IT, ItemTools, numberUnits, T } from '../fields'
  * 계산식: 효과를 셈한 장의 '1,200시간 × 4만 원 × 10명 = 4.8억 원'. 넓으면 한 줄에 값마다 칸 하나(숫자 아래에 이름)를 두고
  * 사이에 셈 기호, 끝에 = 와 결과(강조색, 이름은 '결과의 이름'). 숫자는 모두 같은 크기(모든 숫자가 한 줄에 드는 크기)라 글자
  * 밑줄이 한 줄에 서고, 칸은 제 숫자의 폭만큼이라 기호 양옆이 늘 같다. 칸이 좁아 숫자가 너무 작아지면 영수증처럼 쌓는다: 줄마다 기호, 이름, 오른쪽 끝에 값, 합계 선 아래 = 결과.
- * 셈 기호를 비우면 곱하기. 적은 결과가 셈과 다르면 편집할 때만 알려 준다(결과는 사람이 적은 그대로 보인다)
+ * 셈 기호를 비우면 곱하기. 결과를 비우면 값들을 셈해 보이고(편집할 때는 옅게, deck/calc.ts의 calcAutoOf), 적은 결과가 셈과 다르면
+ * 편집할 때만 알려 준다(결과는 사람이 적은 그대로 보인다)
  */
 export function Calc() {
   const { slide, meta, mode, folds } = useSlide()
@@ -24,7 +26,9 @@ export function Calc() {
   const values = items.map((_, i) => shown(i))
   const ops = items.map((it, i) => (i === 0 ? null : opOf(demo ? hintFor(slide.layout, slide.hints, 'meta', 'meta', i) : it.meta)))
   const result = readField(slide, meta, 'result').trim()
-  const resultShown = result || (mode !== 'final' ? hintFor(slide.layout, slide.hints, 'result') : '')
+  // 결과를 비우면 값들을 셈해 보인다(셈할 수 있을 때만). 적은 결과가 늘 이긴다
+  const auto = result || demo ? null : calcAutoOf(items)
+  const resultShown = result || auto || (mode !== 'final' ? hintFor(slide.layout, slide.hints, 'result') : '')
   const withResult = !!resultShown
   // 그려지는 숫자들(결과까지)의 폭: 한 줄 꼴은 폭을 더한 것으로 숫자 크기를 정하고, 쌓은 꼴은 값들 가운데 가장 긴 것으로
   // 값 칸의 너비를, 결과는 제 폭으로 결과 칸의 너비를 정한다(결과는 두 단계 커서 값 칸의 너비로 잡으면 이름 칸이 좁아졌다)
@@ -77,7 +81,7 @@ export function Calc() {
             </span>
             <div className="bk-ca-cell">
               <div className="bk-ca-vbox">
-                <T k="result" as="p" className="bk-ca-v" numeral oneLine units={resultUnits} />
+                <T k="result" as="p" className="bk-ca-v" numeral oneLine units={resultUnits} auto={auto ?? undefined} />
               </div>
               <T k="label" as="p" className="bk-ca-name" />
             </div>

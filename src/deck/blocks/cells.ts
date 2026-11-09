@@ -1,5 +1,6 @@
 // 부품 하나를 다루는 도우미: 새 부품, 보이는 항목, 부품을 장처럼 그리기, 비어 있는 칸, 항목 더하기, 복사
 
+import { calcAutoOf } from '../calc'
 import { withOneMore } from '../edits'
 import { emptyItem, uid, withDefaultOptions } from '../make'
 import type { Block, BlockEffect, BlockFrom, BlockReveal, BlockSpeed, BlockType, BlockWhen, Item, Slide } from '../types'
@@ -194,12 +195,18 @@ export interface BlockMissing {
   label: string
 }
 
+/**
+ * 비워 두면 셈해 보이는 칸: 계산식의 결과(deck/calc.ts). 셈할 수 있으면 장에 결과가 보이므로 빈칸으로 세지 않는다.
+ * 세던 때는 결과가 보이는데도 '빈칸 1곳: 계산식의 결과'가 남아, 보이는 값을 손으로 다시 적게 했다
+ */
+const autoFilled = (block: Block, key: string) => block.type === 'calc' && key === 'result' && calcAutoOf(blockItems(block)) !== null
+
 /** 이 부품에서 비어 있는 꼭 채울 칸. name은 같은 장에 같은 부품이 둘 이상일 때 자리를 붙인 이름 (blockNames) */
 export function blockMissing(block: Block, name = BLOCKS[block.type].name): BlockMissing[] {
   const spec = BLOCKS[block.type]
   const out: BlockMissing[] = []
   for (const f of spec.fields) {
-    if (f.optional || f.key.startsWith('$')) continue
+    if (f.optional || f.key.startsWith('$') || autoFilled(block, f.key)) continue
     if (!(block.fields[f.key] ?? '').trim()) out.push({ block: block.id, key: f.key, label: `${name}의 ${f.label}` })
   }
   if (spec.items) {

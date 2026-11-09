@@ -69,7 +69,9 @@
 | 부품 장의 판(12×12칸을 자른 조각, 넣기·빼기·옮기기·맞바꾸기·선 끌기, 다시 맞추기) | `src/deck/blocks/board.ts`. 부품마다의 크기 규칙(`boardFit`)은 `sizing.ts`, 부품 수와 면은 `rules.ts`, 놓을 자리는 `place.ts` |
 | 다른 컴포넌트로 바꾸기: 바꿀 수 있는 묶음과 칸의 역할, 글을 옮기는 규칙 | `src/deck/blocks/swap.ts`(`SWAP_GROUPS`, `swapBlock`). 편집기의 '바꾸기'만 쓴다(AI 제안에는 없다) |
 | 부품이 잘리지 않는 높이 | `src/deck/blockHeights.ts`(갤러리에서 잰 값, 손으로 고치지 않는다) |
-| 칸의 글에서 숫자 읽기, 선 그래프의 축 | `src/slides/numbers.ts`(`seriesIn`, `amountPair`, `lineAxis`) |
+| 칸의 글에서 숫자를 단위까지 읽기(`readAmount`), 계산한 값의 꼴 | `src/deck/amount.ts`. 계산식이 결과를 셈해 보이면 빈칸으로 세지 않아야 해서 발표 모델 층에 둔다. 그리는 곳은 `slides/numbers.ts`에서 그대로 가져간다 |
+| 계산식의 셈(셈 기호, 결과 확인, 비운 결과를 셈해 보이기) | `src/deck/calc.ts`(`calcAutoOf`). 그리기(`slides/blocks/Calc.tsx`)와 빈칸 세기(`blocks/cells.ts`)가 같이 쓴다 |
+| 그림에 놓이는 값들 읽기, 선 그래프의 축 | `src/slides/numbers.ts`(`seriesIn`, `amountPair`, `lineAxis`) |
 | 조각 색의 단계(구성비, 쌓은 막대) | `src/slides/tints.ts` |
 | 이어 움직이는 이웃 장이 같이 쓰는 차트의 잣대(막대 비교, 추이)와 묶지 않는 문턱 | `src/slides/sharedScale.ts`의 `sharedScales`. 장 차례 정보(`pageInfo`)에서 한 번 셈하고 `pageProps`가 넘겨, 편집 화면, 발표, 내보낸 HTML, PDF와 PPT, 목록 그림이 같이 쓴다 |
 | 빈 차트를 예시 값으로 옅게 그릴지 | `src/slides/context.ts`의 `demoOf` |
