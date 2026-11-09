@@ -56,7 +56,7 @@ export const SCENES: readonly SceneSpec[] = [
   {
     id: 'time',
     name: '시간의 흐름',
-    description: '시간 쪽으로 천천히 따라가다가 지금 단계(강조한 점)에 머물러요.',
+    description: '단계 사이를 넓혀 차례로 보이며 시간 쪽으로 천천히 따라가요.',
     layouts: ['timeline', 'trend', 'progress'],
     blocks: ['timeline', 'gantt', 'trend', 'progress'],
   },

@@ -1508,8 +1508,9 @@ export function motionEngine(): MotionEngine {
         const t = head()
         items('.tl-item', t, (el, at) => {
           grow(el, at, variant === 'steps' ? 'down' : 'x', '::before')
+          // 지금 단계는 길게 선 강조색 눈금이 말한다. 눈금 둘레로 둥근 고리를 퍼뜨리던 때는 세로 눈금에 작은 동그라미가 걸려 남은 것처럼
+          // 보였다(예시 쇼룸 감성 검수: 눈금에 작은 고리)
           pop(el.querySelector('.tl-dot'), at + 140)
-          if (el.classList.contains('is-now')) pulse(el.querySelector('.tl-dot'), at + 420)
           rise(el.querySelector('.tl-meta'), at + 60, L.y * 0.5)
           rise(el.querySelector('.tl-title'), at + 200, L.y * 0.6)
           rise(el.querySelector('.tl-body'), at + 260, L.y * 0.6)
@@ -3816,8 +3817,6 @@ export function motionEngine(): MotionEngine {
       let guide: HTMLElement[] = []
       /** 근거 사이를 이만큼 벌린다 (선이 따라가며 읽을 수 있게) */
       let spread = 1
-      /** 시간의 흐름: 지금 단계(강조한 점)에서 머무는 곳 */
-      let now: HTMLElement | null = null
       /** 비교 드러내기: 장막을 칠 곳과 가르는 선 */
       let halves: { region: Box; split: number; right?: HTMLElement } | null = null
       let picture: HTMLElement | null = null
@@ -3887,8 +3886,6 @@ export function motionEngine(): MotionEngine {
         }
         case 'time': {
           spread = 1.25
-          const scope2 = layout === 'compose' ? cellOf(['timeline', 'gantt', 'trend', 'progress']) : slide
-          if (scope2) now = scope2.querySelector<HTMLElement>('.tl-item.is-now, .tn-pt.is-hl')
           if (layout === 'progress') guide = qa('.ps-row.it')
           cam = { kind: 'drift', dur: 0 }
           break
@@ -3918,7 +3915,6 @@ export function motionEngine(): MotionEngine {
       const textAt = underline ? textBox(text) : null
       const textSize = text ? parseFloat(getComputedStyle(text).fontSize) || 60 : 60
       const focalAt = deepBox(focal)
-      const nowAt = deepBox(now)
       // 선은 글이 실제로 그려진 자리에 맞춘다: 컴포넌트 칸은 판에 맞춰 글보다 커서, 칸 위에 그으면 글에서 떨어져 떠 있었다(녹화)
       const guideAt = guide.map((el) => textBox(el) ?? boxOf(el))
       const origin = textAt ?? focalAt
@@ -4151,10 +4147,8 @@ export function motionEngine(): MotionEngine {
             moveRest(r.R, r.rStart, r.rStart, spread)
             const g = thread(guide, guideAt)
             const span = Math.max(d(1600), lastStart(r.R) - begin + d(700))
-            if (now && nowAt) {
-              const at = firstIn(now)
-              if (Number.isFinite(at)) spot([nowAt], at + d(260), d(1300))
-            }
+            // 지금 단계 둘레만 남기고 장 전체를 가림막으로 덮던 때는 제목까지 흐렸다가 되돌아와 장이 한 번 꺼졌다 켜진 것처럼
+            // 보였다(예시 쇼룸 감성 검수). 지금 단계는 제 강조색과 카메라가 그쪽으로 따라가는 것으로 선다
             // 카메라는 읽는 쪽으로 따라간다: 옆으로 흐르면 오른쪽으로, 아래로 쌓였으면 아래로
             const down = g ? !g.across : false
             camera('drift', begin, span, center, down ? 0 : 40, down ? 28 : 0)
