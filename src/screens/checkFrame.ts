@@ -85,6 +85,8 @@ export function inkOf(slide: HTMLElement): Ink {
     if (!shown(el)) continue
     const tag = el.tagName.toLowerCase()
     if (el instanceof SVGElement) {
+      // 배경 모션(.s-bd)은 장 끝까지 지나가는 몸짓이라 틀이 아니다: 끝 모습의 가장자리에 남는 옅은 흔적을 틀 밖 내용으로 쟀다
+      if (el.closest('.s-bd')) continue
       if (['path', 'rect', 'circle', 'line', 'polyline', 'polygon', 'ellipse'].includes(tag)) {
         const r = el.getBoundingClientRect()
         add(r.left, r.top, r.right, r.bottom, el, true)
