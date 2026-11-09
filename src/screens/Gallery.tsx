@@ -240,8 +240,7 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
     const types = params.get('type') === 'all' ? DECK_TYPES : [(params.get('type') as DeckType | null) ?? 'business']
     const decks = types.map((type) => {
       const input = { type, audience: 'mixed', minutes: 30, method: 'live', title: '', org: '', presenter: '', theme } as const
-      // &all=1: 듣는 사람과 시간으로 고르지 않은 구성의 모든 장. 홍보 페이지 구성 보기의 그림(site/images/decks/<종류>-<차례>.webp)이
-      // 이 장들을 mode=preview로 찍은 것이라, 차례가 BLUEPRINTS[type].recipes의 차례와 같다
+      // &all=1: 듣는 사람과 시간으로 고르지 않은 구성의 모든 장. 차례는 BLUEPRINTS[type].recipes와 같다(구성 검사 look check --decks가 쓴다)
       return params.get('all') === '1' ? createDeck(input, (BLUEPRINTS[type] ?? BLUEPRINTS.blank).recipes) : createDeck(input)
     })
     const slides = decks.flatMap((d) => d.slides)
