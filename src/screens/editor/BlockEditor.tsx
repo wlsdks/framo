@@ -19,6 +19,7 @@ import {
   effectOf,
   foldableFields,
   gutterLimit,
+  guttersOf,
   imagePlace,
   lookChangeIssue,
   lookOf,
@@ -49,7 +50,7 @@ import { josa, particle } from '../../lib/josa'
 import { gestureKey, usePointerSessions } from '../../lib/pointerSession'
 import { motionEngine } from '../../motion/engine'
 import type { BlockEdit } from '../../slides/blockEdit'
-import { FRAME_PAD } from '../../slides/blockFrame'
+import { FRAME_PAD, frameRect } from '../../slides/blockFrame'
 import { SlideCanvas } from '../../slides/SlideCanvas'
 import { useDeck } from '../../store/deckStore'
 import { addSaved } from '../../store/saved'
@@ -59,7 +60,7 @@ import { BlockTools } from './BlockTools'
 import { CANVAS, COL_W } from './canvas'
 import { useLinkEditing } from './LinkEditor'
 import { useLook } from './look'
-import { narrowText, noRoomText, refuseText } from './noRoom'
+import { edgeText, narrowText, noRoomText, refuseText } from './noRoom'
 import { dropBlocks, dropResult, planDrop, sameBoard, sameEditTarget, type DropPlanKind, type EditTarget } from './planDrop'
 import { RoomZone } from './RoomZone'
 
@@ -140,6 +141,49 @@ function caretAt(ed: HTMLElement, x: number, y: number) {
 function leaveTyping() {
   const a = document.activeElement
   if (a instanceof HTMLElement && a.closest('input, textarea, [contenteditable]')) a.blur()
+}
+
+/**
+ * 테두리의 옆 끝으로 치는 너비 (화면 px). 안쪽은 좁게: 글은 테두리에서 FRAME_PAD만큼 안쪽이라, 글 끝을 눌러 커서를 두는 자리는 가로채지 않는다.
+ * 바깥쪽은 칸 끝까지 (칸이 테두리보다 넓은 컴포넌트)
+ */
+const EDGE_IN = 3
+const EDGE_OUT = 12
+
+/** 컴포넌트 칸의 테두리에서 (x, y)가 왼쪽, 오른쪽 끝인지 */
+function frameSide(cell: HTMLElement, x: number, y: number): 'l' | 'r' | null {
+  const f = frameRect(cell)
+  if (y < f.top || y > f.bottom) return null
+  if (x >= f.right - EDGE_IN && x <= f.right + EDGE_OUT) return 'r'
+  if (x <= f.left + EDGE_IN && x >= f.left - EDGE_OUT) return 'l'
+  return null
+}
+
+/**
+ * 손 아래(t, x, y)가 어느 컴포넌트 테두리의 옆 끝인지. 테두리는 그린 것 둘레라 칸 밖(칸 사이, 본문 상자 밖)으로 조금 나오기도 해서(blockFrame.ts),
+ * 칸 밖이면 모든 칸을 본다. 제 일이 있는 것(끌어 옮기는 이름표, 판의 선, 연결 기호, 항목 손잡이와 빼기, 단추)은 뺀다: 항목 줄 끝의 빼기는
+ * 테두리 끝에 붙어 있다
+ */
+function edgeUnder(area: HTMLElement, t: Element, x: number, y: number): { id: string; side: 'l' | 'r' } | null {
+  if (t.closest('.bk-handle, .bk-line, .bk-link, button, input, textarea, .img-ed, .bk-bar, .it-remove, .it-grip')) return null
+  const own = t.closest<HTMLElement>('.bk[data-block]')
+  if (own && !area.contains(own)) return null
+  for (const cell of own ? [own] : area.querySelectorAll<HTMLElement>(':scope > .bk[data-block]')) {
+    const side = frameSide(cell, x, y)
+    if (side) return { id: cell.dataset.block ?? '', side }
+  }
+  return null
+}
+
+/** 누르기에서 쓰는 것만. 판의 선은 React의 누르기로, 테두리 끝은 문서에 건 누르기(useBlockEditing의 '테두리 끝으로 너비 바꾸기')로 시작한다 */
+type Press = Pick<PointerEvent, 'button' | 'clientX' | 'clientY' | 'preventDefault' | 'stopPropagation'>
+
+/** 컴포넌트의 그쪽 끝에 닿은 판의 선 (옆 컴포넌트와의 사이). 슬라이드 끝 쪽이면 없다 (blocks.tsx의 Lines가 고른 부품 곁의 선을 찾는 것과 같다) */
+function sideGutter(blocks: Block[], b: Block, side: 'l' | 'r'): Gutter | null {
+  const a = b.at
+  if (!a) return null
+  const x = side === 'l' ? a.x : a.x + a.w
+  return guttersOf(blocks).find((g) => g.dir === 'h' && g.at === x && g.from < a.y + a.h && a.y < g.to) ?? null
 }
 
 /** 본문 상자(.bk-area)의 화면 자리와 캔버스 크기 */
@@ -542,7 +586,7 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
 
   /** 눌렀다가 조금 움직이면 끌기 시작. 그냥 떼면 onClick */
   const press = useCallback(
-    (e: ReactPointerEvent<HTMLElement>, start: (x: number, y: number) => void, onClick?: () => void) => {
+    (e: Press, start: (x: number, y: number) => void, onClick?: () => void) => {
       if (e.button !== 0) return
       const sx = e.clientX
       const sy = e.clientY
@@ -708,7 +752,7 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
   // ---------- 판을 나누는 선 ----------
 
   const onGutterPointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLElement>, gutter: Gutter) => {
+    (e: Press, gutter: Gutter) => {
       if (e.button !== 0) return
       e.preventDefault()
       e.stopPropagation()
@@ -789,6 +833,80 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
     const next = dragGutter(blocks, gutter, to, area.size.h)
     if (next) store.setBlocks(cur.id, next)
   }
+
+  // ---------- 테두리 끝으로 너비 바꾸기 ----------
+  // 컴포넌트 테두리의 왼쪽·오른쪽 끝을 잡아 끄는 것은 PowerPoint의 글상자처럼 너비를 바꾸려는 것이다. 예전에는 옮기기가 시작되어 '현재 자리예요'만
+  // 떴고, 혼자 슬라이드 너비를 다 쓰는 컴포넌트는 왜 넓어지지 않는지 알 수 없었다("박스 가로 길이가 왜 조절이 안 돼? 글자가 늘어서 늘리고 싶은데").
+  // 그쪽에 옆 컴포넌트와의 사이 선이 있으면 그 선을 끄는 것과 같게, 슬라이드 끝이면 까닭을 알린다
+
+  const widenAt = (e: Press, id: string, side: 'l' | 'r') => {
+    const blocks = slideRef.current.blocks ?? []
+    const b = blocks.find((x) => x.id === id)
+    if (!b) return
+    const g = sideGutter(blocks, b, side)
+    if (g) onGutterPointerDown(e, g)
+    else toast.show(edgeText(b), undefined, 5000)
+  }
+
+  // 끌 수 있는 끝에 손을 올리면 판의 선과 같은 너비 커서 (styles/blocks.css). 슬라이드 끝 쪽은 그대로 두고, 끌면 까닭을 알린다(widenAt).
+  // 누르기는 문서에서 먼저(잡기 단계) 받는다: 테두리 끝은 칸 밖(칸 사이, 본문 상자 밖)에도 있어 칸의 누르기(onCellPointerDown)에 오지 않고,
+  // 칸 안이면 칸의 누르기가 옮기기를 시작하기 전에 가로채야 한다. 본문 상자는 장을 고르거나 다시 그리면 새로 생기니 누를 때마다 지금 것을 본다
+  useEffect(() => {
+    if (!compose || drag) return
+    let frame = 0
+    let shown: HTMLElement | null = null
+    const set = (area: HTMLElement | null) => {
+      if (shown === area) return
+      if (shown) delete shown.dataset.edge
+      if (area) area.dataset.edge = 'col'
+      shown = area
+    }
+    /** 손 아래가 지금 편집 중인 본문 상자의 테두리 끝이면 그 상자와 컴포넌트 */
+    const hitAt = (ev: PointerEvent) => {
+      const area = areaEl.current
+      const t = ev.target instanceof Element ? ev.target : null
+      if (!area?.isConnected || !t || !area.closest('.slide')?.contains(t)) return null
+      // 쓰고 있는 칸 위에서는 글자를 고르는 자리다 (onCellPointerDown도 그대로 둔다)
+      if (t.closest('.ed')?.contains(document.activeElement)) return null
+      const hit = edgeUnder(area, t, ev.clientX, ev.clientY)
+      return hit && { ...hit, area }
+    }
+    const onMove = (ev: PointerEvent) => {
+      cancelAnimationFrame(frame)
+      if (ev.buttons) return set(null)
+      frame = requestAnimationFrame(() => {
+        const hit = hitAt(ev)
+        const blocks = slideRef.current.blocks ?? []
+        const b = hit && blocks.find((x) => x.id === hit.id)
+        set(b && sideGutter(blocks, b, hit.side) ? hit.area : null)
+      })
+    }
+    const onDown = (ev: PointerEvent) => {
+      if (ev.button !== 0) return
+      const hit = hitAt(ev)
+      if (!hit) return
+      // 칸의 누르기(옮기기)와 칸 밖을 누르면 고르기를 끝내는 무대의 처리(SlideStage)로 넘기지 않는다: 이 컴포넌트를 고르고 너비를 바꾼다
+      ev.stopPropagation()
+      ev.preventDefault()
+      leaveTyping()
+      setSelected(hit.id)
+      links.selectLink(null)
+      // 그냥 떼면 칸의 누르기와 같게: 글 칸이면 그 자리에 글자 커서를
+      const ed = (ev.target as Element).closest<HTMLElement>('.ed')
+      const { clientX: x, clientY: y } = ev
+      press(ev, () => widenAt(ev, hit.id, hit.side), ed ? () => caretAt(ed, x, y) : undefined)
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('pointerdown', onDown, true)
+    return () => {
+      cancelAnimationFrame(frame)
+      set(null)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerdown', onDown, true)
+    }
+    // widenAt, links는 그릴 때마다 새로 만들지만 읽는 것은 ref(slideRef, areaEl)와 그대로인 할 일뿐이다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compose, slide.id, drag])
 
   // ---------- 고른 부품의 도구 ----------
 
