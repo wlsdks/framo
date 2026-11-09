@@ -86,9 +86,11 @@
   font-weight: 800;
 }
 
-/* 지금 칸: 머리부터 마지막 줄까지 옅은 띠 */
+/* 지금 칸: 머리부터 마지막 줄까지 그 달의 앞 끝에 강조색 선 하나. 할 일 줄(막대와 기간 칸의 세로 줄)보다 위에 긋는다: 밑에 깔던 때는
+   줄마다 기간 칸의 옅은 세로 줄이 그 위를 덮어 줄 사이 틈에서만 보여서 끊긴 점선처럼 읽혔다(검수) */
 .bk-gt-now {
   position: absolute;
+  z-index: 1;
   top: 0;
   bottom: 0;
   left: calc(var(--lw) + 28px + (100% - var(--lw) - 28px) * var(--now) / var(--n));
@@ -178,6 +180,19 @@
 
 .bk-gt-row.is-later {
   --gt-c: var(--accent-line);
+}
+
+/* 검은 바탕에서는 막대 농담을 한 단계씩 짙게: 강조색 45%, 26%를 검정에 섞으면 프로젝터에서 막대가 바탕에 묻혔다(검수) */
+.is-dark .bk-gt {
+  --gt-c: color-mix(in srgb, var(--accent) 66%, var(--bg));
+}
+
+.is-dark .bk-gt-row.is-later {
+  --gt-c: color-mix(in srgb, var(--accent) 44%, var(--bg));
+}
+
+.is-dark .bk-gt-row.is-done {
+  --gt-c: color-mix(in srgb, var(--ink) 32%, transparent);
 }
 
 .bk-gt-row.is-hint .bk-gt-bar,
