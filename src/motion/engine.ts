@@ -1508,8 +1508,9 @@ export function motionEngine(): MotionEngine {
         const t = head()
         items('.tl-item', t, (el, at) => {
           grow(el, at, variant === 'steps' ? 'down' : 'x', '::before')
+          // 지금 단계는 길게 선 강조색 눈금이 말한다. 눈금 둘레로 둥근 고리를 퍼뜨리던 때는 세로 눈금에 작은 동그라미가 걸려 남은 것처럼
+          // 보였다(예시 쇼룸 감성 검수: 눈금에 작은 고리)
           pop(el.querySelector('.tl-dot'), at + 140)
-          if (el.classList.contains('is-now')) pulse(el.querySelector('.tl-dot'), at + 420)
           rise(el.querySelector('.tl-meta'), at + 60, L.y * 0.5)
           rise(el.querySelector('.tl-title'), at + 200, L.y * 0.6)
           rise(el.querySelector('.tl-body'), at + 260, L.y * 0.6)
@@ -2562,8 +2563,8 @@ export function motionEngine(): MotionEngine {
         case 'cycle': {
           // 순환의 요점은 끝이 처음에 이어지는 것이라, 짜임마다 마지막 단계에서 처음 단계로 돌아오는 길을 끝까지 긋고 그 길을 데이터 조각이
           // 한 번 탄다. 고리(넓고 높은 칸): 12시의 첫 단계 점이 맺히면 구간이 시계 방향으로 하나씩 그어지고 조각이 선 끝을 타고 건너가
-          // 머리가 맺힐 때 다음 단계가 나온다. 마지막 구간이 첫 점으로 돌아오면 조각이 고리를 한 번 더 빠르게 돌고, 첫 점이 받으며
-          // 부풀었다 돌아온다. 가로(넓고 낮은 칸): 단계가 왼쪽부터 나오며 번호 사이 선이 그어지고, 마지막 단계에서 선이 위로 꺾여 거꾸로
+          // 머리가 맺힐 때 다음 단계가 나온다. 마지막 구간이 첫 점으로 돌아오면 첫 점이 받으며 부풀었다 돌아오고 고리는 멈춘다: 다 그린
+          // 뒤에 조각이 한 바퀴 더 돌고 생동감에서는 둘이 쉬지 않고 돌던 때는 고리가 로딩 표시처럼 보였다(예시 쇼룸 감성 검수). 가로(넓고 낮은 칸): 단계가 왼쪽부터 나오며 번호 사이 선이 그어지고, 마지막 단계에서 선이 위로 꺾여 거꾸로
           // 건너와 처음 단계로 들어간다. 세로(좁은 칸): 단계가 위에서부터 나오고, 괄호 선이 아래에서 위로 그어져 처음 단계로 들어간다.
           // 단계가 많아도 한 바퀴는 1.8초 안에. 되풀이하지 않는다(흐름과 같은 까닭)
           lines(one('.bk-h'), 60)
@@ -2608,19 +2609,8 @@ export function motionEngine(): MotionEngine {
               packet(stage, legs[n], at + 80, hop * 0.92)
               pop(tips[n] ?? null, at + 80 + hop * 0.85)
             })
-            // 한 번 더: 조각이 구간마다 이어 건너간다(점에서 나와 다음 점 앞에서 들어간다)
-            const fast = hop * 0.6
-            let again = 140 + steps.length * hop + 260
-            for (const leg of legs) {
-              packet(stage, leg, again, fast)
-              again += fast
-            }
-            land(ports[0] ?? null, again - 80)
-            // 생동감: 그 뒤로는 조각 둘이 고리를 마주 보며 쉬지 않고 돈다(한 바퀴 길을 이어 붙여 한 줄로)
-            const loop = legs.flat()
-            const lap = d(Math.max(2600, steps.length * 700))
-            stream(stage, loop, again + 300, lap)
-            stream(stage, loop, again + 300, lap, lap / 2)
+            // 마지막 구간의 조각이 첫 점에 닿을 때 첫 점이 받는다
+            land(ports[0] ?? null, 140 + (steps.length - 1) * hop + 80 + hop * 0.92 - 40)
           } else if (getComputedStyle(root).getPropertyValue('--cy-flat').trim() === '1') {
             // 단계가 왼쪽부터 차례로 나온다(번호 사이에는 선이 없다: 차례는 읽는 방향과 번호가 말한다, cycle.css). 사이는 세로의 괄호 선과
             // 같은 짧은 차례(hop의 0.6배): 번호 사이 선을 걷은 뒤에도 선을 긋던 사이(hop)를 그대로 두면 생동감에서 단계마다 0.6초씩 서서
@@ -3422,11 +3412,10 @@ export function motionEngine(): MotionEngine {
             if (accent) run(anims, seg, [{ backgroundColor: accent }], s(open + 40 + i * 60), { easing: OUT, duration: d(520) })
             run(anims, seg, [{ borderRadius: '0px' }], s(open), { easing: OUT, duration: d(460) })
           })
-          count(one('.bk-sg-total'), 120)
-          items('.bk-sg-key', open + 220, (el, at) => {
-            rise(el, at, L.y * 0.5)
-            countIn(el.querySelector('.bk-sg-v'), at + 40)
-          })
+          // 합계는 막대가 펼쳐지는 것과 같은 때, 같은 곡선으로 센다: 따로 세던 때는 맨 위 숫자가 막대보다 앞서 끝 값에 닿았다.
+          // 조각의 값은 세지 않고 이름표와 함께 올라온다: 작은 숫자 넷이 함께 구르면 초점이 넷으로 갈렸다(예시 쇼룸 감성 검수)
+          count(one('.bk-sg-total'), 60, { easing: EASE.sweep, duration: 720 })
+          items('.bk-sg-key', open + 220, (el, at) => rise(el, at, L.y * 0.5))
           break
         }
         case 'merge': {
@@ -3831,8 +3820,6 @@ export function motionEngine(): MotionEngine {
       let guide: HTMLElement[] = []
       /** 근거 사이를 이만큼 벌린다 (선이 따라가며 읽을 수 있게) */
       let spread = 1
-      /** 시간의 흐름: 지금 단계(강조한 점)에서 머무는 곳 */
-      let now: HTMLElement | null = null
       /** 비교 드러내기: 장막을 칠 곳과 가르는 선 */
       let halves: { region: Box; split: number; right?: HTMLElement } | null = null
       let picture: HTMLElement | null = null
@@ -3902,8 +3889,6 @@ export function motionEngine(): MotionEngine {
         }
         case 'time': {
           spread = 1.25
-          const scope2 = layout === 'compose' ? cellOf(['timeline', 'gantt', 'trend', 'progress']) : slide
-          if (scope2) now = scope2.querySelector<HTMLElement>('.tl-item.is-now, .tn-pt.is-hl')
           if (layout === 'progress') guide = qa('.ps-row.it')
           cam = { kind: 'drift', dur: 0 }
           break
@@ -3933,7 +3918,6 @@ export function motionEngine(): MotionEngine {
       const textAt = underline ? textBox(text) : null
       const textSize = text ? parseFloat(getComputedStyle(text).fontSize) || 60 : 60
       const focalAt = deepBox(focal)
-      const nowAt = deepBox(now)
       // 선은 글이 실제로 그려진 자리에 맞춘다: 컴포넌트 칸은 판에 맞춰 글보다 커서, 칸 위에 그으면 글에서 떨어져 떠 있었다(녹화)
       const guideAt = guide.map((el) => textBox(el) ?? boxOf(el))
       const origin = textAt ?? focalAt
@@ -4166,10 +4150,8 @@ export function motionEngine(): MotionEngine {
             moveRest(r.R, r.rStart, r.rStart, spread)
             const g = thread(guide, guideAt)
             const span = Math.max(d(1600), lastStart(r.R) - begin + d(700))
-            if (now && nowAt) {
-              const at = firstIn(now)
-              if (Number.isFinite(at)) spot([nowAt], at + d(260), d(1300))
-            }
+            // 지금 단계 둘레만 남기고 장 전체를 가림막으로 덮던 때는 제목까지 흐렸다가 되돌아와 장이 한 번 꺼졌다 켜진 것처럼
+            // 보였다(예시 쇼룸 감성 검수). 지금 단계는 제 강조색과 카메라가 그쪽으로 따라가는 것으로 선다
             // 카메라는 읽는 쪽으로 따라간다: 옆으로 흐르면 오른쪽으로, 아래로 쌓였으면 아래로
             const down = g ? !g.across : false
             camera('drift', begin, span, center, down ? 0 : 40, down ? 28 : 0)

@@ -382,8 +382,27 @@ export function blockFitter() {
    * 앞의 점의 이름표나 다른 점을 덮거나 판 밖으로 나가면 오른쪽, 왼쪽, 위, 아래 차례로 겹치지 않는 자리를 찾는다. 없으면 어림한 자리.
    * 흐름의 단계 이름과 추이의 점 숫자(trendPlace)도 여기서 다시 고른다(flowNames)
    */
+  /**
+   * 나누기의 몫(39%)을 값 옆에 둘지 아래에 둘지: 조각 아래 이름표 하나라도 값과 몫이 한 줄에 들지 않으면 모든 이름표의 몫을 값 아래에
+   * 둔다(is-pct-below). 이름표마다 꺾이게 두던 때는 좁은 조각 하나만 '11%'가 한 줄 아래로 떨어져 나란한 이름표의 줄이 어긋났다(예시
+   * 쇼룸 감성 검수). 글자 크기가 바뀔 때마다 다시 고른다(place)
+   */
+  function splitPct(scope: ParentNode): void {
+    for (const sg of Array.from(scope.querySelectorAll<HTMLElement>('.bk-sg'))) {
+      sg.classList.remove('is-pct-below')
+      if (!sg.offsetWidth) continue
+      const wrapped = Array.from(sg.querySelectorAll<HTMLElement>('.bk-sg-key')).some((key) => {
+        const v = key.querySelector('.bk-sg-v')?.getBoundingClientRect()
+        const p = key.querySelector('.bk-sg-pct')?.getBoundingClientRect()
+        return !!v && !!p && p.width > 0 && p.top >= v.bottom - 2
+      })
+      if (wrapped) sg.classList.add('is-pct-below')
+    }
+  }
+
   function place(scope: ParentNode): void {
     flowNames(scope)
+    splitPct(scope)
     const plots = scope instanceof HTMLElement && scope.classList.contains('pm-plot') ? [scope] : Array.from(scope.querySelectorAll<HTMLElement>('.pm-plot'))
     const SIDES = ['is-left', 'is-up', 'is-down']
     const tries = [[], ['is-left'], ['is-up'], ['is-down'], ['is-left', 'is-up'], ['is-left', 'is-down']]

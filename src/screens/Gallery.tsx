@@ -361,7 +361,10 @@ export function Gallery() {
         ...(params.get('hideHead') === '1' ? { hideHead: true } : {}),
         ...(params.get('hideFoot') === '1' ? { hideFoot: true } : {}),
       },
-    })),
+    })).map((s) =>
+      // &hl은 강조할 항목을 고를 수 있는 컴포넌트에도(BLOCKS의 highlight)
+      hl !== null && s.blocks ? { ...s, blocks: s.blocks.map((b) => (BLOCKS[b.type]?.highlight ? { ...b, highlight: Number(hl) } : b)) } : s,
+    ),
   }
   // 구성(set=blank)과 예시 발표(set=example)는 처음 만들 때의 판이라, 글자 크기(&size)나 테마를 바꾼 모습은 편집기처럼 판을 다시 맞춰 본다
   const deck = ['hideHead', 'hideFoot', 'blankHead'].some((key) => params.get(key) === '1') || ['blank', 'example'].includes(params.get('set') ?? '') ? settleDeck(raw) : raw

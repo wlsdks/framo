@@ -33,10 +33,12 @@ export function Wipe() {
               className="it bk-wp-row"
               style={{ "--k": k } as CSSProperties}
             >
+              {/* 지금과 바뀐 뒤는 한 문장씩: Enter는 다음 짝으로(줄바꿈은 Shift+Enter). Enter가 줄바꿈이던 때는 처음 쓰는 사람이 다음 줄을
+                  쓰려고 Enter를 눌러 한 칸에 두 문장을 썼다(처음 쓰는 사람 검수). 길면 칸 너비에서 저절로 꺾인다 */}
               <span className="bk-wp-was">
-                <IT i={i} k="title" className="bk-wp-old" multiline />
+                <IT i={i} k="title" className="bk-wp-old" multiline enterNext />
               </span>
-              <IT i={i} k="body" className="bk-wp-new" multiline />
+              <IT i={i} k="body" className="bk-wp-new" multiline enterNext />
               <ItemTools i={i} />
             </li>
           ))}

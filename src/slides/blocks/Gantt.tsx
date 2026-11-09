@@ -1,6 +1,7 @@
 // 부품: 추진 일정 (gantt). 모양은 styles/blocks/gantt.css
 
 import { BLOCKS } from '../../deck/blocks'
+import { readField } from '../../deck/fields'
 import { hintFor } from '../../deck/layouts'
 import { cx } from '../../lib/cx'
 import { useSlide } from '../context'
@@ -13,10 +14,12 @@ import { useDemo } from './parts'
  * 지금 칸을 적으면 지난 일은 흐리게, 하는 일은 강조색, 앞으로 할 일은 옅은 강조색으로 나눠 칠한다
  */
 export function Gantt() {
-  const { slide, mode } = useSlide()
+  const { slide, meta, mode } = useSlide()
   const { demo, read } = useDemo(['cols'])
   const cols = colsOf(read('cols'))
-  const now = spanIn(read('now'), cols)?.[0] ?? -1
+  // 지금 칸은 적은 값으로만: 기간 칸이 비어 안내로 그리는 동안 지금 칸의 안내('예: 11월')까지 값으로 읽던 때는 편집할 때만 11월이
+  // 강조되고 발표에서는 사라져, 지금을 정해 둔 것처럼 보였다(처음 쓰는 사람 검수)
+  const now = spanIn(readField(slide, meta, 'now'), cols)?.[0] ?? -1
   const items = slide.items.slice(0, BLOCKS.gantt.items!.max)
   // 기간이 비어 있으면 편집할 때만 안내 기간으로 흐린 막대를 보인다
   const periodOf = (i: number) => items[i].body.trim() || (mode === 'final' ? '' : hintFor(slide.layout, slide.hints, 'body', 'body', i))

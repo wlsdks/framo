@@ -436,6 +436,13 @@ describe('자리 정하기', () => {
     expect(labels.every((l) => l.startsWith('오른쪽 '))).toBe(true)
   })
 
+  it('빈칸 이름은 칸 이름이 항목 이름과 같으면 겹쳐 쓰지 않는다 (추진 일정 할 일 1)', () => {
+    const g = { ...block('gantt', 'g'), items: block('gantt').items.map((it) => ({ ...it, title: '' })) }
+    const labels = blockMissing(g).map((m) => m.label)
+    expect(labels).toContain('추진 일정 할 일 1')
+    expect(labels.some((l) => l.includes('할 일 1의 할 일'))).toBe(false)
+  })
+
   it('로고가 많으면 넓은 칸에만 놓는다', () => {
     const logos = (n: number) => ({ ...block('logos', 'l'), items: Array.from({ length: n }, (_, i) => ({ ...block('logos').items[0], id: `l${i}` })) })
     expect([3, 6, 10].map((n) => minSpanOf(logos(n)))).toEqual([6, 8, 12])

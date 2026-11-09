@@ -157,11 +157,21 @@ function withoutExample(b: Block, k: string): Block {
 function BlockBody({ block, span }: { block: Block; span: number }) {
   const ctx = useSlide()
   const opened = useContext(BlockEditContext)?.opened
-  // 편집기에서 '칸 더하기'로 연 칸은 비어 있어도 그린다
+  // 편집기에서 '칸 더하기'로 연 칸은 비어 있어도 그린다. 프레임 잡기의 구성이 안내를 적어 둔 칸도 처음부터 펼쳐 둔다: 접어 두면 원인 캐기의
+  // 확인한 사실, 계산식의 근거, 추진 일정의 지금처럼 구성이 이 장에 쓰라고 적어 둔 안내가 보이지 않았다(처음 쓰는 사람 검수). 비워 두면
+  // 발표할 때는 다른 빈칸처럼 그리지 않는다(필수 칸이 안내를 보이는 것과 같다)
   const folds = useMemo(() => {
     const all = foldsOf(block.type)
-    return opened?.size ? new Set([...all].filter((k) => !opened.has(`${block.id} ${k}`))) : all
-  }, [block.type, block.id, opened])
+    const hints = block.hints
+    const hinted = (k: string) => {
+      if (!hints) return false
+      if (hints[k]?.trim()) return true
+      if (!k.startsWith('items.')) return false
+      const tail = `.${k.slice('items.'.length)}`
+      return Object.keys(hints).some((h) => h.startsWith('items.') && h.endsWith(tail) && !!hints[h]?.trim())
+    }
+    return opened?.size || hints ? new Set([...all].filter((k) => !opened?.has(`${block.id} ${k}`) && !hinted(k))) : all
+  }, [block.type, block.id, block.hints, opened])
   const spec = BLOCKS[block.type]
   const outer = ctx.actions
   // 발표 모습에서는 하나도 채우지 않은 항목을 그리지 않는다(장의 항목과 같은 규칙, SlideCanvas)

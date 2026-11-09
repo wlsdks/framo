@@ -145,6 +145,27 @@
   }
 }
 
+/* 판을 혼자 쓰는 넓고 높은 칸: 글을 한 단계씩 키우고(지금 30 → 36, 바뀐 뒤 36 → 44) 바뀐 뒤를 강조색으로 둔다. 보통 크기로는 판을 혼자
+   써도 두 줄이 장 가운데에 작게 남아 프레임 잡기의 작은 그림에서 거의 빈 장으로 보였다(감성 검수). 바뀐 뒤는 이 장의 답이라 강조색이고,
+   글자색 굵은 글로 키우면 장 제목(52px) 바로 아래 단계의 굵은 검정 줄이 되어 제목이 둘로 읽힌다(원인 캐기의 근본 원인과 같다) */
+@container bk (min-width: 1200px) and (min-height: 600px) {
+  .bk-look-plain .bk-wp {
+    .bk-wp-hf,
+    .bk-wp-ht {
+      --fs: var(--t-body);
+    }
+
+    .bk-wp-old {
+      --fs: var(--t-h);
+    }
+
+    .bk-wp-new {
+      --fs: 44px;
+      color: var(--accent);
+    }
+  }
+}
+
 @container bk (max-width: 720px) {
   .bk-wp-frame {
     grid-template-columns: minmax(0, 1fr);

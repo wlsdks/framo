@@ -54,6 +54,11 @@ export function cycleRing(n: number, from = 0): { spots: CycleSpot[]; arcs: { d:
   return { spots, arcs }
 }
 
+/** 강조할 단계: 고른 것이 있으면 그것, 없으면 강조 없음(-1). 순환에는 정해진 답이 없어서 기본으로 칠하면 뜻 없는 강조가 된다 */
+function cycleHighlight(chosen: number | undefined, n: number): number {
+  return Number.isInteger(chosen) && chosen! >= -1 && chosen! < n ? chosen! : -1
+}
+
 /** 글 너비 어림(이름 글자 크기 em): 한글과 전각은 1, 그 밖은 0.58, 띄어쓰기 0.3 */
 function widthEm(text: string): number {
   let w = 0
@@ -169,6 +174,7 @@ export function Cycle() {
   const labels = shown.map(({ i }) => ({ title: seen('title', i), meta: opened || slide.items[i]?.meta.trim() ? seen('meta', i) : '' }))
   const fit = cycleFit(spots, cycleLabelBoxes(labels))
   const center = mode !== 'final' || !!readField(slide, meta, 'center').trim()
+  const hl = cycleHighlight(slide.options.highlight, shown.length)
   const angle = (deg: number) => ({ '--a': `${deg}deg` }) as CSSProperties
   return (
     <div
@@ -188,7 +194,7 @@ export function Cycle() {
         <span className="bk-cy-marks" aria-hidden="true">
           {arcs.map((a, n) => (
             <Fragment key={n}>
-              <span className="bk-cy-port" style={angle(a.from)} />
+              <span className={cx('bk-cy-port', n === hl && 'is-hl')} style={angle(a.from)} />
               <span className="bk-cy-tip" style={angle(a.tip)} />
             </Fragment>
           ))}
@@ -202,7 +208,7 @@ export function Cycle() {
           {shown.map(({ item, i }, n) => (
             <li
               key={item.id}
-              className={cx('it bk-cy-step', `is-${spots[n].side}`)}
+              className={cx('it bk-cy-step', `is-${spots[n].side}`, n === hl && 'is-hl')}
               style={{ ...angle(spots[n].angle), '--fx': spots[n].fx, '--fy': spots[n].fy } as CSSProperties}
             >
               <span className="bk-cy-mark">

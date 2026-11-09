@@ -98,6 +98,9 @@
   border-radius: var(--r-mark);
   /* 지금은 칠하지 않고 그 달의 앞 끝에 강조색 선 하나 */
   box-shadow: inset var(--rule-hair) 0 0 var(--accent);
+  /* 그림일 뿐이라 누르기는 아래로 보낸다: 줄 위에 덮인 그 달 칸 너비의 상자가 누르기를 가로채서, 지금 달의 막대에 마우스를 올리거나
+     눌러 날짜를 고칠 수 없었다(처음 쓰는 사람 검수) */
+  pointer-events: none;
 }
 
 .bk-gt-row {

@@ -136,14 +136,12 @@
   --rt-c: var(--accent);
 }
 
+/* 사람 그림도 막대와 같은 색(--rt-c): 따로 글자색 16%로 두던 때는 검은 바탕에서 빈 사람이 바탕에 묻혔다(예시 쇼룸 감성 검수).
+   검은 바탕의 한 단계 짙은 빈 색(아래 .is-dark)을 막대와 같이 받는다 */
 .bk-rt-dots[data-kind='person'] .bk-rt-d {
   border-radius: 0;
   background: none;
-  color: color-mix(in srgb, var(--ink) 16%, transparent);
-}
-
-.bk-rt-dots[data-kind='person'] .bk-rt-d.is-on {
-  color: var(--accent);
+  color: var(--rt-c);
 }
 
 .bk-rt-d svg {
@@ -253,7 +251,7 @@
   }
 }
 
-/* 검은 바탕에서는 빈 막대(글자색 16%)가 바탕에 묻혀서 한 단계 짙게 */
+/* 검은 바탕에서는 빈 막대와 빈 사람(글자색 16%)이 바탕에 묻혀서 한 단계 짙게 */
 .is-dark .bk-rt-d:not(.is-on) {
   --rt-c: color-mix(in srgb, var(--ink) 30%, transparent);
 }

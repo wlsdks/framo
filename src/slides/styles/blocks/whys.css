@@ -116,11 +116,12 @@
   color: var(--accent);
 }
 
+/* 덧붙임(근거 숫자, 출처)은 작은 글(26)에 한 단계 진한 글자색: 출처 글자(22)에 옅은 글자색으로 두던 때는 3~5m에서 읽히지 않았다(감성 검수) */
 .bk-wy-m {
-  --fs: var(--t-source);
+  --fs: var(--t-small);
   display: block;
   margin-top: 4px;
-  color: var(--ink-3);
+  color: var(--ink-2);
   line-height: 1.35;
 }
 
@@ -201,5 +202,29 @@
 @container bk (min-width: 1200px) and (min-height: 640px) {
   .bk-look-plain .bk-wy:not(.is-across) {
     --wy-gap: calc(44px * var(--bk-fit, 1));
+  }
+
+  /* 판을 혼자 쓰는 무대에서는 글을 한 단계씩 키운다(원인 30 → 36, 근본 원인 36 → 44, 이름표 22 → 26): 보통 크기로는 장 가운데에
+     계단이 작게 남아 프레임 잡기의 작은 그림에서 거의 빈 장으로 보였다(감성 검수). 문제 줄은 원인처럼 보통 굵기로 둔다: 굵게 두면
+     키운 문제 줄(43px)이 장 제목(52px) 바로 아래 단계의 굵은 검정 줄이 되어 제목이 둘로 읽힌다. 캐기의 처음은 이름표(문제)와 맨 위
+     자리가, 끝은 강조색 답이 가른다. 여섯 단(원인 다섯)은 키운 글로는 이 문턱(640)에 들지 않아서 보통 크기로 둔다 */
+  .bk-look-plain .bk-wy:not(.is-across, [data-steps='6']) {
+    .bk-wy-step,
+    .bk-wy-t {
+      --fs: var(--t-h);
+    }
+
+    .bk-wy-step.is-root,
+    .bk-wy-step.is-root .bk-wy-t {
+      --fs: 44px;
+    }
+
+    .bk-wy-k {
+      --fs: var(--t-small);
+    }
+
+    .bk-wy-step.is-problem .bk-wy-t {
+      font-weight: 400;
+    }
   }
 }
