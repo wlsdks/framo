@@ -4,7 +4,9 @@ import { CSS } from '@dnd-kit/utilities'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { slideAiHidden } from '../../deck/aiHidden'
 import { slideName } from '../../deck/blocks'
+import { presetRecipe } from '../../deck/cine'
 import { missingFields, pageInfo } from '../../deck/fields'
+import { uid } from '../../deck/make'
 import type { Deck, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { listAccessibility, movedSay, useListDrag } from '../../lib/listDrag'
@@ -15,6 +17,7 @@ import { AlertIcon, EyeOffIcon, LockIcon, PlusIcon, Popover } from '../ui'
 import { keys } from '../../lib/keys'
 import { SHORTCUT } from './shortcuts'
 import { AddSlide } from './AddSlide'
+import { addCineSlide } from './cineEdit'
 import { SlideContextMenu } from './SlideMenu'
 import { useDrawSoon } from '../drawSoon'
 import { useAfterPaint, useLook } from './look'
@@ -180,6 +183,10 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
             onPick={(id) => {
               addSlide(id, selectedId ?? undefined)
               close()
+            }}
+            onPickCine={(preset) => {
+              close()
+              addCineSlide(presetRecipe(preset, uid()), selectedId ?? undefined)
             }}
           />
         )}

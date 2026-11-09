@@ -36,10 +36,10 @@ export function cineGoesNext(slide: Slide): boolean {
 }
 
 /**
- * 모션 그래픽을 넣는다: 빈 장이면 이 장에 판 가득, 다른 내용이 있으면 이 장 다음에 새 컴포넌트 장을 만들어 판 가득(cineGoesNext. 물어보고
- * 기다리게 하지 않는다). 넣는 고침은 하나라 되돌리기 한 번에 원래대로다. 넣은 부품 id
+ * 넣을 모션 그래픽 부품(판 가득). 레시피는 맡겨 두어(stageCine) 부품을 넣는 고침에 같이 들어간다. isFresh: 틀에서 새로 넣는 것
+ * (손잡이를 바꾸면 새 갈래로 남는다. 바꾸지 않으면 라이브러리에 남기지 않는다)
  */
-export function insertCine(recipe: CineRecipe, slide: Slide, isFresh: boolean, toast: Toast): string {
+function cineBlock(recipe: CineRecipe, isFresh: boolean): Block {
   const id = stageCine(recipe)
   // 칸에는 틀의 지어낸 예시 글을 넣는다: 빈 칸이면 발표 모습(모션 편집의 무대)에 그릴 글자가 없어 장면이 비었다. 슬라이드 위에서 바로 고쳐 쓴다
   const sample = presetSpec(recipe.preset).sample as Record<string, string>
@@ -47,6 +47,20 @@ export function insertCine(recipe: CineRecipe, slide: Slide, isFresh: boolean, t
   if (isFresh) fresh.add(block.id)
   // 장에 혼자 서고 레시피에 제목 칸이 있으면 장 제목은 숨긴다(장면의 제목이 장의 제목이다). 제목 칸이 없는 장면은 장 제목 아래에 선다
   if (recipe.texts?.some((t) => t.key === 'title')) stageHead(block.id)
+  return block
+}
+
+/** 넣은 모션 그래픽을 모션 편집에서 연다 (넣은 고침이 그려진 다음에) */
+function openStudio(blockId: string): void {
+  requestAnimationFrame(() => window.dispatchEvent(new CustomEvent(OPEN_STUDIO, { detail: blockId })))
+}
+
+/**
+ * 모션 그래픽을 넣는다: 빈 장이면 이 장에 판 가득, 다른 내용이 있으면 이 장 다음에 새 컴포넌트 장을 만들어 판 가득(cineGoesNext. 물어보고
+ * 기다리게 하지 않는다). 넣는 고침은 하나라 되돌리기 한 번에 원래대로다. 넣은 부품 id
+ */
+export function insertCine(recipe: CineRecipe, slide: Slide, isFresh: boolean, toast: Toast): string {
+  const block = cineBlock(recipe, isFresh)
   const store = useDeck.getState()
   if (cineGoesNext(slide)) {
     store.addComposeSlide([block], slide.id)
@@ -58,7 +72,19 @@ export function insertCine(recipe: CineRecipe, slide: Slide, isFresh: boolean, t
     store.replaceSlide(slide.id, { ...asCompose(slide), blocks: [block] })
     toast.show('이 슬라이드에 모션 그래픽을 넣었어요', undoAction(toast), 6000)
   }
-  requestAnimationFrame(() => window.dispatchEvent(new CustomEvent(OPEN_STUDIO, { detail: block.id })))
+  openStudio(block.id)
+  return block.id
+}
+
+/**
+ * '슬라이드 추가'에서 고른 모션 그래픽 틀: 늘 afterId 다음에 새 슬라이드를 만들어 판 가득 넣는다(고른 장이 비었어도 그 장을 쓰지 않는다:
+ * 슬라이드를 더하려고 누른 것이라). 다른 슬라이드를 더할 때처럼 새 슬라이드를 고르고, 컴포넌트에서 넣을 때처럼 모션 편집을 연다.
+ * 더하는 고침은 하나라 되돌리기 한 번에 사라진다. 넣은 부품 id
+ */
+export function addCineSlide(recipe: CineRecipe, afterId?: string): string {
+  const block = cineBlock(recipe, true)
+  useDeck.getState().addComposeSlide([block], afterId)
+  openStudio(block.id)
   return block.id
 }
 
