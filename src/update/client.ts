@@ -26,3 +26,5 @@ export const loadUpdate = (on: boolean) => (on ? checkUpdate() : updateStatus())
 /** 받는다. 시작 프로그램으로 켠 Framo면 받은 뒤 풀어 두기까지 서버가 한다 */
 export const startDownload = () => call('download', 'POST')
 export const revealDownload = () => call('reveal', 'POST')
+/** 풀어 둔 새 버전으로 다시 켠다. 서버가 답한 뒤 끝나고 시작 프로그램이 새 버전을 켠다 */
+export const restartApp = () => call('restart', 'POST')
