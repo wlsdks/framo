@@ -1068,7 +1068,9 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     if (cue.enter === 'settle') {
       const o = out(p)
       st.opacity = String(o)
-      const b = (1 - o) * (lively ? 6 : 4)
+      // 흐림은 생동감에서만(MOTION.md 10절: 차분하게는 흐림 없음). 차분하게도 4px로 흐리게 맺히던 때는 결정 자리의 기본 세기에서 큰 제목이
+      // 한 칸 뿌옇게 떠 신뢰감을 깎았다(감성 검수)
+      const b = lively ? (1 - o) * 6 : 0
       st.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : ''
       return
     }
