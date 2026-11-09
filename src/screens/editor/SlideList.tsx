@@ -19,6 +19,12 @@ import { SlideContextMenu } from './SlideMenu'
 import { useDrawSoon } from '../drawSoon'
 import { useAfterPaint, useLook } from './look'
 
+/**
+ * 끌기를 시작하는 거리. 늘 같은 값을 넘긴다: 그릴 때마다 새 값을 넘기면 dnd-kit이 끌기 손잡이가 바뀐 것으로 알아, 장을 고르거나 글자를
+ * 칠 때마다 목록 그림이 모두 다시 그려졌다
+ */
+const DRAG_AFTER = { activationConstraint: { distance: 6 } }
+
 export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selectedId: string | null; onRemove: (slide: Slide) => void }) {
   const select = useDeck((s) => s.select)
   const moveSlide = useDeck((s) => s.moveSlide)
@@ -26,6 +32,11 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
   const look = useLook(deck)
   const info = pageInfo(deck.slides, deck)
   const sections = useStableSections(info)
+  // 끌기 목록에 넘기는 장 id들. 장의 차례가 그대로면 같은 배열을 넘긴다: 그릴 때마다 새 배열을 넘기면 끌기 목록(SortableContext)이 바뀐 것으로
+  // 알려 목록 그림 마흔 장이 장을 고를 때마다, 글자 하나 칠 때마다 모두 다시 그려졌다(그림마다 끌기 손잡이를 다시 단다)
+  const order = deck.slides.map((s) => s.id).join('\n')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const ids = useMemo(() => deck.slides.map((s) => s.id), [order])
   // 목록을 처음 그린 뒤에 생긴 목록 그림(새로 더하거나 복제한 장)은 고치는 장이 먼저 보이게 그 뒤에 그린다 (Thumb)
   const later = useRef(false)
   useEffect(() => {
@@ -33,7 +44,7 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
   }, [])
   // 끌기는 마우스로만. dnd-kit의 키보드 끌기는 Space와 Enter로 시작해서, 장을 고르려고 Enter를 누르면 끌기가 시작됐다.
   // 키보드로는 Alt+위아래 화살표로 한 칸씩 옮긴다 (아래 onKeyDown)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useSensors(useSensor(PointerSensor, DRAG_AFTER))
   const drag = useListDrag()
   // 화면 읽기 프로그램에 들려줄 말. dnd-kit의 기본 안내는 영어라 한국어로 바꾼다
   const [said, setSaid] = useState('')
@@ -129,7 +140,7 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
           onDragCancel={drag.end}
           accessibility={accessibility}
         >
-          <SortableContext items={deck.slides.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
             {deck.slides.map((slide) => (
               <Thumb
                 key={slide.id}
