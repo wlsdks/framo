@@ -274,6 +274,17 @@
   min-height: 0;
 }
 
+/* 설정을 접으면 슬라이드에 자리를 돌려준다. 버전 기록과 모션 편집은 각자의 오른쪽 칸을 그대로 쓴다. */
+@media (min-width: 1101px) {
+  .ed-body.is-side-collapsed {
+    grid-template-columns: 224px minmax(0, 1fr);
+  }
+
+  .ed-body.is-side-collapsed .side {
+    display: none;
+  }
+}
+
 /* 화면에는 보이지 않고 화면 읽기 프로그램만 읽는 글 (장을 옮겼다는 알림 등) */
 .sr-only {
   position: absolute;
@@ -843,9 +854,9 @@
   color: var(--panel);
 }
 
-/* 1280×600 노트북처럼 단추가 한 줄에 다 들어가지 않으면 그림만 (Editor.tsx의 useTightTools가 잰다).
-   고른 컴포넌트의 '바꾸기'는 글자를 남긴다: 엇갈린 화살표 그림만으로는 옆 컴포넌트와 자리를 바꾸는 단추로 읽혔다 */
-.stage-tools[data-tight] .stage-tools-r .btn-t,
+/* 1280×600 노트북처럼 단추가 한 줄에 다 들어가지 않으면 그림만 (StageTools의 useTightTools가 잰다).
+   접은 설정을 다시 여는 단추와 고른 컴포넌트의 '바꾸기'는 그림만으로 뜻을 알기 어려워 글자를 남긴다. */
+.ed-body:not(.is-side-collapsed) .stage-tools[data-tight] .stage-tools-r .btn:not(.stage-side) .btn-t,
 .stage-tools[data-tight='2'] .stage-tools-l .btn:not(.bk-swap-btn) .btn-t {
   position: absolute;
   width: 1px;
@@ -986,15 +997,16 @@
   display: flex;
   flex: none;
   align-items: stretch;
-  gap: 4px;
+  gap: 2px;
   height: 46px;
-  padding: 0 12px 0 10px;
+  padding: 0 8px;
   border-bottom: 1px solid var(--line);
 }
 
 .side-tab {
   position: relative;
-  padding: 0 10px;
+  padding: 0 8px;
+  white-space: nowrap;
   border: 0;
   background: none;
   color: var(--ink-3);

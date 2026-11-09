@@ -8,7 +8,7 @@
   position: relative;
 }
 
-/* 넓은 화면에서는 오른쪽 칸의 '컴포넌트' 탭으로 고른다. 오른쪽 칸을 접는 좁은 화면에서만 장 아래에 둔다 */
+/* 오른쪽 칸이 보이면 '컴포넌트' 탭으로 고른다. 설정을 접었거나 좁은 화면이면 장 아래에서 연다. */
 .stage-blocks {
   display: none;
   color: var(--sel);
@@ -20,15 +20,32 @@
   background: var(--sel-soft);
 }
 
-/* 오른쪽 칸을 접는 좁은 창에서만: 장 아래의 '이 장 설정'과 띄운 칸의 닫기 */
-.stage-side,
-.side-close {
+/* 접은 오른쪽 칸을 다시 여는 단추. 좁은 창에서는 늘 보인다(narrow.css). */
+.stage-side {
   display: none;
 }
 
+.ed-body.is-side-collapsed .stage-side,
+.ed-body.is-side-collapsed .stage-blocks {
+  display: inline-flex;
+}
+
 .side-close {
+  display: inline-flex;
+  flex: none;
   align-self: center;
+  gap: 2px;
+  width: auto;
+  height: 28px;
+  padding: 0 4px;
   margin-left: auto;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.side-close:hover {
+  background: var(--hover-2);
 }
 
 /* (i) 단추가 이미 오른쪽으로 밀고 있으면 그 옆에 붙는다 */

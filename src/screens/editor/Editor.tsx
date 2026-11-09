@@ -18,7 +18,7 @@ import { loadBestDeck, persistNow } from '../../store/persist'
 import { useEditLock } from '../../store/useEditLock'
 import { canRecord } from '../../present/record'
 import { Present, type RecordResult } from '../Present'
-import { BackIcon, CloseIcon, HistoryIcon, Info, KeyboardIcon, RedoIcon, SAVE_HELP, takeNotice, undoAction, UndoIcon, useToast } from '../ui'
+import { BackIcon, ChevronIcon, HistoryIcon, Info, KeyboardIcon, RedoIcon, SAVE_HELP, takeNotice, undoAction, UndoIcon, useToast } from '../ui'
 import { measureOver } from './aiOver'
 import { ASK_ERROR, AiInbox, AiMenu, AiReview, AskStatus } from './AiShare'
 import { useBlockEditing } from './BlockEditor'
@@ -359,7 +359,7 @@ function EditorBody({ deck }: { deck: Deck }) {
         </div>
       </header>
 
-      <div className={cx('ed-body', versionsOpen && 'has-versions', side.shown && !versionsOpen && !inStudio && 'has-side', inStudio && 'is-studio')}>
+      <div className={cx('ed-body', versionsOpen && 'has-versions', side.shown && !versionsOpen && !inStudio && 'has-side', side.collapsed && !versionsOpen && !inStudio && 'is-side-collapsed', inStudio && 'is-studio')}>
         <SlideList deck={deck} selectedId={slide?.id ?? null} onRemove={removeSlide} />
         {inStudio && slide ? (
           <MotionStudio
@@ -395,13 +395,13 @@ function EditorBody({ deck }: { deck: Deck }) {
                         슬라이드로 끌어다 놓거나 눌러서 넣어요. 아무 데나 놓아도 알맞은 자리에 맞춰져요. 그림에 마우스를 올리면 발표할 때의 모션을 보여 줘요.
                       </Info>
                     )}
-                    {/* 좁은 창에서 슬라이드 위에 띄웠을 때만 보인다 */}
-                    <button type="button" className="icon-btn side-close" aria-label="오른쪽 칸 닫기" title="닫기 (Esc)" onClick={side.close}>
-                      <CloseIcon />
+                    <button type="button" className="btn btn-sm side-close" aria-label="오른쪽 칸 접기" title="접어서 슬라이드를 더 크게 봐요" onClick={side.close}>
+                      접기
+                      <ChevronIcon />
                     </button>
                   </div>
                   {side.tab === 'library' ? (
-                    <BlockLibrary deck={deck} slide={slide} blocks={blocks} toast={toast} />
+                    <BlockLibrary deck={deck} slide={slide} blocks={blocks} toast={toast} onClose={side.closeLibrary} />
                   ) : side.tab === 'motion' ? (
                     <MotionPanel deck={deck} slide={slide} onOpenStudio={openStudio} />
                   ) : (

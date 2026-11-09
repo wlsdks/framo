@@ -259,7 +259,7 @@ function useIdleIssues(slide: Slide, areaH: number | undefined, issueFor: (t: Bl
   return shown.issues
 }
 
-export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide: Slide; blocks: BlockEditing; toast: Toast }) {
+export function BlockLibrary({ deck, slide, blocks, toast, onClose }: { deck: Deck; slide: Slide; blocks: BlockEditing; toast: Toast; onClose: () => void }) {
   const [group, setGroup] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   /** 묶음을 고른다. 목록은 그 묶음의 처음부터: 굴려 둔 자리에 그대로 서면 고른 묶음의 앞 카드들이 위로 지나가 보이지 않았다 */
@@ -302,11 +302,11 @@ export function BlockLibrary({ deck, slide, blocks, toast }: { deck: Deck; slide
       if (e.defaultPrevented || dialogOpen()) return
       // 까닭을 펼쳐 두었으면 그것만 닫는다
       if (why) setWhy(null)
-      else blocks.setLibraryOpen(false)
+      else onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [blocks, why, query])
+  }, [onClose, why, query])
 
   // 까닭 창은 목록 아래에 붙어 목록을 줄인다. 누른 카드가 줄어든 목록 밖으로 밀려나지 않게 보이는 자리까지 굴린다
   // (1280×600에서 둘째 줄 카드를 누르면 창이 뜨며 그 카드가 가려져, 무엇에 대한 설명인지 알 수 없었다).

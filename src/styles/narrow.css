@@ -11,8 +11,7 @@
     display: none;
   }
 
-  .stage-side,
-  .side-close {
+  .stage-side {
     display: inline-flex;
   }
 

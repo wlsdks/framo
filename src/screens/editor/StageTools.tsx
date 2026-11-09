@@ -288,17 +288,6 @@ export function StageTools({
             <BlocksIcon />
             컴포넌트 넣기
           </button>
-          {/* 오른쪽 칸을 접는 좁은 창에서만 보인다. 레이아웃, 모양, 바탕을 여기서 연다 */}
-          <button
-            type="button"
-            className={cx('btn btn-sm stage-side', side.settingsShown ? 'is-on' : 'btn-ghost')}
-            aria-pressed={side.settingsShown}
-            title="이 슬라이드의 레이아웃, 모양, 바탕, 모션"
-            onClick={side.toggleSettings}
-          >
-            <SlidersIcon />
-            <span className="btn-t">이 슬라이드 설정</span>
-          </button>
           <SlideAsk deck={deck} slide={slide} ai={ai} ask={ask} />
           {spec.items && (
             <button
@@ -318,17 +307,30 @@ export function StageTools({
       )}
       {/* 단추가 한 줄에 다 들어가지 않으면 오른쪽부터 글자를 숨기고 그림만 남긴다 (이름은 title로, useTightTools) */}
       <div className="stage-tools-r">
+        {/* 미리 보기 중에도 접은 설정을 다시 열 수 있게 오른쪽 도구에 둔다. */}
+        <button
+          type="button"
+          className={cx('btn btn-sm stage-side', side.settingsShown ? 'is-on' : 'btn-ghost')}
+          aria-pressed={side.settingsShown}
+          aria-label="이 슬라이드 설정 열기"
+          title="이 슬라이드의 레이아웃, 모양, 바탕, 모션"
+          onClick={side.toggleSettings}
+        >
+          <SlidersIcon />
+          <span className="btn-t">이 슬라이드 설정</span>
+        </button>
         {shareWith && !peek && !peekSlide && <SharedScaleNote who={shareWith} />}
         <button
           type="button"
           className={cx('btn btn-ghost btn-sm', peek && 'is-on')}
           aria-pressed={peek}
+          aria-label={peek ? '편집으로' : '이 슬라이드 미리 보기'}
           // 발표를 시작하지 않고 이 장만 듣는 분이 볼 모습으로 본다. 발표는 위의 '발표하기'(F5), 지금 장부터는 그 옆 메뉴와 Shift+F5
           title={peek ? '편집으로 돌아가기 (Esc)' : '듣는 분이 볼 모습을 여기서 봐요. 발표는 시작하지 않아요'}
           onClick={onTogglePeek}
         >
           <ScreenIcon />
-          <span className="btn-t">{peek ? '편집으로' : '이 슬라이드 미리 보기'}</span>
+          <span className="btn-t">{peek ? '편집으로' : side.collapsed ? '미리 보기' : '이 슬라이드 미리 보기'}</span>
         </button>
         {/* 복제, 숨기기, 지우기는 덜 쓰는 일이라 '더 보기'에 이름과 함께 둔다. 예전에는 그림만 남은 단추 셋이 나란히 있어서
             빗금 친 눈이 '발표에서 숨기기'인지 알기 어려웠다(1280 너비에서는 늘 그림만 보였다) */}
