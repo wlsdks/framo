@@ -22,11 +22,12 @@
   flex: none;
 }
 
+/* 이름표와 단위는 왼쪽부터 이어서: 양 끝에 두면 넓은 칸에서 단위가 오른쪽 끝에 혼자 떨어져 섰다(예시 쇼룸 감성 검수, VISUAL-RULES 6) */
 .bk-sg-top {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 24px;
+  justify-content: flex-start;
+  gap: 32px;
 }
 
 .bk-sg-label {
