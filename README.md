@@ -24,7 +24,7 @@ PPT로 만들던 발표 자료를 HTML로 쉽게 만드는 도구입니다. 어�
 
 Framo는 서명을 받지 않은 오픈소스라서 처음 한 번은 운영체제가 막습니다. 윈도우가 "Windows의 PC 보호" 창을 띄우면 **추가 정보 → 실행**을 누릅니다. 맥은 "확인되지 않은 개발자" 안내가 뜨면 **완료**를 누른 뒤 **시스템 설정 → 개인정보 보호 및 보안**의 **그래도 열기**를 누르고 다시 엽니다. 127.0.0.1에만 묶기 때문에 방화벽 허용 창은 뜨지 않습니다.
 
-나눠 줄 압축 파일은 `npm run pack`으로 만듭니다(`release/gyeol-windows.zip`, `release/gyeol-mac.zip`). 이때 개발 PC에서 nodejs.org의 공식 Node.js(윈도우 x64, 맥 arm64와 x64)를 한 번 받아 체크섬을 확인하고 넣습니다. `Framo.exe`는 Node.js의 단일 실행 파일(SEA) 기능으로 공식 `node.exe`에 작은 시작 코드(`launch/framo-exe.cjs`)를 넣은 것입니다(`scripts/exe.mjs`, postject). 아이콘(`launch/framo.ico`)과 파일 정보는 resedit(순수 JavaScript)가 넣어서 맥에서 묶어도 들어갑니다. 한글 파일 이름이 윈도우에서 깨지지 않게 zip을 직접 만들고, 윈도우용의 `.bat`은 CRLF, 안내 문서는 BOM을 붙인 UTF-8로 씁니다. zip 이름에 버전을 넣지 않아서 `releases/latest/download/gyeol-mac.zip` 같은 주소가 늘 최신 버전을 받습니다.
+나눠 줄 압축 파일은 `npm run pack`으로 만듭니다(`release/gyeol-windows.zip`, `release/gyeol-mac.zip`). 이때 개발 PC에서 nodejs.org의 공식 Node.js(윈도우 x64, 맥 arm64와 x64)를 한 번 받아 체크섬을 확인하고 넣습니다. `Framo.exe`는 Node.js의 단일 실행 파일(SEA) 기능으로 공식 `node.exe`에 작은 시작 코드(`launch/framo-exe.cjs`)를 넣은 것입니다(`scripts/exe.mjs`, postject). 이 코드와 `.bat`, `.command`는 모두 시작 프로그램(`dist-node/launch.mjs`)을 켜고, 시작 프로그램이 받아서 풀어 둔 가장 새 버전을 고릅니다. 아이콘(`launch/framo.ico`)과 파일 정보는 resedit(순수 JavaScript)가 넣어서 맥에서 묶어도 들어갑니다. 한글 파일 이름이 윈도우에서 깨지지 않게 zip을 직접 만들고, 윈도우용의 `.bat`은 CRLF, 안내 문서는 BOM을 붙인 UTF-8로 씁니다. zip 이름에 버전을 넣지 않아서 `releases/latest/download/gyeol-mac.zip` 같은 주소가 늘 최신 버전을 받습니다.
 
 ## 이렇게 씁니다
 
@@ -73,7 +73,7 @@ Framo 발표/
 
 - **이 PC 안에서만 돕니다.** 서버는 `127.0.0.1`에만 묶여 있어 같은 네트워크의 다른 PC에서 접속할 수 없고, 다른 주소 이름으로 들어온 요청은 거절합니다. 화면 파일만 내주고 발표 내용은 받지 않습니다.
 - **발표 내용은 바깥으로 보내지 않습니다.** 화면과 내보낸 HTML 파일 모두 CSP로 바깥 주소 연결을 막습니다. 글꼴과 이미지도 모두 안에 들어 있습니다.
-- **바깥 연결은 둘뿐입니다.** 직접 누르는 ‘AI에게 부탁’(이 PC의 Claude Code를 띄웁니다)과 새 버전 확인입니다. 새 버전 확인은 로컬 서버가 처음 화면을 열 때(하루에 한 번까지) GitHub의 이 저장소(`github.com/wlsdks/framo`, 예전 이름 `gyeol`)에 가장 최근 릴리스만 묻습니다. 함께 보내는 것은 Framo 버전뿐입니다. **받기**를 누르면 그 릴리스의 zip을 GitHub에서 받아, GitHub이 알려 준 SHA-256이 맞을 때만 Framo 폴더의 `새 버전`에 두고 폴더를 열어 줍니다. 풀거나 실행하지는 않습니다. 처음 화면의 버전 표시를 눌러 끌 수 있습니다. 다른 곳으로 가는 연결은 `scripts/offline.test.ts`(소스)와 `scripts/offline.mjs`(빌드 결과, `npm run pack`과 검수)가 막습니다.
+- **바깥 연결은 둘뿐입니다.** 직접 누르는 ‘AI에게 부탁’(이 PC의 Claude Code를 띄웁니다)과 새 버전 확인입니다. 새 버전 확인은 로컬 서버가 처음 화면을 열 때(하루에 한 번까지) GitHub의 이 저장소(`github.com/wlsdks/framo`, 예전 이름 `gyeol`)에 가장 최근 릴리스만 묻습니다. 함께 보내는 것은 Framo 버전뿐입니다. **업데이트**를 누르면 그 릴리스의 zip을 GitHub에서 받아, GitHub이 알려 준 크기와 SHA-256이 맞을 때만 Framo 폴더 안의 `versions/<버전>`에 풀어 둡니다(바깥 라이브러리 없이 직접 읽고, 폴더 밖으로 나가는 이름, 링크, 지나치게 큰 항목은 막습니다). **지금 다시 시작**을 누르면 같은 주소에서 새 버전으로 다시 켜지고, 누르지 않으면 다음에 켤 때 바뀝니다. 발표는 브라우저 저장소에 있어 그대로이고, AI(MCP)에 등록한 경로도 바뀌지 않습니다. 쓰기가 막힌 폴더나 백신 때문에 풀지 못하면 받은 zip이 든 폴더를 열어 직접 풀게 합니다. 처음 화면의 버전 표시를 눌러 끌 수 있습니다. 다른 곳으로 가는 연결은 `scripts/offline.test.ts`(소스)와 `scripts/offline.mjs`(빌드 결과, `npm run pack`과 검수)가 막습니다.
 - **저장은 두 곳뿐입니다.** 이 브라우저(IndexedDB)와 사용자가 고른 보관 폴더입니다.
 - **AI는 모양만 다룹니다.** 아래 ‘AI에게 구성 맡기기’를 보세요.
 - **오픈소스만 씁니다.** 모두 사내에서 써도 되는 라이선스(MIT, Apache-2.0, BSD, OFL 등)입니다. [docs/OPEN-SOURCE.md](docs/OPEN-SOURCE.md)에 정리했고, `npm run licenses`로 확인합니다.
