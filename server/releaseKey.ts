@@ -6,4 +6,4 @@
 // - 키를 바꿀 때는 새 키를 더한 버전을 먼저 내놓고(옛 키로 서명), 충분히 퍼진 뒤에 옛 키를 뺀다. 이미 깔린 버전은 자기가 아는 키만 믿는다.
 // - 비어 있으면 서명을 확인할 수 없어 자동으로 풀지 않는다(받은 폴더를 열어 사람이 푸는 안내로). 릴리스(release.yml)는 비어 있으면 멈춘다.
 
-export const RELEASE_KEYS: readonly string[] = []
+export const RELEASE_KEYS: readonly string[] = ['Xmuw0oqB/wXFf9nulr5B+ZxC8oJWR/EeItACHLJ4Vjo=']
