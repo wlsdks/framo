@@ -827,10 +827,11 @@ function toolsSpot(item: HTMLElement, pair = false): { right: number; top: numbe
   // 장 안이고 장의 다른 글(이웃 컴포넌트의 글도)과 도구 막대를 덮지 않는 곳에. 장만 넘친 것을 자르고 칸은 자르지 않는다
   const ink = [...textLines(item.closest('.slide') ?? cell), ...(bar ? [bar] : [])]
   const end = Math.min(ir.right, frame.right) - TOOL_PAD
-  // 옆은 항목에서 조금 띄운다: 붙여 두면 항목 끝까지 찬 글(두 칸 짝의 가장 긴 줄)에 닿아 글을 덮는 것으로 보고 아래로 내렸다
+  // 옆은 항목과 컴포넌트 테 밖으로 조금 띄운다: 항목에 붙여 두면 끝까지 찬 글(두 칸 짝의 가장 긴 줄)에 닿아 글을 덮는 것으로 보고
+  // 아래로 내렸고, 테 바로 바깥이면 도구의 원이 고른 컴포넌트의 파란 테에 닿아 겹쳐 보였다
   const near = [
-    [ir.right + TOOL_PAD + w, top],
-    [ir.left - TOOL_PAD, top],
+    [Math.max(ir.right, frame.right) + 2 * TOOL_PAD + w, top],
+    [Math.min(ir.left, frame.left) - 2 * TOOL_PAD, top],
     [end, ir.top - h],
     [end, ir.bottom],
   ]
