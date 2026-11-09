@@ -5,8 +5,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import { BACKDROP_PLACES, BACKDROPS, baseBackdrop, isBackdropKind, isBackdropStrength } from '../deck/backdrops'
 import { pageInfo, type PageInfo } from '../deck/fields'
-import { createSampleDeck } from '../deck/sample'
-import { extraSlides } from '../deck/showcase'
+import { showcaseSlides } from '../deck/showcase'
 import type { Deck, Slide } from '../deck/types'
 import { backdrops } from '../slides/Backdrop'
 import { pageProps, ScaledSlide, SlideCanvas } from '../slides/SlideCanvas'
@@ -19,7 +18,7 @@ export function withBackdrop(slide: Slide, kind: string | null, place?: string |
 }
 
 export function backdropSlides(params: URLSearchParams): Slide[] {
-  const pool = [...createSampleDeck().slides, ...extraSlides()]
+  const pool = showcaseSlides()
   const only = params.get('kinds')?.split(',')
   return BACKDROPS.filter((b) => !only || only.includes(b.id)).map((b) => {
     const base = pool.find((s) => s.layout === b.showOn) ?? pool[0]

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { autoArranged, autoPlace, BLOCKS, boardAreaH, boardSig, canCompose, insertAt, makeBlock, resizeBlock, settleDeck, tiles } from '../deck/blocks'
 import { makeSlide } from '../deck/generate'
-import { createSampleDeck } from '../deck/sample'
+import { createSampleDeck, layoutSampleDeck } from '../deck/sample'
 import type { Block, Deck, Item, LayoutId, Slide } from '../deck/types'
 import { applyOps, parseOp, parseRequest, slideEmpty, type Op } from './ops'
 import { REQUEST_FORMAT, REQUEST_VERSION } from './protocol'
@@ -11,7 +11,8 @@ import { checkShape, shapeBlockId, shapeSlideId, toShape as shapeOf, type ShapeB
 type OpenShape = Omit<ShapeDeck, 'slides'> & { slides: (Omit<ShapeSlide, 'blocks'> & { blocks?: ShapeBlock[] })[] }
 const toShape = (...a: Parameters<typeof shapeOf>) => shapeOf(...a) as unknown as OpenShape
 
-const deck = createSampleDeck()
+// 장의 차례와 레이아웃(한 장 요약, 핵심 숫자 …)에 기대는 시험이라 예시 발표를 레이아웃 장으로 짠 판을 쓴다
+const deck = layoutSampleDeck()
 const shape = toShape(deck)
 const sid = (i: number) => shape.slides[i].id
 const run = (...ops: Op[]) => applyOps(deck, ops)

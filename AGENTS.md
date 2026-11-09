@@ -68,14 +68,14 @@ npm run pack         # 나눠 줄 폴더와 zip (release/)
 모든 장과 모양, 색과 글자 크기는 장 모음(`#/system`, 쓰는 사람도 봄)에서 봅니다. 새 레이아웃은 `LAYOUT_GROUPS`의 묶음 하나와 `showcase.ts`의 예시 장이 있어야 합니다(테스트가 확인). 무너지기 쉬운 경우까지 늘어놓고 점검할 때는 개발용 갤러리를 씁니다.
 
 ```
-#/gallery?theme=white|navy|serif&mode=edit|preview|final&set=sample|blank&type=business|deal|improve|report
+#/gallery?theme=white|navy|serif&mode=edit|preview|final&set=sample|example|blank&type=business|deal|improve|report
 ```
 
 ## 구조
 
 | 위치 | 내용 |
 |---|---|
-| `src/deck/` | 데이터 모델(`types.ts`), 보고 종류별 구성(`blueprints.ts`, 종류 하나는 `blueprints/<id>.ts`), 레이아웃 정의와 묶음(`layouts.ts`), 부품과 자리 규칙(`blocks/`, 한 곳에서 내보내는 것은 `blocks.ts`), 구성 만들기(`generate.ts`, 그림이 말하는 장은 레시피의 `blocks`로 부품 장을 만든다. 새 id·항목·장은 `make.ts`), 편집기와 AI 제안이 같이 쓰는 항목 수·레이아웃 바꾸기(`edits.ts`), 예시 발표(`sample.ts`), 레이아웃별 예시 장(`showcase.ts`), 모션 그래픽의 레시피(`cine.ts`: 틀, 손잡이, 버전 id. 그리기는 `src/motion/cine.ts`) |
+| `src/deck/` | 데이터 모델(`types.ts`), 보고 종류별 구성(`blueprints.ts`, 종류 하나는 `blueprints/<id>.ts`), 레이아웃 정의와 묶음(`layouts.ts`), 부품과 자리 규칙(`blocks/`, 한 곳에서 내보내는 것은 `blocks.ts`), 구성 만들기(`generate.ts`, 그림이 말하는 장은 레시피의 `blocks`로 부품 장을 만든다. 새 id·항목·장은 `make.ts`), 편집기와 AI 제안이 같이 쓰는 항목 수·레이아웃 바꾸기(`edits.ts`), 예시 발표(`sample.ts`: 홈의 쇼룸 `createSampleDeck`과, 같은 이야기를 레이아웃 장으로 짠 `layoutSampleDeck`), 레이아웃별 예시 장(`showcase.ts`), 모션 그래픽의 레시피(`cine.ts`: 틀, 손잡이, 버전 id. 그리기는 `src/motion/cine.ts`) |
 | `src/slides/` | 슬라이드 그리기(`layouts.tsx`가 `layouts/`의 레이아웃별 파일을 모은다), 부품 장(`blocks.tsx`, 부품 장만의 부품은 `blocks/`의 부품별 파일), 슬라이드 디자인(`slides.css`가 `styles/`의 레이아웃별 파일을, `blocks.css`가 `styles/blocks/`의 부품별 파일을 차례대로 묶는다), 편집 표시(`edit.css`) |
 | `src/screens/` | 홈, 프레임 잡기, 편집기(`editor/`), 발표 화면, 장 모음(`System.tsx`, 디자인 시스템) |
 | `src/store/` | 편집 상태(zustand), 저장(IndexedDB + 보관 폴더), 버전 |

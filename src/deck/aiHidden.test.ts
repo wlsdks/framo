@@ -4,7 +4,7 @@ import { asCompose, autoPlace, makeBlock, unwrapCompose } from './blocks'
 import { unknownParts } from './compat'
 import { makeSlide } from './generate'
 import { migrateDeck } from './migrate'
-import { createSampleDeck } from './sample'
+import { createSampleDeck, layoutSampleDeck } from './sample'
 import type { Block, Slide } from './types'
 
 const b = (type: Block['type'], id: string): Block => ({ ...makeBlock(type), id })
@@ -40,7 +40,7 @@ describe('AI에게 숨기기', () => {
   })
 
   it('레이아웃을 바꿔도 숨긴 채다: 숨긴 장은 컴포넌트 장이 되어도, 숨긴 컴포넌트 하나뿐인 장은 되돌려도', () => {
-    const points = { ...createSampleDeck().slides.find((s) => s.layout === 'points')! }
+    const points = { ...layoutSampleDeck().slides.find((s) => s.layout === 'points')! }
     const hidden = asCompose({ ...points, options: { ...points.options, aiHidden: true } })
     expect(hidden.layout).toBe('compose')
     expect(slideAiHidden(hidden)).toBe(true)

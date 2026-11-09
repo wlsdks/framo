@@ -1,14 +1,15 @@
 // 비밀 심기 시험에 쓰는 발표. 모양(share.test.ts)과 MCP 서버(mcp/server.test.ts)의 시험이 같이 쓴다.
 // 시험 파일에서 가져오면 그 파일의 시험까지 한 번 더 돌아서 따로 둔다
 
-import { createSampleDeck } from '../deck/sample'
+import { layoutSampleDeck } from '../deck/sample'
 import type { Block, Deck } from '../deck/types'
 
 export const SECRET = '기밀7731'
 
 /** 사람이 글을 적을 수 있는 모든 곳, 그리고 가져온 파일이라면 아무 글이나 들어 있을 수 있는 곳에 비밀을 심는다 */
 export function secretDeck(): Deck {
-  const deck = createSampleDeck()
+  // 레이아웃 장만 든 판에 비밀을 심고, 부품 장은 아래에서 따로 심는다(부품 장의 칸과 고르는 값마다)
+  const deck = layoutSampleDeck()
   const s = (k: string) => `${SECRET}-${k}`
   return {
     ...deck,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { asCompose, autoPlace, insertAt, makeBlock, settleDeck } from '../deck/blocks'
 import { makeSlide } from '../deck/generate'
 import type { Block, Slide } from '../deck/types'
-import { createSampleDeck } from '../deck/sample'
+import { createSampleDeck, layoutSampleDeck } from '../deck/sample'
 import { checkOps, standInDeck } from './check'
 import { applyOps, parseOp, type Op } from './ops'
 import { SECRET, secretDeck } from './secretDeck'
@@ -12,8 +12,8 @@ import { shapeBlockId, shapeSlideId, toShape as shapeOf, type ShapeBlock, type S
 type OpenShape = Omit<ShapeDeck, 'slides'> & { slides: (Omit<ShapeSlide, 'blocks'> & { blocks?: ShapeBlock[] })[] }
 const toShape = (...a: Parameters<typeof shapeOf>) => shapeOf(...a) as unknown as OpenShape
 
-// 예시 발표에 부품 장 둘(점 목록, 핵심 숫자를 부품 장으로 바꾼 것)을 두고 본다
-const deck = createSampleDeck()
+// 예시 발표를 레이아웃 장으로 짠 판에 부품 장 둘(점 목록, 핵심 숫자를 부품 장으로 바꾼 것)을 두고 본다
+const deck = layoutSampleDeck()
 const at = (layout: string) => deck.slides.findIndex((s) => s.layout === layout)
 const POINTS = at('points')
 const KPI = at('kpi')
