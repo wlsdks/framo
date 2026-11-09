@@ -141,6 +141,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 이름표 하나라도 값과 몫이 한 줄에 들지 않으면 모든 이름표의 몫을 값 아래에(fitBlocks.ts의 splitPct): 좁은 조각 하나만 몫이 떨어지면
+   나란한 이름표의 줄이 어긋났다 */
+.bk-sg.is-pct-below .bk-sg-pct {
+  flex-basis: 100%;
+}
+
 .bk-sg-key.is-hl :is(.bk-sg-v, .bk-sg-vu) {
   color: var(--accent);
 }
