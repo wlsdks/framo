@@ -61,6 +61,24 @@ describe('이 슬라이드에 어울리는 것', () => {
   it('차트만 든 장에는 결론 한 줄을 먼저 권한다', () => {
     expect(suggestBlocks(slideWith('', '', [block('bars')]))[0]).toBe('message')
   })
+
+  it('내용을 쓰기 전에도 발표 종류에 맞는 출발점을 준다', () => {
+    const blank = slideWith('')
+    expect(suggestBlocks(blank, 4, undefined, 'weekly')).toEqual(expect.arrayContaining(['progress', 'sparks', 'gantt']))
+    expect(suggestBlocks(blank, 4, undefined, 'plan')).toEqual(expect.arrayContaining(['gantt', 'people', 'goal']))
+    expect(suggestBlocks(blank, 4, undefined, 'issue')).toEqual(expect.arrayContaining(['whys', 'progress', 'facts']))
+  })
+
+  it('작성한 내용이 구체적이면 발표 종류보다 먼저 보고, 장의 역할도 참고한다', () => {
+    expect(suggestBlocks(slideWith('두 방식 비교'), 4, undefined, 'weekly')[0]).toBe('compare')
+    const blank = { ...slideWith(''), purpose: '다음 할 일' }
+    expect(suggestBlocks(blank, 4, undefined, 'weekly')[0]).toBe('gantt')
+  })
+
+  it('이미 쓰는 레이아웃과 막힌 컴포넌트는 추천하지 않는다', () => {
+    expect(suggestBlocks(makeSlide('progress'), 4, undefined, 'weekly')).not.toContain('progress')
+    expect(suggestBlocks(slideWith(''), 4, () => true, 'weekly')).toEqual([])
+  })
 })
 
 describe('모션 그래픽 틀 찾기와 어울리는 틀', () => {

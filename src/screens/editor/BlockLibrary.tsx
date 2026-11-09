@@ -23,7 +23,7 @@ import { SavedParts } from './SavedParts'
 
 // 부품 고르기: 부품마다 예시 내용을 넣은 작은 그림을 보여 주고, 마우스를 올리면 발표할 때의 움직임을 한 번 보여 준다.
 // 카드를 슬라이드로 끌어다 놓거나, 누르면 알맞은 자리에 넣는다.
-// 맨 위의 찾기 칸('무엇을 보여 줄까요?')과 '이 슬라이드에 어울리는 것'(장에 적힌 글로 고른 넷)이 먼저다: 예순 개 넘는 카드를
+// 맨 위의 찾기 칸('무엇을 보여 줄까요?')과 발표 종류·현재 장을 참고한 추천 넷이 먼저다: 예순 개 넘는 카드를
 // 묶음 칩으로만 고르던 때는 무엇을 보여 줄지는 알아도 그것이 어느 묶음에 있는지 몰라 끝까지 굴려 봐야 했다
 
 const THUMB_RATIO = 1.5
@@ -207,13 +207,14 @@ const TYPES = BLOCK_GROUPS.flatMap((g) => g.types)
 const MINE = '$mine'
 
 /**
- * 모션 그래픽 묶음(틀 여섯). 대표 기능이라 칩 줄의 '전체' 바로 뒤와 '전체'의 맨 위에 둔다: 예전에는 내 컴포넌트 → 새 모션 그래픽을
+ * 모션 그래픽 묶음(틀 여섯). 칩 줄과 '전체'의 맨 위에 둔다: 예전에는 내 컴포넌트 → 새 모션 그래픽을
  * 눌러야 틀이 나와서 처음 쓰는 사람이 찾지 못했다. 내가 고친 버전은 그대로 내 컴포넌트에 쌓인다
  */
 const CINE_GROUP = { name: '모션 그래픽', description: '영화 타이틀처럼 움직이는 한 장면이에요. 슬라이드 한 장을 다 써서, 내용이 있는 슬라이드면 바로 뒤에 새 슬라이드로 넣어요' }
 const CINE_IDS: CinePresetId[] = CINE_PRESETS.map((p) => p.id)
 
 const LINK_GROUP = { name: '연결 기호', short: '연결', description: '컴포넌트 사이에 끼워 둘이 어떻게 이어지는지 보여 줘요' }
+const RECOMMENDED = 'recommended'
 
 type Issues = ReadonlyMap<BlockType, NoRoom | null>
 
@@ -260,7 +261,7 @@ function useIdleIssues(slide: Slide, areaH: number | undefined, issueFor: (t: Bl
 }
 
 export function BlockLibrary({ deck, slide, blocks, toast, onClose }: { deck: Deck; slide: Slide; blocks: BlockEditing; toast: Toast; onClose: () => void }) {
-  const [group, setGroup] = useState<string | null>(null)
+  const [group, setGroup] = useState<string | null>(RECOMMENDED)
   const listRef = useRef<HTMLDivElement>(null)
   /** 묶음을 고른다. 목록은 그 묶음의 처음부터: 굴려 둔 자리에 그대로 서면 고른 묶음의 앞 카드들이 위로 지나가 보이지 않았다 */
   const pickGroup = (id: string | null) => {
@@ -378,13 +379,17 @@ export function BlockLibrary({ deck, slide, blocks, toast, onClose }: { deck: De
   const note = group === CINE_GROUP.name && !mine ? null : slideNote
   const groups = searching ? [] : group ? BLOCK_GROUPS.filter((g) => g.name === group) : BLOCK_GROUPS
   const showLinks = !searching && (!group || group === LINK_GROUP.name)
-  // 이 장에 어울리는 것: 장에 적힌 글로 고른 넷(넣을 수 없는 것은 빼고). 글이나 짜임에 맞는 모션 그래픽 틀이 있으면 그것이 맨 앞의 하나다
-  // (모션 그래픽은 장 하나를 다 쓰므로 자리가 다 찬 장이어도 다음 장에 넣는다). 표지와 섹션처럼 컴포넌트를 넣지 않는 장에는 두지 않는다
+  // 추천은 네 개까지만. 현재 장에 넣을 수 있는 것을 먼저 권하고, 모두 막혔으면 다음 장에 넣을 수 있는 카드와 까닭을 보인다.
   const cineFit = useMemo(() => (closed ? null : suggestCine(slide)), [slide, closed])
-  const suggested = useMemo(() => (closed || full ? [] : suggestBlocks(slide, cineFit ? 3 : 4, (t) => !!issues.get(t))), [slide, issues, closed, full, cineFit])
+  const suggested = useMemo(() => {
+    const n = cineFit ? 3 : 4
+    const available = closed ? [] : suggestBlocks(slide, n, (t) => !!issues.get(t), deck.meta.type)
+    return available.length ? available : suggestBlocks(slide, n, undefined, deck.meta.type)
+  }, [slide, issues, closed, cineFit, deck.meta.type])
   // 찾은 연결 기호 (이름과 설명에 찾는 말이 다 들어 있으면)
   const foundLinks = searching ? BLOCK_LINKS.filter((l) => query.trim().split(/\s+/).every((w) => `${l.name} ${l.description} ${LINK_GROUP.name}`.includes(w))) : []
   const chips: { id: string | null; name: string; title?: string }[] = [
+    { id: RECOMMENDED, name: '추천' },
     { id: null, name: '전체' },
     { id: CINE_GROUP.name, name: CINE_GROUP.name, title: `${CINE_GROUP.name}: ${CINE_GROUP.description}` },
     ...BLOCK_GROUPS.map((g) => ({ id: g.name, name: g.short, title: `${g.name}: ${g.description}` })),
@@ -557,24 +562,28 @@ export function BlockLibrary({ deck, slide, blocks, toast, onClose }: { deck: De
                   <div className="lib-grid is-found">
                     {/* 이 슬라이드에 넣을 수 있는 것을 먼저: 찾자마자 맨 앞에 잠긴 카드가 서면 찾은 것이 없는 것처럼 보였다.
                         모션 그래픽은 늘 넣을 수 있다(다른 내용이 있으면 다음 장에) */}
+                    {found.filter((t) => !issues.get(t)).map(card)}
                     {foundCines.map(cineCard)}
-                    {[...found.filter((t) => !issues.get(t)), ...found.filter((t) => issues.get(t))].map(card)}
+                    {found.filter((t) => issues.get(t)).map(card)}
                     {foundLinks.map(linkCard)}
                   </div>
                 )}
               </section>
             ) : (
-              !group &&
+              (group === RECOMMENDED || !group) &&
               (suggested.length > 0 || cineFit) && (
                 <section className="lib-sec lib-suggest">
                   <h3 className="lib-group">이 슬라이드에 어울리는 것</h3>
-                  <p className="lib-group-d">슬라이드에 적힌 글을 보고 골랐어요</p>
+                  <p className="lib-group-d">발표 종류와 현재 슬라이드를 참고했어요</p>
                   <div className="lib-grid">
-                    {cineFit && cineCard(cineFit)}
                     {suggested.map(card)}
+                    {cineFit && cineCard(cineFit)}
                   </div>
                 </section>
               )
+            )}
+            {!searching && group === RECOMMENDED && (
+              <button type="button" className="btn btn-ghost lib-all" onClick={() => pickGroup(null)}>전체 컴포넌트 보기</button>
             )}
             {!searching && (!group || group === CINE_GROUP.name) && (
               <section className="lib-sec">

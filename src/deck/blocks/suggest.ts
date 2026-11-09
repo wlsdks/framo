@@ -1,8 +1,8 @@
-// 컴포넌트 고르기의 '찾기'와 '이 슬라이드에 어울리는 것'. AI를 부르지 않고 이름, 설명, 묶음의 낱말과 장에 적힌 글의 낱말로만 정한다.
+// 컴포넌트 찾기와 추천. AI를 부르지 않고 카탈로그의 낱말, 발표 종류, 현재 장의 역할과 글로 정한다.
 // 예순 개 넘는 카드를 묶음 칩으로만 고르면, 무엇을 보여 주고 싶은지는 알아도 그것이 어느 묶음에 있는지 몰라 끝까지 굴려 봐야 했다
 
 import { CINE_PRESETS } from '../cine'
-import type { BlockType, CinePresetId, Slide } from '../types'
+import type { BlockType, CinePresetId, DeckType, Slide } from '../types'
 import { BLOCK_GROUPS, BLOCKS } from './catalog'
 
 /**
@@ -106,7 +106,9 @@ export function suggestCine(slide: Slide): CinePresetId | null {
 
 /** 장에 적힌 글의 낱말과 어울리는 컴포넌트. 앞에 둔 것일수록 먼저. 셋째 값은 무게(없으면 1): 숫자는 어느 글에나 흔해서 가볍게 */
 const RULES: [RegExp, BlockType[], number?][] = [
-  [/일정|계획|로드맵|분기|마일스톤|언제까지|착수|오픈/, ['gantt', 'timeline', 'checks']],
+  [/할 일|일정|계획|로드맵|분기|마일스톤|언제까지|착수|오픈/, ['gantt', 'timeline', 'checks']],
+  [/진행|현황|완료|상태/, ['progress', 'status', 'checks']],
+  [/숫자|수치|지표|실적/, ['sparks', 'kpi', 'bars']],
   [/단계|절차|과정|프로세스|흐름|순서/, ['process', 'flow', 'steps']],
   [/비교|대비|차이|전후|바뀌|vs\b|A안|B안/i, ['compare', 'versus', 'delta']],
   [/원인|이유|왜/, ['whys', 'pareto']],
@@ -124,14 +126,34 @@ const RULES: [RegExp, BlockType[], number?][] = [
 /** 장에 아무것도 맞지 않을 때: 보고에서 가장 많이 쓰는 것 (앞의 넷이 먼저, 이미 들었거나 넣을 수 없으면 뒤의 것으로 채운다) */
 const USUAL: BlockType[] = ['message', 'number', 'bars', 'process', 'delta', 'compare', 'timeline', 'bullets']
 
+/** 글을 쓰기 전에도 발표 종류에서 출발한다. 작성한 글의 낱말이 맞으면 그쪽이 먼저다. */
+const BY_TYPE: Record<DeckType, readonly BlockType[]> = {
+  business: ['market', 'kpi', 'number', 'timeline'],
+  improve: ['delta', 'compare', 'process', 'bars'],
+  decide: ['compare', 'rating', 'risks', 'table'],
+  deal: ['message', 'compare', 'kpi', 'timeline'],
+  proposal: ['compare', 'number', 'timeline', 'people'],
+  plan: ['gantt', 'goal', 'people', 'checks'],
+  weekly: ['progress', 'sparks', 'gantt', 'summary'],
+  report: ['progress', 'kpi', 'risks', 'checks'],
+  result: ['kpi', 'delta', 'bars', 'trend'],
+  issue: ['whys', 'timeline', 'progress', 'facts'],
+  kickoff: ['timeline', 'people', 'goal', 'checks'],
+  research: ['bars', 'compare', 'table', 'message'],
+  study: ['process', 'image', 'points', 'checks'],
+  intro: ['people', 'timeline', 'kpi', 'image'],
+  blank: [],
+}
+
 /** 그림으로 말하는 컴포넌트(차트 묶음). 이것만 있는 장에는 결론 한 줄을 먼저 권한다 */
 const CHARTS = new Set<BlockType>(BLOCK_GROUPS.find((g) => g.short === '차트')?.types ?? [])
 
 /**
  * 이 장에 어울리는 컴포넌트 n개. 장의 제목, 부제, 칸과 항목의 글에 있는 낱말로 고르고(RULES), 이미 든 컴포넌트는 빼고,
- * 차트만 있는 장에는 결론 한 줄을 먼저. 맞는 것이 모자라면 흔히 쓰는 것으로 채운다. 넣을 수 없는 것(blocked)은 고르지 않는다
+ * 차트만 있는 장에는 결론 한 줄을 먼저. 글을 쓰기 전에는 발표 종류와 장의 역할을 참고하고, 모자라면 흔히 쓰는 것으로 채운다.
+ * 넣을 수 없는 것(blocked)은 고르지 않는다. 이 판단은 PC 안에서만 하고 AI 공유에는 넣지 않는다.
  */
-export function suggestBlocks(slide: Slide, n = 4, blocked: (t: BlockType) => boolean = () => false): BlockType[] {
+export function suggestBlocks(slide: Slide, n = 4, blocked: (t: BlockType) => boolean = () => false, type: DeckType = 'blank'): BlockType[] {
   const blocks = slide.blocks ?? []
   const text = [
     ...Object.values(slide.fields ?? {}),
@@ -139,9 +161,13 @@ export function suggestBlocks(slide: Slide, n = 4, blocked: (t: BlockType) => bo
     ...blocks.flatMap((b) => [...Object.values(b.fields ?? {}), ...(b.items ?? []).flatMap((i) => [i.title, i.body, i.value])]),
   ].join(' ')
   const has = new Set(blocks.map((b) => b.type))
+  if (Object.hasOwn(BLOCKS, slide.layout)) has.add(slide.layout as BlockType)
   const score = new Map<BlockType, number>()
   const add = (t: BlockType, s: number) => score.set(t, (score.get(t) ?? 0) + s)
   for (const [test, types, weight = 1] of RULES) if (test.test(text)) types.forEach((t, i) => add(t, (3 - i * 0.5) * weight))
+  for (const [test, types, weight = 1] of RULES) if (test.test(slide.purpose)) types.forEach((t, i) => add(t, (3 - i * 0.5) * weight * 0.35))
+  const usualForType = BY_TYPE[type] ?? []
+  usualForType.forEach((t, i) => add(t, 1.6 - i * 0.2))
   if (blocks.length && blocks.every((b) => CHARTS.has(b.type))) add('message', 4)
   USUAL.forEach((t, i) => add(t, 0.4 - i * 0.04))
   return [...score]

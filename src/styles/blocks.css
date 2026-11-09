@@ -1030,7 +1030,7 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
 .lib-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 4px;
+  gap: 2px;
   margin: 8px 12px 0;
 }
 
@@ -1038,7 +1038,7 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   flex: 0 0 auto;
   min-width: 0;
   height: 32px;
-  padding: 0 8px;
+  padding: 0 6px;
   border: 0;
   border-radius: var(--r-sm);
   background: none;
@@ -1083,6 +1083,11 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
 
 .lib-sec + .lib-sec {
   margin-top: 14px;
+}
+
+.lib-all {
+  width: 100%;
+  margin-top: 20px;
 }
 
 /* 묶음 제목: 이름과 개수, 밑에 무엇이 들어 있는지 한 줄 */
