@@ -3408,11 +3408,10 @@ export function motionEngine(): MotionEngine {
             if (accent) run(anims, seg, [{ backgroundColor: accent }], s(open + 40 + i * 60), { easing: OUT, duration: d(520) })
             run(anims, seg, [{ borderRadius: '0px' }], s(open), { easing: OUT, duration: d(460) })
           })
-          count(one('.bk-sg-total'), 120)
-          items('.bk-sg-key', open + 220, (el, at) => {
-            rise(el, at, L.y * 0.5)
-            countIn(el.querySelector('.bk-sg-v'), at + 40)
-          })
+          // 합계는 막대가 펼쳐지는 것과 같은 때, 같은 곡선으로 센다: 따로 세던 때는 맨 위 숫자가 막대보다 앞서 끝 값에 닿았다.
+          // 조각의 값은 세지 않고 이름표와 함께 올라온다: 작은 숫자 넷이 함께 구르면 초점이 넷으로 갈렸다(예시 쇼룸 감성 검수)
+          count(one('.bk-sg-total'), 60, { easing: EASE.sweep, duration: 720 })
+          items('.bk-sg-key', open + 220, (el, at) => rise(el, at, L.y * 0.5))
           break
         }
         case 'merge': {
