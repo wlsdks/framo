@@ -209,7 +209,8 @@ export function blockMissing(block: Block, name = BLOCKS[block.type].name): Bloc
     blockItems(block).forEach((item, i) => {
       for (const f of spec.items!.fields) {
         if (f.optional) continue
-        if (!item[f.key].trim()) out.push({ block: block.id, key: f.key, item: i, label: `${itemName(i)}의 ${f.label}` })
+        // 칸 이름이 항목 이름과 같으면(추진 일정의 할 일) 항목 이름만: '추진 일정 할 일 1의 할 일'로 이름이 겹쳤다(처음 쓰는 사람 검수)
+        if (!item[f.key].trim()) out.push({ block: block.id, key: f.key, item: i, label: f.label === label ? itemName(i) : `${itemName(i)}의 ${f.label}` })
       }
     })
   }
