@@ -573,10 +573,10 @@ function touches(r: MutationRecord): boolean {
   return !el.classList.contains('ed') || withoutHalo(r.oldValue) !== withoutHalo(el.getAttribute('style'))
 }
 
-/** 본문 상자 밖에서 맞추기에 닿는 것: 본문 상자의 크기, 장의 클래스(테마, 글꼴, 글자 크기, 바탕)와 스타일(색), 받은 글꼴 */
+/** 본문 상자 밖에서 맞추기에 닿는 것: 본문 상자의 크기, 장의 클래스(테마, 글꼴, 글자 크기, 바탕)와 스타일(색). 받은 글꼴은 따로 본다(BlockArea의 fontsAt) */
 function outerSign(area: HTMLElement): string {
   const slide = area.closest('.slide')
-  return `${area.clientWidth}x${area.clientHeight}|${slide?.className}|${slide?.getAttribute('style')}|${loadedFonts()}`
+  return `${area.clientWidth}x${area.clientHeight}|${slide?.className}|${slide?.getAttribute('style')}`
 }
 
 function BlockArea() {
@@ -603,6 +603,10 @@ function BlockArea() {
   const watch = useRef<MutationObserver | null>(null)
   const changed = useRef(true)
   const fitted = useRef('')
+  // 글꼴을 받는 중에 맞췄으면 그때 받은 글꼴 수. 그 뒤에 글꼴이 오면 글자 폭이 바뀌어 다시 맞춘다. 받는 중이 아닐 때 맞춘 판(null)은 쓰는 글자의
+  // 글꼴 조각이 다 와 있던 것이라(맞추기가 글을 재면서 없는 조각을 부르면 받는 중이 된다) 뒤에 다른 조각이 와도 같은 값이다. 예전에는 글꼴
+  // 조각이 하나라도 더 오면 그 뒤에 다시 그린 판을 모두 다시 맞춰서, 장을 하나 더할 때 쪽 번호만 바뀐 목록 그림까지 다시 맞췄다
+  const fontsAt = useRef<number | null>(null)
   // 지난 맞추기 뒤에 안이 바뀐 칸. null이면 칸 밖(본문 상자, 칸을 넣고 뺌, 선)도 바뀌어 모든 칸을 다시 잰다 (fitBlocks.ts의 fit)
   const dirty = useRef<Set<Element> | null>(null)
   // 지난 맞추기 때 손을 올렸거나 글을 쓰던 칸
@@ -621,7 +625,8 @@ function BlockArea() {
   const fitAll = (el: HTMLElement, rendered: boolean) => {
     if (watch.current) note(el, watch.current.takeRecords())
     const outer = outerSign(el)
-    if (outer === fitted.current) {
+    const same = outer === fitted.current && (fontsAt.current === null || fontsAt.current === loadedFonts())
+    if (same) {
       if (!changed.current) return
       // 움직이는 동안(엔진이 data-mo-play를 붙인다) 안에서 바뀐 것은 엔진이 잠깐 바꾼 것(굴러가는 숫자, 나눈 낱말)이라 끝나면
       // 되돌아온다. 그릴 때 바뀐 것이면 그때의 맞추기가 움직임이 끝난 뒤로 미뤄 두었다(fitBlocks의 later). 그래서 글꼴 준비나
@@ -631,7 +636,7 @@ function BlockArea() {
     // 손을 올린 칸과 글을 쓰는 칸은 늘 다시 잰다: 그 칸의 편집 표시(그림 위에 겹친 칸 같은)는 손과 초점에 따라 보이고 숨어서
     // 바뀌어도 바뀐 것으로 잡히지 않는다(스타일만 바뀐다). 지난번의 그 칸도 같다
     const active = [el.querySelector(':scope > .bk:hover'), el.querySelector(':scope > .bk:focus-within')]
-    const cells = outer === fitted.current ? dirty.current : null
+    const cells = same ? dirty.current : null
     if (cells) for (const c of [...active, ...touched.current]) if (c) cells.add(c)
     touched.current = active
     fitBlocks(el, cells)
@@ -645,6 +650,7 @@ function BlockArea() {
     changed.current = !watch.current
     dirty.current = watch.current ? new Set() : null
     fitted.current = outer
+    fontsAt.current = document.fonts?.status === 'loading' ? loadedFonts() : null
   }
   // 맞추기보다 먼저 지켜보기 시작한다 (같은 컴포넌트의 layout effect는 적은 차례대로 돈다)
   useLayoutEffect(() => {
