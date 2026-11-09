@@ -31,7 +31,7 @@ export const improve: Blueprint = {
     {
       layout: 'bars',
       purpose: '문제의 크기',
-      priority: 3,
+      priority: 2,
       focus: 'numbers',
       section: '문제',
       items: 3,
@@ -44,10 +44,10 @@ export const improve: Blueprint = {
       },
     },
     {
-      // 원인은 글 목록보다 '왜?'를 거듭해 내려가는 그림이 개선안의 근거를 보인다. 팀장 앞의 짧은 보고에서도 문제의 크기보다 먼저 남는다
+      // 원인은 글 목록보다 '왜?'를 거듭해 내려가는 그림이 개선안의 근거를 보인다. 짧은 보고에서는 숫자(문제의 크기)가 먼저 남는다
       layout: 'compose',
       purpose: '원인',
-      priority: 2,
+      priority: 3,
       focus: 'context',
       section: '문제',
       guide: '왜를 거듭해 근본 원인까지 내려가면 개선안이 왜 맞는지 보여요.',
