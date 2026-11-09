@@ -1934,9 +1934,11 @@ export function motionEngine(): MotionEngine {
       const timing = { duration: period, delay: s(at) + phase, iterations: Infinity, easing: CARRY, fill: 'backwards' as FillMode }
       const a = p.animate(frames, timing)
       const b = p.animate([{ opacity: 0, scale: '0.5' }, { opacity: 1, scale: '1', offset: 0.14 }, { opacity: 1, scale: '1', offset: 0.86 }, { opacity: 0, scale: '0.5' }], { ...timing, easing: 'linear' })
-      // 닿는 순간: 받는 것(lit)이 잠깐 강조색이 된다(모이고 퍼지기와 같은 문법). 조각은 주기의 0.86쯤에 사라진다
+      // 닿는 순간: 받는 것(lit)이 잠깐 강조색이 된다(모이고 퍼지기와 같은 문법). 조각은 주기의 0.86쯤에 사라진다.
+      // 밝히기는 첫 조각이 닿을 때 한 번뿐이다: 조각이 닿을 때마다 밝히면 장에 머무는 내내 같은 자리가 몇 초마다 깜박였다(사용자:
+      // '깜빡깜빡 거림'). 그 뒤로는 조각만 오가며 데이터가 흐른다는 것을 보인다
       const c = lit?.el
-        ? lit.el.animate([{ ...lit.off, offset: 0 }, { ...lit.off, offset: 0.8 }, { ...lit.on, offset: 0.86 }, { ...lit.off, offset: 0.97 }, { ...lit.off, offset: 1 }], { ...timing, easing: 'linear' })
+        ? lit.el.animate([{ ...lit.off, offset: 0 }, { ...lit.off, offset: 0.8 }, { ...lit.on, offset: 0.86 }, { ...lit.off, offset: 0.97 }, { ...lit.off, offset: 1 }], { ...timing, iterations: 1, easing: 'linear' })
         : null
       stops.push(() => {
         a.cancel()
@@ -2736,16 +2738,14 @@ export function motionEngine(): MotionEngine {
             packet(link, ends(link), again, fast)
             again += fast
           }
-          // 생동감: 그 뒤로는 조각이 단계 사이를 쉬지 않고 건너간다(선마다 엇갈려). 데이터가 계속 오가는 흐름으로 보인다
+          // 생동감: 그 뒤로는 조각이 단계 사이를 쉬지 않고 건너간다(선마다 엇갈려). 데이터가 계속 오가는 흐름으로 보인다.
+          // 닿는 순간에는 받는 단계의 번호만 잠깐 강조색이 된다(모이고 퍼지기와 같은 문법). 예전에는 받는 단계 둘레에 2px 테를 켰다 꺼서,
+          // 테 없는 모양(선 위에 번호, 아래에 이름)에서는 없던 네모 테두리가 몇 초마다 깜박였다(사용자: '깜빡거리면서 박스 테두리가 생김')
           const accent = getComputedStyle(scope).getPropertyValue('--accent').trim()
-          const rim = (el: Element | undefined) => (el ? getComputedStyle(el).boxShadow : 'none')
-          links.forEach((link, i) =>
-            stream(link, ends(link), again + 300, d(1400), (i * 1400) / Math.max(2, links.length), {
-              el: nodes[i + 1] ?? null,
-              off: { boxShadow: rim(nodes[i + 1]) },
-              on: { boxShadow: `inset 0 0 0 2px ${accent}` },
-            }),
-          )
+          links.forEach((link, i) => {
+            const num = nodes[i + 1]?.querySelector('.bk-fw-i') ?? null
+            stream(link, ends(link), again + 300, d(1400), (i * 1400) / Math.max(2, links.length), num ? { el: num, off: { color: getComputedStyle(num).color }, on: { color: accent } } : undefined)
+          })
           const hl = one('.bk-fw-node.is-hl')
           // 부풀기는 transform으로: 나타날 때 쓴 scale과 같은 속성이면 늦게 만든 이것이 시작 전(fill backwards)부터 scale을 덮어 나타나기가 사라진다
           if (hl && links.length) run(anims, hl, [{ transform: 'scale(1)' }, { transform: 'scale(1.03)' }, { transform: 'scale(1)' }], s(again - 60), { easing: 'ease-in-out', duration: d(480) })
@@ -3306,14 +3306,17 @@ export function motionEngine(): MotionEngine {
             const hit = hits[way]
             const dot = dots[way]
             // 조각은 주기의 0.88쯤에 닿는다(가속·감속 곡선). 반 주기 고리로 옮기면 0.76쯤
-            if (!out && hit) loops.push(hit.animate([{ opacity: 0, offset: 0 }, { opacity: 0, offset: 0.68 }, { opacity: 0.9, offset: 0.76 }, { opacity: 0, offset: 0.92 }, { opacity: 0, offset: 1 }], flashAt))
+            // 가운데 테는 길마다 처음 닿을 때 한 번만 밝힌다: 조각이 닿을 때마다 밝히면 네 길이 엇갈려 가운데 원의 테가 쉬지 않고
+            // 깜박였다(사용자: '깜빡거리면서 테두리가 생김'). 그 뒤로는 조각만 오간다. 첫 조각은 주기의 0.88에 닿으니 반 주기 늦춘 고리 한 번의 0.76이다
+            if (!out && hit) loops.push(hit.animate([{ opacity: 0, offset: 0 }, { opacity: 0, offset: 0.68 }, { opacity: 0.9, offset: 0.76 }, { opacity: 0, offset: 0.92 }, { opacity: 0, offset: 1 }], { ...flashAt, delay: delay + period / 2, iterations: 1 }))
             if (dot) {
               const lit = { background: accent, scale: '1.35' }
               const rest = { background: getComputedStyle(dot).backgroundColor, scale: '1' }
               const frames = out
                 ? [{ ...rest, offset: 0 }, { ...rest, offset: 0.68 }, { ...lit, offset: 0.76 }, { ...rest, offset: 0.92 }, { ...rest, offset: 1 }]
                 : [{ ...lit, offset: 0 }, { ...rest, offset: 0.12 }, { ...rest, offset: 1 }]
-              loops.push(dot.animate(frames, flashAt))
+              // 끝점도 처음 두 조각(반 주기씩)이 닿을 때까지만: 쉬지 않고 밝히면 네 끝점이 번갈아 깜박였다
+              loops.push(dot.animate(frames, { ...flashAt, iterations: 2 }))
             }
           })
           stops.push(() => loops.forEach((a) => a.cancel()))
