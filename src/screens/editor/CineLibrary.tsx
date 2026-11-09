@@ -15,8 +15,22 @@ import { cineGoesNext, insertCine } from './cineEdit'
 import { useLook, type Look } from './look'
 
 // 모션 그래픽 카드: 컴포넌트 고르기의 '모션 그래픽' 묶음(틀 여섯)과 내 컴포넌트의 '모션 그래픽'(내가 고친 모션 그래픽, 갈래마다 가장 새 버전).
+// '슬라이드 추가'의 모션 그래픽 묶음(AddSlide.tsx)도 같은 그림(cineCardSlide)과 올리면 움직이기(usePlayOnHover)를 쓴다.
 // 카드에 마우스를 올리면 그 장면이 작게 한 번 움직인다(카드는 여럿이라 GPU 없이 캔버스로. 장면은 발표할 때와 같은 엔진).
 // 누르면 넣고(cineEdit.ts의 insertCine) 모션 편집이 열린다: 장면을 바로 보이고 손잡이로 고치게. 카드의 글은 틀의 지어낸 예시다(라이브러리에는 글이 없다)
+
+/** 카드 그림의 장: 제목을 숨긴 컴포넌트 장에 그 모션 그래픽 하나를 판 가득(틀의 지어낸 예시 글로). '슬라이드 추가'의 모션 그래픽 카드도 쓴다 */
+export function cineCardSlide(look: Look, recipe: CineRecipe): { slide: Slide; deck: Look } {
+  const id = cineId(recipe)
+  const s = makeSlide('compose')
+  const slide: Slide = {
+    ...s,
+    id: `cine-thumb-${id}`,
+    options: { ...s.options, hideHead: true, hideFoot: true },
+    blocks: [{ ...makeBlock('cine'), id: `cine-thumb-b-${id}`, fields: presetSpec(recipe.preset).sample as Record<string, string>, cine: id, at: { x: 0, y: 0, w: 12, h: 12 } }],
+  }
+  return { slide, deck: { ...look, cines: { [id]: recipe } } }
+}
 
 /**
  * 카드 그림: 제목을 숨긴 컴포넌트 장에 그 모션 그래픽 하나를 판 가득. fit이면 컴포넌트 카드와 같은 3:2 그림에 장(16:9)을 가운데 두고
@@ -32,17 +46,7 @@ const CineThumb = memo(function CineThumb({ look, recipe, fit }: { look: Look; r
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  const { slide, deck } = useMemo(() => {
-    const id = cineId(recipe)
-    const s = makeSlide('compose')
-    const slide: Slide = {
-      ...s,
-      id: `cine-thumb-${id}`,
-      options: { ...s.options, hideHead: true, hideFoot: true },
-      blocks: [{ ...makeBlock('cine'), id: `cine-thumb-b-${id}`, fields: presetSpec(recipe.preset).sample as Record<string, string>, cine: id, at: { x: 0, y: 0, w: 12, h: 12 } }],
-    }
-    return { slide, deck: { ...look, cines: { [id]: recipe } } }
-  }, [look, recipe])
+  const { slide, deck } = useMemo(() => cineCardSlide(look, recipe), [look, recipe])
   const bg = fit ? (themeStyle(look.theme) as Record<string, string>)['--bg'] : undefined
   return (
     <div ref={ref} className={fit ? 'lib-thumb cn-fit' : 'cn-thumb'} style={bg ? { background: bg } : undefined}>
@@ -56,7 +60,7 @@ const CineThumb = memo(function CineThumb({ look, recipe, fit }: { look: Look; r
 })
 
 /** 카드에 올리면 한 번 움직인다(움직이는 동안 다시 올려도 처음부터 다시 하지 않는다) */
-function usePlayOnHover(level: string) {
+export function usePlayOnHover(level: string) {
   const last = useRef(new WeakMap<Element, number>())
   return (card: HTMLElement) => {
     const el = card.querySelector<HTMLElement>('.bk-cn')

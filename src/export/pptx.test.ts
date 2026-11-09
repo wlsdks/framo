@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { posix } from 'node:path'
 import { deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
+import { bareSlides, leaveOut } from '../deck/fields'
 import { createDeck } from '../deck/generate'
 import { buildPptx, deckToPptx, notesParagraphs, pptxParts, relsPathOf, xmlChars, xmlText, type PptxInput } from './pptx'
 import { crc32 } from './zip'
@@ -244,6 +245,20 @@ describe('발표를 PPT로', () => {
     // PNG는 다시 줄이지 않고 그대로 둔다, XML은 줄인다
     expect(entries.find((e) => e.name === 'ppt/media/image1.png')!.method).toBe(0)
     expect(entries.find((e) => e.name === 'ppt/presentation.xml')!.method).toBe(8)
+  })
+
+  it('확인 창에서 빈 슬라이드를 빼고 내보내면 그 장은 PPT에 들어가지 않는다 (발표는 그대로)', async () => {
+    // 지어낸 주간 보고: 마지막 장(요청 사항)의 요청을 비워 두었다
+    const deck = createDeck({ type: 'weekly', audience: 'practitioner', minutes: 10, method: 'live', title: '주간 업무 보고', org: '운영팀', presenter: '발표자', theme: 'white' })
+    const skip = bareSlides(deck)
+    expect(skip.length).toBeGreaterThan(0)
+    const seen: string[] = []
+    await deckToPptx(leaveOut(deck, skip), async (slide) => {
+      seen.push(slide.id)
+      return png(16, 9, [0, 0, 0])
+    })
+    expect(seen).toEqual(deck.slides.filter((s) => !skip.includes(s.id)).map((s) => s.id))
+    expect(deck.slides.some((s) => s.hidden)).toBe(false)
   })
 })
 

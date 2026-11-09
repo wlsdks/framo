@@ -295,7 +295,7 @@ function EditorBody({ deck }: { deck: Deck }) {
   if (launch.presenting)
     return (
       <Present
-        deck={deck}
+        deck={launch.shown}
         startId={launch.presenting.startId}
         entering={launch.presenting.entering}
         onExit={endPresent}
@@ -420,7 +420,7 @@ function EditorBody({ deck }: { deck: Deck }) {
           deck={deck}
           check={exporting.confirm}
           what="파일"
-          proceed="그대로 내보내기"
+          verb="내보내기"
           onProceed={exporting.proceed}
           onClose={exporting.closeConfirm}
           onGoTo={goToSlide}

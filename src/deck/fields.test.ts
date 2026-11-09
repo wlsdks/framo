@@ -1,7 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { deckBlanks, dropIndex, isBlankItem, looksOptional, missingFields, optionalBlanks, presentable, sendable, shownChars, shownOnly, unshownCount, withUnsent } from './fields'
+import {
+  bareShows,
+  bareSlide,
+  bareSlides,
+  deckBlanks,
+  dropIndex,
+  isBlankItem,
+  leaveOut,
+  looksOptional,
+  missingFields,
+  optionalBlanks,
+  pageInfo,
+  presentable,
+  sendable,
+  shownChars,
+  shownOnly,
+  unshownCount,
+  withUnsent,
+} from './fields'
 import { createDeck, emptyItem, makeSlide } from './generate'
-import { BLOCKS, withLayout } from './blocks'
+import { BLOCKS, makeBlock, withLayout } from './blocks'
 import { labelIn, LAYOUT_ORDER, LAYOUTS } from './layouts'
 import type { Deck, Item, Slide } from './types'
 
@@ -317,5 +335,113 @@ describe('발표 파일(HTML)에 담는 발표와 다시 열 때 이어받기 (s
     expect(withUnsent(sent, d).meta.contact).toBe('연락처')
     // 파일의 장에 나오는 값을 비웠으면 지운 것이다
     expect(withUnsent({ ...sent, meta: { ...sent.meta, org: '' } }, d).meta.org).toBe('')
+  })
+})
+
+describe('빈칸 때문에 제목만 남는 장 (bareSlide)', () => {
+  const deck = createDeck({ type: 'weekly', audience: 'practitioner', minutes: 10, method: 'live', title: '주간 업무 보고', org: '운영팀', presenter: '발표자', theme: 'white' })
+  const meta = deck.meta
+  const titled = (slide: Slide, title = '제목 한 줄'): Slide => ({ ...slide, fields: { ...slide.fields, title } })
+  const fill = (slide: Slide, k: 'title' | 'body' | 'value' | 'image', v: string): Slide => ({ ...slide, items: slide.items.map((it, i) => (i === 0 ? { ...it, [k]: v } : it)) })
+
+  it('요청을 비운 마지막 장은 제목만 남는다: 프레임 잡기가 만든 주간 보고의 ‘도움이 필요한 것’', () => {
+    const closing = deck.slides.find((s) => s.layout === 'closing')!
+    expect(closing.fields.title).toBeTruthy()
+    expect(bareSlide(closing, meta)).toBe(true)
+    expect(bareShows(closing)).toBe('title')
+    // 요청 하나라도 채우면 빈 장이 아니다
+    expect(bareSlide(fill(closing, 'title', '옆 팀 일손 요청'), meta)).toBe(false)
+  })
+
+  it('꼭 채울 칸이 없는 장은 그 모습이 뜻한 것이라 세지 않는다 (요청 없이 인사하는 마지막 장, 제목만 둔 컴포넌트 장)', () => {
+    expect(bareSlide({ ...titled(makeSlide('closing'), '감사합니다'), items: [] }, meta)).toBe(false)
+    expect(bareSlide(titled(makeSlide('compose')), meta)).toBe(false)
+  })
+
+  it('표지, 섹션 구분, 메시지는 제목이 곧 내용이라 제목까지 비었을 때만 센다', () => {
+    for (const id of ['cover', 'section', 'statement'] as const) {
+      expect(bareSlide(titled(makeSlide(id)), meta), id).toBe(false)
+      expect(bareSlide(makeSlide(id), meta), id).toBe(true)
+      expect(bareShows(makeSlide(id)), id).toBe('nothing')
+    }
+    // 발표자 이름처럼 여러 장에 되풀이되는 발표 전체의 값은 내용으로 치지 않는다
+    expect(bareSlide(makeSlide('cover'), { ...meta, presenter: '발표자', org: '운영팀' })).toBe(true)
+  })
+
+  it('항목을 비운 목차와 내용 장은 빈 장이고, 숫자나 이미지 하나라도 채우면 아니다', () => {
+    for (const id of ['agenda', 'summary', 'kpi', 'points', 'timeline', 'logos'] as const) {
+      const slide = titled(makeSlide(id))
+      expect(bareSlide(slide, meta), id).toBe(true)
+    }
+    expect(bareSlide(fill(titled(makeSlide('kpi')), 'value', '40%'), meta)).toBe(false)
+    expect(bareSlide(fill(titled(makeSlide('logos')), 'image', 'data:image/png;base64,AA'), meta)).toBe(false)
+  })
+
+  it('틀의 글(표의 열 이름, 비교의 양쪽 이름, 축 이름, 단위, 출처)만 채운 장은 듣는 분께 빈 틀이라 센다', () => {
+    const frame = (id: Parameters<typeof makeSlide>[0], fields: Record<string, string>) => ({ ...titled(makeSlide(id)), fields: { title: '제목', ...fields } })
+    expect(bareSlide(frame('table', { h1: '과제', h2: '담당', h3: '기한' }), meta)).toBe(true)
+    expect(bareSlide(frame('compare', { leftTitle: '지금', rightTitle: '바뀐 뒤' }), meta)).toBe(true)
+    expect(bareSlide(frame('matrix', { xAxis: '효과', yAxis: '쉬움' }), meta)).toBe(true)
+    expect(bareSlide(frame('trend', { unit: '%', target: '120', lead: '부제' }), meta)).toBe(true)
+    expect(bareSlide(frame('kpi', { source: '사내 집계' }), meta)).toBe(true)
+  })
+
+  it('머리 밖의 칸(사례의 대상, 이미지 설명, 증감의 처음 값)은 내용이라 채우면 빈 장이 아니다', () => {
+    expect(bareSlide({ ...titled(makeSlide('case')), fields: { title: '결과', client: '물류센터' } }, meta)).toBe(false)
+    expect(bareSlide({ ...titled(makeSlide('imageText')), fields: { title: '화면', body: '새 화면이에요' } }, meta)).toBe(false)
+    expect(bareSlide({ ...titled(makeSlide('bridge')), fields: { title: '증감', startValue: '117' } }, meta)).toBe(false)
+  })
+
+  it('제목을 숨긴 장은 제목이 있어도 아무것도 보이지 않는다', () => {
+    const closing = deck.slides.find((s) => s.layout === 'closing')!
+    expect(bareShows({ ...closing, options: { ...closing.options, hideHead: true } })).toBe('nothing')
+  })
+
+  it('컴포넌트 장: 비운 컴포넌트만 있으면 빈 장, 글을 채우거나 글 없이도 그려지는 모션 그래픽이 있으면 아니다', () => {
+    const blank = { ...titled(makeSlide('compose')), blocks: [makeBlock('message')] }
+    expect(bareSlide(blank, meta)).toBe(true)
+    // 비운 컴포넌트가 남아 빈칸이 있어도, 다른 컴포넌트에 글이 있으면 빈 장이 아니다
+    const filled = { ...blank, blocks: [...blank.blocks, { ...makeBlock('message'), fields: { text: '한 문장' } }] }
+    expect(missingFields(filled, meta).length).toBeGreaterThan(0)
+    expect(bareSlide(filled, meta)).toBe(false)
+    expect(bareSlide({ ...blank, blocks: [...blank.blocks, makeBlock('cine')] }, meta)).toBe(false)
+  })
+
+  it('발표하는 장 가운데 빈 장만 권하고, 빼면 남는 장이 없으면 권하지 않는다', () => {
+    const closing = deck.slides.find((s) => s.layout === 'closing')!
+    expect(bareSlides(deck)).toContain(closing.id)
+    expect(bareSlides({ ...deck, slides: deck.slides.map((s) => (s === closing ? { ...s, hidden: true } : s)) })).not.toContain(closing.id)
+    expect(bareSlides({ ...deck, slides: [closing, makeSlide('section')] })).toEqual([])
+  })
+})
+
+describe('이번에만 빼고 발표하기와 내보내기 (leaveOut)', () => {
+  const deck = createDeck({ type: 'weekly', audience: 'practitioner', minutes: 10, method: 'live', title: '주간 업무 보고', org: '운영팀', presenter: '발표자', theme: 'white' })
+  const skip = bareSlides(deck)
+  const out = leaveOut(deck, skip)
+
+  it('뺀 장은 사본에서만 발표에서 숨기고, 고치는 발표는 바꾸지 않는다 (지우지도, 숨기기를 켜지도 않는다)', () => {
+    expect(skip.length).toBeGreaterThan(0)
+    const before = JSON.stringify(deck)
+    leaveOut(deck, skip)
+    expect(JSON.stringify(deck)).toBe(before)
+    expect(deck.slides.some((s) => s.hidden)).toBe(false)
+    expect(out.slides.filter((s) => s.hidden).map((s) => s.id)).toEqual(skip)
+    // 글은 그대로 (숨김 표시만 다르다)
+    expect(out.slides.map(({ hidden: _, ...s }) => s)).toEqual(deck.slides)
+    expect(leaveOut(deck, [])).toBe(deck)
+  })
+
+  it('발표 화면과 발표자 화면의 쪽 번호는 뺀 장 없이 1부터 이어 매긴다', () => {
+    const info = pageInfo(out.slides, out)
+    expect(info.total).toBe(deck.slides.length - skip.length)
+    expect(skip.every((id) => !info.page.has(id))).toBe(true)
+    expect([...info.page.values()]).toEqual(Array.from({ length: info.total }, (_, i) => i + 1))
+  })
+
+  it('발표 파일에서 빠지고, 그 파일을 이 PC에서 다시 열면 뺀 장이 제자리에 돌아와 이 PC의 발표와 같다', () => {
+    const sent = JSON.parse(JSON.stringify(sendable(out))) as Deck
+    expect(sent.slides.some((s) => skip.includes(s.id))).toBe(false)
+    expect(JSON.stringify(withUnsent(sent, deck))).toBe(JSON.stringify(deck))
   })
 })

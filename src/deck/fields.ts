@@ -1,7 +1,7 @@
 import { asksDecision } from './blueprints'
-import { allBlocks, blockMissing, blockNames, BLOCKS } from './blocks'
+import { allBlocks, blockMissing, blockNames, BLOCKS, HEAD_KEYS } from './blocks'
 import { LAYOUTS } from './layouts'
-import type { Deck, DeckMeta, Item, ItemKey, MetaKey, Slide } from './types'
+import type { Block, Deck, DeckMeta, Item, ItemKey, LayoutId, MetaKey, Slide } from './types'
 
 export function isMetaKey(key: string): boolean {
   return key.startsWith('$')
@@ -160,6 +160,67 @@ export function deckBlanks(deck: Deck): { slide: Slide; missing: Missing[] }[] {
   })
 }
 
+/**
+ * 내용을 받치는 틀의 글: 단위, 목표선, 표의 열 이름, 비교의 양쪽 이름, 축 이름(과 비워 두면 정해진 이름이 보이는 칸, named).
+ * 이것만 채운 장은 듣는 분께 빈 틀로 보인다. 여기에 없는 칸은 내용으로 친다: 칸을 새로 더해도 빈 슬라이드로 잘못 세지 않게
+ */
+const FRAME_KEYS = new Set(['unit', 'target', 'h1', 'h2', 'h3', 'h4', 'leftTitle', 'rightTitle', 'xAxis', 'yAxis'])
+
+/** 제목 한 줄이 곧 그 장의 말인 장: 표지, 섹션 구분, 메시지. 제목만 있어도 빈 장이 아니다 */
+const HEAD_IS_BODY: readonly LayoutId[] = ['cover', 'section', 'statement']
+
+/** 칸 정의(레이아웃이나 부품)가 그리는 칸 가운데 채운 것이 있는지. counts는 내용으로 칠 장의 칸 */
+function anyShown(spec: CellSpec, x: Cells, counts: (key: string) => boolean): boolean {
+  if (spec.fields.some((f) => counts(f.key) && x.fields[f.key]?.trim())) return true
+  return x.items.slice(0, spec.items?.max ?? 0).some((it) => spec.items!.fields.some((f) => it[f.key]?.trim()))
+}
+
+/** 부품이 장에 무언가를 그리는지: 채운 칸이 있거나, 꼭 채울 칸이 없는 부품(모션 그래픽처럼 글 없이도 그림이 서는 것) */
+function blockShows(b: Block): boolean {
+  return anyShown(BLOCKS[b.type], b, (key) => !isMetaKey(key)) || !blockMissing(b).length
+}
+
+/**
+ * 꼭 채울 칸이 남았는데 머리(제목, 부제, 출처)와 틀의 글 말고는 보일 것이 없는 장. 그대로 발표하면 듣는 분께 제목 한 줄만 뜬다:
+ * 주간 보고의 마지막 장 '도움이 필요한 것'의 요청을 비운 채 발표하면 빈 요청 줄은 빠지고(presentable) 제목과 발표자 이름만 남았다.
+ * 발표하기와 내보내기 전에 이번에만 빼고 가자고 권한다(CheckDialog, leaveOut). 꼭 채울 칸이 없는 장은 그 모습이 뜻한 것이라
+ * (요청 없이 인사만 하는 마지막 장, 제목만 둔 컴포넌트 장) 세지 않는다. 표지, 섹션 구분, 메시지는 제목이 곧 내용이라 제목까지 비었을 때만 센다.
+ * 발표 전체의 값(발표자, 연락처 같은)은 여러 장에 되풀이되는 것이라 내용으로 치지 않는다
+ */
+export function bareSlide(slide: Slide, meta: DeckMeta): boolean {
+  if (!missingFields(slide, meta).length) return false
+  const own = HEAD_IS_BODY.includes(slide.layout)
+  const spec = LAYOUTS[slide.layout]
+  const named = new Set(spec.fields.filter((f) => f.named).map((f) => f.key))
+  const counts = (key: string) =>
+    !isMetaKey(key) && !named.has(key) && !hiddenField(slide, key) && (own || !(HEAD_KEYS.includes(key) || FRAME_KEYS.has(key)))
+  if (anyShown(spec, slide, counts)) return false
+  return !(slide.layout === 'compose' && allBlocks(slide.blocks ?? []).some(blockShows))
+}
+
+/** 이번에만 빼고 가자고 권할 빈 장(bareSlide)의 id, 발표하는 차례대로. 빼면 발표할 장이 하나도 남지 않으면 권하지 않는다(빈 목록) */
+export function bareSlides(deck: Deck): string[] {
+  const shown = deck.slides.filter((s) => !s.hidden)
+  const bare = shown.filter((s) => bareSlide(s, deck.meta)).map((s) => s.id)
+  return bare.length < shown.length ? bare : []
+}
+
+/** 빈 장(bareSlide)이 발표에서 무엇으로 보이는지: 제목 한 줄만 남는지, 아무것도 없는지 */
+export function bareShows(slide: Slide): 'title' | 'nothing' {
+  return !HEAD_IS_BODY.includes(slide.layout) && !hiddenField(slide, 'title') && slide.fields.title?.trim() ? 'title' : 'nothing'
+}
+
+/**
+ * 이번 발표(내보내기)에서만 뺀 장을 발표에서 숨긴 사본. 발표 화면, 발표자 화면(발표 화면이 이 사본을 보낸다), 발표 파일, PDF, PPT, 영상이
+ * 숨긴 장을 건너뛰는 길(hidden)을 그대로 탄다. 쪽 번호도 뺀 장 없이 다시 매겨져 듣는 분과 발표자가 같은 번호를 본다.
+ * 고치는 발표(저장되는 것)에는 쓰지 않는다: 지우지도, '발표에서 숨기기'를 켜지도 않아 다음 발표에서는 다시 묻는다
+ */
+export function leaveOut(deck: Deck, ids: readonly string[]): Deck {
+  if (!ids.length) return deck
+  const out = new Set(ids)
+  return { ...deck, slides: deck.slides.map((s) => (out.has(s.id) && !s.hidden ? { ...s, hidden: true } : s)) }
+}
+
 type CellSpec ={ fields: { key: string }[]; items?: { max: number; fields: { key: ItemKey }[] } }
 type Cells = { fields: Record<string, string>; items: Item[] }
 
@@ -225,8 +286,9 @@ export function sendable(deck: Deck): Deck {
 
 /**
  * 발표 파일(HTML)로 연 발표(sent)에, 그 파일이 담지 않는 것(sendable이 뺀 것)을 이 PC의 같은 발표(full)에서 되찾아 넣는다: 같은 장의 발표자
- * 노트와 가려진 칸, 숨긴 장(있던 자리에), 보내는 장에 나오지 않는 발표 전체의 값. 발표 파일의 빈 노트는 지운 것이 아니라 담기지 않은 것이다.
- * 이것 없이 같은 발표를 발표 파일 내용으로 바꾸면 노트와 숨긴 장이 사라진 것으로 보였다(바뀌기 전 모습은 버전 기록에만 있었다).
+ * 노트와 가려진 칸, 숨긴 장과 이번에만 빼고 내보낸 빈 장(있던 자리에), 보내는 장에 나오지 않는 발표 전체의 값. 발표 파일의 빈 노트는
+ * 지운 것이 아니라 담기지 않은 것이다. 이것 없이 같은 발표를 발표 파일 내용으로 바꾸면 노트와 숨긴 장이 사라진 것으로 보였다(바뀌기 전 모습은
+ * 버전 기록에만 있었다). 빼고 내보낸 빈 장(leaveOut)은 이 PC의 발표에서 숨긴 장이 아니지만, 내보낸 뒤 고치지 않았으면 지금도 빈 장(bareSlide)이다.
  * 파일에 담긴 것(보이는 글, 차례, 고른 값)은 파일 그대로 둔다. 이 PC의 발표를 내보낸 파일을 그대로 열면 이 PC의 발표와 똑같다
  */
 export function withUnsent(sent: Deck, full: Deck): Deck {
@@ -235,10 +297,10 @@ export function withUnsent(sent: Deck, full: Deck): Deck {
     const f = was.get(s.id)
     return f ? withUnsentSlide(s, f) : s
   })
-  // 숨긴 장은 이 PC의 발표에서 바로 앞에 있던 장 뒤에 (앞에 있던 장이 파일에 없으면 그 앞 장, 하나도 없으면 맨 앞에)
+  // 숨긴 장과 빼고 내보낸 빈 장은 이 PC의 발표에서 바로 앞에 있던 장 뒤에 (앞에 있던 장이 파일에 없으면 그 앞 장, 하나도 없으면 맨 앞에)
   const ids = new Set(slides.map((s) => s.id))
   full.slides.forEach((s, i) => {
-    if (!s.hidden || ids.has(s.id)) return
+    if (ids.has(s.id) || !(s.hidden || bareSlide(s, full.meta))) return
     let at = 0
     for (let j = i - 1; j >= 0 && !at; j--) at = slides.findIndex((x) => x.id === full.slides[j].id) + 1
     slides.splice(at, 0, s)
