@@ -5,7 +5,8 @@
 //   끌어 보기, 하나씩, 필름 띠, 멈춘 그림이 한 계산에서 나오고, 어느 때로 건너뛰어도 같은 그림이다. 시계는 Web Animations 하나(clock)라서
 //   엔진의 끝맺음, 모션 편집의 멈추기와 끌어 보기, 발표하는 사람의 건너뛰기가 그 시계만 맞추면 된다.
 // - 그리기는 셋: 입자는 WebGL2의 점(기본), 소프트웨어 GL이거나 GPU가 없으면 Canvas2D(입자 1500, 잔상 없음), 멈춘 그림은 SVG(남는 선만.
-//   편집 화면, 목록, PDF, PPT, 내보낸 HTML의 처음 모습). 빛, 먹, 선, 펜 끝은 뒤의 2D 캔버스가 그린다.
+//   편집 화면, 목록, PDF, PPT, 내보낸 HTML의 처음 모습). 빛, 먹, 선, 펜 끝, 갈래는 뒤의 2D 캔버스가 그린다. 이 버전이 모르는 재료
+//   (더 새 버전의 것)는 다른 재료로 바꿔 그리지 않고 쉰다(글만 제 때에 맺힌다).
 // - 밝기: 장 바탕이 어두우면 빛(더하기 섞기), 밝으면 번지는 먹(보통 섞기, 낮은 짙기, 빛 번짐 없음). 색은 장의 글자색과 강조색뿐이다.
 // - 글은 DOM의 글 그대로다(고를 수 있고 PDF에서 벡터). 엔진은 그리는 순간 칸의 글자를 그 칸의 글꼴로 화면 밖 캔버스에 그려 모양을 딴다.
 //   들어오기는 투명도, 흐림(8px까지), 가림(mask)으로만 한다(자리를 다시 짜지 않는다). 끝나면 손댄 것을 모두 되돌려 편집 화면과 같다.
@@ -138,7 +139,10 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     /** 갈래: 입자마다 몇째 갈래인지(-1은 갈래 없이 가운데 둘레), 갈래마다 [뻗는 각도, 길이, 휘는 몫] */
     arm: Int8Array
     arms: number[][]
-    mode: 'burst' | 'scatter' | 'pen' | 'wash' | 'threads'
+    /** 뻗어 나가는 갈래(갈림길) */
+    br: Branches | null
+    /** rest: 이 버전이 모르는 재료라 그리지 않고 쉰다 */
+    mode: 'burst' | 'scatter' | 'pen' | 'wash' | 'threads' | 'branches' | 'rest'
     N: number
     ang: Float32Array
     rad: Float32Array
@@ -380,6 +384,162 @@ export function cineMotion(kit: DrawKit): CineRuntime {
   }
 
   /**
+   * 갈래(갈림길): 장 왼쪽 밖에서 들어온 줄기가 오른쪽으로 뻗으며 여러 갈래로 나뉘고, 한 길(남는 길)만 답의 글 첫머리에 닿는다.
+   * 갈래는 3차 곡선을 표본 점으로 잘라 둔다(점마다 [x, y, 뿌리에서의 거리, 굵기]). 묶음은 함께 자라고 함께 걷히는 갈래의 무리다:
+   * 묶음 0은 줄기(뿌리에서 첫 갈림까지), 1은 남는 길(첫 갈림에서 답까지), 나머지는 걷힐 갈래다
+   */
+  interface Branches {
+    pts: Float32Array
+    /** 갈래마다 [첫 표본, 표본 수, 묶음] */
+    segs: Int32Array
+    /**
+     * 묶음마다 [붙은 자리의 거리, 붙은 때의 흐른 거리, 자라는 빠르기 몫, 걷히는 늦춤(0~1), 가장 먼 거리, 남는가(1/0)].
+     * 묶음의 앞 = 붙은 자리 + (흐른 거리 - 붙은 때의 흐른 거리) × 빠르기 몫
+     */
+    groups: number[][]
+    /** 갈라진 자리마다 [x, y, 반지름, 거리, 묶음]: 이음매를 둥글게 메운다 */
+    joints: number[]
+    /** 남는 길의 끝 거리, 흐르는 거리의 끝(가장 먼 갈래가 닿는 때) */
+    end: number
+    far: number
+  }
+
+  /**
+   * 갈래를 짠다. aim은 답의 글(주인공) 첫 줄의 왼쪽 끝(조금 띄운 자리)과 그 줄의 가운데 높이.
+   * 남는 길은 정해 둔 마디(뿌리 → 첫 갈림 → 둘째 → 답의 첫머리)를 지나 가운데 띠를 가고, 걷힐 갈래(물줄기)는 첫 갈림에서 위와 아래의 띠로
+   * 부채처럼 나뉘어 거듭 갈라지며 장 오른쪽 끝 너머까지 장 가득 뻗는다(강 하구처럼). 장의 왼쪽 절반에만 뻗던 시안은 겨울 나뭇가지나 나무 그림표로 읽혔고,
+   * 남는 길과의 크기 차이가 없어 고르는 순간이 작았다(필름). 갈래마다 각도, 길이, 굵기를 다르게(고르게 나누면 눈송이나 바람개비로
+   * 읽혔다, 배경과 빛에서 글자로의 필름). 굵기는 붓질처럼 조금씩 오르내린다
+   */
+  function branchesOf(R: () => number, c: { ox: number; oy: number; cw: number; ch: number; W: number }, aim: number[], dense: number): Branches {
+    const { ox, oy, cw, ch } = c
+    const K = 20
+    const pts: number[] = []
+    const segs: number[] = []
+    const joints: number[] = []
+    const top = oy + ch * 0.04
+    const bot = oy + ch * 0.96
+    const fit = (y: number) => Math.min(bot, Math.max(top, y))
+    const [tx, ty] = aim
+    // 장 오른쪽 끝 너머까지(칸 밖으로 번지면 판의 끝까지)
+    const right = Math.max(ox + cw, c.W) + 40
+    const ph = R() * TAU
+    /** 3차 곡선 하나를 K점으로(거리와 굵기도). 끝의 거리 */
+    const bez = (p: number[], s0: number, w0: number, w1: number, g: number) => {
+      const first = pts.length / 4
+      let sd = s0
+      let px = p[0]
+      let py = p[1]
+      for (let i = 0; i < K; i++) {
+        const t = i / (K - 1)
+        const u = 1 - t
+        const x = u * u * u * p[0] + 3 * u * u * t * p[2] + 3 * u * t * t * p[4] + t * t * t * p[6]
+        const y = u * u * u * p[1] + 3 * u * u * t * p[3] + 3 * u * t * t * p[5] + t * t * t * p[7]
+        if (i) sd += Math.hypot(x - px, y - py)
+        // 붓질처럼 굵기가 조금씩 오르내린다(고른 굵기는 그래프의 선으로 읽힌다)
+        pts.push(x, y, sd, lerp(w0, w1, t) * (1 + 0.1 * Math.sin(sd * 0.019 + ph)))
+        px = x
+        py = y
+      }
+      segs.push(first, K, g)
+      return sd
+    }
+    // 남는 길의 마디: 뿌리(장 왼쪽 밖) → 첫 갈림 → 둘째 → 답. 뿌리는 답보다 조금 위나 아래라 곧은 선이 아니다
+    const side = R() < 0.5 ? -1 : 1
+    const x0 = -30
+    const L = Math.max(cw * 0.2, tx - x0)
+    const y0 = fit(ty + side * ch * (0.02 + 0.02 * R()))
+    const W = [
+      [x0, y0],
+      [x0 + L * (0.26 + 0.03 * R()), lerp(y0, ty, 0.3)],
+      [x0 + L * (0.64 + 0.04 * R()), lerp(y0, ty, 0.8) - side * ch * 0.012],
+      [tx, ty],
+    ]
+    // 마디의 방향(이웃 마디를 잇는 쪽). 답에는 눕혀서(가로로) 닿는다
+    const tan = W.map((p, i) => {
+      if (i === W.length - 1) return [Math.hypot(p[0] - W[i - 1][0], p[1] - W[i - 1][1]), 0]
+      const a = W[Math.max(0, i - 1)]
+      const b = W[i + 1]
+      return [(b[0] - a[0]) / (i ? 2 : 1), (b[1] - a[1]) / (i ? 2 : 1)]
+    })
+    const SW = [15, 13, 10.5, 8.5]
+    const at: number[] = [0]
+    const groups: number[][] = [
+      [0, 0, 1, 0, 0, 1],
+      [0, 0, 1, 0, 0, 1],
+    ]
+    for (let i = 0; i < W.length - 1; i++) {
+      const a = W[i]
+      const b = W[i + 1]
+      const p = [a[0], a[1], a[0] + tan[i][0] / 3, a[1] + tan[i][1] / 3, b[0] - tan[i + 1][0] / 3, b[1] - tan[i + 1][1] / 3, b[0], b[1]]
+      at.push(bez(p, at[i], SW[i], SW[i + 1], i ? 1 : 0))
+      if (i < W.length - 2) joints.push(b[0], b[1], SW[i + 1] / 2, at[i + 1], i ? 1 : 0)
+    }
+    const end = at[at.length - 1]
+    groups[0][4] = at[1]
+    groups[1][0] = at[1]
+    groups[1][1] = at[1]
+    groups[1][4] = end
+    /**
+     * 걷힐 갈래 하나와 그 아래 갈래들(재귀). 갈래마다 맡은 띠(lo~hi)가 있고, 갈라질 때 띠를 나눠 가진다: 갈래끼리 엇갈리지 않아 강 하구처럼
+     * 부채로 퍼진다(띠 없이 각도로만 나누던 시안은 장 오른쪽이 엇갈린 그물로 읽혔다, 필름). 갈라진 두 갈래는 앞 갈래의 방향으로 함께 떠났다가
+     * 조금씩 벌어진다(꺾인 마디는 나무 그림표로 읽혔다)
+     */
+    const grow = (x: number, y: number, dir: number, lo: number, hi: number, len: number, w: number, depth: number, s0: number, g: number) => {
+      const ex = Math.min(right, x + len)
+      const ey = lerp(lo, hi, 0.5 + (R() - 0.5) * 0.36)
+      const d = Math.hypot(ex - x, ey - y)
+      if (d < 40 || ex <= x + 12) return
+      // 끝은 흐르는 쪽(오른쪽)으로 눕는다. 마지막 갈래는 덜 눕혀 끝이 벌어진다(모두 눕히면 끝이 나란한 빗질 자국으로 읽혔다, 필름)
+      const a1 = Math.atan2(ey - y, ex - x) * (depth > 0 ? 0.5 : 0.85)
+      const p = [x, y, x + Math.cos(dir) * d * 0.42, y + Math.sin(dir) * d * 0.42, ex - Math.cos(a1) * d * 0.42, ey - Math.sin(a1) * d * 0.42, ex, ey]
+      const w1 = depth > 0 ? Math.max(2.6, w * 0.76) : Math.max(1.6, w * 0.36)
+      const s1 = bez(p, s0, w, w1, g)
+      groups[g][4] = Math.max(groups[g][4], s1)
+      if (depth <= 0 || ex >= right) return
+      joints.push(ex, ey, w1 / 2, s1, g)
+      const kids = depth >= 2 && R() < 0.25 ? 3 : 2
+      // 띠를 고르지 않게 나눈다(반씩 나누면 위아래가 거울에 비친 그림표로 읽혔다, 필름)
+      const cut = [0]
+      for (let k = 1; k < kids; k++) cut.push((k + (R() - 0.5) * 0.5) / kids)
+      cut.push(1)
+      for (let k = 0; k < kids; k++) {
+        // 몇은 뻗지 않고 끝난다(띠 하나가 비어 모든 갈래가 같은 수로 나뉜 무늬가 되지 않게)
+        if (k && R() < 0.16) continue
+        // 마지막 갈래의 길이는 들쭉날쭉하게(끝이 한 줄로 서면 빗의 이로 읽혔다)
+        const l = len * (depth === 1 ? 0.55 + 0.45 * R() : 0.8 + 0.14 * R())
+        grow(ex, ey, a1 + (k - (kids - 1) / 2) * 0.24, lerp(lo, hi, cut[k]), lerp(lo, hi, cut[k + 1]), l, w1, depth - 1, s1, g)
+      }
+    }
+    // 첫 갈림은 세 갈래: 위로 한 줄기, 가운데(남는 길), 아래로 한 줄기. 위와 아래의 줄기는 제 띠를 나눠 가지며 거듭 갈라진다(한 점에서
+    // 여러 줄기가 한꺼번에 퍼지면 거품기나 빗자루 머리로 읽혔다, 필름). 깊이는 촘촘하기에 따라
+    const B = W[1]
+    const span = right - B[0]
+    const gap = ch * 0.06
+    const deep = dense === 0 ? 2 : dense === 2 ? 4 : 3
+    const L0 = span * (dense === 2 ? 0.24 : 0.3)
+    // 위와 아래는 갈라지는 자리, 굵기, 깊이가 다르다(거울에 비친 모양이 되지 않게)
+    const tall = R() < 0.5
+    for (const [lo, hi, lag, first, d] of [
+      [top, ty - gap, 0, tall ? 0.72 : 1.1, tall ? deep : Math.max(2, deep - 1)],
+      [ty + gap, bot, 0.08, tall ? 1.1 : 0.72, tall ? Math.max(2, deep - 1) : deep],
+    ]) {
+      const dir = Math.atan2((lo + hi) / 2 - B[1], L0) * 0.85
+      groups.push([at[1], at[1], 1, lag, at[1], 0])
+      grow(B[0], B[1], dir, lo, hi, L0 * first, d === deep ? 11 : 9.5, d, at[1], groups.length - 1)
+    }
+    // 남는 길도 뻗는 동안에는 다른 물줄기와 같다: 답의 첫머리를 지나 가운데 띠로 장 끝까지 간다. 고를 때 이 끝자락은 다른 갈래처럼 되돌아오고
+    // 뿌리에서 답의 첫머리까지만 남는다. 남는 길만 느리게 자라게 하던 시안은 뿌리 곁의 짧은 가시로 보였고, 일찍 멈추게 하면 막힌 길로
+    // 읽혔다(필름)
+    groups.push([end, end, 1, 0.04, end, 0])
+    grow(tx, ty, 0, ty - gap * 1.6, ty + gap * 1.6, (right - tx) * 0.4, SW[SW.length - 1] * 0.92, 2, end, groups.length - 1)
+    // 흐르는 거리의 끝: 가장 먼 걷힐 갈래
+    let far = end
+    for (const g of groups) if (!g[5]) far = Math.max(far, g[1] + (g[4] - g[0]))
+    return { pts: new Float32Array(pts), segs: new Int32Array(segs), groups, joints, end, far }
+  }
+
+  /**
    * 장면을 만든다: 칸과 글의 자리를 재고, 입자 n개의 씨앗 값과 모일 자리를 정한다. 재는 동안에는 카메라를 잠깐 풀어 둔다
    * (배율이 걸린 채로 재면 글의 자리가 어긋난다)
    */
@@ -433,7 +593,8 @@ export function cineMotion(kit: DrawKit): CineRuntime {
     const path = s.material === 'line' && isPath(s)
     const P = (u: number) => [ox + (pathX(u) / 1000) * cw, oy + (pathY(s.shape, u) / 1000) * ch]
     if (path) [fx, fy] = P(0)
-    const mode: Scene['mode'] = s.material === 'wash' ? 'wash' : s.material === 'threads' ? 'threads' : s.material === 'line' ? 'pen' : spans.spread ? 'burst' : 'scatter'
+    const mode: Scene['mode'] =
+      s.material === 'wash' || s.material === 'threads' || s.material === 'branches' || s.material === 'rest' ? s.material : s.material === 'line' ? 'pen' : spans.spread ? 'burst' : 'scatter'
     // 번지는 크기: 뒤에 모임이 있으면 장의 한가운데를 채울 만큼, 번짐으로 끝나면 장 끝 너머까지
     const far = Math.hypot(Math.max(fx, host.w - fx), Math.max(fy, host.h - fy))
     // 모이기 전의 구름은 장의 한쪽에 머물게(장 절반을 덮으면 흰 바탕에서 그을음으로 읽혔다, 감성 검수). 차분하게는 같은 안무의 작은 판
@@ -615,7 +776,22 @@ export function cineMotion(kit: DrawKit): CineRuntime {
       threads[k * 8 + 6] = 0.38 * (0.35 * Math.min(1, Math.abs(y0 - y1) / ch) + 0.65 * R())
       threads[k * 8 + 7] = 0.75 + 0.25 * R()
     }
-    return { s, W: host.w, H: host.h, ox, oy, cw, ch, fx, fy, gr, gb, reach, shaped: sampled, cz: 0, edge, threads, threadW, arm, arms, mode, N: n, ang, rad, z, size, alpha, tone, delay, bow, ph, w, sx, sy, tx, ty, pu, texts, spans, dark }
+    // 촘촘하기(손잡이): 갈래의 깊이, 낱장의 두께
+    const dense = s.count >= 5000 ? 2 : s.count <= 1500 ? 0 : 1
+    let br: Branches | null = null
+    if (mode === 'branches') {
+      // 남는 길이 닿을 곳: 답(주인공 글)의 첫 줄 왼쪽 끝을 조금 띄운 자리, 그 줄의 가운데 높이(글의 첫머리로 흘러 든다). 가운데에 닿게
+      // 하던 시안은 남는 길이 글 아래를 지나야 해서, 답이 맺히기 전까지 홀로 선 물결 밑줄로 읽혔다(필름). 글이 없으면 칸의 가운데 왼쪽
+      const hero = texts.find((t) => t.cue.key === bigKey)
+      let aim = [fx - cw * 0.12, fy]
+      if (hero) {
+        const hr = hero.el.getBoundingClientRect()
+        const l0 = linesOf(hero.el, (r) => [(r.left - hr.left) / kz, (r.top - hr.top) / kz, r.width / kz, r.height / kz]).lines[0]
+        if (l0) aim = [hero.box[0] + l0[0] - 30, hero.box[1] + l0[1] + l0[3] * 0.55]
+      }
+      br = branchesOf(R, { ox, oy, cw, ch, W: host.w }, aim, dense)
+    }
+    return { s, W: host.w, H: host.h, ox, oy, cw, ch, fx, fy, gr, gb, reach, shaped: sampled, cz: 0, edge, threads, threadW, arm, arms, br, mode, N: n, ang, rad, z, size, alpha, tone, delay, bow, ph, w, sx, sy, tx, ty, pu, texts, spans, dark }
   }
 
   /** 구간 안에서의 진행(0~1). 구간이 없으면 없다(-1) */
@@ -1271,6 +1447,7 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
       x.globalCompositeOperation = 'source-over'
       if (c.mode === 'wash') drawWash(x, c, e)
       if (c.mode === 'threads') drawThreads(x, c, e)
+      if (c.mode === 'branches') drawBranches(x, c, e)
       // 길: 펜 끝이 지나간 만큼 가는 선이 남는다(끝 모습의 SVG와 같은 길, 같은 색, 같은 굵기)
       if (c.mode === 'pen') {
         const u = penAt(c, e)
@@ -1439,6 +1616,121 @@ void main(){vec2 q=gl_PointCoord*2.0-1.0;float r=dot(q,q);if(r>1.0)discard;float
         x.stroke()
       })
       x.globalCompositeOperation = 'source-over'
+    }
+
+    /**
+     * 갈래 하나의 [from, to] 구간(뿌리에서의 거리)을 굵기만큼의 띠로 경로에 더한다. 띠는 한쪽 둘레로 가서 다른 쪽 둘레로 돌아오는
+     * 닫힌 꼴이고, 모든 띠와 이음매의 원이 같은 돌림 방향이라 겹친 곳도 한 번만 칠해진다(겹친 곳만 짙어지면 갈림마다 먹 점이 생긴다).
+     * 끝(자라는 앞)과 꼬리(빨려 드는 뒤)는 붓끝처럼 가늘어진다
+     */
+    const ribbon = (x: CanvasRenderingContext2D, P: Float32Array, first: number, count: number, from: number, to: number, wk: number) => {
+      const s0 = P[first * 4 + 2]
+      const s1 = P[(first + count - 1) * 4 + 2]
+      const a = Math.max(from, s0)
+      const b = Math.min(to, s1)
+      if (b - a < 0.5) return
+      const L = rib
+      let m = 0
+      const put = (i: number, u: number) => {
+        const j = i * 4
+        const k = j + 4
+        L[m++] = lerp(P[j], P[k], u)
+        L[m++] = lerp(P[j + 1], P[k + 1], u)
+        L[m++] = lerp(P[j + 2], P[k + 2], u)
+        L[m++] = lerp(P[j + 3], P[k + 3], u)
+      }
+      for (let i = first; i < first + count - 1 && m < L.length - 8; i++) {
+        const sa = P[i * 4 + 2]
+        const sb = P[i * 4 + 6]
+        if (sb < a || sa > b) continue
+        const d = Math.max(1e-3, sb - sa)
+        if (!m) put(i, clamp((a - sa) / d))
+        put(i, clamp((b - sa) / d))
+      }
+      const n = m / 4
+      if (n < 2) return
+      // 한쪽 둘레로 가고(-n 쪽) 다른 쪽 둘레로 돌아온다(+n 쪽)
+      for (let pass = 0; pass < 2; pass++) {
+        for (let jj = 0; jj < n; jj++) {
+          const j = pass ? n - 1 - jj : jj
+          const o = j * 4
+          const p0 = Math.max(0, j - 1) * 4
+          const p1 = Math.min(n - 1, j + 1) * 4
+          let dx = L[p1] - L[p0]
+          let dy = L[p1 + 1] - L[p0 + 1]
+          const dl = Math.hypot(dx, dy) || 1
+          dx /= dl
+          dy /= dl
+          const sd = L[o + 2]
+          // 붓끝: 자라는 앞(to)과 빨려 드는 꼬리(from) 둘레만 가늘게. 갈래 하나의 끝(b)에서 가늘게 하면 마디마다 끊겨 보였다(필름)
+          const hw = (L[o + 3] * wk * clamp(0.28 + (to - sd) / 44) * clamp(0.28 + (sd - from) / 44)) / 2
+          const sg = pass ? hw : -hw
+          const px = L[o] - dy * sg
+          const py = L[o + 1] + dx * sg
+          if (!pass && !jj) x.moveTo(px, py)
+          else x.lineTo(px, py)
+        }
+      }
+      x.closePath()
+    }
+    /** 띠 하나의 표본(갈래 하나는 22점이라 넉넉하다) */
+    const rib = new Float32Array(26 * 4)
+
+    /**
+     * 갈래(갈림길): 장 왼쪽 밖에서 들어온 줄기가 뻗으며 갈라지고(√t: 처음에 빠르게, 점점 느리게), 다 뻗기 전에 고른다. 고르는 순간
+     * 걷힐 갈래는 끝에서부터 갈라진 자리로 되돌아가고(왼쪽으로), 남는 길은 짙고 굵어지며 뒤에서부터 답의 첫머리로 흘러 들어간다(오른쪽으로).
+     * 다른 길은 되돌아가고 고른 길은 답이 된다: 남는 길이 홀로 선 박자가 없다(홀로 서면 갈 곳 없는 물결 밑줄로 읽혔다, 필름).
+     * 끝 모습은 글뿐이고 강조색은 쓰지 않는다
+     */
+    const drawBranches = (x: CanvasRenderingContext2D, c: Scene, e: number) => {
+      const b = c.br
+      if (!b) return
+      const SP = c.spans.spread
+      const RS = c.spans.resolve
+      const D = SP ? b.far * Math.sqrt(Math.max(0, prog(SP, e))) : b.far
+      if (D <= 0) return
+      const len = RS ? Math.max(1, RS.end - RS.start) : 1
+      const pick = RS ? out(prog(RS, e)) : 1
+      // 남는 길은 걷힐 갈래가 반쯤 되돌아간 뒤에 흘러 들기 시작한다(첫 갈림이 먼저 끊기면 걷힐 갈래가 허공에 뜬다)
+      const pull = RS ? carry(clamp((e - RS.start - 0.45 * len) / (0.42 * len))) : 0
+      if (pull >= 1) return
+      const tail = b.end * pull
+      const A0 = c.dark ? 0.62 : 0.72
+      const A1 = c.dark ? 0.9 : 0.96
+      // 고르기 전에는 모든 갈래를 한 번에 칠한다(같은 짙기). 고르는 동안에는 남는 길과 걷힐 갈래를 따로
+      const split = !!RS && e > RS.start
+      const keepA = lerp(A0, A1, split ? pick : 0) * (1 - smooth(0.6, 1, pull))
+      const wk = 1 + 0.12 * (split ? pick : 0)
+      x.globalCompositeOperation = 'source-over'
+      for (let pass = 0; pass < (split ? 2 : 1); pass++) {
+        x.beginPath()
+        for (let g = 0; g < b.groups.length; g++) {
+          const G = b.groups[g]
+          const keep = G[5] === 1
+          if (split && keep !== (pass === 0)) continue
+          let front = g === 0 ? D : G[0] + Math.max(0, D - G[1]) * G[2]
+          if (g && front <= G[0]) continue
+          let from = keep ? tail : 0
+          if (!keep && split) {
+            // 끝에서부터 갈라진 자리로 되돌아간다. 남는 길과 겹치는 첫머리는 비운다(겹친 곳이 두 번 칠해지면 먹 점이 생긴다)
+            // 천천히 떠나 빠르게 되돌아가고 천천히 멈춘다: 장 가득한 갈래가 한 번에 쓸려 가는 것이 보이게(빠르게 걷으면 0.15초 만에 사라져 고르는
+            // 몸짓이 보이지 않았다, 필름)
+            const q = carry(clamp((e - RS!.start - G[3] * len) / (len * 0.5)))
+            if (q >= 1) continue
+            front = Math.min(front, lerp(G[4], G[0], q))
+            from = G[0] + 7
+          }
+          for (let k = 0; k < b.segs.length; k += 3) if (b.segs[k + 2] === g) ribbon(x, b.pts, b.segs[k], b.segs[k + 1], from, front, keep ? wk : 1)
+          for (let j = 0; j < b.joints.length; j += 5) {
+            if (b.joints[j + 4] !== g || b.joints[j + 3] > front - 3 || b.joints[j + 3] < from + 3) continue
+            const r = b.joints[j + 2] * (keep ? wk : 1)
+            x.moveTo(b.joints[j] + r, b.joints[j + 1])
+            x.arc(b.joints[j], b.joints[j + 1], r, 0, TAU)
+          }
+        }
+        x.fillStyle = rgbCss(ink.c, split && pass === 1 ? A0 * (1 - 0.35 * pick) : split ? keepA : A0)
+        x.fill()
+      }
     }
 
     /** 펜 끝: 작은 점 하나(빛 번짐 없이. 번지는 빛은 어두운 바탕의 초점 하나뿐이다) */

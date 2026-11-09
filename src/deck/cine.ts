@@ -26,8 +26,12 @@ import type {
   Deck,
 } from './types'
 
-/** 이 버전의 엔진 번호. 레시피를 읽는 법(구간, 모양, 손잡이의 뜻)이 바뀌면 올린다 */
-export const CINE_ENGINE = 1
+/**
+ * 이 버전의 엔진 번호. 레시피를 읽는 법(구간, 모양, 손잡이의 뜻)이 바뀌거나 새 재료가 생기면 올린다. 레시피에는 그 레시피를 읽는 데 필요한
+ * 번호를 적는다(틀의 engine): 1은 처음의 틀 넷, 2는 갈림길(새 재료). 그래서 틀 넷의 레시피는 예전 버전에서도 손잡이까지 그대로 쓰고,
+ * 새 재료의 레시피는 예전 버전이 '새 버전에서 만든 모션 그래픽'으로 알린다(아는 층만 그리고 레시피는 지우지 않는다)
+ */
+export const CINE_ENGINE = 2
 
 /** 첫 연출의 한도(ms, 생동감·보통 빠르기). 더 길면 듣는 분을 기다리게 한다(docs/MOTION.md '모션 그래픽') */
 export const CINE_MAX_MS = 10000
@@ -37,13 +41,13 @@ export const CINE_MAX_MS = 10000
 const CINE_PHASES: readonly CinePhaseKind[] = ['seed', 'spread', 'gather', 'resolve', 'write', 'pull', 'hold']
 export const CINE_FIELDS: readonly CineFieldKey[] = ['glyph', 'title', 'lead', 'label', 'text', 'sub', 'value', 'note', 'before', 'after']
 const ENTERS: readonly CineEnter[] = ['settle', 'write', 'letters', 'count', 'carry']
-const MATERIALS: readonly CineMaterial[] = ['particles', 'wash', 'threads', 'line']
-/** 재료마다 고를 수 있는 모양(첫째가 기본) */
-export const SHAPES_OF: Record<CineMaterial, readonly CineShape[]> = { particles: ['glyph', 'ring', 'point'], wash: ['point'], threads: ['glyph'], line: ['line', 'wave'] }
+const MATERIALS: readonly CineMaterial[] = ['particles', 'wash', 'threads', 'line', 'branches']
+/** 재료마다 고를 수 있는 모양(첫째가 기본). 갈래는 모양을 고르지 않는다(답의 글 첫머리로 간다) */
+export const SHAPES_OF: Record<CineMaterial, readonly CineShape[]> = { particles: ['glyph', 'ring', 'point'], wash: ['point'], threads: ['glyph'], line: ['line', 'wave'], branches: ['point'] }
 /** 장의 답에 강조색이 들어오는 시간(ms, 보통 빠르기) */
 const ACCENT_MS = 450
 const FRAMES: readonly CineFrame[] = ['mark', 'center', 'line']
-const PRESET_IDS: readonly CinePresetId[] = ['light', 'diffuse', 'gather', 'stroke']
+const PRESET_IDS: readonly CinePresetId[] = ['light', 'diffuse', 'gather', 'stroke', 'fork']
 
 interface Choice<T> {
   id: T
@@ -105,7 +109,7 @@ export const CINE_FIELD_SPECS: { key: CineFieldKey; label: string; hint: string;
   { key: 'after', label: '바뀐 값', hint: '2시간' },
 ]
 
-// ---------- 틀(프리셋) 넷 ----------
+// ---------- 틀(프리셋) 다섯 ----------
 
 /** 틀마다 이름, 하는 말, 어울리는 장, 처음 레시피(글 없이 정해진 낱말만) */
 interface CinePresetSpec {
@@ -117,13 +121,15 @@ interface CinePresetSpec {
   fits: string
   /** 칸에 처음 넣을 지어낸 글(예시). 레시피에는 들어가지 않는다 */
   sample: Partial<Record<CineFieldKey, string>>
+  /** 이 틀의 레시피를 읽는 데 필요한 엔진 번호(없으면 1) */
+  engine?: number
   recipe: Omit<CineRecipe, 'engine' | 'lineage' | 'seed' | 'preset'>
 }
 
 const phases = (...list: [CinePhaseKind, number, number?][]): CinePhase[] => list.map(([kind, ms, overlap]) => (overlap ? { kind, ms, overlap } : { kind, ms }))
 
 /**
- * 틀 넷. 시간은 생동감·보통 빠르기 기준이고 차분하게는 엔진이 같은 안무를 줄인다. 큐 시트와 까닭은 docs/MOTION.md '모션 그래픽'.
+ * 틀 다섯, 재료 다섯. 시간은 생동감·보통 빠르기 기준이고 차분하게는 엔진이 같은 안무를 줄인다. 큐 시트와 까닭은 docs/MOTION.md '모션 그래픽'.
  * 차례가 곧 고르는 곳의 차례다
  */
 export const CINE_PRESETS: readonly CinePresetSpec[] = [
@@ -236,6 +242,39 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       bleed: false,
     },
   },
+  {
+    id: 'fork',
+    name: '갈림길',
+    description: '한 줄기가 여러 갈래로 뻗어 나가다가 한 길만 남고, 그 길이 닿은 자리에서 답이 맺혀요.',
+    fits: '여러 안 가운데 고른 것, 선택과 집중',
+    engine: 2,
+    sample: { label: '여러 안 가운데', title: '작게 시작해 넓혀 가요', sub: '비용과 일정을 함께 보고 골랐어요' },
+    recipe: {
+      frame: 'center',
+      material: 'branches',
+      // 갈래가 다 뻗기 전에 고르기 시작하고(뻗은 채 서 있는 박자를 두지 않는다), 고르는 동안 남는 길 끝에서 답이 맺힌다: 남는 길이
+      // 홀로 선 박자가 있으면 갈 곳 없는 물결 밑줄로 읽혔다(필름)
+      phases: phases(['spread', 1200], ['resolve', 800, 200], ['write', 600, 400]),
+      particles: { amount: 'normal', size: 1, tone: 'ink', depth: 0.3, trail: false, spread: 'side' },
+      shape: { kind: 'point' },
+      light: false,
+      line: false,
+      // 고르는 동안 답 쪽으로 천천히 다가간다(여기를 보라)
+      camera: 'push',
+      pace: 'normal',
+      texts: [
+        // 칸의 차례가 곧 글의 차례(이름표, 답, 덧붙이는 말). 답(고른 길)이 먼저 맺힌다: 다른 갈래가 걷히는 동안 남는 길 끝에서.
+        // 무엇 가운데서 골랐는지와 까닭은 덧붙임으로
+        { key: 'label', enter: 'settle', on: 'write', lag: 0.2 },
+        { key: 'title', enter: 'settle', on: 'resolve', lag: 0.4 },
+        { key: 'sub', enter: 'settle', on: 'write', lag: 0.5 },
+      ],
+      handoff: false,
+      loop: false,
+      // 줄기는 장 왼쪽 끝 밖에서 들어온다(지금까지 걸어온 길)
+      bleed: true,
+    },
+  },
 ]
 
 export const presetSpec = (id: CinePresetId) => CINE_PRESETS.find((p) => p.id === id) ?? CINE_PRESETS[0]
@@ -243,7 +282,7 @@ export const presetSpec = (id: CinePresetId) => CINE_PRESETS.find((p) => p.id ==
 /** 틀에서 새 레시피. lineage는 라이브러리의 새 갈래 id */
 export function presetRecipe(id: CinePresetId, lineage: string, seed = 7): CineRecipe {
   const p = presetSpec(id)
-  return structuredCopy({ engine: CINE_ENGINE, lineage, preset: p.id, seed, ...p.recipe })
+  return structuredCopy({ engine: p.engine ?? 1, lineage, preset: p.id, seed, ...p.recipe })
 }
 
 const structuredCopy = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T
@@ -367,7 +406,8 @@ export interface CineTextCue {
  */
 export interface CineScript {
   frame: CineFrame
-  material: CineMaterial
+  /** rest는 이 버전이 모르는 재료(더 새 버전의 것): 그리지 않고 쉰다(글은 제 때에 맺힌다) */
+  material: CineMaterial | 'rest'
   seed: number
   spans: CineSpan[]
   /** 다 맺히는 때(ms) */
@@ -445,9 +485,10 @@ export function cineScript(raw: unknown): CineScript | null {
     // 장의 답은 하나: 강조색이 들어오는 0.45초를 끝에 더한다
     texts.push({ key: t.key as CineFieldKey, enter, start, end: start + len, ...(t.answer === true && !texts.some((x) => x.accent !== undefined) ? { accent: start + len + ACCENT_MS * pace } : {}) })
   }
-  // 모양은 재료마다 뜻이 있는 것만: 입자는 글자, 고리, 한 점으로 모이고, 그어지는 선은 선이나 물결, 먹의 면은 한 점에서, 가는 선은 글자로
-  const material = oneOf(MATERIALS, r.material, preset.material ?? 'particles')
-  const kinds = SHAPES_OF[material]
+  // 모양은 재료마다 뜻이 있는 것만: 입자는 글자, 고리, 한 점으로 모이고, 그어지는 선은 선이나 물결, 먹의 면은 한 점에서, 가는 선은 글자로.
+  // 모르는 재료(더 새 버전의 것)는 다른 재료로 바꿔 그리지 않고 쉰다: 틀의 재료로 그리면 그 장면과 다른 그림이 된다
+  const material: CineScript['material'] = r.material === undefined ? (preset.material ?? 'particles') : MATERIALS.includes(r.material) ? r.material : 'rest'
+  const kinds = material === 'rest' ? SHAPES_OF.wash : SHAPES_OF[material]
   const kind = oneOf(kinds, shape.kind, kinds[0])
   return {
     frame: oneOf(FRAMES, r.frame, preset.frame),
