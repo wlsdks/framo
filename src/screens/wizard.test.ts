@@ -20,11 +20,17 @@ describe('새 발표: 프레임 잡기', () => {
     // 칸의 크기는 1920×1080과 1280×600(윈도우 150%)에서 잰 것(안쪽 여백을 뺀 너비와 높이, 칸 사이, 장 이름 줄)
     const big = { width: 1074, height: 796, gapX: 12, gapY: 16, label: 23 }
     const small = { width: 719, height: 401, gapX: 12, gapY: 16, label: 22 }
-    // 장 수만으로 넷, 다섯 단을 정하던 때는 1920에서 열한 장이 260px 그림 세 줄로 칸 아래 3분의 1을 비웠다.
-    // 끝 줄이 조금(15% 밑) 가려지는 것은 받는다: 칸 안에서 스크롤하고 아래가 옅게 흐려 더 있는 것이 보인다
-    expect([5, 7, 11, 15].map((n) => planColumns(n, big))).toEqual([3, 3, 3, 4])
-    // 1280×600은 칸이 낮아 열한 장도 네 단에 다 든다(끝 줄을 반 넘게 가리지 않는다)
+    // 장 수만으로 넷, 다섯 단을 정하던 때는 1920에서 열다섯 장이 다섯 단의 작은 그림으로 칸 아래 절반 가까이를 비웠다
+    expect([5, 7, 11, 15].map((n) => planColumns(n, big))).toEqual([3, 3, 4, 4])
     expect([5, 7, 11, 15].map((n) => planColumns(n, small))).toEqual([3, 4, 4, 5])
+    // 끝 줄을 가리지 않는다: 세 단이면 열한 장의 끝 줄이 반쯤 가려져 잘린 것으로 읽혔다. 고른 단 수에서는 모든 장이 칸에 온전히 든다
+    const rows = (n: number, box: typeof big) => {
+      const c = planColumns(n, box)
+      const w = (box.width - box.gapX * (c - 1)) / c
+      const k = Math.ceil(n / c)
+      return k * ((w * 9) / 16 + box.label) + (k - 1) * box.gapY
+    }
+    for (const box of [big, small]) for (let n = 1; n <= 20; n++) if (planColumns(n, box) < 6) expect(rows(n, box), `${n}장`).toBeLessThanOrEqual(box.height)
     // 작은 장 그림은 96px(FitSlide의 가장 작은 크기)보다 좁아지지 않는다
     for (const box of [big, small]) for (let n = 1; n <= 20; n++) expect((box.width - box.gapX * (planColumns(n, box) - 1)) / planColumns(n, box)).toBeGreaterThanOrEqual(96)
   })
