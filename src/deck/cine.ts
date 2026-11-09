@@ -295,10 +295,10 @@ export const CINE_PRESETS: readonly CinePresetSpec[] = [
       camera: 'none',
       pace: 'normal',
       texts: [
-        // 무엇이 모이는지가 먼저(처음 0.5초 안에 읽힌다), 숫자는 물방울이 닿을 때마다 물과 함께 오른다. 강조색 없이: 다 찼다는 것은 숫자
-        // 아래까지 찬 물이 말한다
+        // 무엇이 모이는지가 먼저(처음 0.5초 안에 읽힌다), 숫자는 물방울이 닿을 때마다 물과 함께 오른다. 값이 맺히는 장면이라 숫자가 다
+        // 오른 순간 강조색이 한 번 들어온다(장의 답)
         { key: 'title', enter: 'settle', on: 'seed' },
-        { key: 'value', enter: 'count', on: 'gather' },
+        { key: 'value', enter: 'count', on: 'gather', answer: true },
         { key: 'sub', enter: 'settle', on: 'write' },
       ],
       handoff: false,
