@@ -3,7 +3,8 @@
 @media (max-width: 1100px) {
   .ed-body,
   .ed-body.has-side {
-    grid-template-columns: 196px minmax(0, 1fr);
+    /* 그림·번호·17px 스크롤바가 함께 들어갈 너비는 넓은 창과 같다. 목록까지 줄이면 그림과 빈칸 수가 잘린다. */
+    grid-template-columns: var(--slide-list-width) minmax(0, 1fr);
   }
 
   /* 좁으면 오른쪽 칸을 접고, 열 때만 슬라이드 위에 띄운다 (장 아래의 '컴포넌트 넣기', '이 장 설정'으로 연다) */
@@ -37,7 +38,7 @@
   }
 
   .ed-body.has-versions {
-    grid-template-columns: 196px minmax(0, 1fr) 320px;
+    grid-template-columns: var(--slide-list-width) minmax(0, 1fr) 320px;
   }
 
   /* 모션 편집은 오른쪽 칸(고른 것의 값)이 있어야 쓸 수 있어 접지 않는다. 대신 슬라이드 목록을 접어 무대 자리를 지킨다 */
