@@ -18,6 +18,9 @@ on:
       - scripts/pack.mjs
       - scripts/zip.mjs
       - scripts/exe.mjs
+      - scripts/ci-update.mjs
+      - server/launch.ts
+      - server/versions.ts
       - launch/**
 
 permissions:

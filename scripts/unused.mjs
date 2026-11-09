@@ -239,6 +239,7 @@ export const ALLOW = {
   /** 손으로 돌리는 스크립트(package.json, 워크플로, 훅이 부르지 않는다) */
   manualRoots: {
     'scripts/icon.mjs': 'Framo.exe의 아이콘(launch/framo.ico)을 홍보 페이지의 표시로 다시 만들 때 손으로 돌린다',
+    'scripts/fake-release.mjs': '자동 업데이트 시험(scripts/ci-update.mjs)이 node --import로 서버에 끼우는 가짜 GitHub 릴리스. 가져오지 않고 경로로 넘긴다',
   },
   /** 시험만 쓰는 도우미 파일 */
   testHelpers: {
