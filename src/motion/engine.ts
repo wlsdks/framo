@@ -1097,13 +1097,8 @@ export function motionEngine(): MotionEngine {
         const box = el.getBoundingClientRect()
         const zoom = el.offsetWidth ? box.width / el.offsetWidth : 1
         const labelsOf = (n: Element) => (Array.prototype.slice.call(n.children) as HTMLElement[]).filter((c) => (c.textContent || '').trim())
-        // 추이의 숫자 글자. 숫자 칸(.tn-val)은 목표선을 비키는 여백까지 품어 글자보다 훨씬 크다
+        // 추이의 숫자 글자(글자 높이로 자른 상자, trend.css)
         const numOf = (c: HTMLElement) => c.querySelector('.tn-num') as HTMLElement | null
-        // 목표선 비키기(trend.css의 .tn-num 여백)는 움직이는 동안 css 대신 아래 lift로 센다: css는 지금 쪽의 것만 알려 줘서, 옮겨 갈 다른 쪽에서
-        // 비켜 설 자리를 알 수 없었다(처음에 잰 자리로 보면 앞 장에서 목표선 위로 비켜 있던 숫자가 넘기자마자 점선 위에 내려앉았다)
-        const nums = sides.map((sd) => labelsOf(sd.el).map(numOf))
-        const numStyles = nums.map((list) => list.map((n) => (n ? n.getAttribute('style') : null)))
-        nums.forEach((list) => list.forEach((n) => n && (n.style.margin = '0px')))
         const offsets = () =>
           sides.map((sd) => {
             const p = sd.el.getBoundingClientRect()
@@ -1125,31 +1120,15 @@ export function motionEngine(): MotionEngine {
         sides.forEach((sd) => toSide(sd, sd.after))
         // 자리 0: 앞 장의 쪽, 1: 새 쪽, 2: 새 쪽에서 위아래를 바꾼 자리
         const spots = [then, now, away]
-        /** 숫자가 목표선에 걸칠 때 비켜 서는 만큼(px, 위로는 음수). trend.css의 .tn-num 여백과 같은 셈: 점에서 목표선까지(d)가 숫자 자리
-            (점에서 up 위, 글 높이 em) 둘레 10px 안이면 숫자 끝을 목표선에서 10px 띄운다. 그림이 낮으면(200px 이하) 골짜기 숫자도 위에 선다 */
-        const lift = (list: string[], hl: boolean, y: number, ty: number, h: number, em: number) => {
-          if (!Number.isFinite(ty) || !Number.isFinite(y) || list.indexOf('is-mid') >= 0) return 0
-          const below = list.indexOf('is-below') >= 0 && h > 200
-          const d = ((below ? y - ty : ty - y) * h) / 100
-          const up = hl ? 40 : 24
-          const by = d - up + 10 > 0 && d - up - em - 10 <= 0 ? d + 10 - up : 0
-          return below ? by : -by
-        }
         sides.forEach((sd, k) => {
           const labels = labelsOf(sd.el)
           const styles = labels.map((c) => c.getAttribute('style'))
-          const lists = [sd.before, sd.after, flip(sd)]
-          const hl = sd.el.classList.contains('is-hl')
-          const em = nums[k].map((n) => (n ? parseFloat(getComputedStyle(n).fontSize) * 1.1 : 0))
           // 추이의 그림 상자와 선: 숫자가 겹치는지 볼 곳
           const canvas = sd.el.closest('.tn-canvas') as HTMLElement | null
           const polys = canvas ? (Array.prototype.slice.call(canvas.querySelectorAll('.tn-line')) as SVGPolylineElement[]) : []
           // 숫자마다 지금 자리와 그 자리로 옮긴 때(처음에는 앞 장의 쪽)
           const state = labels.map(() => ({ side: 0, at: -1 }))
-          const restore = () => {
-            labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
-            nums[k].forEach((n, i) => n && (numStyles[k][i] === null ? n.removeAttribute('style') : n.setAttribute('style', numStyles[k][i]!)))
-          }
+          const restore = () => labels.forEach((c, i) => (styles[i] === null ? c.removeAttribute('style') : c.setAttribute('style', styles[i]!)))
           sets.push((t) => {
             if (t.v >= 1) return restore()
             const w = canvas ? canvas.offsetWidth : 0
@@ -1159,21 +1138,17 @@ export function motionEngine(): MotionEngine {
             const ty = canvas ? parseFloat(canvas.style.getPropertyValue('--ty')) : NaN
             const py = h - (y * h) / 100
             const pts = polys.map((pl) => (pl.getAttribute('points') || '').trim().split(/[\s,]+/).map(Number))
-            /** 쪽(side)의 글자 자리: 점에서 글자 상자의 왼쪽 위까지(목표선 비키기 더함) */
-            const spot = (side: number, i: number) => {
-              const o = spots[side][k][i] || now[k][i]
-              return [o[0], o[1] + (nums[k][i] ? lift(lists[side], hl, y, ty, h, em[i]) : 0)]
-            }
-            /** 쪽(side)에 선 숫자가 선이나 목표 점선과 겹치는지(그림 상자의 px). 숫자의 잉크는 글자 상자(줄 높이 1.1em)의 가운데쯤이라
-                위아래를 조금 덜고, 둘레(pad)를 넉넉히 본다 */
+            /** 쪽(side)의 글자 자리: 점에서 글자 상자의 왼쪽 위까지 */
+            const spot = (side: number, i: number) => spots[side][k][i] || now[k][i]
+            /** 쪽(side)에 선 숫자가 선이나 목표 점선과 겹치는지(그림 상자의 px). 글자 상자가 곧 숫자의 잉크라 둘레(pad)만 더 본다 */
             const hits = (side: number, i: number, pad = 3) => {
               const o = spots[side][k][i]
               if (!canvas || !o || !Number.isFinite(px) || !Number.isFinite(py)) return false
               const at = spot(side, i)
               const l = px + at[0] - pad
               const r = l + o[2] + pad * 2
-              const top = py + at[1] + o[3] * 0.12 - pad
-              const b = top + o[3] * 0.76 + pad * 2
+              const top = py + at[1] - pad
+              const b = top + o[3] + pad * 2
               if (Number.isFinite(ty) && top < (1 - ty / 100) * h && (1 - ty / 100) * h < b) return true
               for (const list of pts)
                 for (let j = 0; j + 3 < list.length; j += 2) {

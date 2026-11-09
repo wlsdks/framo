@@ -18,10 +18,11 @@
 
 .tn-canvas {
   position: absolute;
-  /* 위 띠는 가장 높은 점의 강조한 숫자(52px, 줄 높이 1.1)와 점에서 띄운 40px가 들어갈 만큼. 숫자 크기(--fs 목록과 같은 식)를 따라 늘린다:
-     104px로 두면 글자 크기 '크게'와 글자 맞추기의 키우기에서 숫자(75px)가 그림 위로 나가, 낮은 줄에서는 위에도 아래에도 둘 자리가 없어
-     바닥줄에 걸쳤다 */
-  inset: calc(40px + 64px * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1)) 0 0;
+  /* 위 띠는 가장 높은 점의 강조한 숫자(52px, 글자 높이 0.71em)와 점에서 띄운 28px가 들어갈 만큼. 숫자 크기(--fs 목록과 같은 식)를 따라 늘린다:
+     고정으로 두면 글자 크기 '크게'와 글자 맞추기의 키우기에서 숫자(75px)가 그림 위로 나가, 낮은 줄에서는 위에도 아래에도 둘 자리가 없어
+     바닥줄에 걸쳤다. 숫자 상자를 글자 높이로 자르고(.tn-num) 점에서 띄운 거리를 글자에 맞춘 만큼(40px에서 28px, 줄 높이의 위아래 틈
+     20px) 띠를 줄여 그림에 돌려준다 */
+  inset: calc(28px + 44px * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1)) 0 0;
   /* 점 숫자의 자리를 그림 너비(cqi)로 재서 양끝에서 밖으로 나가지 않게 한다. 높이는 골짜기 숫자의 자리를 정할 때 본다 */
   container-type: size;
 }
@@ -101,7 +102,7 @@
 
 .tn-val {
   position: absolute;
-  bottom: 24px;
+  bottom: 20px;
   left: 0;
   /* 점 자리(.tn-pt)는 너비가 0이라 그대로 두면 숫자 상자가 가장 좁은 너비로 잡힌다. 그러면 아래 translate의
      100%(상자 너비)가 글보다 작아 오른쪽 끝 점의 숫자가 그림 밖으로 나간다(편집 화면에서 글자를 줄이던 까닭) */
@@ -112,7 +113,7 @@
 }
 
 .tn-pt.is-below .tn-val {
-  top: 24px;
+  top: 20px;
   bottom: auto;
 }
 
@@ -126,6 +127,9 @@
   translate: clamp(calc(var(--x) * -1cqi), -100%, calc((100 - var(--x)) * 1cqi - 100%)) 0;
 }
 
+/* 숫자 상자는 글자 높이(숫자의 윗선에서 바닥선까지)로 자른다: 점에서 띄운 거리(20px, 점 둘레에서 11px)가 곧 점에서 숫자 바닥까지라
+   위아래 어느 쪽에 서도 같은 틈이고, 자리를 고를 때(fitBlocks.ts) 재는 상자가 그려진 글자와 같다. 줄 높이 상자로 재던 때는 숫자가 글자보다 위아래로 6px씩 큰
+   상자로 목표선과 부딪혀, 사이에 들 수 있는 숫자도 자리가 없다고 봤다 */
 .tn-num {
   --fs: 30px;
   display: block;
@@ -133,66 +137,23 @@
   font-weight: 600;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
+  text-box: trim-both cap alphabetic;
   /* 목표선이나 선이 숫자를 가로지르지 않게 바탕색으로 둘레를 지운다 */
   text-shadow: 0 0 4px var(--bg), 0 0 8px var(--bg), 0 0 12px var(--bg);
 }
 
+/* 큰 숫자는 틈도 글자에 맞춰 조금 더(점 둘레에서 19px) */
 .tn-pt.is-hl .tn-val {
-  bottom: 40px;
+  bottom: 28px;
 }
 
 /* 강조한 점의 숫자를 점 아래로 내릴 때(fitBlocks.ts): 위의 bottom을 풀지 않으면 위아래가 다 잡혀 숫자 상자의 높이가 0이 됐다 */
 .tn-pt.is-hl.is-below .tn-val {
-  top: 40px;
+  top: 28px;
   bottom: auto;
 }
 
-/* 숫자가 목표선에 걸치면 선 위로(골짜기 숫자는 선 아래로) 비켜 선다. 바탕색 둘레(text-shadow)는 글자 둘레만 지워서,
-   목표선이 숫자 한가운데를 지나면 글자 사이로 점선이 그대로 보였다(96, 101처럼 목표 115 아래의 숫자).
-   점에서 목표선까지(--tn-d)가 숫자 자리(점에서 --tn-up 위, 글 높이 1.1em) 둘레 10px 안이면 숫자 아래를 목표선 위 10px에 둔다.
-   조건은 계단 둘의 차로 만든다: (--tn-d − 시작)×1000000을 0과 올릴 만큼 사이로 자르면 시작보다 낮을 때 0, 넘으면 올릴 만큼이다(곱이 작으면 경계 둘레 0.1px 안에서 반쯤만 올라 숫자가 선에 걸쳤다).
-   끝(숫자 자리 위)을 넘으면 같은 계단을 빼서 다시 0. 목표선이 없으면 --ty가 아주 낮아 늘 0이다 */
-.tn-num {
-  --tn-up: 24px;
-  --tn-d: calc((var(--ty, -10000) - var(--y)) * 1cqh);
-  --tn-lift: calc(var(--tn-d) + 10px - var(--tn-up));
-  margin-bottom: calc(
-    clamp(0px, (var(--tn-d) - var(--tn-up) + 10px) * 1000000, var(--tn-lift)) -
-      clamp(0px, (var(--tn-d) - var(--tn-up) - 1.1em - 10px) * 1000000, var(--tn-lift))
-  );
-}
-
-.tn-pt.is-hl .tn-num {
-  --tn-up: 40px;
-}
-
-.tn-pt.is-below .tn-num {
-  --tn-d: calc((var(--y) - var(--ty, 10000)) * 1cqh);
-  margin-top: calc(
-    clamp(0px, (var(--tn-d) - var(--tn-up) + 10px) * 1000000, var(--tn-lift)) -
-      clamp(0px, (var(--tn-d) - var(--tn-up) - 1.1em - 10px) * 1000000, var(--tn-lift))
-  );
-  margin-bottom: 0;
-}
-
-/* 그림이 낮으면 골짜기 아래에 숫자를 둘 자리가 없다(아래 시기 이름과 부딪힌다). 다른 점처럼 위에, 목표선도 위로 비킨다 */
-@container (max-height: 200px) {
-  .tn-pt.is-below .tn-val {
-    top: auto;
-    bottom: 24px;
-  }
-
-  .tn-pt.is-below .tn-num {
-    --tn-d: calc((var(--ty, -10000) - var(--y)) * 1cqh);
-    margin-top: 0;
-    margin-bottom: calc(
-      clamp(0px, (var(--tn-d) - var(--tn-up) + 10px) * 1000000, var(--tn-lift)) -
-        clamp(0px, (var(--tn-d) - var(--tn-up) - 1.1em - 10px) * 1000000, var(--tn-lift))
-    );
-  }
-}
-
-/* 점 바로 옆(fitBlocks.ts가 위아래에 둘 자리가 없을 때 고른다): 숫자 가운데를 점 높이에. 목표선 비키기(margin)는 위아래에 둘 때만 */
+/* 점 바로 옆(fitBlocks.ts가 위아래에 둘 자리가 없을 때 고른다): 숫자 가운데를 점 높이에 */
 .tn-pt.is-mid .tn-val {
   top: 0;
   bottom: auto;
@@ -206,17 +167,12 @@
   translate: 20px -50%;
 }
 
-/* 강조한 점은 둘레 고리(반지름 35px)만큼 더 띄운다 */
 .tn-pt.is-hl.is-mid.is-before .tn-val {
-  translate: calc(-100% - 48px) -50%;
+  translate: calc(-100% - 28px) -50%;
 }
 
 .tn-pt.is-hl.is-mid.is-after .tn-val {
-  translate: 48px -50%;
-}
-
-.tn-pt.is-mid .tn-num {
-  margin: 0;
+  translate: 28px -50%;
 }
 
 .tn-pt.is-hl .tn-num {
