@@ -35,7 +35,8 @@ export interface Ran {
 }
 
 interface SuperviseOptions {
-  home: string
+  /** 이 시작 프로그램이 든 버전 폴더. 돌아갈 마지막 자리라 켜지지 않았다는 표시를 남기지 않는다 */
+  own: string
   /** 지금 켤 차례: 새것부터, 마지막은 앱 폴더의 버전. skip은 이번에 켜지지 않은 버전 */
   pick(skip: ReadonlySet<string>): Run[]
   run(run: Run, restarted: boolean): Promise<Ran>
@@ -63,7 +64,7 @@ export async function supervise(o: SuperviseOptions): Promise<number> {
       restarted = true
       continue
     }
-    if (broken(r) && run.dir !== o.home) {
+    if (broken(r) && run.dir !== o.own) {
       o.markFailed(run)
       skip.add(run.version)
       o.say(`새 버전(${run.version})을 켜지 못해서 이전 버전으로 켤게요.`)
@@ -120,18 +121,27 @@ interface MainOptions {
   node?: string
 }
 
+/**
+ * 켤 차례. 앱 폴더의 버전 폴더 가운데 이 시작 프로그램보다 새것(새것부터), 마지막은 이 시작 프로그램이 든 폴더 자신.
+ * 보통은 앱 폴더의 것이 켜지지만, 사람이 versions 안의 Framo.exe를 직접 눌렀으면 그 버전 폴더(own)의 서버를 그 버전의 node로 켠다.
+ * 앱 폴더의 서버를 다른 버전의 node로 켜지 않는다
+ */
+export function choices(own: string, base: string, node: string, platform: NodeJS.Platform, arch: string, skip: ReadonlySet<string>): Run[] {
+  const home = appHome(own)
+  return [
+    ...readyVersions(home, base, platform, arch)
+      .filter((v) => !skip.has(v.version))
+      .map((v) => ({ version: v.version, dir: v.dir, node: nodeIn(v.dir, platform, arch)! })),
+    { version: base, dir: own, node },
+  ]
+}
+
 export async function main({ node = process.execPath }: MainOptions = {}): Promise<never> {
-  const here = dirname(fileURLToPath(import.meta.url))
-  const home = appHome(join(here, '..'))
+  const own = join(dirname(fileURLToPath(import.meta.url)), '..')
   const { platform, arch } = process
   const code = await supervise({
-    home,
-    pick: (skip) => [
-      ...readyVersions(home, BASE, platform, arch)
-        .filter((v) => !skip.has(v.version))
-        .map((v) => ({ version: v.version, dir: v.dir, node: nodeIn(v.dir, platform, arch)! })),
-      { version: BASE, dir: home, node },
-    ],
+    own,
+    pick: (skip) => choices(own, BASE, node, platform, arch, skip),
     run: runServer,
     markFailed,
     say: (m) => console.error(`\n  ${m}\n`),

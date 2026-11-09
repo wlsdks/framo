@@ -2,10 +2,11 @@
 // 앞쪽은 서버를 흉내 내고, 뒤쪽은 작은 서버 대역을 진짜 자식 프로세스로 띄워 IPC와 끝 코드까지 본다.
 
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { READY_FILE, READY_FORMAT, requiredFiles } from './versions'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { runServer, supervise, type Ran, type Run } from './launch'
+import { choices, runServer, supervise, type Ran, type Run } from './launch'
 import { FAIL_CODE, LISTENING, RESTART_CODE, RESTARTED_ENV } from './versions'
 
 const HOME = '/app'
@@ -21,7 +22,7 @@ async function play(available: () => Run[], results: Record<string, Ran[]>) {
   const failed: string[] = []
   const said: string[] = []
   const code = await supervise({
-    home: HOME,
+    own: HOME,
     pick: (skip) => [...available().filter((r) => !skip.has(r.version)), base],
     run: async (r, restarted) => {
       runs.push({ version: r.version, restarted })
@@ -46,7 +47,7 @@ describe('시작 프로그램', () => {
     let list = [v9]
     const results = { '0.9.0': [ran({ code: RESTART_CODE })], '0.10.0': [ran({ code: 0 })] }
     const r = await supervise({
-      home: HOME,
+      own: HOME,
       pick: (skip) => [...list.filter((x) => !skip.has(x.version)), base],
       run: async (x, restarted) => {
         const out = results[x.version as '0.9.0' | '0.10.0'].shift()!
@@ -88,7 +89,7 @@ describe('시작 프로그램', () => {
     const runs: { version: string; restarted: boolean }[] = []
     const skipFailed = new Set<string>()
     await supervise({
-      home: HOME,
+      own: HOME,
       pick: (skip) => [...list.filter((x) => !skip.has(x.version) && !skipFailed.has(x.version)), base],
       run: async (x, restarted) => {
         runs.push({ version: x.version, restarted })
@@ -176,7 +177,7 @@ describe('시작 프로그램이 띄우는 진짜 자식', () => {
     const good = fakeVersion(`process.send(${JSON.stringify(LISTENING)}, () => process.exit(0))`)
     const failed: string[] = []
     const code = await supervise({
-      home: good,
+      own: good,
       pick: (skip) => [
         ...(skip.has('0.9.0') ? [] : [{ version: '0.9.0', dir: broken, node: process.execPath }]),
         { version: '0.8.0', dir: good, node: process.execPath },
@@ -187,5 +188,42 @@ describe('시작 프로그램이 띄우는 진짜 자식', () => {
     })
     expect(failed).toEqual(['0.9.0'])
     expect(code).toBe(0)
+  })
+})
+
+describe('켤 차례', () => {
+  /** 앱 폴더와 그 안의 버전 폴더(다 풀고 확인을 마친 것) */
+  function app(...versions: string[]) {
+    const home = mkdtempSync(join(tmpdir(), 'gyeol-choices-'))
+    for (const v of versions) {
+      const dir = join(home, 'versions', v)
+      for (const f of requiredFiles('win32', 'x64')) {
+        mkdirSync(join(dir, ...f.split('/').slice(0, -1)), { recursive: true })
+        writeFileSync(join(dir, ...f.split('/')), 'x')
+      }
+      writeFileSync(join(dir, READY_FILE), JSON.stringify({ format: READY_FORMAT, version: v }))
+    }
+    return home
+  }
+
+  it('앱 폴더에서 켜면 새 버전부터, 마지막은 앱 폴더 자신', () => {
+    const home = app('0.9.0', '0.10.0')
+    const list = choices(home, '0.8.0', '/node', 'win32', 'x64', new Set())
+    expect(list.map((r) => [r.version, r.dir])).toEqual([
+      ['0.10.0', join(home, 'versions', '0.10.0')],
+      ['0.9.0', join(home, 'versions', '0.9.0')],
+      ['0.8.0', home],
+    ])
+    expect(list[0].node).toBe(join(home, 'versions', '0.10.0', 'node', 'node.exe'))
+  })
+
+  it('versions 안의 Framo.exe를 직접 눌러도 그 버전 폴더의 서버를 켠다(앱 폴더의 서버를 다른 node로 켜지 않는다)', () => {
+    const home = app('0.9.0', '0.10.0')
+    const own = join(home, 'versions', '0.9.0')
+    const list = choices(own, '0.9.0', join(own, 'node', 'node.exe'), 'win32', 'x64', new Set())
+    expect(list.map((r) => [r.version, r.dir])).toEqual([
+      ['0.10.0', join(home, 'versions', '0.10.0')],
+      ['0.9.0', own],
+    ])
   })
 })
