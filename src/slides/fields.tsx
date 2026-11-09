@@ -956,6 +956,10 @@ export function ItemTools({ i, sort = true, keepBlank = false, pair = false }: {
         if (side) item.dataset.tools = side
         else delete item.dataset.tools
       }
+      // 레이아웃 장의 가로로 놓인 항목은 빼기를 상자가 아니라 글 상자의 오른쪽 위 모서리에(edit.css의 --it-pad-r): 단 사이를 항목의
+      // 안쪽 여백으로 띄운 레이아웃(목표 대비 실적의 나란히)은 상자 모서리가 단 사이 가운데라, 빼기가 옆 단의 이름 바로 앞에 서서 옆 단을
+      // 지우는 단추로 읽혔다
+      const padR = !inBlock && axis === 'x' && !side ? parseFloat(getComputedStyle(item).paddingRight) || 0 : 0
       // 값이 그대로면 쓰지 않는다: 항목의 스타일을 바꾸면 장을 다시 맞춘다(blocks.tsx의 BlockArea가 본문 상자 안의 바뀜을 지켜본다)
       const at = side ? null : spot
       for (const [name, v] of [
@@ -963,6 +967,7 @@ export function ItemTools({ i, sort = true, keepBlank = false, pair = false }: {
         ['--it-tools-t', at?.top],
         ['--it-out-r', at?.out],
         ['--it-side-y', side === 'side' ? textMiddle(item) : undefined],
+        ['--it-pad-r', padR > 0 ? padR : undefined],
       ] as const) {
         const value = v === undefined ? '' : `${Math.round(v)}px`
         if (item.style.getPropertyValue(name) === value) continue
