@@ -782,13 +782,13 @@ button.wz-step:hover {
   list-style: none;
 }
 
-.wzx-strip li {
+.wzx-strip > li {
   border-radius: 2px;
   cursor: default;
   transition: box-shadow var(--t-fast);
 }
 
-.wzx-strip li.is-on {
+.wzx-strip > li.is-on {
   box-shadow: 0 0 0 2px var(--sel);
 }
 
@@ -943,7 +943,8 @@ button.wz-step:hover {
   mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
 }
 
-.wzp-grid li {
+/* 바로 아래 칸만: 작은 장 그림 안의 목록(일정 막대의 줄 같은)까지 잡으면 장이 세로로 쌓여 일정 막대가 이름 아래로 흩어졌다 */
+.wzp-grid > li {
   display: flex;
   flex-direction: column;
   gap: 6px;
