@@ -51,6 +51,16 @@ describe('짜임 틀 고르기', () => {
       expect(at(bs, 'r').x).toBeGreaterThan(at(bs, 'b').x)
     }
   })
+  it('원을 그리지 않는 비율 원 옆의 주석은 멀리 떨어지지 않게 반씩 나눈다 (8 : 4로 나누면 사이가 340px 비고 주석이 꺾였다)', () => {
+    for (const value of ['150%', '10건']) {
+      const ring = { ...sampleBlock('ring'), id: 'r', fields: { ...sampleBlock('ring').fields, value, label: '확인할 비율' } }
+      const note = { ...block('note', 'c'), fields: { text: '입력한 비율이 표시 범위에 맞는지 확인해요.' } }
+      const bs = board(ring, note)
+      expect(tiles(bs)).toBe(true)
+      expect(at(bs, 'c').y, value).toBe(at(bs, 'r').y)
+      expect(at(bs, 'r').w, value).toBe(6)
+    }
+  })
   it('핵심 숫자를 줄로 쌓는 칸에 너비를 몰아주지 않고 옆 목록과 고르게 나눈다', () => {
     const quote = { ...block('quote', 'q'), fields: { quote: '회의가 짧아지니 오후에 일할 시간이 생겼어요', by: '시범 부서 팀원' } }
     const kpi0 = block('kpi', 'k')

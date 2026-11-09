@@ -25,6 +25,11 @@ import { AREA_W, atRect, blockMinH, isStretchy, widthOf } from './sizing'
 const RAGGED = new Set<BlockType>(['bullets', 'text', 'message', 'callout', 'facts', 'quote', 'points'])
 /** 나란한 칸 사이가 옆 칸 사이(BLOCK_COL_GAP)보다 본문 너비의 이만큼 넘게 비면 남는 너비를 한 칸이 다 받은 것 */
 const HOLE = 0.2
+/**
+ * 주석 앞의 구멍은 더 좁게(본문의 5%, 84px): 주석은 앞의 것에 이어 읽는 덧붙임이라 멀리 떨어지면 따로 선 글이 된다.
+ * 다른 칸처럼 20%까지 두면 비율 원(150%)과 기준 글 사이가 340px 비고 기준 글은 오른쪽 4칸에서 두 줄로 꺾였다(검수)
+ */
+const NOTE_HOLE = 0.05
 
 /** 틀을 견주는 가장 많은 부품 수. 더 많으면 사람이 짠 차례가 짜임의 뜻이라 판에 맡긴다 */
 export const ARRANGE_MAX = 4
@@ -62,8 +67,17 @@ function measureW(b: Block, w: number): number {
   if ((b.type === 'text' || b.type === 'bullets') && w >= 1300 && b.fields.heading?.trim()) return Math.min(w * 0.3, [...b.fields.heading.trim()].length * 44) + 48 + 24 * 30
   if (b.type === 'text') return 24 * 30
   if (b.type === 'facts' && (b.items.length <= 3 || w < 1300)) return 140 + 24 * 30
+  // 주석은 글 폭 없이 칸 너비에서 꺾여서 한 줄에 드는 너비까지 그려진다: 이름 + 사이(16) + 가장 긴 줄, 작은 글(26px)을 한 단계 키운 크기로
+  if (b.type === 'note') {
+    const kind = b.fields.kind?.trim() ?? ''
+    const text = Math.max(0, ...(b.fields.text ?? '').split('\n').map((line) => widthOf(line, headLook().lead)))
+    return (kind ? widthOf(kind, headLook().lead) * NOTE_PX + 16 : 0) + text * NOTE_PX
+  }
   return MEASURE_W[b.type] ?? Infinity
 }
+
+/** 주석 글자의 너비를 어림하는 글자 크기 (캔버스 px): 작은 글 26px을 판이 한 단계(1.2) 키운 크기에 굵은 이름과 자간 몫을 더한다 */
+const NOTE_PX = 32
 
 /**
  * 핵심 숫자가 좁은 칸에서 바꾸는 짜임의 높이 (캔버스 px, styles/blocks/kpi.css와 같은 값: arrange.test.ts가 맞춰 본다).
@@ -248,13 +262,16 @@ function picture(b: Block, r: { w: number; h: number }): { w: number; h: number 
 const unknownRing = (b: Block): boolean => b.type === 'ring' && readPercent(b.fields.value ?? '') === null
 
 /**
- * 원을 그리지 않는 비율 원이 넓은 칸에서 그리는 너비 (캔버스 px): 숫자(칸의 55%까지) + 사이 64 + 이름과 덧붙임 중 긴 것.
- * 칸 전체를 쓴다고 계산하면 그 아래에 다른 부품을 쌓고 본문 오른쪽 29%를 비운 판을 골랐다(검수)
+ * 원을 그리지 않는 비율 원이 그리는 너비 (캔버스 px). 넓은 칸(700px 이상)에서는 숫자(칸의 55%까지) + 사이 64 + 이름과 덧붙임 중 긴 것.
+ * 칸 전체를 쓴다고 계산하면 그 아래에 다른 부품을 쌓고 본문 오른쪽 29%를 비운 판을 골랐다(검수).
+ * 좁은 칸에서는 이름, 숫자, 덧붙임을 위아래로 쌓아서(styles/blocks/ring.css) 그중 넓은 것까지다: 넓은 칸의 셈으로 보면 5칸에 쌓은
+ * 숫자 뒤의 빈 곳을 몰라, 옆 주석과 사이가 290px 빈 판을 골랐다
  */
 function unknownRingW(b: Block, w = AREA_W): number {
-  const value = Math.min(w * 0.55, widthOf(b.fields.value ?? '', headLook().lead) * 154)
+  const number = widthOf(b.fields.value ?? '', headLook().lead) * 154
   const text = Math.max(220, widthOf(b.fields.label ?? '', headLook().lead) * 44, widthOf(b.fields.note ?? '', headLook().lead) * 36)
-  return value + 64 + text
+  if (w < 700) return Math.min(w, Math.max(number, text))
+  return Math.min(w * 0.55, number) + 64 + text
 }
 
 /** 짜임 하나의 점수 (작을수록 좋다). 그려질 모습을 어림한다: 글자를 몇 단계까지 키울 수 있는지, 쌓은 뒤 본문을 얼마나 채우는지, 나란한 칸 한쪽이 얼마나 비는지 */
@@ -289,6 +306,10 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
   if (fill < 0.6) cost += (0.6 - fill) * 100
   if (fill < 0.8) cost += (0.8 - fill) * 30
   if (fill > 0.95) cost += (fill - 0.95) * 100
+  // 칸 안에 그려지는 너비: 주석은 한 줄에 드는 너비까지라(measureW), 칸 너비로 세면 짧은 주석 옆의 빈 곳을 주석 아래의 빈 곳으로 한 번 더
+  // 쳐서 주석을 좁은 칸에 밀어 넣었다(비율 원 옆 주석이 4칸에서 두 줄로 꺾이고 둘 사이가 340px 비었다). 칸 오른쪽의 빈 곳은 아래 '가로로
+  // 빈 곳'이 센다
+  const drawnW = (b: Block) => (b.type === 'note' ? Math.min(rect(b).w, measureW(b, rect(b).w)) : rect(b).w)
   // 한쪽 빔: 나란한 칸 가운데 짧은 칸 아래로 비는 넓이 (본문 넓이에 견준 몫)
   const walk = (n: Tree) => {
     if (n.kind === 'leaf') return
@@ -299,7 +320,7 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
       // 차트 옆처럼 세게 치면, 캡처를 4칸에 작게 두고 글을 8칸에 둔 판이 캡처를 크게 둔 판보다 나았다
       const beside = n.kids.some((k) => k.kind === 'leaf' && aspectOf(laid.get(k.block.id)!)) ? 0.5 : 1
       n.kids.forEach((k, i) => {
-        const w = leaves(k).reduce((a, b) => Math.max(a, rect(b).x + rect(b).w), 0) - Math.min(...leaves(k).map((b) => rect(b).x))
+        const w = leaves(k).reduce((a, b) => Math.max(a, rect(b).x + drawnW(b)), 0) - Math.min(...leaves(k).map((b) => rect(b).x))
         cost += (((top - hs[i]) * w) / (areaH * AREA_W)) * 150 * beside
       })
     }
@@ -370,7 +391,7 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
     }
     // 비율로 읽을 수 없는 값(150%, 10건)은 원 없이 숫자 옆에 이름과 덧붙임을 둔다(styles/blocks/ring.css). 칸 전체를 쓴다고 계산하면
     // 그 아래에 다른 부품을 쌓고 본문 오른쪽 29%를 비운 판을 골랐다(검수)
-    if (unknownRing(b) && r.w >= 700) return r.x + Math.min(r.w, unknownRingW(placed, r.w))
+    if (unknownRing(b)) return r.x + Math.min(r.w, unknownRingW(placed, r.w))
     const total = placed.fields.total?.trim() ?? ''
     if (b.type === 'ratio' && r.w >= 900 && /^\d+$/.test(total) && Number(total) > 0 && Number(total) <= 20) {
       const words = Math.max(1, ...[placed.fields.label, placed.fields.note].map((s) => [...(s ?? '')].length)) * 26
@@ -386,6 +407,8 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
       const n = Math.max(1, blockItems(placed).length)
       return r.x + r.w - r.w / n + Math.min(r.w / n, 440)
     }
+    // 주석은 잰 높이가 글이 꺾여도 그대로라(가장 낮은 높이) 잰 높이로 어림하면(naturalSpan) 늘 3칸만 쓴다고 보았다: 한 줄에 드는 너비로
+    if (b.type === 'note') return r.x + drawnW(b)
     const w = isStretchy(b.type) ? r.w : Math.min(atRect({ x: 0, y: 0, w: naturalSpan(laid.get(b.id)!), h: 1 }, size).w, measureW(b, r.w))
     return r.x + Math.min(r.w, w)
   }
@@ -414,9 +437,10 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
             const ra = laid.get(a.id)!.at!
             const rb = laid.get(b.id)!.at!
             if (ra.y >= rb.y + rb.h || rb.y >= ra.y + ra.h) continue
-            worst = Math.max(worst, (inkLeft(b) - inkRight(a) - BLOCK_COL_GAP) / AREA_W)
+            const hole = (inkLeft(b) - inkRight(a) - BLOCK_COL_GAP) / AREA_W
+            worst = Math.max(worst, hole - (b.type === 'note' ? NOTE_HOLE : HOLE))
           }
-        if (worst > HOLE) cost += (worst - HOLE) * 200
+        if (worst > 0) cost += worst * 200
       }
     n.kids.forEach(holes)
   }
