@@ -1,4 +1,4 @@
-import { agenda, type Recipe } from './blueprints/recipes'
+import { agenda, each, type Recipe } from './blueprints/recipes'
 import { createDeck, emptyItem, planRecipes } from './generate'
 import type { Deck, Item, Slide, SlideOptions } from './types'
 
@@ -184,8 +184,37 @@ const SCREEN: Recipe = {
   guide: '새 방식에서 쓸 화면을 넣어요.',
 }
 
+/**
+ * 개선 제안 구성은 원인, 바뀌는 모습, 기대 효과를 컴포넌트(원인 캐기, 바뀌기, 계산식)로 만든다. 예시 발표는 그 장들을 칸을 채운
+ * 레이아웃 장(점 목록, 비교, 핵심 숫자)으로 둔다: 장 모음과 컴포넌트 고르기가 레이아웃마다의 예시를 이 발표에서 가져오고(showcase.ts),
+ * 여러 시험이 이 발표의 장을 레이아웃으로 찾는다
+ */
+const AS_LAYOUT: Record<string, Partial<Recipe>> = {
+  원인: {
+    layout: 'points',
+    guide: '왜 생기는지 짚으면 개선안이 왜 맞는지 보여요.',
+    hints: {
+      title: '문제가 생기는 이유',
+      'items.title': '원인',
+      'items.body': '왜 그런지, 얼마나 자주 그런지',
+      ...each({ title: ['양식이 팀마다 달라요', '업체 목록이 흩어져 있어요', '승인이 세 단계예요'] }),
+    },
+  },
+  '바뀌는 모습': {
+    layout: 'compare',
+    guide: '지금 방식과 바뀐 방식을 줄마다 나란히 놓아요.',
+    fields: { leftTitle: '지금', rightTitle: '개선 후' },
+    hints: { title: '이렇게 바꾸자고 제안해요', 'items.title': '지금의 방식', 'items.body': '바뀐 방식' },
+  },
+  '기대 효과': {
+    layout: 'kpi',
+    guide: '무엇이 얼마나 좋아지는지 숫자로 적어요.',
+    hints: { title: '바꾸면 얻는 것', 'items.body': '계산 근거' },
+  },
+}
+
 function recipes(): Recipe[] {
-  const list = [...planRecipes('improve', 'mixed', 30)]
+  const list = planRecipes('improve', 'mixed', 30).map((r) => (AS_LAYOUT[r.purpose] ? { ...r, ...AS_LAYOUT[r.purpose], blocks: undefined } : r))
   list.splice(list.findIndex((r) => r.purpose === '한 장 요약') + 1, 0, agenda)
   list.splice(list.findIndex((r) => r.purpose === '바뀌는 절차') + 1, 0, SCREEN)
   return list

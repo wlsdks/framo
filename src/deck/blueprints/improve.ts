@@ -7,7 +7,7 @@ export const improve: Blueprint = {
   name: '개선 제안',
   description: '일하는 방식이나 제도, 도구를 바꾸자고 해요',
   storyline: ['문제', '원인', '개선안', '효과'],
-  showcase: ['문제의 크기', '원인', '바뀌는 절차', '기대 효과'],
+  showcase: ['문제의 크기', '원인', '바뀌는 모습', '기대 효과'],
   defaultTitle: '개선 제안',
   // 프레임 잡기에서 먼저 골라 둘 값: 바꿀 일을 맡은 팀장께 짧게
   defaults: { audience: 'practitioner', minutes: 10 },
@@ -31,7 +31,7 @@ export const improve: Blueprint = {
     {
       layout: 'bars',
       purpose: '문제의 크기',
-      priority: 2,
+      priority: 3,
       focus: 'numbers',
       section: '문제',
       items: 3,
@@ -44,37 +44,50 @@ export const improve: Blueprint = {
       },
     },
     {
-      layout: 'points',
+      // 원인은 글 목록보다 '왜?'를 거듭해 내려가는 그림이 개선안의 근거를 보인다. 팀장 앞의 짧은 보고에서도 문제의 크기보다 먼저 남는다
+      layout: 'compose',
       purpose: '원인',
-      priority: 3,
+      priority: 2,
       focus: 'context',
       section: '문제',
-      guide: '왜 생기는지 짚으면 개선안이 왜 맞는지 보여요.',
-      hints: {
-        title: '문제가 생기는 이유',
-        'items.title': '원인',
-        'items.body': '왜 그런지, 얼마나 자주 그런지',
-        ...each({ title: ['양식이 팀마다 달라요', '업체 목록이 흩어져 있어요', '승인이 세 단계예요'] }),
-      },
+      guide: '왜를 거듭해 근본 원인까지 내려가면 개선안이 왜 맞는지 보여요.',
+      hints: { title: '문제의 뿌리는 양식을 맡은 곳이 없는 것이에요' },
+      blocks: [
+        {
+          type: 'whys',
+          hints: {
+            problem: '구매 요청 한 건에 평균 6시간이 들어요',
+            ...each({
+              title: ['팀마다 양식이 달라 다시 맞춰요', '업체 목록이 흩어져 메일로 물어요', '양식과 목록을 맡아 고치는 곳이 없어요'],
+              meta: ['양식 7가지', '목록 4곳', '최근 3년 맡은 곳 없음'],
+            }),
+          },
+        },
+      ],
     },
     section('개선안', '어떻게 바꿀지'),
     priorities('개선안'),
     {
-      layout: 'compare',
+      layout: 'compose',
       purpose: '바뀌는 모습',
       priority: 1,
       section: '개선안',
-      guide: '지금 방식과 바뀐 방식을 줄마다 나란히 놓아요.',
-      fields: { leftTitle: '지금', rightTitle: '개선 후' },
-      hints: {
-        title: '이렇게 바꾸자고 제안해요',
-        'items.title': '지금의 방식',
-        'items.body': '바뀐 방식',
-        ...each({
-          title: ['팀마다 다른 양식으로 써요', '업체를 메일로 물어봐요', '승인에 사흘 걸려요'],
-          body: ['한 가지 양식으로 써요', '업체 목록에서 바로 찾아요', '하루 안에 승인해요'],
-        }),
-      },
+      guide: '지금 방식과 바뀐 방식을 줄마다 짝지어요.',
+      hints: { title: '이렇게 바꾸자고 제안해요' },
+      blocks: [
+        {
+          type: 'wipe',
+          fields: { from: '지금', to: '개선 후' },
+          hints: {
+            'items.title': '지금의 방식',
+            'items.body': '바뀐 방식',
+            ...each({
+              title: ['팀마다 다른 양식으로 써요', '업체를 메일로 물어봐요', '승인에 사흘 걸려요'],
+              body: ['한 가지 양식으로 써요', '업체 목록에서 바로 찾아요', '하루 안에 승인해요'],
+            }),
+          },
+        },
+      ],
     },
     {
       layout: 'process',
@@ -92,16 +105,25 @@ export const improve: Blueprint = {
       ...each({ value: ['500만 원', '2,000만 원', '6,000만 원'], meta: ['1개월', '3개월', '6개월'] }),
     }),
     {
-      layout: 'kpi',
+      // 아끼는 시간은 셈을 보여야 믿는다: 큰 숫자 하나보다 '한 건에 줄어드는 시간 × 한 해 요청 = 한 해에 아끼는 시간'
+      layout: 'compose',
       purpose: '기대 효과',
       priority: 1,
       section: '개선안',
-      guide: '무엇이 얼마나 좋아지는지 숫자로 적어요.',
-      hints: {
-        title: '바꾸면 얻는 것',
-        'items.body': '계산 근거',
-        ...each({ value: ['40%', '3.6시간', '1,200시간'], title: ['줄어드는 시간', '요청 한 건에 드는 시간', '한 해에 아끼는 시간'] }),
-      },
+      guide: '얻는 것을 셈으로 보이면 숫자를 믿어요.',
+      hints: { title: '한 해 1,200시간, 4,800만 원어치 일손을 아껴요' },
+      blocks: [
+        {
+          type: 'calc',
+          items: 3,
+          hints: {
+            label: '한 해에 아끼는 일손',
+            result: '4,800만 원',
+            note: '요청 수는 지난해, 인건비는 평균 기준',
+            ...each({ value: ['2.4시간', '500건', '4만 원'], title: ['요청 한 건에 줄어드는 시간', '한 해 구매 요청', '한 시간 인건비'] }),
+          },
+        },
+      ],
     },
     section('실행', '언제, 어떻게 바꿀지'),
     {

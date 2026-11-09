@@ -22,10 +22,24 @@ export const proposal: Blueprint = {
       hints: { title: '어떤 문제를 해결하려는지 한 문장으로', lead: '현황과 목표를 확인한 근거' },
     },
     {
-      layout: 'points', purpose: '제안 내용', priority: 1,
-      guide: '제공할 내용과 얻을 수 있는 점을 짝지어 적어요.',
-      hints: { title: '이렇게 해결해요', 'items.title': '제안하는 내용', 'items.body': '듣는 분이 얻는 것',
-        ...each({ title: ['현장 확인', '시범 운영', '결과 점검'] }) },
+      // 무엇을 하는지보다 듣는 분의 일이 무엇이 달라지는지가 제안의 말이라, 지금의 모습이 제안 뒤의 모습으로 넘어가는 장면으로 보인다
+      layout: 'compose', purpose: '제안 내용', priority: 1,
+      guide: '듣는 분이 지금 겪는 것과 제안으로 달라지는 것을 짝지어 적어요.',
+      hints: { title: '이렇게 해결해요' },
+      blocks: [
+        {
+          type: 'wipe',
+          fields: { from: '지금', to: '제안하면' },
+          hints: {
+            'items.title': '듣는 분이 지금 겪는 것',
+            'items.body': '제안으로 달라지는 것',
+            ...each({
+              title: ['분류가 틀린 물건을 다시 찾아요', '바쁜 날마다 사람을 더 불러요', '나아졌는지 알 길이 없어요'],
+              body: ['분류할 때 바로 걸러 내요', '바쁜 시간에도 같은 인원으로 돌려요', '주마다 오류율로 확인해요'],
+            }),
+          },
+        },
+      ],
     },
     {
       layout: 'compare', purpose: '제공 범위', priority: 1, variant: 'apart',
@@ -35,9 +49,19 @@ export const proposal: Blueprint = {
         ...each({ title: ['현장 확인', '한 곳에서 시범 운영', '결과 공유'], body: ['추가 현장 조사', '다른 장소로 확대', '장기 운영 방식'] }) },
     },
     {
-      layout: 'timeline', purpose: '진행 일정', priority: 2, focus: 'detail',
-      guide: '시작부터 결과를 확인할 때까지의 단계를 적어요.',
-      hints: { title: '이런 순서로 진행해요', ...each({ meta: ['1주', '2주', '3~6주', '7주'], title: ['현황 확인', '준비', '시범 운영', '결과 점검'] }) },
+      // 단계마다 걸리는 기간이 달라서(시범 운영만 4주) 점을 이은 선보다 기간 막대가 진행 방식을 그대로 보인다
+      layout: 'compose', purpose: '진행 일정', priority: 2, focus: 'detail',
+      guide: '시작부터 결과를 확인할 때까지 단계마다 기간을 적어요.',
+      hints: { title: '7주 안에 시범 운영 결과까지 확인해요' },
+      blocks: [
+        {
+          type: 'gantt',
+          hints: {
+            cols: '1주, 2주, 3주, 4주, 5주, 6주, 7주',
+            ...each({ title: ['현황 확인', '준비', '시범 운영', '결과 점검'], body: ['1주', '2주', '3주~6주', '7주'] }),
+          },
+        },
+      ],
     },
     {
       layout: 'imageText', purpose: '제안 화면', priority: 3, focus: 'detail',
