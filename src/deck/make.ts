@@ -14,7 +14,7 @@ export function emptyItem(): Item {
   return { id: uid(), title: '', body: '', value: '', meta: '', image: '' }
 }
 
-/** 빈 장. 구성의 장(recipe)을 주면 그 역할, 안내, 미리 넣는 이름표로 */
+/** 빈 장. 구성의 장(recipe)을 주면 그 역할, 안내, 미리 넣는 이름표로. 부품 장의 부품은 generate.ts의 recipeSlide가 짠다 */
 export function makeSlide(layout: LayoutId, recipe?: Partial<Recipe>): Slide {
   const spec = LAYOUTS[layout]
   const count = recipe?.items ?? spec.items?.default ?? 0

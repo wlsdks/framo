@@ -1,9 +1,26 @@
 // 장 하나의 꼴(Recipe)과 발표 종류의 꼴(Blueprint), 여러 발표 종류가 같이 쓰는 장: 표지, 한 장 요약, 안 비교, 위험, 마지막 장, 목차
 
-import type { Audience, DeckType, ItemKey, LayoutId, SlideOptions } from '../types'
+import type { Audience, BlockType, DeckType, ItemKey, LayoutId, SlideOptions } from '../types'
 
 /** 듣는 사람에 따라 더 챙기거나 덜 챙기는 장. 장 수를 맞출 때 우선순위를 한 단계 올리거나 내린다 */
 export type Focus = 'numbers' | 'detail' | 'context'
+
+/**
+ * 부품 장(compose)에 처음 넣어 둘 컴포넌트 하나. 장의 말이 글보다 그림(흐름, 원인 캐기, 바뀌기, 일정 막대 …)으로 서는 장에 쓴다.
+ * 장처럼 내용은 넣지 않고 칸마다 안내(hints)만 단다. 미리 채우는 것은 구조 글자뿐이다(fields, prefill: '지금', '바뀐 뒤' 같은).
+ * 자리는 정하지 않는다: 편집기에서 눌러 넣을 때처럼 판이 알아서 짠다(generate.ts의 recipeSlide)
+ */
+interface RecipeBlock {
+  type: BlockType
+  /** 칸 안내. 키는 컴포넌트의 칸 이름(`problem`, `items.title`, `items.0.title`). 없으면 컴포넌트의 기본 안내 */
+  hints?: Record<string, string>
+  fields?: Record<string, string>
+  prefill?: Partial<Record<ItemKey, string>>[]
+  /** 항목 수. 없으면 컴포넌트의 기본 */
+  items?: number
+  variant?: string
+  highlight?: number
+}
 
 export interface Recipe {
   layout: LayoutId
@@ -29,6 +46,8 @@ export interface Recipe {
   variant?: string
   /** 처음 정해 두는 장 옵션 (예: 강조할 단계) */
   options?: SlideOptions
+  /** 부품 장(layout: 'compose')에 넣어 둘 컴포넌트. 이때 hints와 fields는 장의 머리(제목, 부제) 것이다 */
+  blocks?: RecipeBlock[]
 }
 
 export interface Blueprint {

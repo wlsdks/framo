@@ -61,6 +61,7 @@
 | 사용자가 고르는 값(글꼴, 글자 크기, 아래 표시, 장 넘기기, 바탕, 움직임 …) | `src/deck/themes.ts`. AI 카탈로그, 모양, 제안이 이 목록을 같이 쓴다 |
 | 장면 목록과 맞는 장(`SCENES`, `sceneFits`) | `src/deck/scenes.ts`. 편집기, 예전 버전 검사, AI 카탈로그(`scenes`), 모양(`options.scene`), 제안(`set_options`의 `scene`)이 같이 쓴다 |
 | 항목 수와 레이아웃 바꾸기(편집기와 AI 제안이 같은 규칙으로) | `src/deck/edits.ts` |
+| 구성의 장 하나 만들기(부품 장이면 레시피의 컴포넌트를 판이 알아서 짠다). 프레임 잡기, 미리 보기, AI 제안의 역할로 장 넣기가 같이 쓴다 | `src/deck/generate.ts`의 `recipeSlide` |
 | 예전에 저장한 발표 읽기 | `src/deck/migrate.ts`의 `migrateDeck` |
 | 새 버전에서 만든 발표 알아보기 | `src/deck/compat.ts` |
 | 브라우저와 보관 폴더 중 어느 쪽을 남길지 | `src/store/reconcile.ts` |
