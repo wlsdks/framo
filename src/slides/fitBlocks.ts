@@ -400,9 +400,37 @@ export function blockFitter() {
     }
   }
 
+  /**
+   * 추진 일정의 담당(과 기간)을 이름 옆에 둘지 아래에 둘지: 한 줄이라도 이름 옆에 들지 않으면 모든 줄의 담당을 이름 아래에 둔다
+   * (is-meta-below, gantt.css). 줄마다 꺾이게 두던 때는 긴 이름의 줄만 담당이 아래로 떨어져 그 줄만 높고 짜임이 달랐다. 편집할 때 비어
+   * 안내로 보이는 담당과 기간은 세지 않는다(발표에는 없는 글이라 편집 화면만 짜임이 바뀐다). 글을 쓰는 동안은 쓰기 전 그대로(flowNames와
+   * 같다). 글자 크기가 바뀔 때마다 다시 고른다(place)
+   */
+  function ganttMeta(scope: ParentNode): void {
+    for (const gt of Array.from(scope.querySelectorAll<HTMLElement>('.bk-gt'))) {
+      const area = gt.closest<HTMLElement>('.bk-area')
+      if (area && typing(area)) continue
+      gt.classList.remove('is-meta-below')
+      if (!gt.offsetWidth) continue
+      const wrapped = Array.from(gt.querySelectorAll<HTMLElement>('.bk-gt-label')).some((label) => {
+        const t = label.querySelector('.bk-gt-t')?.getBoundingClientRect()
+        if (!t) return false
+        // 기간이 비어 안내 기간을 보이는 줄(is-hint)의 기간도 안내다
+        const hinted = label.parentElement?.classList.contains('is-hint')
+        return Array.from(label.querySelectorAll<HTMLElement>(':scope > :is(.bk-gt-m, .bk-gt-p):not(.is-empty, .is-hint)')).some((m) => {
+          if (hinted && m.classList.contains('bk-gt-p')) return false
+          const r = m.getBoundingClientRect()
+          return r.width > 0 && r.top >= t.bottom - 2
+        })
+      })
+      if (wrapped) gt.classList.add('is-meta-below')
+    }
+  }
+
   function place(scope: ParentNode): void {
     flowNames(scope)
     splitPct(scope)
+    ganttMeta(scope)
     const plots = scope instanceof HTMLElement && scope.classList.contains('pm-plot') ? [scope] : Array.from(scope.querySelectorAll<HTMLElement>('.pm-plot'))
     const SIDES = ['is-left', 'is-up', 'is-down']
     const tries = [[], ['is-left'], ['is-up'], ['is-down'], ['is-left', 'is-up'], ['is-left', 'is-down']]
