@@ -2539,7 +2539,9 @@ export function motionEngine(): MotionEngine {
               wyPath.push(p)
             })
           }
-          const hop = Math.min(levelName === 'lively' ? 560 : 480, 1600 / Math.max(1, steps.length - 1))
+          // 단 사이는 근본 원인이 차분하게 1.2초, 생동감 1.6초 안에 맺히게 단 수로 나눈다: 1600ms를 나누던 때는 네 단에서 근본 원인이
+          // 생동감 2.4초에야 맺혀 듣는 분을 기다리게 했다(검수)
+          const hop = levelName === 'lively' ? Math.min(400, 1000 / Math.max(1, steps.length - 1)) : Math.min(340, 860 / Math.max(1, steps.length - 1))
           const seg = hop * 0.8
           steps.forEach((step, n) => {
             const at = 120 + n * hop
