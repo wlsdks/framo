@@ -2574,15 +2574,11 @@ export function motionEngine(): MotionEngine {
             } else rise(text, at + seg * 0.75, L.y * 0.4)
             rise(note, at + seg * 0.75 + 90, L.y * 0.3)
           })
-          // 생동감: 그 뒤로는 조각이 문제에서 이름표를 따라 한 단씩 내려가 근본 원인에 닿고, 닿을 때 근본 원인의 글이 잠깐 밝아진다.
-          // 캐 들어가는 차례를 계속 보여 준다. 길은 이름표마다의 왼쪽 가운데를 계단(꺾임)으로 잇는다
+          // 생동감: 그 뒤로는 조각이 문제에서 이름표를 따라 한 단씩 내려가 근본 원인에 닿는다. 캐 들어가는 차례를 계속 보여 준다.
+          // 길은 이름표마다의 왼쪽 가운데를 계단(꺾임)으로 잇는다. 근본 원인은 이름표와 글이 모두 강조색이라(whys.css) 닿을 때 색을 바꾸지 않는다
           if (wyList && wyPath.length > 1) {
-            // 근본 원인의 이름표는 이미 강조색이라, 닿을 때 밝아지는 것은 근본 원인의 글이다
-            const rootText = steps[steps.length - 1].querySelector('.bk-wy-t') as HTMLElement | null
-            const accent = getComputedStyle(wyList).getPropertyValue('--accent').trim()
-            const ink = rootText ? getComputedStyle(rootText).color : ''
             const end = 120 + (steps.length - 1) * hop + seg + 600
-            stream(wyList, wyPath, end, d(2600), 0, rootText ? { el: rootText, off: { color: ink }, on: { color: accent } } : undefined)
+            stream(wyList, wyPath, end, d(2600), 0)
           }
           break
         }
