@@ -38,8 +38,18 @@ const UPDATED_KEY = 'html-maker-updated-to'
 
 type Restart = 'idle' | 'running' | 'failed'
 
+interface UpdateOptions {
+  /**
+   * 열 때 GitHub에 확인을 부탁할지(서버가 하루에 한 번까지). 홈만 부탁하고, 편집기는 서버가 아는 것만 본다:
+   * 알림 설명이 '처음 화면을 열 때' 묻는다고 약속한다
+   */
+  check?: boolean
+  /** 다시 시작한 뒤 화면을 새로 열기 전에 할 일(편집기: 고친 것을 바로 저장) */
+  beforeReload?: () => Promise<unknown>
+}
+
 /** 홈의 버전 표시와 새 버전 알림이 같이 쓰는 상태. 화면은 로컬 서버에만 묻는다. GitHub에 묻고 받는 것은 서버가 한다 */
-export function useUpdate(toast: Toast) {
+export function useUpdate(toast: Toast, { check = true, beforeReload }: UpdateOptions = {}) {
   const [on, setOn] = useState<boolean | null>(null)
   const [status, setStatus] = useState<UpdateStatus | null>(null)
   const [doneOpen, setDoneOpen] = useState(false)
@@ -51,7 +61,7 @@ export function useUpdate(toast: Toast) {
     updateCheckOn().then(async (v) => {
       if (!live) return
       setOn(v)
-      const s = await loadUpdate(v)
+      const s = await loadUpdate(v && check)
       if (!live) return
       setStatus(s)
       try {
@@ -117,6 +127,8 @@ export function useUpdate(toast: Toast) {
         } catch {
           // 알림만 건너뛴다
         }
+        // 고치던 것은 브라우저에 있어 서버가 바뀌어도 그대로지만, 새로 열기 전에 모아 둔 저장을 마저 끝낸다
+        await beforeReload?.().catch(() => {})
         return location.reload()
       }
     }
@@ -288,6 +300,61 @@ export function UpdateNotice({ u }: { u: Update }) {
           </p>
         </Modal>
       )}
+    </>
+  )
+}
+
+/**
+ * 편집기 위 막대의 짧은 새 버전 표시. 할 일이 있을 때만 보인다: 업데이트 → 받는 중 → 새 버전 켜기(다시 시작).
+ * 자세한 것(바뀐 점, 받지 못한 까닭, 직접 푸는 안내)은 홈에 둔다. 발표하는 동안에는 위 막대가 없어 보이지 않는다
+ */
+export function UpdateBadge({ toast, beforeReload }: { toast: Toast; beforeReload: () => Promise<unknown> }) {
+  const u = useUpdate(toast, { check: false, beforeReload })
+  const s = u.status
+  if (!s) return null
+  const dl = s.download
+  const available = u.on && s.check.state === 'available' ? s.check : null
+  let body: ReactNode = null
+  if (u.restart === 'running') body = <span className="ed-update">다시 켜는 중</span>
+  else if (dl.state === 'ready')
+    body = (
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm ed-update-go"
+        title={
+          u.restart === 'failed'
+            ? '다시 켜지 못했어요. Framo 창을 닫고 다시 실행하면 새 버전으로 켜져요.'
+            : `누르면 ${dl.version} 버전으로 다시 시작해요. 고친 것은 그대로 있어요.`
+        }
+        onClick={u.restartNow}
+      >
+        새 버전 켜기
+      </button>
+    )
+  // 위 막대는 자리가 좁아(1280 창에서 발표 이름이 줄어든다) 짧게 쓰고, 무엇인지는 말풍선으로
+  else if (dl.state === 'downloading')
+    body = (
+      <span className="ed-update" title="새 버전을 받는 중이에요. 그동안 계속 고칠 수 있어요.">
+        받는 중 {percent(dl.received, dl.total)}%
+      </span>
+    )
+  else if (dl.state === 'preparing')
+    body = (
+      <span className="ed-update" title="받은 새 버전을 확인하고 준비하는 중이에요.">
+        준비 중 {percent(dl.done, dl.total)}%
+      </span>
+    )
+  else if (available?.download && s.auto && dl.state === 'idle')
+    body = (
+      <button type="button" className="btn btn-ghost btn-sm ed-update-go" title={`새 버전 ${available.version}${particle(available.version, '이', '가')} 나왔어요. 고치는 동안 받아 둬요.`} onClick={u.download}>
+        업데이트
+      </button>
+    )
+  if (!body) return null
+  return (
+    <>
+      {body}
+      <span className="ed-top-sep" aria-hidden="true" />
     </>
   )
 }
