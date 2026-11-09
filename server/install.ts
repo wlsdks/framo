@@ -1,6 +1,7 @@
 // 받은 새 버전을 앱 폴더의 versions/X.Y.Z에 풀고 확인한다. 시작 프로그램(launch.ts)은 다 풀고 확인을 마친 폴더만 고른다.
 //
-// 1. zip의 SHA-256과 크기를 한 번 더 맞춘다(받은 뒤 그사이 바뀌었으면 풀지 않는다).
+// 1. zip을 versions 안의 제 사본(.part-….zip)으로 옮겨 적으며 SHA-256과 크기를 한 번 더 맞춘다. 이후로는 그 사본만 읽는다:
+//    지문을 맞춘 파일과 푸는 파일이 같다(맞춘 뒤 '새 버전' 폴더의 zip이 바뀌어도 상관없다). 다 풀면 사본은 지운다.
 // 2. zip을 읽어 모든 이름이 맨 위 폴더(gyeol-<버전>/) 안의 정해 둔 이름(PACKAGE_TOP)인지, 크기가 상한 안인지 본다(unzip.ts).
 // 3. 디스크에 남은 자리를 보고, versions/.part-… 에 푼다. 앱 폴더 밖에는 쓰지 않는다.
 // 4. 풀린 파일이 모두 그 크기로 남았는지(백신이 지우거나 막지 않았는지), 켜는 데 쓸 파일과 package.json의 버전이 맞는지 본다.
@@ -11,9 +12,11 @@
 // 붙지 않아(브라우저나 압축 풀기 앱만 붙인다) 따로 걷지 않는다. 함께 든 node는 nodejs.org의 서명, 공증을 받은 파일이다.
 
 import { createHash, randomBytes } from 'node:crypto'
-import { createReadStream, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, statfsSync, writeFileSync } from 'node:fs'
+import { createReadStream, createWriteStream, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, statfsSync, writeFileSync, type WriteStream } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { join } from 'node:path'
+import { Transform } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import type { InstallError as UpdateInstallError } from '../src/update/protocol'
 import { extractZip, readZip, type ZipLimits } from './unzip'
 import { compareVersions, listVersions, READY_FILE, READY_FORMAT, requiredFiles, VERSION_NAME, VERSIONS_DIR } from './versions'
@@ -49,19 +52,38 @@ function isDir(dir: string): boolean {
   }
 }
 
-/** 받은 zip이 GitHub이 알려 준 크기와 SHA-256 그대로인지 */
-function sameFile(file: string, size: number, sha256: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const hash = createHash('sha256')
-    let n = 0
-    createReadStream(file)
-      .on('data', (c) => {
-        n += c.length
-        hash.update(c)
-      })
-      .on('error', () => resolve(false))
-      .on('end', () => resolve(n === size && hash.digest('hex') === sha256))
+/**
+ * 받은 zip을 to(새로 만드는 제 사본, 이 사용자만 읽고 쓴다)로 옮겨 적으며 크기와 SHA-256을 맞춘다.
+ * 맞으면 'ok', 다르거나 읽지 못하면 'verify'(사본은 지운다). 지문을 맞춘 바이트가 곧 풀 바이트다
+ */
+async function copyVerified(from: string, to: string, size: number, sha256: string): Promise<'ok' | 'verify' | 'space' | 'write'> {
+  const hash = createHash('sha256')
+  let n = 0
+  const check = new Transform({
+    transform(chunk: Buffer, _enc, cb) {
+      n += chunk.length
+      if (n > size) return cb(new Error('too big'))
+      hash.update(chunk)
+      cb(null, chunk)
+    },
   })
+  let out: WriteStream
+  try {
+    out = createWriteStream(to, { flags: 'wx', mode: 0o600 })
+  } catch {
+    return 'write'
+  }
+  let wrote: NodeJS.ErrnoException | null = null
+  out.on('error', (e) => (wrote = e))
+  const result = await pipeline(createReadStream(from), check, out).then(
+    () => (n === size && hash.digest('hex') === sha256 ? ('ok' as const) : ('verify' as const)),
+    () => {
+      const code = (wrote as NodeJS.ErrnoException | null)?.code
+      return code === 'ENOSPC' || code === 'EDQUOT' ? ('space' as const) : wrote ? ('write' as const) : ('verify' as const)
+    },
+  )
+  if (result !== 'ok') await rm(to, { force: true }).catch(() => {})
+  return result
 }
 
 /** 남은 디스크 자리가 넉넉한지. 잴 수 없는 곳이면 쓰면서 알게 된다(ENOSPC) */
@@ -137,14 +159,25 @@ interface InstallOptions {
 
 export async function installVersion(o: InstallOptions): Promise<'ok' | InstallError> {
   if (!VERSION_NAME.test(o.version)) return 'layout'
-  if (!(await sameFile(o.zip, o.size, o.sha256))) return 'verify'
   const root = versionsFolder(o.home)
   if (!root) return 'write'
-  const final = join(root, o.version)
   const existing = listVersions(o.home, o.platform, o.arch).find((v) => v.version === o.version)
   if (existing?.ready && !existing.failed) return 'ok'
+  if (!roomFor(root, o.size)) return 'space'
+  const copy = join(root, `.part-${o.version}-${randomBytes(4).toString('hex')}.zip`)
+  const copied = await copyVerified(o.zip, copy, o.size, o.sha256)
+  if (copied !== 'ok') return copied
+  try {
+    return await installFrom(copy, root, existing !== undefined, o)
+  } finally {
+    await rm(copy, { force: true }).catch(() => {})
+  }
+}
 
-  const entries = await readZip(o.zip, ZIP_LIMITS)
+/** 지문을 맞춘 사본(zip)에서 푼다 */
+async function installFrom(zip: string, root: string, existing: boolean, o: InstallOptions): Promise<'ok' | InstallError> {
+  const final = join(root, o.version)
+  const entries = await readZip(zip, ZIP_LIMITS)
   if (typeof entries === 'string') return 'layout'
   const top = `gyeol-${o.version}/`
   const items: { entry: (typeof entries)[number]; to: string }[] = []
@@ -167,7 +200,7 @@ export async function installVersion(o: InstallOptions): Promise<'ok' | InstallE
     return 'write'
   }
   const result = await (async (): Promise<'ok' | InstallError> => {
-    const r = await extractZip(o.zip, part, items, (done) => o.onProgress?.(done, total))
+    const r = await extractZip(zip, part, items, (done) => o.onProgress?.(done, total))
     if (r !== 'ok') return r === 'space' || r === 'write' ? r : 'layout'
     // 백신이 그새 지우거나 비운 파일이 없는지
     for (const { entry, to } of items) {
@@ -223,7 +256,8 @@ export async function cleanVersions(home: string, current: string, base: string,
   } catch {
     return
   }
+  // 풀다 만 폴더, 지문을 맞춰 옮겨 둔 zip 사본, 지우다 만 폴더(링크면 링크만 지운다)
   for (const n of names) {
-    if (/^\.(part|trash)-/.test(n) && isDir(join(root, n))) await rm(join(root, n), { recursive: true, force: true }).catch(() => {})
+    if (/^\.(part|trash)-/.test(n)) await rm(join(root, n), { recursive: true, force: true }).catch(() => {})
   }
 }

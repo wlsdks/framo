@@ -58,6 +58,23 @@ describe('새 버전 풀기', () => {
     expect(leftovers(s.home)).toEqual([])
   })
 
+  it('지문을 맞춘 사본만 푼다: 맞춘 뒤 받은 zip이 바뀌어도 그 바뀐 것을 풀지 않는다', async () => {
+    const s = setup(fakePackage('0.9.0', 'win32'))
+    let swapped = false
+    const r = await install(s, {
+      onProgress: () => {
+        // 풀기가 시작된 뒤 받은 자리의 zip을 다른 것으로 바꾼다
+        if (!swapped) writeFileSync(s.file, fakePackage('0.9.0', 'win32', { 'dist/index.html': '바꿔치기' }))
+        swapped = true
+      },
+    })
+    expect(r).toBe('ok')
+    expect(swapped).toBe(true)
+    expect(readFileSync(join(s.home, 'versions', '0.9.0', 'dist', 'index.html'), 'utf8')).toContain('Framo')
+    // 사본은 남기지 않는다
+    expect(leftovers(s.home)).toEqual(['0.9.0'])
+  })
+
   it('받은 뒤 zip이 바뀌었으면(지문이 다르면) 풀지 않는다', async () => {
     const s = setup(fakePackage('0.9.0', 'win32'))
     expect(await install(s, { sha256: '0'.repeat(64) })).toBe('verify')
@@ -130,6 +147,7 @@ describe('버전 폴더 치우기', () => {
     const home = mkdtempSync(join(tmpdir(), 'gyeol-clean-'))
     for (const v of ['0.6.0', '0.8.1', '0.9.0', '0.9.1', '0.10.0', '0.11.0', '0.12.0']) put(home, v)
     mkdirSync(join(home, 'versions', '.part-0.12.0-abcd'))
+    writeFileSync(join(home, 'versions', '.part-0.12.0-abcd.zip'), 'zip')
     mkdirSync(join(home, 'versions', '.trash-1234'))
     await cleanVersions(home, '0.10.0', '0.8.0', 'win32', 'x64')
     expect(readdirSync(join(home, 'versions')).sort()).toEqual(['0.10.0', '0.12.0', '0.9.1'])
