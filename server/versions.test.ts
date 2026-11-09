@@ -1,6 +1,6 @@
 // 버전 폴더 고르기: 시작 프로그램과 MCP 서버가 켤 버전, 로컬 서버가 아는 앱 폴더.
 
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -89,6 +89,19 @@ describe('켤 버전 고르기', () => {
     put(h, '0.09.0')
     put(h, 'v0.9.0')
     expect(listVersions(h, P, A)).toEqual([])
+  })
+
+  it('켜는 데 쓸 파일로 가는 길에 링크나 정션(node/, dist-node/)이 있으면 고르지 않는다', () => {
+    const h = home()
+    const elsewhere = mkdtempSync(join(tmpdir(), 'gyeol-elsewhere-'))
+    mkdirSync(join(elsewhere, 'node'))
+    writeFileSync(join(elsewhere, 'node', 'node.exe'), 'x')
+    const dir = put(h, '0.9.0', { missing: 'node/node.exe' })
+    rmSync(join(dir, 'node'), { recursive: true, force: true })
+    // 윈도우는 관리자 권한 없이 만들 수 있는 정션으로
+    symlinkSync(join(elsewhere, 'node'), join(dir, 'node'), 'junction')
+    expect(readyVersions(h, '0.8.0', P, A)).toEqual([])
+    expect(listVersions(h, P, A)[0]).toMatchObject({ version: '0.9.0', ready: false })
   })
 
   it('링크인 버전 폴더, 링크인 versions 폴더는 따라가지 않는다', () => {

@@ -89,6 +89,20 @@ function realDir(dir: string): boolean {
   }
 }
 
+/**
+ * 버전 폴더 안의 파일(rel, /로 나눔)이 가는 길의 모든 단계(node/, dist-node/ …)까지 진짜 폴더이고 끝이 진짜 파일인지.
+ * 중간 단계가 링크나 정션이면 버전 폴더 밖의 것을 켜게 된다(lstat은 윈도우의 정션도 링크로 알린다)
+ */
+function fileInside(dir: string, rel: string): boolean {
+  const parts = rel.split('/')
+  let at = dir
+  for (const p of parts.slice(0, -1)) {
+    at = join(at, p)
+    if (!realDir(at)) return false
+  }
+  return realFile(join(at, parts[parts.length - 1]))
+}
+
 /** 표시 파일이 이 버전을 말하는지. 작은 JSON 하나라 크면 읽지 않는다 */
 function readyMark(dir: string, version: string): boolean {
   const file = join(dir, READY_FILE)
@@ -128,7 +142,7 @@ export function listVersions(home: string, platform: NodeJS.Platform, arch: stri
     .sort((a, b) => compareVersions(b, a))
     .map((version) => {
       const dir = join(root, version)
-      const ready = hasNode && readyMark(dir, version) && need.every((f) => realFile(join(dir, ...f.split('/'))))
+      const ready = hasNode && readyMark(dir, version) && need.every((f) => fileInside(dir, f))
       return { version, dir, ready, failed: existsMark(join(dir, FAILED_FILE)) }
     })
 }
