@@ -36,7 +36,7 @@
 | 폴더 | 하는 일 | 가져와도 되는 것 |
 |---|---|---|
 | `lib/` | 어디에도 기대지 않는 작은 도구: 단축키 표기, 발표 중의 키(`presentKeys`), 끄는 동안의 처리기(`pointerSession`), 조사 고르기(`josa`), 주소, 이미지 크기 읽기, 앱 버전 | 없음 |
-| `deck/` | 발표 모델: 꼴(`types.ts`), 구성(`blueprints.ts`와 발표 종류마다의 `blueprints/<id>.ts`, `generate.ts`), 레이아웃과 부품의 정의와 규칙, 테마 값, 예전 파일 읽기. 화면 없이 돈다 | `lib` |
+| `deck/` | 발표 모델: 꼴(`types.ts`), 구성(`blueprints.ts`와 발표 종류마다의 `blueprints/<id>.ts`, `generate.ts`), 새 id·항목·장(`make.ts`: 부품 장도 쓰는 가장 아래의 만들기라 구성 만들기와 나눴다. 구성 만들기가 부품 장을 짜려고 `blocks`를 가져오면, 둘이 한 파일일 때 순환이다), 레이아웃과 부품의 정의와 규칙, 테마 값, 예전 파일 읽기. 화면 없이 돈다 | `lib` |
 | `motion/` | 발표할 때의 움직임 엔진. 내보낸 HTML에 소스째 들어간다 | `lib` |
 | `present/` | 발표 화면과 발표자 화면 잇기 | `deck`, `lib` |
 | `slides/` | 장 그리기(React), 글자 칸, 숫자 읽기, 부품 장 맞추기 | `deck`, `lib`, `motion` |

@@ -1,8 +1,8 @@
 // 장과 부품의 항목 수, 레이아웃을 바꾸는 규칙. 사람이 편집기에서 할 때(store/deckStore)와 AI 제안을 적용할 때(ai/ops)가
 // 같이 쓴다. 따로 적어 두었더니 같은 일(항목 하나 더하기, 레이아웃 바꾸기)을 세 곳에서 조금씩 다르게 고쳐야 했다
 
-import { emptyItem, withDefaultOptions } from './generate'
 import { LAYOUTS } from './layouts'
+import { emptyItem, withDefaultOptions } from './make'
 import type { Item, LayoutId, Slide } from './types'
 
 /**

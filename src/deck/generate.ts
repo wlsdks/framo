@@ -1,14 +1,9 @@
 import { AUDIENCES, BLUEPRINTS, type Recipe } from './blueprints'
-import { LAYOUTS } from './layouts'
-import type { Audience, Deck, DeckType, Item, LayoutId, Method, Slide, SlideOptions, ThemeId } from './types'
+import { emptyItem, makeSlide, uid } from './make'
+import type { Audience, Deck, DeckType, Method, ThemeId } from './types'
 
-export function uid(): string {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
-}
-
-export function emptyItem(): Item {
-  return { id: uid(), title: '', body: '', value: '', meta: '', image: '' }
-}
+// 새 id, 새 항목, 새 장은 make.ts에 있다(부품 장도 쓰는 가장 아래의 만들기). 바깥은 여기서 그대로 가져온다
+export { emptyItem, makeSlide, uid } from './make'
 
 /** 발표 시간에 맞는 목표 장 수. 보고는 질문과 토론 시간이 길어서 한 장에 2분 남짓. */
 export function targetCount(minutes: number): number {
@@ -52,33 +47,6 @@ export function planRecipes(type: DeckType, audience: Audience, minutes: number)
     list = list.filter((r) => !victim.recipes.includes(r))
   }
   return list
-}
-
-export function makeSlide(layout: LayoutId, recipe?: Partial<Recipe>): Slide {
-  const spec = LAYOUTS[layout]
-  const count = recipe?.items ?? spec.items?.default ?? 0
-  return {
-    id: uid(),
-    layout,
-    purpose: recipe?.purpose ?? spec.name,
-    section: recipe?.section ?? '',
-    fields: { ...(recipe?.fields ?? {}) },
-    items: Array.from({ length: count }, (_, i) => ({ ...emptyItem(), ...recipe?.prefill?.[i] })),
-    hints: { ...(recipe?.hints ?? {}) },
-    guide: recipe?.guide ?? spec.description,
-    notes: '',
-    options: withDefaultOptions(layout, { ...recipe?.options }, count),
-    ...(recipe?.variant ? { variant: recipe.variant } : {}),
-    ...(layout === 'compose' ? { blocks: [] } : {}),
-  }
-}
-
-/** 레이아웃마다 처음 정해 두는 옵션. 이미 고른 값은 그대로 둔다. */
-export function withDefaultOptions(layout: LayoutId, options: SlideOptions, itemCount: number): SlideOptions {
-  if (layout === 'pricing' && options.highlight === undefined) return { ...options, highlight: itemCount >= 3 ? 1 : -1 }
-  // 제품 화면 캡처가 대부분이라 잘리지 않게 전체를 보여 주는 쪽이 기본이다.
-  if (layout === 'imageText' && options.contain === undefined) return { ...options, contain: true }
-  return options
 }
 
 interface DeckInput {

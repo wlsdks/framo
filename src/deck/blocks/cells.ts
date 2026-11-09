@@ -1,7 +1,7 @@
 // 부품 하나를 다루는 도우미: 새 부품, 보이는 항목, 부품을 장처럼 그리기, 비어 있는 칸, 항목 더하기, 복사
 
 import { withOneMore } from '../edits'
-import { emptyItem, uid, withDefaultOptions } from '../generate'
+import { emptyItem, uid, withDefaultOptions } from '../make'
 import type { Block, BlockEffect, BlockFrom, BlockReveal, BlockSpeed, BlockType, BlockWhen, Item, Slide } from '../types'
 import { byReading } from './board'
 import { BLOCK_EFFECT_IDS, BLOCK_FROM_IDS, BLOCK_REVEAL_IDS, BLOCK_SPEED_IDS, BLOCK_WHEN_IDS, BLOCKS, EFFECT_FROM } from './catalog'
