@@ -9,8 +9,8 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { UpdateStatus } from '../src/update/protocol'
 import { allowedHop, createUpdater, MAX_ASSET_BYTES, parseRelease, REPOS, type Getter } from './update'
-import { compareVersions, FAILED_FILE, READY_FILE, READY_FORMAT, requiredFiles } from './versions'
-import { fakePackage } from './zipFixture'
+import { compareVersions, FAILED_FILE, READY_FILE, requiredFiles } from './versions'
+import { fakePackage, markReady } from './zipFixture'
 import { createUpdateHandler, dropFile, type UpdateSetup } from './updateRoutes'
 
 const ZIP = Buffer.from('지어낸 배포본 내용 '.repeat(200))
@@ -493,7 +493,7 @@ describe('새 버전 창구', () => {
         mkdirSync(join(dir, ...f.split('/').slice(0, -1)), { recursive: true })
         writeFileSync(join(dir, ...f.split('/')), 'x')
       }
-      writeFileSync(join(dir, READY_FILE), JSON.stringify({ format: READY_FORMAT, version }))
+      markReady(dir, version)
       if (failed) writeFileSync(join(dir, FAILED_FILE), '{}')
     }
 

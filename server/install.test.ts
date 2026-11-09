@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { cleanVersions, installVersion, newerVersion, PACKAGE_TOP } from './install'
 import { FAILED_FILE, READY_FILE, READY_FORMAT, readyVersions, requiredFiles } from './versions'
-import { fakePackage, makeZip } from './zipFixture'
+import { fakePackage, makeZip, markReady } from './zipFixture'
 
 function setup(zip: Buffer) {
   const home = mkdtempSync(join(tmpdir(), 'gyeol-install-'))
@@ -29,7 +29,11 @@ describe('새 버전 풀기', () => {
     const progress: number[] = []
     expect(await install(s, { onProgress: (done) => progress.push(done) })).toBe('ok')
     const dir = join(s.home, 'versions', '0.9.0')
-    expect(JSON.parse(readFileSync(join(dir, READY_FILE), 'utf8'))).toEqual({ format: READY_FORMAT, version: '0.9.0' })
+    const mark = JSON.parse(readFileSync(join(dir, READY_FILE), 'utf8'))
+    expect(mark).toMatchObject({ format: READY_FORMAT, version: '0.9.0' })
+    // 풀린 파일마다의 크기를 적어 둔다(켤 때 맞춰 본다)
+    expect(mark.files['dist/index.html']).toBe(statSync(join(dir, 'dist', 'index.html')).size)
+    expect(Object.keys(mark.files)).toContain('node/node.exe')
     expect(readFileSync(join(dir, 'dist', 'index.html'), 'utf8')).toContain('Framo')
     expect(readyVersions(s.home, '0.8.0', 'win32', 'x64').map((v) => v.version)).toEqual(['0.9.0'])
     expect(leftovers(s.home)).toEqual(['0.9.0'])
@@ -139,7 +143,7 @@ describe('버전 폴더 치우기', () => {
       mkdirSync(join(dir, ...f.split('/').slice(0, -1)), { recursive: true })
       writeFileSync(join(dir, ...f.split('/')), 'x')
     }
-    writeFileSync(join(dir, READY_FILE), JSON.stringify({ format: READY_FORMAT, version }))
+    markReady(dir, version)
     if (failed) writeFileSync(join(dir, FAILED_FILE), '{}')
   }
 

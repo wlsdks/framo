@@ -1,10 +1,11 @@
 // 버전 폴더 고르기: 시작 프로그램과 MCP 서버가 켤 버전, 로컬 서버가 아는 앱 폴더.
 
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { appHome, FAILED_FILE, listVersions, nodeIn, READY_FILE, READY_FORMAT, readyVersions, requiredFiles } from './versions'
+import { appHome, FAILED_FILE, listVersions, nodeIn, READY_FILE, readyVersions, requiredFiles } from './versions'
+import { markReady } from './zipFixture'
 
 const P = 'win32'
 const A = 'x64'
@@ -23,7 +24,7 @@ function put(h: string, name: string, { ready = true, mark = name, missing = '',
     mkdirSync(join(dir, ...f.split('/').slice(0, -1)), { recursive: true })
     writeFileSync(join(dir, ...f.split('/')), 'x')
   }
-  if (ready) writeFileSync(join(dir, READY_FILE), JSON.stringify({ format: READY_FORMAT, version: mark }))
+  if (ready) markReady(dir, mark)
   if (failed) writeFileSync(join(dir, FAILED_FILE), '{}')
   return dir
 }
@@ -72,6 +73,30 @@ describe('켤 버전 고르기', () => {
     put(h, '1.3.0', { missing: 'node/node.exe' })
     put(h, '0.9.0')
     expect(readyVersions(h, '0.8.0', P, A).map((v) => v.version)).toEqual(['0.9.0'])
+  })
+
+  it('준비 표시에 적힌 파일이 빠지거나 크기가 바뀌었으면(백신이 지우거나 비운) 고르지 않는다', () => {
+    const h = home()
+    const gone = put(h, '0.9.0')
+    writeFileSync(join(gone, 'dist', 'extra.js'), 'x')
+    markReady(gone, '0.9.0')
+    rmSync(join(gone, 'dist', 'extra.js'))
+    const changed = put(h, '0.10.0')
+    writeFileSync(join(changed, 'dist', 'index.html'), '다른 길이의 내용')
+    expect(readyVersions(h, '0.8.0', P, A)).toEqual([])
+  })
+
+  it('준비 표시가 폴더 밖이나 위를 가리키는 자리를 적었으면 고르지 않는다', () => {
+    const h = home()
+    const dir = put(h, '0.9.0')
+    const mark = JSON.parse(readFileSync(join(dir, READY_FILE), 'utf8'))
+    for (const bad of ['../outside.txt', '/etc/hosts', 'dist/../../x', 'a\\b']) {
+      writeFileSync(join(dir, READY_FILE), JSON.stringify({ ...mark, files: { ...mark.files, [bad]: 1 } }))
+      expect([bad, readyVersions(h, '0.8.0', P, A).length]).toEqual([bad, 0])
+    }
+    // 파일 목록이 없는 표시(예전 꼴)도 고르지 않는다
+    writeFileSync(join(dir, READY_FILE), JSON.stringify({ format: mark.format, version: '0.9.0' }))
+    expect(readyVersions(h, '0.8.0', P, A)).toEqual([])
   })
 
   it('켜지지 않았던 버전은 건너뛰고 바로 앞 버전을 고른다', () => {

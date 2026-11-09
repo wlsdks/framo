@@ -2,7 +2,8 @@
 // 앞쪽은 서버를 흉내 내고, 뒤쪽은 작은 서버 대역을 진짜 자식 프로세스로 띄워 IPC와 끝 코드까지 본다.
 
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
-import { READY_FILE, READY_FORMAT, requiredFiles } from './versions'
+import { requiredFiles } from './versions'
+import { markReady } from './zipFixture'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -17,23 +18,34 @@ const v10: Run = { version: '0.10.0', dir: '/app/versions/0.10.0', node: '/app/v
 const ran = (over: Partial<Ran>): Ran => ({ listening: true, code: 0, signal: null, spawnFailed: false, ...over })
 
 /** 켤 차례(available)와 버전마다의 결과(차례대로 하나씩 꺼낸다)로 시작 프로그램을 돌린다 */
-async function play(available: () => Run[], results: Record<string, Ran[]>) {
+/** 자리를 잡고 시험 시간(TRIAL_MS)을 넘겨 돈 결과 */
+const stableRuns = new WeakSet<Ran>()
+const steady = (over: Partial<Ran>) => {
+  const r = ran(over)
+  stableRuns.add(r)
+  return r
+}
+
+async function play(available: () => Run[], results: Record<string, Ran[]>, counts = new Map<string, number>()) {
   const runs: { version: string; restarted: boolean }[] = []
   const failed: string[] = []
   const said: string[] = []
   const code = await supervise({
     own: HOME,
     pick: (skip) => [...available().filter((r) => !skip.has(r.version)), base],
-    run: async (r, restarted) => {
+    run: async (r, restarted, onStable) => {
       runs.push({ version: r.version, restarted })
       const next = results[r.version]?.shift()
       if (!next) throw new Error(`no result for ${r.version}`)
+      if (stableRuns.has(next)) onStable()
       return next
     },
     markFailed: (r) => failed.push(r.version),
+    crashes: (r) => counts.get(r.version) ?? 0,
+    setCrashes: (r, n) => counts.set(r.version, n),
     say: (m) => said.push(m),
   })
-  return { code, runs, failed, said }
+  return { code, runs, failed, said, counts }
 }
 
 describe('시작 프로그램', () => {
@@ -57,6 +69,8 @@ describe('시작 프로그램', () => {
         return out
       },
       markFailed: () => {},
+      crashes: () => 0,
+      setCrashes: () => {},
       say: () => {},
     })
     expect(r).toBe(0)
@@ -97,6 +111,8 @@ describe('시작 프로그램', () => {
         return results[x.version].shift()!
       },
       markFailed: (x) => skipFailed.add(x.version),
+      crashes: () => 0,
+      setCrashes: () => {},
       say: () => {},
     })
     expect(runs).toEqual([
@@ -113,8 +129,40 @@ describe('시작 프로그램', () => {
     expect(r.code).toBe(1)
   })
 
-  it('자리를 잡은 뒤에 멈춘 서버는 버전 탓으로 보지 않는다', async () => {
-    const r = await play(() => [v9], { '0.9.0': [ran({ listening: true, code: 1 })] })
+  it('새 버전이 자리를 잡고 얼마 못 가 멈추면 한 번은 다시 켜고, 또 멈추면 앞 버전으로(창은 새로 열지 않는다)', async () => {
+    const r = await play(() => [v9], {
+      '0.9.0': [ran({ listening: true, code: 1 }), ran({ listening: true, code: null, signal: 'SIGSEGV' })],
+      '0.8.0': [ran({ code: 0 })],
+    })
+    expect(r.runs).toEqual([
+      { version: '0.9.0', restarted: false },
+      { version: '0.9.0', restarted: true },
+      { version: '0.8.0', restarted: true },
+    ])
+    expect(r.failed).toEqual(['0.9.0'])
+    expect(r.said.join()).toContain('자꾸 멈춰서')
+  })
+
+  it('멈춘 횟수는 다음에 켤 때도 이어진다: 지난번에 한 번 멈춘 새 버전이 또 얼마 못 가 멈추면 앞 버전으로', async () => {
+    const r = await play(() => [v9], { '0.9.0': [ran({ listening: true, code: 1 })], '0.8.0': [ran({ code: 0 })] }, new Map([['0.9.0', 1]]))
+    expect(r.failed).toEqual(['0.9.0'])
+  })
+
+  it('시험 시간을 넘겨 돈 새 버전은 믿을 만하다: 센 것을 지우고, 그 뒤에 멈추면 버전 탓으로 보지 않는다', async () => {
+    const r = await play(() => [v9], { '0.9.0': [steady({ listening: true, code: 1 })] }, new Map([['0.9.0', 1]]))
+    expect(r.failed).toEqual([])
+    expect(r.counts.get('0.9.0')).toBe(0)
+    expect(r.code).toBe(1)
+  })
+
+  it('다시 켜기(75), 까닭을 보인 끝(78), 정상 끝(0)은 멈춘 것으로 세지 않는다', async () => {
+    const r = await play(() => [v9], { '0.9.0': [ran({ listening: true, code: FAIL_CODE })] })
+    expect(r.failed).toEqual([])
+    expect(r.counts.get('0.9.0')).toBeUndefined()
+  })
+
+  it('앱 폴더의 버전은 멈춰도 돌아갈 곳이 없어 그대로 끝난다', async () => {
+    const r = await play(() => [], { '0.8.0': [ran({ listening: true, code: 1 })] })
     expect(r.failed).toEqual([])
     expect(r.code).toBe(1)
   })
@@ -150,6 +198,14 @@ describe('시작 프로그램이 띄우는 진짜 자식', () => {
     writeFileSync(join(dir, 'dist-node', 'serve.mjs'), code)
     return dir
   }
+
+  it('자리를 잡고 시험 시간을 넘기면 한 번 알린다', async () => {
+    const dir = fakeVersion(`process.send(${JSON.stringify(LISTENING)}); setTimeout(() => process.exit(0), 300)`)
+    let stable = 0
+    const r = await runServer({ version: '0.9.0', dir, node: process.execPath }, false, () => stable++, 50)
+    expect(r.code).toBe(0)
+    expect(stable).toBe(1)
+  })
 
   it('자리를 잡았다는 말(IPC)과 끝 코드를 받고, 다시 켰다는 표시를 넘긴다', async () => {
     const dir = fakeVersion(`
@@ -194,6 +250,8 @@ describe('시작 프로그램이 띄우는 진짜 자식', () => {
       ],
       run: runServer,
       markFailed: (r) => failed.push(r.version),
+      crashes: () => 0,
+      setCrashes: () => {},
       say: () => {},
     })
     expect(failed).toEqual(['0.9.0'])
@@ -211,7 +269,7 @@ describe('켤 차례', () => {
         mkdirSync(join(dir, ...f.split('/').slice(0, -1)), { recursive: true })
         writeFileSync(join(dir, ...f.split('/')), 'x')
       }
-      writeFileSync(join(dir, READY_FILE), JSON.stringify({ format: READY_FORMAT, version: v }))
+      markReady(dir, v)
     }
     return home
   }

@@ -5,21 +5,22 @@
 // 2. zip을 읽어 모든 이름이 맨 위 폴더(gyeol-<버전>/) 안의 정해 둔 이름(PACKAGE_TOP)인지, 크기가 상한 안인지 본다(unzip.ts).
 // 3. 디스크에 남은 자리를 보고, versions/.part-… 에 푼다. 앱 폴더 밖에는 쓰지 않는다.
 // 4. 풀린 파일이 모두 그 크기로 남았는지(백신이 지우거나 막지 않았는지), 켜는 데 쓸 파일과 package.json의 버전이 맞는지 본다.
-// 5. 준비 표시(.framo-ready)를 쓰고, 폴더째 versions/<버전>으로 이름을 바꾼다. 시작 프로그램은 이 이름과 표시를 본다.
+// 5. 준비 표시(.framo-ready, 풀린 파일마다의 크기)를 쓰고, 폴더째 versions/<버전>으로 이름을 바꾼다. 시작 프로그램은 이 이름과 표시를 보고,
+//    켤 때마다 목록의 파일이 그대로 있는지도 본다.
 // 하나라도 안 되면 푼 것을 지우고 정해진 말로 알린다. 화면은 사람이 직접 푸는 안내로 돌아간다.
 //
 // 맥: zip의 실행 권한(node, .command)을 그대로 남긴다. 이 서버(node)가 쓴 파일에는 격리 속성(com.apple.quarantine)이
 // 붙지 않아(브라우저나 압축 풀기 앱만 붙인다) 따로 걷지 않는다. 함께 든 node는 nodejs.org의 서명, 공증을 받은 파일이다.
 
 import { createHash, randomBytes } from 'node:crypto'
-import { createReadStream, createWriteStream, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, statfsSync, writeFileSync, type WriteStream } from 'node:fs'
+import { createReadStream, createWriteStream, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, statfsSync, type WriteStream } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import type { InstallError as UpdateInstallError } from '../src/update/protocol'
 import { extractZip, readZip, type ZipLimits } from './unzip'
-import { compareVersions, listVersions, READY_FILE, READY_FORMAT, requiredFiles, VERSION_NAME, VERSIONS_DIR } from './versions'
+import { compareVersions, listVersions, requiredFiles, VERSION_NAME, VERSIONS_DIR, writeReady } from './versions'
 
 /** 풀지 못한 까닭(약속은 화면과 같이 쓰는 protocol.ts). 'start'는 시작 프로그램이 정하는 것이라 여기서는 쓰지 않는다 */
 type InstallError = Exclude<UpdateInstallError, 'start'>
@@ -220,7 +221,7 @@ async function installFrom(zip: string, root: string, existing: boolean, o: Inst
     }
     if (!packageIs(part, o.version)) return 'layout'
     try {
-      writeFileSync(join(part, READY_FILE), JSON.stringify({ format: READY_FORMAT, version: o.version }))
+      writeReady(part, o.version, Object.fromEntries(items.filter((i) => !i.entry.dir).map((i) => [i.to, i.entry.size])))
     } catch (e) {
       return (e as NodeJS.ErrnoException).code === 'ENOSPC' ? 'space' : 'write'
     }

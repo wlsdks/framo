@@ -4,14 +4,14 @@
 //   ├─ AI 공유/, 새 버전/          버전이 바뀌어도 그대로 이어지는 것은 늘 앱 폴더에 둔다
 //   └─ versions/
 //      ├─ 0.9.0/                  새 버전을 받아 풀고 확인한 것 (zip 안의 gyeol-0.9.0/ 그대로)
-//      │  └─ .framo-ready         다 풀고 확인을 마쳤다는 표시. 맨 마지막에 쓰고, 이것이 든 폴더째 이름을 바꿔 내놓는다
+//      │  └─ .framo-ready         다 풀고 확인을 마쳤다는 표시와 풀린 파일마다의 크기. 맨 마지막에 쓰고, 이것이 든 폴더째 이름을 바꿔 내놓는다
 //      └─ .part-…, .trash-…       푸는 중, 지우는 중. 버전 이름 꼴이 아니라 고르지 않는다
 //
 // 이 파일의 약속(폴더 이름, 표시 파일, 끝 코드, 알림 말)은 이미 깔린 시작 프로그램에 들어 있다. 앱 폴더의 시작 프로그램은
 // 처음 푼 버전 그대로 계속 쓰이므로, 뒤의 버전도 이 약속을 그대로 지켜야 한다. 바꾸지 말고 더하기만 한다.
 // Node 내장만 쓴다(시작 프로그램이 이 파일을 묶어 간다).
 
-import { lstatSync, readdirSync, readFileSync } from 'node:fs'
+import { lstatSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 
 export const VERSIONS_DIR = 'versions'
@@ -103,14 +103,31 @@ function fileInside(dir: string, rel: string): boolean {
   return realFile(join(at, parts[parts.length - 1]))
 }
 
-/** 표시 파일이 이 버전을 말하는지. 작은 JSON 하나라 크면 읽지 않는다 */
+/** 표시에 적는 파일 자리: 버전 폴더 안의 /로 나눈 상대 경로(위로 올라가거나 절대 경로가 아닌 것) */
+const MARK_PATH = /^(?!.*(^|\/)\.\.?(\/|$))[^\\:\/][^\\:]*$/
+/** 표시 파일의 상한. 배포본은 파일 수백 개라 몇십 KB다 */
+const MAX_MARK_BYTES = 1024 * 1024
+
+/**
+ * 다 풀고 확인을 마쳤다는 표시를 쓴다(install.ts). files는 풀린 파일마다의 크기.
+ * 시작 프로그램은 켤 때마다 이 목록과 버전 폴더를 맞춰 보아, 빠지거나 크기가 바뀐 파일(백신이 지우거나 비운)이 있으면 고르지 않는다
+ */
+export function writeReady(dir: string, version: string, files: Record<string, number>) {
+  writeFileSync(join(dir, READY_FILE), JSON.stringify({ format: READY_FORMAT, version, files }))
+}
+
+/** 표시 파일이 이 버전을 말하고, 적힌 파일이 모두 그 크기로 진짜 파일로 있는지 */
 function readyMark(dir: string, version: string): boolean {
   const file = join(dir, READY_FILE)
   try {
     const st = lstatSync(file)
-    if (!st.isFile() || st.size > 4096) return false
-    const v = JSON.parse(readFileSync(file, 'utf8')) as unknown
-    return typeof v === 'object' && v !== null && (v as { format?: unknown }).format === READY_FORMAT && (v as { version?: unknown }).version === version
+    if (!st.isFile() || st.size > MAX_MARK_BYTES) return false
+    const v = JSON.parse(readFileSync(file, 'utf8')) as { format?: unknown; version?: unknown; files?: unknown }
+    if (typeof v !== 'object' || v === null || v.format !== READY_FORMAT || v.version !== version) return false
+    const files = v.files
+    if (typeof files !== 'object' || files === null || Array.isArray(files)) return false
+    const list = Object.entries(files as Record<string, unknown>)
+    return list.length > 0 && list.every(([rel, size]) => MARK_PATH.test(rel) && typeof size === 'number' && fileInside(dir, rel) && lstatSync(join(dir, ...rel.split('/'))).size === size)
   } catch {
     return false
   }

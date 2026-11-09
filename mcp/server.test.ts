@@ -15,7 +15,8 @@ import { autoPlace, insertAt, makeBlock } from '../src/deck/blocks'
 import { makeSlide } from '../src/deck/generate'
 import { createSampleDeck } from '../src/deck/sample'
 import { newerMcp, sandboxArgs, sandboxTight } from './server'
-import { nodeIn, READY_FILE, READY_FORMAT, requiredFiles } from '../server/versions'
+import { nodeIn, requiredFiles } from '../server/versions'
+import { markReady } from '../server/zipFixture'
 
 // 빌드한 MCP 서버를 실제로 띄워서 Claude Code처럼 이야기해 본다.
 const repo = join(import.meta.dirname, '..')
@@ -491,7 +492,7 @@ describe('새 버전을 받아 둔 앱의 MCP 서버', () => {
       writeFileSync(join(dir, ...f.split('/')), '')
     }
     writeFileSync(join(dir, 'dist-node', 'gyeol-mcp.mjs'), newer)
-    writeFileSync(join(dir, READY_FILE), JSON.stringify({ format: READY_FORMAT, version }))
+    markReady(dir, version)
     return { app, dir }
   }
 
@@ -533,6 +534,8 @@ describe('새 버전을 받아 둔 앱의 MCP 서버', () => {
     )
     const node = nodeIn(dir, process.platform, process.arch)!
     copyFileSync(process.execPath, node, constants.COPYFILE_FICLONE)
+    // 진짜 node로 바꿨으니 풀린 파일 목록(크기)도 다시 적는다
+    markReady(dir, '9.9.9')
     mkdirSync(join(app, 'dist-node'))
     for (const f of readdirSync(built)) copyFileSync(join(built, f), join(app, 'dist-node', f))
     const out = spawnSync(process.execPath, [join(app, 'dist-node', 'gyeol-mcp.mjs')], { encoding: 'utf8', env: { ...process.env, GYEOL_SHARE: undefined } })

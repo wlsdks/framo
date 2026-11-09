@@ -1,7 +1,10 @@
 // 시험용 zip 만들기. 배포본 zip(scripts/zip.mjs)과 같은 꼴을 기본으로, 항목마다 머리를 일부러 비틀 수 있다(나쁜 zip을 만들려고).
 // 새 버전 풀기 시험(unzip, install, updateRoutes)이 같이 쓴다. 배포본에는 들어가지 않는다.
 
+import { lstatSync, readdirSync } from 'node:fs'
+import { join, relative, sep } from 'node:path'
 import { crc32, deflateRawSync } from 'node:zlib'
+import { FAILED_FILE, READY_FILE, writeReady } from './versions'
 
 const UTF8 = 1 << 11
 
@@ -110,4 +113,18 @@ export function fakePackage(version: string, platform: 'win32' | 'darwin', over:
     .filter((e): e is [string, string] => e[1] !== null)
     .map(([name, data]) => ({ name: `gyeol-${version}/${name}`, data, mode: /node\/(arm64|x64)\/node$|\.command$/.test(name) ? 0o100755 : 0o100644 }))
   return makeZip(entries)
+}
+
+/** 손으로 만든 버전 폴더에 준비 표시를 쓴다. 폴더 안의 파일(표시 파일은 빼고)마다의 크기를 적는다 */
+export function markReady(dir: string, version: string) {
+  const files: Record<string, number> = {}
+  const walk = (at: string) => {
+    for (const n of readdirSync(at)) {
+      const p = join(at, n)
+      if (lstatSync(p).isDirectory()) walk(p)
+      else if (n !== READY_FILE && n !== FAILED_FILE) files[relative(dir, p).split(sep).join('/')] = lstatSync(p).size
+    }
+  }
+  walk(dir)
+  writeReady(dir, version, files)
 }
