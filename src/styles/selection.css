@@ -12,7 +12,7 @@
   pointer-events: none;
 }
 
-/* 고른 것의 도구는 장 아래 도구 줄의 왼쪽에 (StageTools의 .stage-sel). 그동안 이 장의 단추(AI 도움받기, 항목 추가)는 숨긴다 */
+/* 고른 것의 도구는 장 아래 도구 줄의 왼쪽에 (StageTools의 .stage-sel). 그동안 이 장의 단추(이 슬라이드 AI 도움받기, 항목 추가)는 숨긴다 */
 .stage-sel {
   display: contents;
 }

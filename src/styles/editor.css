@@ -832,9 +832,10 @@
   color: var(--panel);
 }
 
-/* 1280×600 노트북처럼 단추가 한 줄에 다 들어가지 않으면 그림만 (Editor.tsx의 useTightTools가 잰다) */
+/* 1280×600 노트북처럼 단추가 한 줄에 다 들어가지 않으면 그림만 (Editor.tsx의 useTightTools가 잰다).
+   고른 컴포넌트의 '바꾸기'는 글자를 남긴다: 엇갈린 화살표 그림만으로는 옆 컴포넌트와 자리를 바꾸는 단추로 읽혔다 */
 .stage-tools[data-tight] .stage-tools-r .btn-t,
-.stage-tools[data-tight='2'] .stage-tools-l .btn-t {
+.stage-tools[data-tight='2'] .stage-tools-l .btn:not(.bk-swap-btn) .btn-t {
   position: absolute;
   width: 1px;
   height: 1px;

@@ -279,7 +279,6 @@ export const ALLOW = {
     '파일 안에서만 쓰는 내보내기: src/deck/blocks/saved.ts#savedName',
     '파일 안에서만 쓰는 내보내기: src/deck/blocks/sizing.ts#NO_FIT',
     '파일 안에서만 쓰는 내보내기: src/deck/blocks/sizing.ts#rowPitch',
-    '파일 안에서만 쓰는 내보내기: src/deck/blocks/sizing.ts#changeBlocks',
     '시험에서만 쓰는 내보내기: src/deck/blocks/sizing.ts#fitsWith',
     '파일 안에서만 쓰는 내보내기: src/motion/engine.ts#PlayOptions',
     '파일 안에서만 쓰는 내보내기: src/motion/engine.ts#MotionEngine',

@@ -502,6 +502,75 @@ body.is-block-resizing.is-row-resizing > .drag-cover {
   bottom: calc(100% + 8px);
 }
 
+/* 바꾸기: 적은 글로 바꾼 모습의 작은 그림을 세 칸씩. 머리 줄은 이 묶음이 무엇을 보여 주는지와 글을 옮긴다는 것 */
+.bk-menu.is-swap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  width: 444px;
+}
+
+.bk-swap-h {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  padding: 6px 8px 4px;
+  font-size: 13px;
+}
+
+.bk-swap-h .bk-menu-d {
+  grid-column: auto;
+}
+
+.bk-swap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bk-swap:hover,
+.bk-swap:focus-visible {
+  background: var(--hover);
+}
+
+.bk-swap .lib-thumb {
+  margin-bottom: 4px;
+}
+
+.bk-swap b {
+  font-size: 12.5px;
+}
+
+.bk-swap-n {
+  color: var(--ink-2);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.bk-swap.is-blocked {
+  cursor: help;
+}
+
+.bk-swap.is-blocked .lib-thumb {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.bk-swap.is-blocked :is(b, .bk-swap-n) {
+  opacity: 0.6;
+}
+
 .bk-menu.is-variants {
   width: 200px;
 }

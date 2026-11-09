@@ -248,7 +248,10 @@ function AskList({
   )
 }
 
-/** 슬라이드 아래의 'AI 도움받기'. 이 장 하나를 맡긴다 (위쪽 'AI 도움받기'와 같은 이름, 맡기는 범위만 다르다) */
+/**
+ * 슬라이드 아래의 '이 슬라이드 AI 도움받기'. 이 장 하나를 맡긴다. 위쪽 'AI 도움받기'(발표 전체)와 이름이 같던 때는 둘이 무엇이 다른지
+ * 처음 쓰는 분이 알 수 없었다(처음 쓰는 사람 검수): 이름만 보고 이 슬라이드의 것임을 알게 앞에 '이 슬라이드'를 붙인다
+ */
 export function SlideAsk({ deck, slide, ai, ask }: { deck: Deck; slide: Slide; ai: AiShare; ask: AiAsk }) {
   if (!ai.status) return null
   const busy = ask.job?.state === 'running'
@@ -265,7 +268,8 @@ export function SlideAsk({ deck, slide, ai, ask }: { deck: Deck; slide: Slide; a
           onClick={toggle}
         >
           <AskIcon />
-          {busy ? 'AI가 보는 중' : 'AI 도움받기'}
+          {/* 좁은 창(1280)에서 단추줄이 넘치면 다른 단추처럼 글자를 접고 그림만 남긴다(이름은 title로) */}
+          <span className="btn-t">{busy ? 'AI가 보는 중' : '이 슬라이드 AI 도움받기'}</span>
         </button>
       )}
     >
@@ -338,7 +342,7 @@ export function AiMenu({ deck, ai, ask }: { deck: Deck; ai: AiShare; ask: AiAsk 
     <Popover
       className="pop-ai"
       button={({ toggle, open }) => (
-        // 'AI' 한 낱말은 누르면 무엇이 되는지 말하지 않았다. 장 아래의 'AI 도움받기'와 같은 이름으로, 이쪽은 발표 전체를 맡긴다. 예전 이름 'AI 다듬기'는 무엇을 하는지 어색하게 들렸다.
+        // 'AI' 한 낱말은 누르면 무엇이 되는지 말하지 않았다. 이쪽은 발표 전체를 맡기고, 장 아래의 '이 슬라이드 AI 도움받기'는 그 장만 맡긴다. 예전 이름 'AI 다듬기'는 무엇을 하는지 어색하게 들렸다.
         // 사용법, README, MCP 안내도 이 이름으로 부른다
         <button type="button" className="btn btn-ghost ai-btn" title={`AI에게 발표 전체의 구성과 모양을 제안받아요 (${keys(SHORTCUT.ai)})`} data-shortcut="ai" aria-expanded={open} onClick={toggle}>
           <AskIcon />

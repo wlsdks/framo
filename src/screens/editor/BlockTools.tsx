@@ -1,14 +1,18 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BLOCK_EFFECTS, BLOCK_LOOKS, BLOCKS, blockItems, effectChoices, effectOf, isAlone, shownLook, variantOfBlock, type NoRoom, type SavedKind } from '../../deck/blocks'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { BLOCK_EFFECTS, BLOCK_LOOKS, BLOCKS, blockItems, effectChoices, effectOf, isAlone, shownLook, swapBlock, swapChoices, swapGroupName, variantOfBlock, type NoRoom, type SavedKind } from '../../deck/blocks'
+import { unshownCount } from '../../deck/fields'
+import { makeSlide } from '../../deck/make'
 import { sceneOf } from '../../deck/scenes'
-import type { Block, BlockEffect, Slide } from '../../deck/types'
+import type { Block, BlockEffect, BlockType, Slide } from '../../deck/types'
 import { cx } from '../../lib/cx'
 import { onMenuKeys } from '../../lib/menuKeys'
-import { Icon, LockIcon, MotionIcon, PlusIcon, ShapesIcon, TrashIcon } from '../ui'
+import { Icon, LockIcon, MotionIcon, PlusIcon, ShapesIcon, SwapIcon, TrashIcon } from '../ui'
+import { BlockThumb } from './BlockLibrary'
+import type { Look } from './look'
 import { noRoomText } from './noRoom'
 import { SceneOverride } from './ScenePicker'
 
-// 고른 컴포넌트의 도구 (바탕, 움직임, 모양, 항목 더하기, 지우기, 그리고 이름을 누르면 복제, 앞뒤로, 칸 더하기, 저장, AI에게 숨기기). 레이아웃 슬라이드의 항목 도구처럼 슬라이드 아래 도구 줄에
+// 고른 컴포넌트의 도구 (바꾸기, 바탕, 움직임, 모양, 항목 더하기, 지우기, 그리고 이름을 누르면 복제, 앞뒤로, 칸 더하기, 저장, AI에게 숨기기). 레이아웃 슬라이드의 항목 도구처럼 슬라이드 아래 도구 줄에
 // 그린다(SlideStage가 .stage-sel에 넣는다). 슬라이드 위에는 고른 테와 끌어 옮기는 이름표(.bk-handle)만 남는다
 
 /** 내 컴포넌트로 저장하는 것의 이름 */
@@ -21,9 +25,15 @@ const LOOK_NOTES: Record<Block['look'] & string, string> = {
   bold: '답을 강조색 글자로 써서 가장 눈에 띄어요. 슬라이드 하나에 하나만 써요.',
 }
 
+/** 컴포넌트 하나에서 적었지만 보이지 않는 칸의 수 (그 컴포넌트에 없는 칸, 넘치는 항목) */
+const hiddenIn = (b: Block) => unshownCount({ ...makeSlide('compose'), blocks: [b] })
+
 export function BlockTools({
+  look: deckLook,
   slide,
   block,
+  swapIssue,
+  onSwap,
   itemIssue,
   variantIssue,
   lookIssue,
@@ -44,15 +54,20 @@ export function BlockTools({
   aiHidden,
   onAiHidden,
 }: {
+  /** 바꾸기 메뉴의 작은 그림을 그릴 발표의 테마 */
+  look: Look
   /** 이 부품이 있는 장. 장면을 골랐으면 움직임 메뉴가 장면 알림이 된다 */
   slide: Slide
   block: Block
+  /** 이 컴포넌트로 바꾸면 장에 들어가지 않을 때 그 까닭. 메뉴를 열 때만 묻는다(판을 다시 맞춰 봐야 해서) */
+  swapIssue(to: BlockType): NoRoom | null
+  onSwap(to: BlockType): void
   /** 항목을 더하거나 모양, 바탕을 바꾸면 장에 들어가지 않을 때 그 까닭 */
   itemIssue: NoRoom | null
   variantIssue(variant: string): NoRoom | null
   lookIssue(look: Block['look']): NoRoom | null
-  /** 그런 단추를 눌렀을 때 (막아 두되, 누르면 까닭을 보여 준다) */
-  onBlocked(r: NoRoom): void
+  /** 그런 단추를 눌렀을 때 (막아 두되, 누르면 까닭을 보여 준다). to: 바꾸려던 컴포넌트 */
+  onBlocked(r: NoRoom, to?: BlockType): void
   onShift(dir: -1 | 1): void
   /** 앞(뒤)으로 옮길 수 없는 까닭. 메뉴를 열 때만 묻는다(판을 다시 맞춰 봐야 해서) */
   shiftIssue(dir: -1 | 1): 'first' | 'last' | 'stuck' | null
@@ -74,7 +89,8 @@ export function BlockTools({
   onAiHidden(hidden: boolean): void
 }) {
   const spec = BLOCKS[block.type]
-  const [menu, setMenu] = useState<'look' | 'motion' | 'variant' | 'more' | null>(null)
+  const [menu, setMenu] = useState<'swap' | 'look' | 'motion' | 'variant' | 'more' | null>(null)
+  const swaps = swapChoices(block.type)
   // 모션 메뉴의 '더 보기'를 펼쳤는지 (어울리는 넷 말고 나머지)
   const [moreFx, setMoreFx] = useState(false)
   const fx = effectChoices(block.type)
@@ -241,6 +257,44 @@ export function BlockTools({
           </ul>
         )}
       </div>
+      {/* 바꾸기: 같은 내용을 다른 그림으로 말하는 컴포넌트로. 지우고 다시 넣으면 적은 글을 다시 써야 했다. 고르기 전에 적은 글로 바꾼 모습을 작게 보인다 */}
+      {swaps.length > 0 && (
+        <div className="bk-tool-menu">
+          <button
+            type="button"
+            className={cx(B, 'bk-swap-btn', menu === 'swap' && 'is-on')}
+            aria-expanded={menu === 'swap'}
+            aria-haspopup="menu"
+            title="작성한 글은 그대로 두고 다른 컴포넌트로 바꿔요"
+            onClick={() => setMenu(menu === 'swap' ? null : 'swap')}
+          >
+            <SwapIcon />
+            <span className="btn-t">바꾸기</span>
+          </button>
+          {menu === 'swap' && (
+            <ul ref={menuRef} className="bk-menu is-swap" role="menu" onKeyDown={onMenuKeys} aria-label="바꿀 컴포넌트">
+              <li className="bk-swap-h" role="presentation">
+                <b>{swapGroupName(block.type)}</b>
+                <span className="bk-menu-d">작성한 글은 그대로 옮겨요</span>
+              </li>
+              {swaps.map((to) => (
+                <SwapChoice
+                  key={to}
+                  look={deckLook}
+                  block={block}
+                  to={to}
+                  issue={swapIssue(to)}
+                  onPick={(r) => {
+                    if (r) onBlocked(r, to)
+                    else onSwap(to)
+                    setMenu(null)
+                  }}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       {/* 바탕: 견본만 늘어놓으면 무엇을 고르는지 알 수 없어서, 지금 바탕의 이름을 보이고 누르면 설명과 함께 고른다 */}
       <div className="bk-tool-menu">
         <button type="button" className={cx(B, menu === 'look' && 'is-on')} aria-expanded={menu === 'look'} title="컴포넌트의 바탕" onClick={() => setMenu(menu === 'look' ? null : 'look')}>
@@ -401,4 +455,38 @@ export function BlockTools({
 /** 도구 줄의 바탕 이름: '바탕 없음'은 그대로, 나머지는 '바탕: 강조'처럼 */
 function lookLabel(name: string): string {
   return name.startsWith('바탕') ? name : `바탕: ${name}`
+}
+
+/**
+ * 바꾸기 메뉴의 컴포넌트 하나: 적은 글로 바꾼 모습의 작은 그림과 이름. 그 컴포넌트에 없어 가려지는 칸이 있으면 몇 곳인지
+ * (다시 바꾸면 돌아온다), 앞에서 가려 둔 칸이 모두 다시 보이면 그것을 말한다. 장에 들어가지 않으면 잠그고 까닭을 보인다
+ */
+function SwapChoice({ look, block, to, issue, onPick }: { look: Look; block: Block; to: BlockType; issue: NoRoom | null; onPick(r: NoRoom | null): void }) {
+  const swapped = useMemo(() => swapBlock(block, to), [block, to])
+  const after = hiddenIn(swapped)
+  const back = after === 0 && hiddenIn(block) > 0
+  const spec = BLOCKS[to]
+  const note = issue
+    ? { short: '이 자리에는 들어가지 않아요', long: noRoomText(issue, to, 'change').why }
+    : after > 0
+      ? { short: `가려지는 칸 ${after}곳`, long: `이 컴포넌트에 없는 칸 ${after}곳은 가려 둬요. 다시 바꾸면 돌아와요.` }
+      : back
+        ? { short: '가려 둔 칸이 다시 보여요', long: '앞에서 가려 둔 칸이 모두 다시 보여요.' }
+        : null
+  return (
+    <li>
+      <button
+        type="button"
+        role="menuitem"
+        aria-disabled={!!issue}
+        className={cx('bk-swap', issue && 'is-blocked')}
+        title={note?.long ?? spec.description}
+        onClick={() => onPick(issue)}
+      >
+        <BlockThumb deck={look} type={to} block={swapped} />
+        <b>{spec.name}</b>
+        {note && <span className="bk-swap-n">{note.short}</span>}
+      </button>
+    </li>
+  )
 }

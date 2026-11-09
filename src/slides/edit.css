@@ -151,6 +151,12 @@
   display: none;
 }
 
+/* 셈해 보이는 값(계산식의 결과를 비웠을 때, fields.tsx의 auto): 예시 안내(0.5)보다 짙고 적은 글보다 옅게. 직접 적으면 적은 글이 이긴다.
+   마우스를 올리면 '자동 계산' 말풍선 */
+.ed.is-auto > .ed-hint {
+  opacity: 0.72;
+}
+
 /* 예시 글(넣을 때 틀이 채운 지어낸 글): 안내처럼 옅게. 처음 쓰면 이 표시가 빠진다. 발표 모습에는 다른 글과 같다 */
 .slide.m-edit .ed.is-example > .ed-input {
   opacity: 0.5;

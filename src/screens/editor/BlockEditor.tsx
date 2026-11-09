@@ -7,6 +7,7 @@ import {
   blockFieldPrefix,
   blockItems,
   blockPrefH,
+  boardAreaH,
   changeIssue,
   BLOCK_COL_GAP,
   BLOCK_GAP,
@@ -30,6 +31,8 @@ import {
   removeBlock,
   shiftBlock,
   shiftIssue,
+  swapIn,
+  swapIssue,
   variantOfBlock,
   WHOLE,
   whyNot,
@@ -42,6 +45,7 @@ import {
   type ShownCell,
 } from '../../deck/blocks'
 import { aiHiddenIds, aiHiddenPatch } from '../../deck/aiHidden'
+import { unshownCount } from '../../deck/fields'
 import { FRAME } from '../../deck/frame'
 import { motionOf } from '../../deck/themes'
 import type { Block, BlockEffect, BlockLink, BlockType, Deck, Slide } from '../../deck/types'
@@ -57,7 +61,7 @@ import { addSaved } from '../../store/saved'
 import { BlocksIcon, dialogOpen, GripIcon, isTyping, undoAction, type Toast } from '../ui'
 import { presentKey } from '../../lib/presentKeys'
 import { BlockTools } from './BlockTools'
-import { CANVAS, COL_W } from './canvas'
+import { CANVAS, COL_W, soloSlide } from './canvas'
 import { useLinkEditing } from './LinkEditor'
 import { useLook } from './look'
 import { edgeText, narrowText, noRoomText, refuseText } from './noRoom'
@@ -111,10 +115,6 @@ const SPRING =
   'linear(0, 0.0576, 0.1409, 0.2066, 0.3123, 0.4188, 0.5204, 0.6135, 0.6697, 0.7445, 0.8079, 0.8604, 0.9029, 0.9261, 0.9543, 0.9755, 0.991, 1.0019, 1.007, 1.0122, 1.0151, 1.0162, 1.0161, 1.0156, 1.0143, 1.0127, 1.011, 1.0093, 1.0082, 1.0066, 1.0052, 1.004, 1.003, 1.0025, 1.0017, 1.0011, 1.0007, 1.0004, 1.0002, 1, 1)'
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** 부품 하나만 그린 장 (끌고 있는 부품, 부품 고르기 카드) */
-export function soloSlide(block: Block): Slide {
-  return { id: `solo-${block.id}`, layout: 'compose', purpose: '', section: '', fields: {}, items: [], hints: {}, guide: '', notes: '', options: {}, blocks: [{ ...block, at: WHOLE }] }
-}
 
 /** 글 칸(.ed)에 쓰기 시작한다: 누른 자리(x, y)에 글자 커서를 둔다. 글 밖(빈칸의 안내 위 같은)이면 칸 끝에 */
 function caretAt(ed: HTMLElement, x: number, y: number) {
@@ -1006,15 +1006,42 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
     const area = measureArea(areaEl.current)
     return area ? changeIssue(slide.blocks ?? [], b.id, fn, area.size.h) : null
   }
+  /** 다른 컴포넌트로 바꾼다(같은 자리에서, 적은 글은 그대로). 이 컴포넌트에 없는 칸은 가려 두었다가 다시 바꾸면 돌아온다 */
+  const swap = (b: Block, to: BlockType) => {
+    const s = slideRef.current
+    const before = s.blocks ?? []
+    const h = measureArea(areaEl.current)?.size.h ?? boardAreaH(s, deck)
+    const next = swapIn(before, b.id, to, h)
+    if (!next) {
+      const r = swapIssue(before, b.id, to, h)
+      const t = r && noRoomText(r, to, 'change')
+      if (t) toast.show(`${t.why} ${t.fix}`, undefined, 6000)
+      return
+    }
+    // 알아서 짠 판이면 바꾼 뒤에도 알아서 짠 판이다(다음에 넣고 뺄 때 판을 다시 고른다)
+    store.setBlocks(s.id, next, undefined, autoArranged(before, s.arranged, h))
+    const hidden = (x: Block) => unshownCount({ ...s, fields: {}, items: [], blocks: [x] })
+    const after = hidden(next.find((x) => x.id === b.id)!)
+    const back = after === 0 && hidden(b) > 0
+    const name = BLOCKS[to].name
+    toast.show(
+      `‘${name}’${particle(name, '으로', '로')} 바꿨어요.${after > 0 ? ` 이 컴포넌트에 없는 칸 ${after}곳은 가려 두었어요. 다시 바꾸면 돌아와요.` : back ? ' 가려 두었던 칸도 다시 보여요.' : ''}`,
+      undoAction(toast),
+      after > 0 ? 8000 : undefined,
+    )
+  }
   const tools = (b: Block) => (
     <BlockTools
+      look={look}
       slide={slide}
       block={b}
+      swapIssue={(to) => swapIssue(slide.blocks ?? [], b.id, to, measureArea(areaEl.current)?.size.h ?? boardAreaH(slide, deck))}
+      onSwap={(to) => swap(b, to)}
       itemIssue={issue(b, withItem)}
       variantIssue={(v) => issue(b, (x) => ({ ...x, variant: v }))}
       lookIssue={(lk) => lookChangeIssue(slide.blocks ?? [], b.id, lk ?? 'plain', measureArea(areaEl.current)?.size.h)}
-      onBlocked={(r) => {
-        const t = noRoomText(r, b.type, 'change')
+      onBlocked={(r, to) => {
+        const t = noRoomText(r, to ?? b.type, 'change')
         toast.show(`${t.why} ${t.fix}`, undefined, 6000)
       }}
       onShift={(dir) => store.setBlocks(slideRef.current.id, shiftBlock(slideRef.current.blocks ?? [], b.id, dir, measureArea(areaEl.current)?.size.h))}

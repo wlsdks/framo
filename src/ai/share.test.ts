@@ -128,6 +128,17 @@ describe('모양만 고르기', () => {
     })
   })
 
+  it('계산식이 셈해 보이는 결과는 모양에 넣지 않는다 (비운 결과 칸은 빈칸 그대로)', () => {
+    const calc = makeBlock('calc')
+    const values = ['1,200시간', '4만 원', '10명']
+    const block = { ...calc, items: calc.items.map((item, i) => ({ ...item, value: values[i], title: SECRET })) }
+    const shape = toShape({ ...createSampleDeck(), slides: [{ ...makeSlide('compose'), blocks: autoPlace([], block)! }] })
+    expect(checkShape(shape)).toBe(true)
+    expect(shape.slides[0].blocks![0].fields.result).toBe('empty')
+    expect(JSON.stringify(shape)).not.toMatch(/4\.8|억/)
+    expect(JSON.stringify(shape)).not.toContain(SECRET)
+  })
+
   it('모든 발표 종류와 듣는 사람의 구성이 꼴 확인과 마지막 그물을 지난다', () => {
     // 구성이 부품 장(흐름, 원인 캐기, 일정 막대 …)도 만들어서 부품 장의 키까지
     const words = [...SHAPE_WORDS, 'pane']
