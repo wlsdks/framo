@@ -216,9 +216,18 @@ export const SlideCanvas = memo(function SlideCanvas({
   const side = sideOf(slide)
   const themed = themeStyle(deck.theme, tone)
   const style: CSSProperties = side !== null ? { ...themed, '--side-w': `${side * PANE_UNIT}px` } : themed
+  // 장 안(레이아웃이나 부품 판)은 쪽 번호와 전체 장 수만 바뀌었을 때 다시 그리지 않는다: 그 둘은 아래 띠에만 쓴다. 장을 하나 더하거나
+  // 빼면 목록의 그림이 모두 쪽 번호와 전체 장 수만 바뀌는데, 그림마다 장 안 전체를 다시 그려서 장이 많은 발표일수록 느려졌다.
+  // 장 안이 읽는 값(SlideContext)이 그대로면 같은 값, 같은 그리기(view)를 넘겨 React가 그 아래를 건너뛴다
+  const scale = scales?.get('')
+  const ctx = useMemo(
+    () => ({ slide, meta: deck.meta, mode, actions, canRemoveItem, sections, sectionIndex, scale, scales, cines: deck.cines }),
+    [slide, deck.meta, mode, actions, canRemoveItem, sections, sectionIndex, scale, scales, deck.cines],
+  )
+  const view = useMemo(() => <View />, [View])
 
   return (
-    <SlideContext.Provider value={{ slide, meta: deck.meta, mode, actions, canRemoveItem, sections, sectionIndex, scale: scales?.get(''), scales, cines: deck.cines }}>
+    <SlideContext.Provider value={ctx}>
       <div
         ref={ref}
         className={cx(
@@ -249,7 +258,7 @@ export const SlideCanvas = memo(function SlideCanvas({
       >
         {/* 배경: 글과 컴포넌트 뒤의 그래픽 (Backdrop.tsx). 컴포넌트 하나만 그릴 때는 없다 */}
         {!solo && <Backdrop value={slide.backdrop} dark={isDarkLook(deck.theme, tone)} />}
-        <View />
+        {view}
         {mode === 'edit' && spec.panes && !solo && <PaneTools />}
         {!solo && slide.options.hideFoot !== true && (source || mark) && (
           <footer className="s-foot">
