@@ -817,6 +817,8 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
         },
       ],
     },
+    // 강조할 단계는 고른 것만(기본 없음): 순환에는 정해진 답이 없어서, 이번 달에 손볼 단계처럼 말할 단계가 있을 때 고른다
+    highlight: { label: '강조할 단계', fallback: -1 },
     minSpan: 4,
     prefSpan: 6,
     sample: {

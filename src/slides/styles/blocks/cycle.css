@@ -102,6 +102,11 @@
   text-wrap: pretty;
 }
 
+/* 고른 단계(강조할 단계) 하나만 번호와 이름이 강조색: 이번에 손볼 단계처럼 장이 말하는 단계. 고리의 그 단계 눈금도 강조색(아래) */
+.bk-cy-step.is-hl :is(.bk-cy-n, .bk-cy-t) {
+  color: var(--accent);
+}
+
 .bk-cy-m {
   --fs: var(--t-small);
   display: block;
@@ -214,6 +219,10 @@
     background: var(--ink-2);
     translate: -50% -50%;
     rotate: var(--a);
+  }
+
+  .bk-cy-port.is-hl {
+    background: var(--accent);
   }
 
   /* 구간 끝의 머리는 그리지 않는다: 구간은 다음 단계의 눈금 앞에서 끝나 그 눈금이 끝을 맺는다(—|). 자리(--a)는 움직임이 조각의 길을
