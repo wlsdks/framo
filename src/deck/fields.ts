@@ -177,9 +177,16 @@ function anyShown(spec: CellSpec, x: Cells, counts: (key: string) => boolean): b
   return x.items.slice(0, spec.items?.max ?? 0).some((it) => spec.items!.fields.some((f) => it[f.key]?.trim()))
 }
 
-/** 부품이 장에 무언가를 그리는지: 채운 칸이 있거나, 꼭 채울 칸이 없는 부품(모션 그래픽처럼 글 없이도 그림이 서는 것) */
+/**
+ * 부품이 장에 무언가를 그리는지: 채운 칸이 있거나, 꼭 채울 칸이 없는 부품(모션 그래픽처럼 글 없이도 그림이 서는 것).
+ * 꼭 채울 줄이 있는 부품은 줄을 하나도 채우지 않으면 머리 글(소제목, 양쪽 이름, 단위, 가운데 이름)만으로는 그리는 것으로 치지 않는다:
+ * 구성이 미리 넣어 두는 이름표라, 지식 공유의 '전과 후'(바뀌기)는 줄을 비운 채 '예전에는 / 이렇게 하면' 두 이름만 발표에 떴는데
+ * 확인 창이 건너뛰기를 권하지 않았다(직접 써 보기)
+ */
 function blockShows(b: Block): boolean {
-  return anyShown(BLOCKS[b.type], b, (key) => !isMetaKey(key)) || !blockMissing(b).length
+  const spec = BLOCKS[b.type]
+  if (spec.items?.fields.some((f) => !f.optional) && b.items.slice(0, spec.items.max).every(isBlankItem)) return false
+  return anyShown(spec, b, (key) => !isMetaKey(key)) || !blockMissing(b).length
 }
 
 /**

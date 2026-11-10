@@ -407,6 +407,16 @@ describe('빈칸 때문에 제목만 남는 장 (bareSlide)', () => {
     expect(bareSlide({ ...blank, blocks: [...blank.blocks, makeBlock('cine')] }, meta)).toBe(false)
   })
 
+  it('줄이 있는 컴포넌트는 줄을 비우면 머리 글(양쪽 이름, 소제목, 가운데 이름)만 채워도 빈 장이고, 줄 하나라도 채우면 아니다', () => {
+    const wipe = { ...makeBlock('wipe'), fields: { from: '예전에는', to: '이렇게 하면' } }
+    const slide = { ...titled(makeSlide('compose')), blocks: [wipe] }
+    expect(bareSlide(slide, meta)).toBe(true)
+    const one = { ...wipe, items: wipe.items.map((it, i) => (i === 0 ? { ...it, title: '종이에 붙여요' } : it)) }
+    expect(bareSlide({ ...slide, blocks: [one] }, meta)).toBe(false)
+    // 줄 없는 컴포넌트의 글은 그대로 내용이다
+    expect(bareSlide({ ...slide, blocks: [{ ...makeBlock('message'), fields: { text: '한 문장' } }] }, meta)).toBe(false)
+  })
+
   it('발표하는 장 가운데 빈 장만 권하고, 빼면 남는 장이 없으면 권하지 않는다', () => {
     const closing = deck.slides.find((s) => s.layout === 'closing')!
     expect(bareSlides(deck)).toContain(closing.id)
