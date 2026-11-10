@@ -159,7 +159,9 @@ function readGlyph(ed: HTMLElement): number[] | null {
     top = Math.min(top, x.top)
     bottom = Math.max(bottom, x.bottom)
   }
-  const v = [(left - q.left) / k, (q.right - right) / k, (top - q.top) / k + ink.top, (q.bottom - bottom) / k + ink.bottom]
+  // 테(.ed-halo)는 칸의 안쪽 여백 상자에 대어 놓으므로 테두리 두께만큼 빼고 잰다(한 문장 장의 부제는 위에 선이 있다)
+  const bx = ed.clientWidth ? [ed.clientLeft, ed.offsetWidth - ed.clientLeft - ed.clientWidth, ed.clientTop, ed.offsetHeight - ed.clientTop - ed.clientHeight] : [0, 0, 0, 0]
+  const v = [(left - q.left) / k - bx[0], (q.right - right) / k - bx[1], (top - q.top) / k + ink.top - bx[2], (q.bottom - bottom) / k + ink.bottom - bx[3]]
   // 빈칸은 안내 글이 짧아도 칸으로 보이게 적어도 EMPTY_MIN em 넓게. 글이 선 쪽(text-align)을 두고 반대쪽으로, 칸 상자 안에서만 넓힌다
   if (text !== input) {
     const cs = getComputedStyle(text)
