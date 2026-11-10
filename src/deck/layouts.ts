@@ -645,27 +645,30 @@ export const LAYOUTS: Record<LayoutId, LayoutSpec> = {
       ],
     },
   },
+  // 마지막 장. 받을 결정만이 아니라 부탁(주간 보고의 도움이 필요한 것), 다음 단계, 기억할 것(지식 공유의 정리)으로도 맺어서 이름과
+  // 줄 이름은 어느 쪽으로도 읽히게 둔다: '결정 요청'과 '요청 추가'로 부르던 때는 지식 공유의 '오늘 기억할 것' 장에 결정 요청 레이아웃,
+  // 요청 목록 위치, 요청 추가가 떠서 무엇을 적는 장인지 헷갈렸다(직접 써 보기). 칸의 안내는 발표 종류의 구성이 장마다 정한다
   closing: {
     id: 'closing',
-    name: '결정 요청',
-    description: '결정해 주실 것과 언제까지 필요한지',
+    name: '마무리',
+    description: '결정해 주실 것, 부탁, 기억할 것으로 맺어요',
     variants: [
       { id: 'base', name: '바탕' },
       { id: 'bold', name: '색 면' },
     ],
-    panes: { name: '요청 목록', el: '.cl-steps', sides: [4, 5, 6], base: 5 },
+    panes: { name: '목록', el: '.cl-steps', sides: [4, 5, 6], base: 5 },
     fields: [
       title('결정해 주실 것'),
       { key: '$presenter', label: '발표자', hint: '발표자 이름', optional: true },
       { key: '$contact', label: '연락처', hint: '이메일이나 전화번호', optional: true },
     ],
     items: {
-      label: '요청',
+      label: '항목',
       min: 0,
       max: 3,
       default: 3,
       fields: [
-        { key: 'title', label: '요청', hint: '결정해 주실 일' },
+        { key: 'title', label: '내용', hint: '결정해 주실 일' },
         { key: 'body', label: '설명', hint: '언제까지, 왜 필요한지', optional: true },
       ],
     },

@@ -80,7 +80,7 @@ const CODE_HELP: Record<Exclude<OpCode, 'applied'> | 'invalid', string> = {
   no_slide: '그 장이 이 발표에 없어요. get_shape의 slides[].id나 같은 제안에서 add_slide의 as로 붙인 이름을 쓰세요.',
   has_content: '사람이 적은 글이 있어서 지우거나 줄일 수 없어요. 장은 set_hidden으로 발표에서 빼고, 항목과 부품은 그대로 두세요.',
   out_of_range: '고를 수 있는 범위 밖이에요. 카탈로그의 항목 수(items.min, max), 옆 판 너비(panes.sides), 지금 항목 수, 판 끝(이음표)을 확인하세요.',
-  not_for_layout: '이 장이나 부품의 레이아웃에서는 쓸 수 없는 값이에요. 카탈로그 layouts[]나 blocks[]에 그 값(highlight, panes, place, variants, fields)이 있는지 보세요. 표지, 섹션, 결정 요청 장은 바탕(tone)을 바꿀 수 없어요.',
+  not_for_layout: '이 장이나 부품의 레이아웃에서는 쓸 수 없는 값이에요. 카탈로그 layouts[]나 blocks[]에 그 값(highlight, panes, place, variants, fields)이 있는지 보세요. 표지, 섹션, 마무리 장은 바탕(tone)을 바꿀 수 없어요.',
   last_slide: '남은 장이 하나뿐이라 지울 수 없어요.',
   unknown_role: '카탈로그 deckTypes[].roles[].role에 있는 역할 이름이 아니에요. 그 이름을 그대로 쓰거나 layout을 같이 주세요.',
   no_change: '이미 그 값이라 바뀌는 것이 없어요. 이 op는 빼세요.',
@@ -311,7 +311,7 @@ const TOOLS = [
         'layout을 compose로 하면 같은 내용의 부품 장이 되고(표지, 섹션 장은 안 됨), 부품 장은 그 레이아웃의 부품 하나뿐일 때만 다른 레이아웃으로 되돌릴 수 있다.',
       '- set_hidden {slide, hidden} 발표에서 빼거나 다시 넣는다.',
       '- set_item_count {slide, count} 항목 수. 줄일 때는 끝의 빈 항목만 지운다.',
-      '- set_options {slide, highlight?: 강조할 항목 번호(0부터, -1은 없음; 카탈로그 layouts[].highlight가 있는 레이아웃만), flip?: 옆 판을 반대쪽에, pane?: 옆 판 너비(layouts[].panes.sides 중 하나, null은 기본; 둘 다 panes가 있는 레이아웃의 panes.variants 모양에서만), contain?: 이미지와 설명의 이미지를 자르지 않기, hideHead?: 제목과 부제 숨기기, hideFoot?: 출처와 아래 표시 숨기기(글은 지우지 않음), motion?: 이 장만 다른 움직임(카탈로그 motions, null은 발표 전체 설정대로), tone?: 이 장의 바탕(카탈로그 tones; 표지, 섹션, 결정 요청은 안 됨), place?: 제목 덩어리의 자리(카탈로그 places, null은 기본; layouts[].place가 있는 레이아웃만), transition?: 이 장으로 넘어올 때(카탈로그 transitions, null은 발표 전체 설정대로; morph는 앞 장과 같은 제목이나 부품이 새 자리로 옮겨 간다), scene?: 장면(카탈로그 scenes의 id, null은 장면 끄기; 그 장에 맞는 것만, 아니면 scene_unfit)}',
+      '- set_options {slide, highlight?: 강조할 항목 번호(0부터, -1은 없음; 카탈로그 layouts[].highlight가 있는 레이아웃만), flip?: 옆 판을 반대쪽에, pane?: 옆 판 너비(layouts[].panes.sides 중 하나, null은 기본; 둘 다 panes가 있는 레이아웃의 panes.variants 모양에서만), contain?: 이미지와 설명의 이미지를 자르지 않기, hideHead?: 제목과 부제 숨기기, hideFoot?: 출처와 아래 표시 숨기기(글은 지우지 않음), motion?: 이 장만 다른 움직임(카탈로그 motions, null은 발표 전체 설정대로), tone?: 이 장의 바탕(카탈로그 tones; 표지, 섹션, 마무리는 안 됨), place?: 제목 덩어리의 자리(카탈로그 places, null은 기본; layouts[].place가 있는 레이아웃만), transition?: 이 장으로 넘어올 때(카탈로그 transitions, null은 발표 전체 설정대로; morph는 앞 장과 같은 제목이나 부품이 새 자리로 옮겨 간다), scene?: 장면(카탈로그 scenes의 id, null은 장면 끄기; 그 장에 맞는 것만, 아니면 scene_unfit)}',
       '장면(scene)은 장 하나를 영화의 한 컷처럼 처음부터 끝까지 짠 움직임이다. 맞는 장: scenes[].layouts의 레이아웃, 또는 부품 장에 scenes[].blocks의 부품이 하나라도 있을 때(compare는 나란히 선 두 부품뿐인 부품 장에도). ' +
         '장면을 고른 장은 부품마다의 effect, speed, from 대신 장면대로 움직이고, when과 나오는 차례(order)는 그대로다. 움직임 정도(motion)가 none이면 장면도 쉰다.',
       '- set_backdrop {slide, backdrop: 배경(카탈로그 backdrops의 id) 또는 null(빼기), x?, y?, w?, h?: 자리(장 전체를 가로 12칸, 세로 12칸으로 나눈 칸 수; 넷을 함께 주거나 모두 빼고, 빼면 지금 자리나 앱이 고른 자리. 자주 쓰는 자리는 backdropPlaces, 가장 작은 크기는 backdropRules), strength?: 짙기(backdropStrengths)}',
