@@ -46,4 +46,12 @@ describe('발표하기 전 확인 창 (CheckDialog)', () => {
     expect(html).toMatch(/class="btn btn-primary"[^>]*>그대로 발표하기</)
     expect(html).toContain('그대로 발표하기')
   })
+
+  it('예시 글이 그대로인 칸은 빈칸과 달리 발표에 나온다고 알린다', () => {
+    const example = { block: 'b1', key: 'value', label: '모션 그래픽의 숫자 (예시 그대로)', example: true as const }
+    const html = draw({ rows: [{ ...row, missing: [example] }], missing: 1, over: 0, bare: [] })
+    expect(html).toContain('예시 글은 그대로 나가요')
+    expect(html).toContain('예시 글이 보여요')
+    expect(draw({ rows: [row], missing: row.missing.length, over: 0, bare: [] })).not.toContain('예시 글')
+  })
 })

@@ -267,6 +267,7 @@ export function CheckDialog({
       */}
       <p>
         {check.missing ? `빈칸은 ${what}에 나오지 않아요. ` : ''}
+        {check.rows.some((r) => r.missing.some((m) => m.example)) ? '예시 글은 그대로 나가요. ' : ''}
         {check.over ? '넘친 글은 잘려 보일 수 있어요. ' : ''}
         {/* '그 / 슬라이드로'로 갈라지지 않게 (\u00a0) */}
         누르면 그{'\u00a0'}슬라이드로 가요.
@@ -279,7 +280,7 @@ export function CheckDialog({
               <button
                 type="button"
                 className="pck-card"
-                aria-label={`슬라이드 ${r.page}, ${r.name}${r.missing.length ? `, 빈칸 ${r.missing.length}곳` : ''}${r.bare ? `, ${BARE_SAYS[r.bare]}` : ''}${r.over ? ', 글이 넘침' : ''}`}
+                aria-label={`슬라이드 ${r.page}, ${r.name}${r.missing.length ? `, 빈칸 ${r.missing.length}곳` : ''}${r.bare ? `, ${BARE_SAYS[r.bare]}` : r.missing.some((m) => m.example) ? ', 예시 글이 보여요' : ''}${r.over ? ', 글이 넘침' : ''}`}
                 onClick={() => onGoTo(r.id, r.missing[0])}
               >
                 <ScaledSlide width={PCK_THUMB} decorative>
@@ -293,6 +294,8 @@ export function CheckDialog({
                   {[
                     r.missing.length > 0 && `빈칸 ${r.missing.length}곳`,
                     r.bare && <b key="bare" className="pck-bare">{BARE_SAYS[r.bare]}</b>,
+                    // 예시 글은 빈칸과 달리 듣는 분께 그대로 보인다(모션 그래픽을 넣고 고치지 않은 숫자와 문장)
+                    !r.bare && r.missing.some((m) => m.example) && <b key="ex" className="pck-bare">예시 글이 보여요</b>,
                     r.over && <span key="over" className="pck-over">글이 넘쳤어요</span>,
                   ]
                     .filter(Boolean)

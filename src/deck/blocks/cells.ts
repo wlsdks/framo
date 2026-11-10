@@ -193,6 +193,8 @@ export interface BlockMissing {
   key: string
   item?: number
   label: string
+  /** 비지 않고 넣을 때 틀이 채운 예시 글이 그대로인 칸. 빈칸과 달리 발표에 그대로 나온다 */
+  example?: true
 }
 
 /**
@@ -201,12 +203,22 @@ export interface BlockMissing {
  */
 const autoFilled = (block: Block, key: string) => block.type === 'calc' && key === 'result' && calcAutoOf(blockItems(block)) !== null
 
-/** 이 부품에서 비어 있는 꼭 채울 칸. name은 같은 장에 같은 부품이 둘 이상일 때 자리를 붙인 이름 (blockNames) */
+/**
+ * 이 부품에서 비어 있는 꼭 채울 칸과, 넣을 때 틀이 채운 예시 글이 그대로인 칸(Block.examples). name은 같은 장에 같은 부품이 둘 이상일 때
+ * 자리를 붙인 이름 (blockNames). 예시 글은 비워 둬도 되는 칸이라도 센다: 모션 그래픽을 넣고 바로 발표하면 지어낸 숫자와 문장('2,400건')이
+ * 듣는 분께 그대로 나가는데, 칸이 채워져 있어 '꼭 채울 칸은 모두 채웠어요'라고 했다(처음 쓰는 사람 검수)
+ */
 export function blockMissing(block: Block, name = BLOCKS[block.type].name): BlockMissing[] {
   const spec = BLOCKS[block.type]
   const out: BlockMissing[] = []
+  // 예시 글은 틀이 채운 차례(그려지는 차례: 확산은 숫자, 제목, 덧붙이는 말)대로. 칸 정의의 차례로 두면 '다음 빈칸'이 숫자 아래 제목부터 골랐다
+  const examples = (block.examples ?? []).filter((k) => (block.fields[k] ?? '').trim())
+  for (const k of examples) {
+    const f = spec.fields.find((x) => x.key === k)
+    if (f) out.push({ block: block.id, key: k, label: `${name}의 ${f.label} (예시 그대로)`, example: true })
+  }
   for (const f of spec.fields) {
-    if (f.optional || f.key.startsWith('$') || autoFilled(block, f.key)) continue
+    if (examples.includes(f.key) || f.optional || f.key.startsWith('$') || autoFilled(block, f.key)) continue
     if (!(block.fields[f.key] ?? '').trim()) out.push({ block: block.id, key: f.key, label: `${name}의 ${f.label}` })
   }
   if (spec.items) {

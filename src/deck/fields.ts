@@ -89,6 +89,8 @@ export interface Missing {
   label: string
   /** 부품 장의 부품 안 칸이면 그 부품 id */
   block?: string
+  /** 비지 않고 예시 글이 그대로인 칸(blockMissing). 빈칸과 달리 발표에 그대로 나온다 */
+  example?: true
 }
 
 /** 표시하지 않는 머리와 아래 띠는 빈칸으로 세거나 발표 파일에 넣지 않는다. */

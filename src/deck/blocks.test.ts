@@ -443,6 +443,17 @@ describe('자리 정하기', () => {
     expect(labels.some((l) => l.includes('할 일 1의 할 일'))).toBe(false)
   })
 
+  it('넣을 때 틀이 채운 예시 글이 그대로인 칸은 그려지는 차례대로 빈칸으로 센다', () => {
+    // 모션 그래픽(확산): 숫자, 제목, 덧붙이는 말 차례로 그린다. 칸은 모두 비워 둬도 되는 칸이지만 예시 글로 발표하면 지어낸 숫자가 나간다
+    const c = { ...block('cine', 'c'), fields: { value: '1,280명', title: '새로 함께한 사람', sub: '올해 3분기까지' }, examples: ['value', 'title', 'sub'] }
+    expect(blockMissing(c).map((m) => m.key)).toEqual(['value', 'title', 'sub'])
+    expect(blockMissing(c)[0].label).toBe('모션 그래픽의 숫자 (예시 그대로)')
+    // 한 칸을 고쳐 쓰면(examples에서 빠진다) 그 칸은 세지 않고, 비운 예시 칸도 세지 않는다(비워 둬도 되는 칸)
+    expect(blockMissing({ ...c, examples: ['title', 'sub'] }).map((m) => m.key)).toEqual(['title', 'sub'])
+    expect(blockMissing({ ...c, fields: { ...c.fields, sub: '' } }).map((m) => m.key)).toEqual(['value', 'title'])
+    expect(blockMissing({ ...c, examples: undefined })).toEqual([])
+  })
+
   it('로고가 많으면 넓은 칸에만 놓는다', () => {
     const logos = (n: number) => ({ ...block('logos', 'l'), items: Array.from({ length: n }, (_, i) => ({ ...block('logos').items[0], id: `l${i}` })) })
     expect([3, 6, 10].map((n) => minSpanOf(logos(n)))).toEqual([6, 8, 12])
