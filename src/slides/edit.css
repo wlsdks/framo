@@ -267,7 +267,8 @@
   justify-self: start;
 }
 
-.slide.m-edit :is(.mx-y, .pm-y).ed > * {
+/* 칸의 테(.ed-halo)는 빼고: 테는 칸 상자에 대어 놓는다(위의 .ed > .ed-halo). 글 칸에 두면 화살표 칸만큼 오른쪽으로 밀려 글 앞을 덮었다 */
+.slide.m-edit :is(.mx-y, .pm-y).ed > :not(.ed-halo) {
   grid-area: 1 / 2;
 }
 
@@ -287,7 +288,7 @@
   align-items: center;
 }
 
-.slide.m-edit .ps-chip.ed > * {
+.slide.m-edit .ps-chip.ed > :not(.ed-halo) {
   grid-area: 1 / 2;
 }
 
