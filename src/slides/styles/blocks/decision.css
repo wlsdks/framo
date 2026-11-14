@@ -151,6 +151,8 @@
 }
 
 .bk-dc-forks {
+  /* 선과 마디는 글자를 따라 크고 준다(좁은 칸의 줄인 단계, 내용이 적은 장의 키운 단계): 글만 줄면 마디가 글자만 해 보였다 */
+  --dc-k: calc(min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1));
   position: absolute;
   inset: 0;
   width: 100%;
@@ -161,15 +163,23 @@
 
 .bk-dc-fork {
   fill: none;
-  /* 갈래 곡선은 그림의 뼈대라 줄 선보다 한 단계 짙게(VISUAL-RULES 2-1): 옅은 선(--line-strong)은 흰 바탕에서도 흐렸다(검수) */
-  stroke: color-mix(in srgb, var(--ink-3) 70%, var(--bg));
-  stroke-width: var(--rule-hair);
-  vector-effect: non-scaling-stroke;
+  /* 갈래 곡선은 이 그림의 데이터(조건과 결과의 관계)라 차트의 선처럼 긋는다: 강조색의 농담에 캔버스 3px(키운 단계에서 4px 남짓), 끝은 둥글게.
+     예전의 머리카락 선(회색 1px)은 3~5m에서 보이지 않아 그림이 아니라 글 두 줄로 읽혔다. 농담은 바탕과 2.5:1 남짓: 더 옅으면(45%)
+     밝은 회의실에서 다시 사라지고 진한 점에 옅은 실이 달린 것처럼 보였다(검수) */
+  stroke: color-mix(in srgb, var(--accent) 58%, var(--bg));
+  stroke-width: calc(3px * var(--dc-k));
+  stroke-linecap: round;
+}
+
+/* 갈라지는 마디 하나만 강조색 점: 어디서 갈라지는지가 멀리서도 보인다. 꽉 찬 강조색은 이 점 하나뿐이라 옆 컴포넌트의 답과 다투지 않는다 */
+.bk-dc-node {
+  r: calc(5.5px * var(--dc-k));
+  fill: var(--accent);
 }
 
 .bk-dc {
-  /* 곡선이 지나갈 자리: 질문과 갈래 사이를 넓게 */
-  column-gap: max(140px, 9cqw);
+  /* 곡선이 지나갈 자리: 질문과 갈래 사이를 넓게. 낮은 줄에서 좁으면(가로 110px에 세로 96px) 곡선이 가파르게 접혀 갈고리처럼 읽혔다(검수) */
+  column-gap: max(180px, 12cqw);
 }
 
 .bk-dc-row {
@@ -234,9 +244,39 @@
   }
 }
 
-/* 검은 바탕에서는 갈래 곡선(--line-strong)이 바탕에 묻혀서 한 단계 짙게 */
+/* 짙은 면 위에서는 면 위의 강조색으로. 어두운 바탕에서는 밝은 점이 선을 이기기 쉬워 선을 한 단계 더 밝힌다 */
 .is-dark .bk-dc-fork {
-  stroke: color-mix(in srgb, var(--ink-3) 80%, var(--bg));
+  stroke: color-mix(in srgb, var(--bold-accent, var(--accent)) 62%, var(--bg));
+}
+
+.is-dark .bk-dc-node {
+  fill: var(--bold-accent, var(--accent));
+}
+
+/* ---------- 넓고 낮은 칸 ----------
+   곡선 자리를 칸 너비를 따라 더 넓힌다: 한 줄을 다 쓰는 낮은 칸에서 그림이 칸의 60%에서 끝나고 오른쪽이 통째로 비었다 */
+@container bk (min-width: 1200px) and (max-height: 559.98px) {
+  .bk-dc {
+    column-gap: max(180px, 17cqw);
+  }
+}
+
+/* 질문은 첫 갈래와 끝 갈래의 한가운데에: 이름표와 질문을 한 묶음으로 가운데에 맞추면 질문 글줄이 그보다 아래라 위 갈래는 크게 휘고
+   아래 갈래는 거의 누운, 한쪽으로 기운 그림이 되었다(검수: 위 72px, 아래 24px). 이름표만큼의 빈 줄을 질문 아래에도 둔다(1fr 두 줄은
+   높이가 같다). 아주 낮은 칸(200px 밑)은 그 빈 줄이 들어갈 높이가 없어 그대로 */
+@container bk (min-width: 901px) and (min-height: 200px) and (max-height: 559.98px) {
+  .bk-dc-start {
+    display: grid;
+    grid-template-rows: 1fr auto 1fr;
+  }
+
+  .bk-dc-label {
+    align-self: end;
+  }
+
+  .bk-dc-question {
+    grid-row: 2;
+  }
 }
 
 /* 이름표(확인할 조건)는 질문 위에 떠 있게: 이름표와 질문을 한 묶음으로 갈래의 가운데에 맞추면 곡선이 나오는 질문은 그보다 아래라
@@ -253,5 +293,15 @@
     left: 0;
     width: max-content;
     max-width: 100%;
+  }
+
+  /* 곡선은 갈래의 첫 줄(조건)에 닿고 할 일은 그 아래 줄이라, 닿는 자리들의 가운데는 목록의 가운데보다 할 일 한 줄의 절반만큼 위다.
+     질문 아래에 할 일 한 줄만큼을 비워 질문을 그 가운데로 올린다: 그대로 두면 위 갈래는 140px 오르고 아래 갈래는 76px만 내려
+     위쪽 조건이 '더 먼 길'처럼 보였다(검수). 글자 크기는 할 일과 같은 식(base.css의 글자 칸) */
+  .bk-dc-start::after {
+    display: block;
+    height: calc(1.4em + 4px);
+    font-size: calc(var(--t-body) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1));
+    content: '';
   }
 }
