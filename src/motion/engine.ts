@@ -2521,17 +2521,23 @@ export function motionEngine(): MotionEngine {
               ways.push({ path: pts, cond: rows[i].querySelector('.bk-dc-condition') })
             })
           }
-          fade(one('.bk-dc-label'), 40, 400)
-          rise(one('.bk-dc-question'), 100, L.y * 0.5)
-          let last = 240
-          // 갈래마다 곡선이 질문에서 그어져 나가고, 닿을 즈음 그 갈래의 조건과 할 일이 나타난다
+          // 질문과 갈라지는 마디가 먼저 선다(뿌리가 가지보다 먼저). 그 뒤 곡선이 마디에서 떠나 0.6초 남짓 그어지고, 닿는 순간 그 갈래의
+          // 조건이 맺히고 할 일은 한 박자 뒤에 켜진다. 예전에는 곡선(0.5초)이 질문보다 먼저 달리고 0.3초에 모두 끝나, 멀리서는
+          // '그어짐'이 아니라 한꺼번에 나타나기로 보였고 발표하는 사람이 "이 조건이면…" 하고 말을 실을 틈이 없었다(검수)
+          fade(one('.bk-dc-label'), 0, 320)
+          rise(one('.bk-dc-question'), 40, L.y * 0.5)
+          fade(one('.bk-dc-node'), 140, 240)
+          let last = 300
           const forkEls = paths
-          items('.bk-dc-row', 240, (el, at) => {
+          items('.bk-dc-row', 300, (el, at) => {
             const k = rows.indexOf(el as HTMLElement)
             const f = forkEls[k]
-            if (f && !still) run(anims, f, [{ strokeDasharray: '1 1', strokeDashoffset: '1' }, { strokeDasharray: '1 1', strokeDashoffset: '0' }], s(at - 160), { easing: OUT, duration: d(520) })
-            rise(el, at + 120, L.y * 0.4)
-            last = Math.max(last, at + 120)
+            if (f && !still) run(anims, f, [{ strokeDasharray: '1 1', strokeDashoffset: '1' }, { strokeDasharray: '1 1', strokeDashoffset: '0' }], s(at), { easing: OUT, duration: d(640) })
+            const cond = el.querySelector('.bk-dc-condition')
+            const action = el.querySelector('.bk-dc-action')
+            rise(cond, at + 400, L.y * 0.4)
+            fade(action, at + 520, 360)
+            last = Math.max(last, at + 520)
           })
           if (root && ways.length) {
             const accent = getComputedStyle(root).getPropertyValue('--accent').trim()

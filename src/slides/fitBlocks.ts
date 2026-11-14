@@ -2527,6 +2527,9 @@ export function blockFitter() {
     svg.setAttribute('viewBox', `0 0 ${dc.offsetWidth} ${dc.offsetHeight}`)
     const NS = 'http://www.w3.org/2000/svg'
     const r2 = (v: number) => Math.round(v * 10) / 10
+    // 갈라지는 마디(질문 쪽) 하나만 점으로 맺는다. 닿는 끝에는 아무것도 달지 않는다: 고리를 달면 3~5m에서 구멍이 뭉개져 조건 앞의
+    // 빈 동그라미 글머리표로 읽혔다(검수, VISUAL-RULES 5: 선 끝에 달린 원은 쓰지 않는다)
+    let from: [number, number] | null = null
     for (const row of rows) {
       const cond = row.querySelector<HTMLElement>('.bk-dc-condition') ?? row
       const cr = cond.getBoundingClientRect()
@@ -2536,15 +2539,17 @@ export function blockFitter() {
       if (stacked) {
         // 질문 아래(왼쪽에서 조금 들어온 자리)에서 내려와 반지름 14로 꺾여 조건 앞까지
         const x0 = qx0 + 10
-        const y0 = qy1 + 12
+        const y0 = qy1 + 14
         const r = Math.min(14, Math.max(0, y1 - y0), Math.max(0, x1 - 12 - x0))
         d = `M ${r2(x0)} ${r2(y0)} V ${r2(y1 - r)} Q ${r2(x0)} ${r2(y1)} ${r2(x0 + r)} ${r2(y1)} H ${r2(x1 - 12)}`
+        from = [x0, y0]
       } else {
-        const x0 = qx1 + 20
+        const x0 = qx1 + 24
         const y0 = (qy0 + qy1) / 2
         const xe = x1 - 16
         const c = Math.max(12, (xe - x0) * 0.55)
         d = `M ${r2(x0)} ${r2(y0)} C ${r2(x0 + c)} ${r2(y0)} ${r2(xe - c)} ${r2(y1)} ${r2(xe)} ${r2(y1)}`
+        from = [x0, y0]
       }
       const p = document.createElementNS(NS, 'path')
       p.setAttribute('class', 'bk-dc-fork')
@@ -2552,6 +2557,14 @@ export function blockFitter() {
       // 길이를 1로: 모션이 곡선을 긋는 값(stroke-dashoffset)을 곡선마다 재지 않게
       p.setAttribute('pathLength', '1')
       svg.append(p)
+    }
+    // 점은 곡선 위에 그린다(곡선들이 떠나는 자리를 덮는다)
+    if (from) {
+      const c = document.createElementNS(NS, 'circle')
+      c.setAttribute('class', 'bk-dc-node')
+      c.setAttribute('cx', String(r2(from[0])))
+      c.setAttribute('cy', String(r2(from[1])))
+      svg.append(c)
     }
   }
 
