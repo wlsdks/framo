@@ -1811,12 +1811,18 @@ export function blockFitter() {
       // 다른 줄이 본문 오른쪽까지 그려져 있으면(오른쪽 4분의 1 안까지) 장의 오른쪽은 비지 않았다: 이 줄의 단을 옮기면 판의 칸 선에서 벗어나
       // 그 줄과 어긋나기만 한다. 로고 모음 위의 숫자 둘이 0과 50%가 아니라 0과 70%로 벌어져 양쪽으로 찢어져 보였다
       let others = -Infinity
+      let othersLeft = Infinity
       for (const c of cells) {
         if (band.includes(c)) continue
         const x = drawnX(c, true)
-        if (x) others = Math.max(others, x.r)
+        if (!x) continue
+        others = Math.max(others, x.r)
+        othersLeft = Math.min(othersLeft, x.l)
       }
       if (others >= a.right - 0.25 * a.width) return
+      // 다른 줄의 내용이 본문 왼쪽 선에 서 있으면 이 줄의 첫 단도 그 선에 둔다: 이 줄만 가운데로 옮기면 위아래 줄의 왼쪽 선이 어긋났다
+      // (전과 후 숫자 아래의 흐름선과 목록이 123px, 막대 하나 아래의 주석이 129px 들쭉날쭉). 남는 너비는 단 사이와 오른쪽 끝에만 나눈다
+      const anchored = othersLeft <= a.left + 24 * k
       // 단의 경계: 어느 칸도 가로지르지 않는 판의 세로 선
       const cuts = [0]
       for (let x = 1; x < 12; x++) if (band.some((c) => num(c, '--x') === x) && !band.some((c) => num(c, '--x') < x && x < num(c, '--x') + num(c, '--w'))) cuts.push(x)
@@ -1838,10 +1844,10 @@ export function blockFitter() {
       const widths = inks.map((x) => x.r - x.l)
       const spare = a.width - widths.reduce((s, w) => s + w, 0)
       // 양 끝과 단 사이를 같은 폭으로: 가운데만 넓히면 양쪽 내용이 서로 멀어져 한 장으로 읽히지 않는다.
-      const unit = spare / (cols.length + 1)
+      const unit = spare / (cols.length + (anchored ? 0 : 1))
       // 오른쪽 끝이 이미 그만큼(과 캔버스 24px)보다 좁으면 그대로
       if (a.right - inks[inks.length - 1].r <= unit + 24 * k) return
-      let at = a.left + unit
+      let at = anchored ? inks[0].l : a.left + unit
       const dx = inks.map((x, i) => {
         const d = at - x.l
         at += widths[i] + unit

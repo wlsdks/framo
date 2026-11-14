@@ -63,6 +63,16 @@ describe('부품 장 글자 맞추기', () => {
     expect(short).toMatch(/over\(inner\)/)
   })
 
+  it('다른 줄이 본문 왼쪽 선에 서 있으면 단을 옮길 때 첫 단을 그 선에 둔다', () => {
+    // 이 줄만 가운데로 옮기면 위아래 줄의 왼쪽 선이 어긋났다(갤러리 combos seed 1의 28번, 3의 11번, 7의 13번: 123~175px).
+    // 남는 너비는 단 사이와 오른쪽 끝에만 나눈다
+    const src = fit.blockFitter.toString()
+    const balance = src.slice(src.indexOf('function balance'), src.indexOf('function gutters'))
+    expect(balance).toMatch(/othersLeft\s*<=\s*a\.left/)
+    expect(balance).toMatch(/cols\.length\s*\+\s*\(anchored\s*\?\s*0\s*:\s*1\)/)
+    expect(balance).toMatch(/anchored\s*\?\s*inks\[0\]\.l\s*:\s*a\.left\s*\+\s*unit/)
+  })
+
   it('레이아웃 장을 맞추는 동안 편집 표시를 숨긴다: 편집 화면과 발표 화면의 글자 크기가 같다', () => {
     // 칸 둘레의 면(.ed-halo)은 글 밖으로 띄운 그림이라 본문 왼쪽으로 19px 나온다. 맞추는 동안 그대로 두면 넘친 것으로 보고 글자를 키우지 않아,
     // 덜 찬 장(다섯 단계 흐름, 짧은 사례)의 글자가 편집 화면에서만 발표 화면보다 한 단계 작았다(설명 26px, 발표 화면 31px).
