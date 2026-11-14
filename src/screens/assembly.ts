@@ -859,8 +859,9 @@ function rowRhythm(area: HTMLElement, k: number): string[] {
   for (const cell of area.querySelectorAll<HTMLElement>(':scope > .bk')) {
     const inner = cell.querySelector<HTMLElement>(':scope > .bk-in')
     if (!inner) continue
-    // 모이고 퍼지기의 곳 이름은 줄이 아니라 그림 위의 이름표다: 칸 높이에 맞춰 호를 따라 벌어지는 것이 그림의 짜임이다
-    if (cell.dataset.type === 'hub') continue
+    // 모이고 퍼지기의 곳 이름은 줄이 아니라 그림 위의 이름표다: 칸 높이에 맞춰 호를 따라 벌어지는 것이 그림의 짜임이다.
+    // 방사형 비교의 기준 이름도 축 끝에 서는 이름표라, 위아래 이름표 사이가 그림의 지름이다
+    if (cell.dataset.type === 'hub' || cell.dataset.type === 'radar') continue
     // 고리 모양의 순환도 같다: 단계 이름은 고리 둘레의 이름표라 위 둘과 아래 둘 사이가 고리의 지름이다(가로, 세로 모양은 줄이라 그대로 본다)
     const ring = cell.dataset.type === 'cycle' ? cell.querySelector('.bk-cy-ring') : null
     if (ring && getComputedStyle(ring).display !== 'none') continue

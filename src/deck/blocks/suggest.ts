@@ -119,6 +119,7 @@ const RULES: [RegExp, BlockType[], number?][] = [
   [/담당|조직|역할|맡은/, ['people']],
   [/질문|문의|Q&A|FAQ/i, ['faq']],
   [/설문|만족|응답/, ['likert']],
+  [/진단|역량|강점|약점|균형|평가 항목/, ['radar']],
   [/결론|제안|요청|핵심|결정/, ['message', 'callout']],
   [/\d/, ['number', 'kpi', 'bars'], 0.5],
 ]

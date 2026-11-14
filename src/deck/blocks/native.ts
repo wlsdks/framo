@@ -1386,6 +1386,48 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  radar: {
+    name: '방사형 비교',
+    description: '여러 기준의 점수를 한 그림에. 어디가 강하고 약한지가 모양으로 보여요 (레이더 차트). 기준은 셋에서 여덟까지, 견줄 값(목표, 지난 분기)을 적으면 점선으로 겹쳐요',
+    motion: '틀이 먼저 서고, 다각형이 가운데에서 값까지 펼쳐져요',
+    variants: [
+      { id: 'low', name: '약한 곳 강조' },
+      { id: 'high', name: '강한 곳 강조' },
+    ],
+    fields: [
+      { key: 'heading', label: '소제목', hint: '예: 온보딩 과정 진단', optional: true },
+      { key: 'max', label: '만점', hint: '5', optional: true },
+      // 비워 두면 '목표'로 보인다(Radar.tsx). 견줄 값을 적었을 때만 그린다
+      { key: 'base', label: '견줄 대상', hint: '목표', optional: true, named: true },
+    ],
+    items: {
+      label: '기준',
+      min: 3,
+      max: 8,
+      default: 5,
+      fields: [
+        { key: 'title', label: '기준', hint: '기준', hints: ['안내 자료', '실습', '멘토링', '일정', '도구 준비', '첫 과제', '팀 소개', '되돌아보기'] },
+        { key: 'value', label: '점수', hint: '점수', hints: ['4.4', '3.8', '2.6', '4.1', '3.5', '3.9', '4.3', '3.2'] },
+        // 편집할 때 '목표 [값]'으로 읽힌다(Radar.tsx). 모든 기준에 적어야 점선 다각형이 닫힌다
+        { key: 'meta', label: '견줄 값', hint: '값', hints: ['4.0', '4.0', '4.0', '4.0', '4.0', '4.0', '4.0', '4.0'], optional: true },
+      ],
+    },
+    // 고르지 않으면 모양이 정한다(가장 낮거나 높은 기준). -1은 강조하지 않기
+    highlight: { label: '강조할 기준', fallback: -1 },
+    // 6칸부터: 그보다 좁으면 양옆 이름표가 자리를 다 가져가 그림이 이름표보다 작아진다(4칸에서 그림 폭 110~160px)
+    minSpan: 6,
+    prefSpan: 6,
+    sample: {
+      fields: { heading: '온보딩 과정 진단' },
+      items: [
+        { title: '안내 자료', value: '4.4' },
+        { title: '실습', value: '3.8' },
+        { title: '멘토링', value: '2.6' },
+        { title: '일정', value: '4.1' },
+        { title: '도구 준비', value: '3.5' },
+      ],
+    },
+  },
   heading: {
     name: '소제목',
     description: '옆이나 아래 컴포넌트들을 묶는 짧은 제목 (지금 방식, 바꾸면)',

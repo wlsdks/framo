@@ -1,0 +1,307 @@
+/* ---------- 방사형 비교 ---------- */
+
+/* 그림의 반지름. 길이로 등록해 그림 판(.bk-rdr-plot)에서 한 번 셈한 px를 이름표들이 물려받는다: 등록하지 않으면 쓰는 곳마다
+   다시 셈해서, 칸에 견준 단위(cqw, cqh)가 쓰는 요소의 칸을 따라 달라진다 */
+@property --rdr-r {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 120px;
+}
+
+/* 소제목, 표시 줄(견줄 대상, 만점), 그림. 그림이 남는 높이를 다 쓴다 */
+.bk-rdr {
+  /* 축 끝에서 이름표까지. Radar.tsx가 넘기는 가로 한계(--rdr-rx)도 이 값을 쓴다 */
+  --rdr-gap: 0.5em;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.bk-rdr > .bk-h {
+  margin-bottom: 18px;
+}
+
+.bk-rdr > .bk-rdr-key {
+  /* 점선 표시는 높이가 없어 글줄(baseline)로 맞추면 견줄 대상의 이름이 만점보다 내려앉았다 */
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* 견줄 대상의 표시: 그림의 점선 다각형과 같은 점선 */
+.bk-rdr-lk i {
+  width: 28px;
+  height: 0;
+  border-top: 2px dashed var(--ink-3);
+  border-radius: 0;
+  background: none;
+}
+
+.bk-rdr-warn {
+  margin: 0 0 12px;
+}
+
+.bk-rdr-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* 그림이 서는 자리: 반지름을 이 상자의 너비와 높이로 셈한다(cqw, cqh) */
+.bk-rdr-stage {
+  display: grid;
+  flex: 1 1 0;
+  place-items: center;
+  container-type: size;
+  min-width: 0;
+}
+
+/* 그림 판은 바깥 틀(축 끝을 이은 다각형)에 딱 맞는 상자다: 너비 2·xm·R, 높이 (1 + ym)·R. 이름표는 그 바깥에 서서, 위아래 이름표의
+   높이만큼을 여백으로 잡아 그림과 이름표를 한 덩어리로 가운데에 둔다. 글자 크기(base.css의 --fs)는 이름표와 같아서 em으로 잡는 자리
+   (이름표의 폭과 높이, 축 끝과의 사이)가 모두 이름표 글자에 맞는다.
+   반지름은 가로 한계(--rdr-rx: 옆 이름표마다 가운데에서 이름표 끝까지가 칸 너비의 반에 들게)와 세로 한계(칸 높이에서 위아래 이름표를
+   뺀 만큼) 가운데 작은 쪽. 48px 밑으로는 줄이지 않는다: 그보다 작은 칸은 넘치게 두어 편집기가 그 자리에 넣지 않는다(blockHeights.ts) */
+.bk-rdr-plot {
+  --fs: var(--t-small);
+  --rdr-r: max(48px, min(var(--rdr-rx), (100cqh - var(--rdr-v) * 1em - (1 + var(--rdr-ym)) * var(--rdr-gap)) / (1 + var(--rdr-ym))));
+  position: relative;
+  width: calc(2 * var(--rdr-xm) * var(--rdr-r));
+  height: calc((1 + var(--rdr-ym)) * var(--rdr-r));
+  margin-block: calc(var(--rdr-top) * 1em + var(--rdr-gap)) calc(var(--rdr-bot) * 1em + var(--rdr-ym) * var(--rdr-gap));
+  line-height: 1.3;
+}
+
+.bk-rdr-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.bk-rdr-svg > * {
+  fill: none;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 틀: 바깥 틀과 반 눈금, 축. 값을 읽는 잣대라 옅은 선 하나 굵기로(docs/VISUAL-RULES.md 2). 눈금 숫자는 적지 않는다: 값은 이름표에 있다.
+   바깥 틀(만점)만 차트의 기준선 색(columns.css의 --cc-ref와 같은 농담)으로 한 단계 짙게: 옅은 선 색이면 3~5m 떨어진 화면에서 틀이
+   사라져, 다각형이 만점에서 얼마나 모자란지 읽을 잣대가 없었다 */
+.bk-rdr-ring,
+.bk-rdr-spoke {
+  stroke: var(--line);
+  stroke-width: var(--rule-hair);
+}
+
+.bk-rdr-ring:not(.is-mid) {
+  stroke: color-mix(in srgb, var(--ink-3) 70%, var(--bg));
+}
+
+/* 값의 다각형: 데이터 면이라 칠한다. 강조색을 옅게 비치게 칠해 뒤의 축과 견줄 값의 점선이 보이고, 테두리는 한 단계 옅은 강조색.
+   진한 강조색은 답(강조한 기준의 축)에만 쓴다 */
+.bk-rdr-area {
+  fill: color-mix(in srgb, var(--accent) 16%, transparent);
+  stroke: color-mix(in srgb, var(--accent) var(--ta-1, 66%), var(--bg));
+  stroke-width: 3px;
+}
+
+.is-dark .bk-rdr-area {
+  fill: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* 견줄 값: 채우지 않은 점선. 둘 다 칠하면 겹친 곳의 색이 셋이 되어 어느 쪽이 지금 값인지 흐렸다.
+   가장 옅은 글자색으로: 한 단계 짙은 글자색(--ink-2)이던 때는 그림에서 가장 센 선이 되어 눈이 답(강조한 축)보다 목표의 윤곽에
+   먼저 갔고, 값이 목표와 비슷한 꼭짓점에서는 두 선이 몇 px 사이로 붙어 굵은 선 하나처럼 보였다(감성 검수) */
+.bk-rdr-base {
+  stroke: var(--ink-3);
+  stroke-dasharray: 6 7;
+  stroke-width: 1.5px;
+}
+
+/* 강조한 기준: 가운데에서 그 값까지의 축만 강조색 */
+.bk-rdr-hl {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-width: 4px;
+}
+
+.bk-rdr-list {
+  display: contents;
+}
+
+/* 이름표는 축 끝의 바깥(--rdr-gap만큼 떨어져)에 선다. 오른쪽 축은 왼쪽 끝을, 왼쪽 축은 오른쪽 끝을 축 끝에 대고, 높이는 축이 위를
+   향할수록 이름표의 아래쪽을, 아래를 향할수록 위쪽을 댄다(옆을 향하면 가운데): 어느 방향에서도 이름표가 그림을 덮지 않는다.
+   편집 화면의 .it(position: relative)보다 앞서게 길게 적는다 */
+.slide .bk-rdr .bk-rdr-plot .bk-rdr-it {
+  position: absolute;
+  top: calc(var(--rdr-r) + var(--uy) * (var(--rdr-r) + var(--rdr-gap)));
+  left: calc(50% + var(--ux) * (var(--rdr-r) + var(--rdr-gap)));
+  display: grid;
+  width: max-content;
+  /* Radar.tsx의 SIDE_EM */
+  max-width: 7em;
+}
+
+.bk-rdr-it.is-right {
+  justify-items: start;
+  translate: 0 calc(-50% + 50% * var(--uy));
+}
+
+.bk-rdr-it.is-left {
+  justify-items: end;
+  text-align: right;
+  translate: -100% calc(-50% + 50% * var(--uy));
+}
+
+/* 위아래 꼭짓점: 이름과 값을 한 줄에 가운데로. 두 줄로 쌓으면 그림 위아래로 한 줄씩 더 써서 반지름이 줄었다 */
+.slide .bk-rdr .bk-rdr-plot .bk-rdr-it:is(.is-top, .is-bot) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 0.4em;
+  /* Radar.tsx의 POLE_EM */
+  max-width: 12em;
+  text-align: center;
+}
+
+/* 기준이 일곱 이상이면 위아래 꼭짓점도 옆 이름표처럼 이름 아래 값 (Radar.tsx의 stacked) */
+.slide .bk-rdr.is-stacked .bk-rdr-plot .bk-rdr-it:is(.is-top, .is-bot) {
+  display: grid;
+  justify-items: center;
+  max-width: 7em;
+}
+
+.bk-rdr-it.is-top {
+  translate: -50% -100%;
+}
+
+.bk-rdr-it.is-bot {
+  translate: -50% 0;
+}
+
+/* 이름과 값은 글자 크기가 같다(그림 판의 글자 크기를 물려받는다). 이름은 한 단계 옅은 글자색, 값은 글자색의 굵은 숫자 */
+.bk-rdr-t {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.bk-rdr-v {
+  --fs: var(--t-small);
+  color: var(--ink);
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.bk-rdr-it.is-hl :is(.bk-rdr-t, .bk-rdr-v) {
+  color: var(--accent);
+}
+
+/* 강조한 기준의 값만 한 단계 크게(Radar.tsx의 HL이 이 비율로 이름표 자리를 센다): 답을 큰 숫자로 따로 말하지 않는 좁은 칸에서는
+   답이 다른 이름표와 같은 크기의 파란 글자뿐이라, 눈이 같은 파랑인 다각형 덩어리에 머물렀다(감성 검수) */
+.bk-rdr-it.is-hl .bk-rdr-t {
+  font-weight: 700;
+}
+
+.bk-rdr-it.is-hl .bk-rdr-v {
+  --fs: var(--t-body);
+}
+
+/* 편집할 때만: 견줄 값을 적는 줄('목표 4.0') */
+.bk-rdr-m {
+  display: inline-flex;
+  gap: 0.35em;
+  color: var(--ink-3);
+}
+
+.bk-rdr-it:is(.is-top, .is-bot) > .bk-rdr-m {
+  flex-basis: 100%;
+  justify-content: center;
+}
+
+/* 편집할 때 아직 적지 않은 기준을 예시로 그린 그림은 옅게 */
+/* 예시 값으로 셈한 답(넓은 칸의 큰 숫자)도 같이 옅게: 짙게 두면 적지도 않은 '가장 낮은 기준 2.6'이 적은 글처럼 읽혔다 */
+.bk-rdr.is-demo :is(.bk-rdr-area, .bk-rdr-base, .bk-rdr-hl, .bk-rdr-ans) {
+  opacity: 0.4;
+}
+
+/* 답(가장 낮거나 높은 기준)을 말하는 글: 넓은 칸에서만 선다 */
+.bk-rdr-ans {
+  display: none;
+}
+
+.bk-rdr-ak {
+  --fs: var(--t-source);
+  color: var(--ink-3);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.bk-rdr-an {
+  --fs: var(--t-body);
+  color: var(--accent);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* 큰 숫자는 크기로 답이 되므로 글자색에 보통 굵기 */
+.bk-rdr-av {
+  --fs: 62px;
+  color: var(--ink);
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.bk-in .bk-rdr-av {
+  white-space: pre;
+}
+
+.bk-rdr-am {
+  --fs: var(--t-small);
+  margin-top: 6px;
+  color: var(--ink-2);
+  line-height: 1.3;
+}
+
+/* 넓고 낮은 칸(한 줄을 다 쓰는 칸): 그림은 높이가 정하는 만큼만 커서, 소제목 아래 가운데에 두면 양옆이 통째로 비고 소제목과 표시 줄이
+   그림의 높이를 덜어 갔다. 왼쪽 단에 소제목, 표시 줄, 답(큰 숫자)을 쌓고 그림은 오른쪽에서 칸 높이를 다 쓴다. 왼쪽 단의 글은 장의
+   왼쪽 끝 하나에 선다(docs/VISUAL-RULES.md 5). 답이 없으면(강조하지 않거나 값이 모두 같을 때) 왼쪽 단이 비어서 그대로 둔다 */
+@container bk (min-aspect-ratio: 2 / 1) and (min-width: 900px) {
+  .bk-rdr:has(> .bk-rdr-ans) {
+    display: grid;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    /* 왼쪽 단은 글이 쓰는 만큼만(길면 칸의 32%에서 꺾인다): 고정 몫으로 두면 짧은 소제목 옆이 비어 글과 그림 사이가 그림 오른쪽의
+       세 배로 벌어졌다. 그림은 글 끝에서 칸 끝까지의 가운데에 선다 */
+    grid-template-columns: fit-content(32%) minmax(0, 1fr);
+    column-gap: var(--bk-col-gap);
+  }
+
+  .bk-rdr:has(> .bk-rdr-ans) > .bk-h {
+    grid-row: 1;
+  }
+
+  .bk-rdr:has(> .bk-rdr-ans) > .bk-rdr-key {
+    grid-row: 2;
+  }
+
+  .bk-rdr:has(> .bk-rdr-ans) > .bk-rdr-warn {
+    grid-row: 3;
+  }
+
+  .bk-rdr > .bk-rdr-ans {
+    display: grid;
+    grid-row: 4;
+    align-content: center;
+    justify-items: start;
+    min-width: 0;
+  }
+
+  .bk-rdr:has(> .bk-rdr-ans) > .bk-rdr-body {
+    grid-row: 1 / -1;
+    grid-column: 2;
+  }
+}

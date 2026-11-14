@@ -342,6 +342,11 @@ export function arrangeCost(t: Tree, laid: Laid, fit: Fit, areaH: number, last?:
     if (!isStretchy(b.type)) cost += Math.max(0, at.w - 2 * want) * 2
     // 차트와 그림이 낮은 띠가 되면 읽히지 않는다
     if (isStretchy(b.type) && rect(b).h < 0.4 * areaH) cost += ((0.4 * areaH - rect(b).h) / areaH) * 60
+    // 방사형 비교의 그림은 칸 높이만큼만 커진다(가로세로가 같은 그림): 다른 컴포넌트와 함께 놓일 때 높이의 두 배보다 넓은 칸은 남는 너비가
+    // 그림 옆에 비고 그림은 작아진다. 차트처럼 칸 너비를 다 쓴다고 보면 그림을 낮은 한 줄에 두고 글을 그 아래에 쌓은 판을 골랐다(그림 옆에
+    // 글을 둔 판이 그림이 두 배 가까이 크다). 판을 혼자 쓸 때는 소제목과 답이 왼쪽에 서서(radar.css) 치지 않는다.
+    // 세기는 조합 갤러리에서 맞췄다: 이보다 세게(16부터) 치면 결론(강조 상자)까지 그림 옆의 3칸 단으로 밀려 두 줄로 꺾였다
+    if (b.type === 'radar' && all.length > 1) cost += Math.max(0, rect(b).w / rect(b).h - 2) * 12
     // 이미지가 칸을 다 쓰지 못하고 가운데에 작게 서면 칸의 남는 몫만큼 빈다 (화면 캡처를 넓고 낮은 띠에 둔 판)
     const img = picture(laid.get(b.id)!, rect(b))
     if (img) cost += (1 - (img.w * img.h) / (rect(b).w * rect(b).h)) * ((rect(b).w * rect(b).h) / (areaH * AREA_W)) * 100
