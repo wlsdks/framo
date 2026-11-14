@@ -1126,12 +1126,15 @@ export function blockFitter() {
         let at = a.top
         for (const x of items) {
           if (!row[0].above.includes(x.c) || !dy.has(x.c)) continue
-          // 위 칸의 그려진 것이 이 줄의 그려진 것과 옆으로 멀리 떨어져 있으면(캔버스 24px 넘게) 그 아래에 붙을 까닭이 없다: 판 너비를 다 쓰는
-          // 줄의 짧은 날짜 하나가 오른쪽의 긴 준비 상황 아래로 내려가, 왼쪽 진행 막대 아래가 통째로 비고 날짜만 장 아래 구석에 떨어졌다
+          // 위 칸의 그려진 것이 이 줄의 그려진 것과 옆으로 멀리 떨어져 있으면 그 아래에 붙을 까닭이 없다: 판 너비를 다 쓰는
+          // 줄의 짧은 날짜 하나가 오른쪽의 긴 준비 상황 아래로 내려가, 왼쪽 진행 막대 아래가 통째로 비고 날짜만 장 아래 구석에 떨어졌다.
+          // '멀리'는 묶음 사이(지금 견주는 사이)만큼: 그보다 가까이(예전 기준 24px) 옆을 지나가면 윗줄과 아랫줄이 한 덩어리로 맞물려,
+          // 소제목 옆의 요점 셋 바로 왼쪽 62px에 아래 줄의 목록이 끼어들어 네 단짜리 한 묶음처럼 읽혔다. 자리가 모자라 사이를 줄여 가면
+          // (settle) 기준도 같이 줄어 그때는 끼워 넣는다
           const xs = inkX.get(x.c)
           if (xs && row.every((y) => {
             const ys = inkX.get(y.c)
-            return !!ys && Math.min(ys.r, xs.r) - Math.max(ys.l, xs.l) < -24 * k
+            return !!ys && Math.min(ys.r, xs.r) - Math.max(ys.l, xs.l) < -Math.max(24 * k, gap)
           })) continue
           const below = links.some((l) => l.classList.contains('lk-v') && l.dataset.after === x.id)
           // 아래 이음표가 서면 이음표가 설 자리(양쪽 --lk-pad)만큼 넓게, 소제목 아래는 그 아래 부품과 한 덩어리라 좁게
