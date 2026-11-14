@@ -39,7 +39,7 @@ if (only && only !== 'mac' && only !== 'windows') {
 }
 
 /** 배포본에 넣는 Node.js. LTS 중에서 고르고, 바꿀 때는 docs/OPEN-SOURCE.md도 고친다. */
-const NODE_VERSION = 'v24.22.2'
+const NODE_VERSION = 'v24.22.3'
 
 // 고른 판이 LTS이고, 같은 주 버전에 더 새 보안 수정판이 없는지 먼저 본다(scripts/nodeRelease.mjs)
 {
