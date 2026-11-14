@@ -91,10 +91,22 @@
 
 /* 그림 컴포넌트의 굵은 이름표(소제목, 곳·단계·층의 이름)는 44px(크게면 그 1.2배)까지: 판을 혼자 쓰는 그림은 맞추기(fitBlocks)가
    그림과 숫자를 1.44배까지 키우는데, 굵은 36px 이름이 52px가 되면 장 제목(62)과 다퉈 키우기가 통째로 1.2배에서 멈췄다(rivals).
-   이름표는 제목 한 단계 아래에 머물고 그림이 커진다. 목록은 fitBlocks.ts의 PICTURES와 같다 */
+   이름표는 제목 한 단계 아래에 머물고 그림이 커진다. 목록은 fitBlocks.ts의 PICTURES와 같다.
+   장 제목이 있는 장에서는 컴포넌트의 소제목(.bk-h)도 어느 컴포넌트에서나 같다: 목록, 글의 소제목 하나 때문에 내용이 적은 장(본문의
+   60%를 못 채운)의 글과 그림이 모두 1.2배에 묶였다(조합 720장 가운데 99장). 소제목은 44px에 머물고 그림과 숫자가 커진다.
+   장 제목이 없는 장은 다툴 제목이 없어 그대로 큰다. 컴포넌트마다 더 낮게 정한 상한(핵심 수치 36, 제목이 길 때의 목록 30)이 이기게
+   :where로 가볍게 쓴다 */
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) :where(.bk > .bk-in) .bk-h,
 .bk:is([data-type='flow'], [data-type='network'], [data-type='merge'], [data-type='split'], [data-type='tiles'], [data-type='hub'], [data-type='gather'], [data-type='search'], [data-type='layers'], [data-type='gate'], [data-type='dupes'], [data-type='aliases'], [data-type='adoption'], [data-type='spread'], [data-type='rank'])
   :is(.bk-h, .bk-nw-t, .bk-hb-t, .bk-gt2-t, .bk-ly-t, .bk-dp-r, .bk-al-t, .bk-mg-name, .bk-mg-label, .bk-fw-t, .bk-gw-t, .bk-gw-in, .bk-gw-out, .bk-sr-t, .bk-ra-t, .bk-spr-t, .bk-ad-t, .bk-sg-name) {
   font-size: min(calc(44px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+}
+
+/* 그림의 답(모이는 곳의 이름, 여러 이름으로 불리는 대상)은 장 제목의 한 단계 아래(52px, 크게면 그 1.2배)까지만 큰다. 강조색이라
+   맞추기의 견줌(rivals)에서 빠져 있어, 44px에서 두 단계 키우면 63px로 장 제목(62)보다 커졌다: 눈이 제목보다 그 낱말로 먼저 갔다.
+   키울 때의 사다리는 장 제목 62 > 답 52 > 소제목 44 > 본문 36이다(핵심 한 줄의 --msg-cap, text.css의 본문과 같은 줄) */
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) :where(.bk > .bk-in) :is(.bk-gt2-c, .bk-al-c) {
+  font-size: min(calc(52px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
 }
 
 /* 칸이 좁거나 낮으면 글자를 글자 크기 비율(1.2)의 단계로 작게: 반 칸, 3분의 1 칸이나 300px 밑은 한 단계(0.84),

@@ -36,6 +36,15 @@
   margin-top: 20px;
 }
 
+/* 장 제목이 있는 장에서 소제목 아래의 본문(문단, 목록의 항목)은 소제목 한 단계 아래(36px, 크게면 그 1.2배)까지만 큰다. 내용이 적은 장을
+   두 단계(1.44) 키울 때 소제목은 44px에 머무는데(base.css) 본문이 43px까지 따라 크면 굵기만 다른 같은 크기가 되어, 소제목이 목록의
+   첫 줄처럼 읽혔다. 키울 때의 사다리는 장 제목 62 > 핵심 한 줄 52 > 소제목 44 > 본문 36이고, 남는 자리는 그림과 숫자가 받는다.
+   소제목을 비운 목록과 문단, 장 제목이 없는 장은 그대로 큰다(쓰는 중의 안내 글은 소제목으로 세지 않는다) */
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) .bk-h:not(.is-hint, .is-empty) ~ .bk-body,
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) .bk-h:not(.is-hint, .is-empty) ~ .bk-list .bk-li-t {
+  font-size: min(calc(36px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+}
+
 /* 항목 사이는 칸에 높이가 남으면 넓힌다 (--bk-air, slides/fitBlocks.ts). 목록, 표, 일정 막대가 같이 쓴다.
    점 목록은 소제목 아래도 같은 만큼 넓힌다: 항목 사이만 두 배로 넓히던 때는 항목 사이(74px)가 소제목 아래(28px)보다 넓어서
    소제목이 첫 항목에만 붙고 항목들은 서로 떨어진 줄로 읽혔다. 소제목 아래가 늘 항목 사이보다 조금 넓다 */
