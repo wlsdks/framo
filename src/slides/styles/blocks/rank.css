@@ -180,7 +180,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  :is(.bk-ra-when.is-from, .bk-ra-was, .bk-ra-links) {
+  /* 편집할 때의 칸 규칙(edit.css의 .slide.m-edit .ed, 클래스 셋)보다 세게: 약하면 편집할 때만 지난 때의 이름 칸이 되살아나 지금 때의
+     이름과 한자리에 겹치고, 맞추기가 겹침을 풀려고 글자를 0.7배까지 줄였다(반 칸의 순위가 편집기에서만 깨알같이 작았다) */
+  .bk-ra .bk-ra-board > :is(.bk-ra-when.is-from, .bk-ra-was, .bk-ra-links) {
     display: none;
   }
 
