@@ -833,25 +833,26 @@
     gap: 28px;
   }
 
-  /* 비중 도넛과 100칸: 540px 고리(칸) 대신 칸의 반, 칸 높이보다 크지 않게 */
+  /* 비중 도넛과 100칸: 540px 고리(칸) 대신 칸의 반(--sh-half)까지, 칸 높이보다 크지 않게.
+     그림 단은 그림 너비만큼만(auto): 반으로 나눈 단의 가운데에 두었더니, 낮은 칸에서 높이에 맞춰 작아진 그림이 칸의 왼쪽 선에서
+     30px 들어가 위 줄의 제목과 어긋났고(맞추다 만 것처럼), 그림과 이름표 사이도 그만큼 더 벌어졌다. 남는 너비는 이름표가 쓴다 */
   :is(.va-donut, .va-units) > .bk-in .sh {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    --sh-half: calc((100cqi - 48px) / 2);
+    grid-template-columns: auto minmax(0, 1fr);
     column-gap: 48px;
   }
 
   :is(.va-donut, .va-units) > .bk-in :is(.sh-ring, .sh-units) {
-    width: min(100%, 540px, 100cqh - 96px);
-    justify-self: center;
+    width: min(var(--sh-half), 540px, 100cqh - 96px);
   }
 
-  /* 100칸은 아래의 합계 줄(--sh-top)만큼 더 작게. 합계도 칸 너비에 맞춰 가운데에 */
+  /* 100칸은 아래의 합계 줄(--sh-top)만큼 더 작게. 합계도 칸 너비 안에 */
   .va-units > .bk-in .sh-units {
-    width: min(100%, 540px, 100cqh - 96px - var(--sh-top, 0px));
+    width: min(var(--sh-half), 540px, 100cqh - 96px - var(--sh-top, 0px));
   }
 
   .va-units > .bk-in .sh-top {
-    justify-self: center;
-    max-width: min(100%, 540px, 100cqh - 96px - var(--sh-top, 0px));
+    max-width: min(var(--sh-half), 540px, 100cqh - 96px - var(--sh-top, 0px));
   }
 
   /* 반 칸의 도넛 이름표는 값을 이름 아래로: 이름, 값, 비율을 한 줄에 두면 이름 칸이 두세 글자 너비만 남는다.
@@ -871,7 +872,7 @@
   /* 다섯, 여섯이면 값을 이름 아래로 내린 줄이 여섯 겹이 되어 반 칸보다 높았다(710px). 고리를 줄여 이름표에 자리를 더 주고
      값을 이름과 비율 사이, 한 줄에 둔다 */
   :is(.va-donut, .va-units) > .bk-in .sh:is([data-n='5'], [data-n='6']) {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    --sh-half: calc((100cqi - 48px) * 0.4);
   }
 
   :is(.va-donut, .va-units) > .bk-in .sh:is([data-n='5'], [data-n='6']) .sh-legend {
