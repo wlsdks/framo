@@ -492,8 +492,9 @@
 }
 
 /* 새로 더한 장: 위에서 조금 내려오며 자리 잡는다. 툭 끼어들면 무엇이 늘었는지 눈이 놓쳤다.
-   끌어 옮기는 위치(transform, dnd-kit)와 겹치지 않게 translate로 */
-.thumb.is-new {
+   움직이는 것은 줄이 아니라 줄 안의 번호와 그림이다: 줄째 옮기던 때는 새 장을 보이는 곳으로 올릴 때(scrollIntoView)
+   아직 8px 위에 있는 자리에 맞춰져, 내려앉고 나면 장 이름이 목록 아래로 그만큼 잘렸다 */
+.thumb.is-new > * {
   animation: thumb-in var(--t-slow) var(--ease-out);
 }
 
@@ -505,7 +506,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .thumb.is-new {
+  .thumb.is-new > * {
     animation: none;
   }
 }

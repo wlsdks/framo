@@ -63,9 +63,10 @@ export function SlideList({ deck, selectedId, onRemove }: { deck: Deck; selected
     },
     [select],
   )
-  // 고른 장이 목록 밖에 있으면 보이는 곳으로 (장을 더하거나 장 위에서 넘겼을 때. 목록 안에서 고르면 이미 보인다)
+  // 고른 장이 목록 밖에 있으면 보이는 곳으로 (장을 더하거나 장 위에서 넘겼을 때. 목록 안에서 고르면 이미 보인다).
+  // 단추가 아니라 줄(.thumb)을 올린다: 목록 끝과의 틈(scroll-margin)이 줄에 있어, 단추를 올리면 고른 테와 이름이 목록 끝에 딱 붙었다
   useEffect(() => {
-    if (selectedId) document.getElementById(`thumb-${selectedId}`)?.scrollIntoView({ block: 'nearest' })
+    if (selectedId) document.getElementById(`thumb-${selectedId}`)?.closest('.thumb')?.scrollIntoView({ block: 'nearest' })
   }, [selectedId])
 
   const nameOf = (id: UniqueIdentifier) => {
