@@ -1100,7 +1100,9 @@
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.45;
-  white-space: normal;
+  /* title에 넣은 줄바꿈은 그대로 줄을 바꾼다(컴포넌트 카드의 설명과 '모션: …', 슬라이드 이름과 쓸 내용): 줄바꿈을 버리던 때는
+     '숫자 하나를 크게 모션: 숫자가…'처럼 두 말이 한 문장으로 붙어 읽혔다 */
+  white-space: pre-line;
   word-break: keep-all;
   opacity: 0;
   visibility: hidden;
