@@ -232,6 +232,11 @@ export function SlideStage({
             e.preventDefault()
             e.currentTarget.blur()
           }}
+          // 접히면 첫 줄부터 보인다: 긴 노트의 끝을 쓰다 나오면 스크롤한 자리가 남아, 접힌 한 줄에 가운데 줄이 위아래로 잘려 보였다.
+          // 늘 펼쳐 두는 높은 화면(넘친 글을 스크롤로 읽는다)에서는 읽던 자리를 그대로 둔다
+          onBlur={(e) => {
+            if (getComputedStyle(e.currentTarget).overflowY === 'hidden') e.currentTarget.scrollTop = 0
+          }}
         />
       </label>
     </main>

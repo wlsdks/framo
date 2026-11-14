@@ -949,6 +949,24 @@
   border-color: var(--line-2);
 }
 
+/* 접힌 노트에는 온전한 한 줄만 보인다: textarea는 넘친 글을 안쪽 여백에도 그려서, 두 줄 넘게 적은 노트는 둘째 줄의 윗부분이
+   아래 여백에 반쯤 잘려 비쳤다. 아래 여백을 칸 바탕으로 덮는다(쓰는 동안과, 늘 펼쳐 두는 높은 화면에서는 걷는다) */
+.notes::after {
+  content: '';
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  left: 1px;
+  height: 9px;
+  border-radius: 0 0 calc(var(--r) - 1px) calc(var(--r) - 1px);
+  background: var(--panel);
+  pointer-events: none;
+}
+
+.notes:focus-within::after {
+  display: none;
+}
+
 /* 펼치면 위로 자라 장의 아래쪽을 덮는다(장은 움직이지 않는다) */
 .notes-input:focus {
   z-index: 30;
@@ -969,6 +987,10 @@
 @media (min-height: 820px) {
   .notes {
     height: 96px;
+  }
+
+  .notes::after {
+    display: none;
   }
 
   .notes-input {
