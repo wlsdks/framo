@@ -103,9 +103,11 @@
   pointer-events: none;
 }
 
+/* 줄 사이는 이미 넉넉해서(글자 높이의 1.7배) 장이 덜 찰 때의 바람(fitBlocks의 --bk-air)은 4분의 1만 받는다: 위아래에 다 받던 때는
+   일정 하나뿐인 장에서 줄 사이(80px)가 글자 높이(32px)의 두 배를 넘어 줄마다 따로 떨어져 보였다(VISUAL-RULES 6, checkAssembly) */
 .bk-gt-row {
   align-items: center;
-  padding: calc(16px * var(--bk-fit, 1) + var(--bk-air, 0px)) 0;
+  padding: calc(16px * var(--bk-fit, 1) + var(--bk-air, 0px) / 4) 0;
 }
 
 /* 줄 선은 할 일 사이에만: 칸 이름 줄 바로 아래와 끝줄 아래에도 긋던 때는 머리 아래, 아래 부품 위에서 선 밑에 선이 섰다
@@ -116,7 +118,7 @@
 
 .bk-gt-list[data-n='5'] .bk-gt-row,
 .bk-gt-list[data-n='6'] .bk-gt-row {
-  padding: calc(11px * var(--bk-fit, 1) + var(--bk-air, 0px)) 0;
+  padding: calc(11px * var(--bk-fit, 1) + var(--bk-air, 0px) / 4) 0;
 }
 
 .bk-gt-t {
