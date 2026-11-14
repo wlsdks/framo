@@ -24,6 +24,7 @@ import { Diverge } from './blocks/Diverge'
 import { Facts } from './blocks/Facts'
 import { Flow } from './blocks/Flow'
 import { Hub } from './blocks/Hub'
+import { Radar } from './blocks/Radar'
 import { Rank } from './blocks/Rank'
 import { Spread } from './blocks/Spread'
 import { Adoption } from './blocks/Adoption'
@@ -107,6 +108,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   flow: Flow,
   hub: Hub,
   rank: Rank,
+  radar: Radar,
   spread: Spread,
   adoption: Adoption,
   aliases: Aliases,

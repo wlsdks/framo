@@ -303,6 +303,7 @@ export type NativeBlockType =
   | 'network'
   | 'hub'
   | 'rank'
+  | 'radar'
   | 'spread'
   | 'adoption'
   | 'aliases'

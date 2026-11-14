@@ -132,6 +132,7 @@ const FOLD_USES: Partial<Record<BlockType, Record<string, string>>> = {
   market: { 'items.body': '원마다 어떤 시장인지 한 줄' },
   diverge: { basis: '무엇과 견준 증감인지 (예: 작년 대비)' },
   likert: { scale: '답의 단계 이름을 바꿔요 (예: 매우 불만, 불만, 보통, 만족, 매우 만족). 비우면 단계 수에 맞는 이름', basis: '응답 수나 조사한 때 (예: 응답 140명, 10월)' },
+  radar: { max: '눈금의 끝을 정해요 (예: 5, 100). 비우면 값에 맞는 만점', 'items.meta': '기준마다 견줄 값 (목표, 지난 분기). 모두 적으면 점선으로 겹쳐요' },
   whys: { 'items.meta': '원인마다 그 아래에 적는 확인한 사실 (예: 12개 부서 중 9곳)' },
   cycle: { center: '고리 가운데에 적는 이 순환의 이름 (예: 한 달 주기)', 'items.meta': '단계마다 이름 아래에 적는 짧은 설명 (예: 목표와 방법을 정해요)' },
   sparks: { period: '흐름을 본 기간 (예: 4월~9월)', 'items.meta': '지표마다 지금 값 뒤에 붙는 단위' },

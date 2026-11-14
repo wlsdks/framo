@@ -2413,6 +2413,50 @@ export function motionEngine(): MotionEngine {
           })
           break
         }
+        case 'radar': {
+          // 방사형 비교: 모양이 곧 할 말이다. 틀(바깥 틀과 축)과 견줄 값의 점선이 먼저 서고, 기준 이름이 12시부터 시계 방향으로 켜진다
+          // (무엇을 재는지). 그 다음 값의 다각형이 가운데 한 점에서 값까지 펼쳐진다: 높은 기준은 멀리, 낮은 기준은 덜 뻗어서 어디가
+          // 꺼졌는지가 펼쳐지는 동안 보인다. 다각형이 닿을 때 값이 이름 곁에 켜지고, 마지막에 답(강조한 기준)의 축이 가운데에서 그 값까지
+          // 그어지며 옆의 큰 숫자가 굴러 맞춰진다. 글은 제자리에서 나타난다(움직임은 다각형과 축이 맡는다)
+          lines(one('.bk-h'), 60)
+          fade(one('.bk-rdr-key'), 120, 500)
+          $('.bk-rdr-ring, .bk-rdr-spoke').forEach((el) => fade(el, 100, 500))
+          fade(one('.bk-rdr-base'), 220, 600)
+          const marks = $('.bk-rdr-it')
+          const turn = stagger(marks.length, L.step)
+          marks.forEach((el, i) => fade(el.querySelector('.bk-rdr-t'), 160 + i * turn, 420))
+          const open = 160 + marks.length * turn + 80
+          // 펼쳐지는 것이 이 그림의 큰 몸짓이다: 빠르게 뻗고 길게 자리 잡아서(OUT) 꼭짓점마다 닿는 데가 다른 것이 보인다
+          const spread = levelName === 'lively' ? 1000 : 800
+          const area = one('.bk-rdr-area')
+          if (area) run(anims, area, [{ scale: '0' }], s(open), { easing: OUT, duration: d(spread) })
+          // 값은 다각형이 거의 다 펼쳐졌을 때 시계 방향으로. 강조한 기준의 값은 그 축이 그어진 뒤에
+          const land = open + spread * 0.45
+          const answer = land + (marks.length - 1) * turn + 100
+          // 답의 이름은 다른 이름과 같은 글자색으로 서 있다가 축이 그어질 때 강조색이 된다: 처음부터 강조색이면 다각형이 펼쳐지기도 전에
+          // 어느 기준이 답인지 먼저 말해 버렸다
+          const plain = marks.find((el) => !el.classList.contains('is-hl'))?.querySelector('.bk-rdr-t')
+          const ink = plain ? getComputedStyle(plain).color : ''
+          marks.forEach((el, i) => {
+            const hot = el.classList.contains('is-hl')
+            const name = el.querySelector('.bk-rdr-t')
+            if (hot && name && ink) run(anims, name, [{ color: ink }], s(answer + 120), { easing: OUT, duration: d(360) })
+            fade(el.querySelector('.bk-rdr-v'), hot ? answer + 200 : land + i * turn, 420)
+            fade(el.querySelector('.bk-rdr-m'), land + i * turn, 420)
+          })
+          const hl = one('.bk-rdr-hl')
+          if (hl) {
+            // 길이 0인 선도 둥근 끝 때문에 점으로 보인다: 긋기 전에는 숨긴다
+            fade(hl, answer, 160)
+            run(anims, hl, [{ scale: '0' }], s(answer), { easing: EASE.reveal, duration: d(520) })
+          }
+          fade(one('.bk-rdr-ak'), answer + 120, 420)
+          fade(one('.bk-rdr-an'), answer + 120, 420)
+          fade(one('.bk-rdr-av'), answer + 200, 420)
+          countIn(one('.bk-rdr-av'), answer + 200)
+          fade(one('.bk-rdr-am'), answer + 420, 420)
+          break
+        }
         case 'heat': {
           // 칸이 왼쪽 위 모서리부터 비스듬한 물결로 물든다(줄 + 칸이 같은 칸이 함께). 칸이 많아도 1초 안에 다 물들게.
           // 다 물든 뒤 가장 높은 칸과 낮은 칸에 고리가 맺힌다

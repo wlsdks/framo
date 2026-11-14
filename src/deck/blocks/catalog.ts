@@ -96,8 +96,8 @@ export const BLOCK_GROUPS: { name: string; short: string; description: string; t
   {
     name: '차트',
     short: '차트',
-    description: '막대, 두 값 비교, 추이, 지표 흐름, 비중, 증감, 설문 결과, 달성, 원인 순위, 색 표, 깔때기, 시장 규모',
-    types: ['bars', 'versus', 'attain', 'stack', 'trend', 'sparks', 'share', 'bridge', 'diverge', 'likert', 'pareto', 'heat', 'funnel', 'market'],
+    description: '막대, 두 값 비교, 추이, 지표 흐름, 비중, 증감, 설문 결과, 방사형 비교, 달성, 원인 순위, 색 표, 깔때기, 시장 규모',
+    types: ['bars', 'versus', 'attain', 'stack', 'trend', 'sparks', 'share', 'bridge', 'diverge', 'likert', 'radar', 'pareto', 'heat', 'funnel', 'market'],
   },
   { name: '순서와 일정', short: '순서·일정', description: '할 일, 일정표, 단계, 진행률, 순서, 단계 표시, 날짜', types: ['checks', 'gantt', 'process', 'timeline', 'progress', 'agenda', 'steps', 'date'] },
   // 발표할 때의 움직임이 내용을 말하는 컴포넌트: 데이터가 건너가고, 갈라지고, 모이고, 조립된다. 다 보인 모습도 그 자체로 읽히는 그림이다

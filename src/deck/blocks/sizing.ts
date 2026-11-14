@@ -60,6 +60,8 @@ const FLOOR: Partial<Record<BlockType, (variant: string) => number>> = {
   pareto: () => 380,
   attain: () => 380,
   stack: () => 380,
+  // 방사형 비교는 낮으면 다각형이 이름표 사이의 작은 점이 되어 모양이 읽히지 않는다
+  radar: () => 380,
   // 색 표는 낮으면 칸이 띠처럼 납작해져 색이 면으로 읽히지 않는다
   heat: () => 300,
   // 지표 흐름표는 낮으면 줄마다의 선이 납작한 줄이 되어 오르내림이 보이지 않는다
