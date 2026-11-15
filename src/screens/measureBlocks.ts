@@ -92,6 +92,8 @@ const FIGURE_MIN: [string, number, number][] = [
   // 방사형 비교의 틀: 반지름이 120px 남짓 밑이면 다각형의 들고 남이 이름표 글자 한두 자 크기라 모양으로 읽히지 않는다.
   // 170×150(반지름 90)까지 받던 때는 좁고 낮은 칸에서 그림 폭이 110~170px라 3~5m에서 글 뭉치로만 보였다(감성 검수)
   ['.bk-rdr-plot', 230, 190],
+  // 겹침의 그림 상자: 높이가 큰 원의 지름이다. 220px 밑이면 3~5m 떨어진 화면에서 조금 겹친 부분(10% 안팎)이 선처럼 가늘어 읽히지 않는다
+  ['.bk-ov-fig', 0, 220],
 ]
 
 function clashList(cell: HTMLElement, all: boolean): string[] {

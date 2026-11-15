@@ -135,7 +135,16 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
     const spec = BLOCKS[type]
     const original = sampleBlock(type)
     // 숫자가 아닌 입력도 실제 크기로 재어 본다(비율 원). 큰 숫자는 굴러가는 모습을 값마다 본다('12,000건'처럼 쉼표가 든 값도). 예시의 다른 부품은 바꾸지 않는다.
-    const sample = (type === 'ring' || type === 'number') && value != null ? { ...original, fields: { ...original.fields, value } } : original
+    // 겹침은 세 값을 빗금으로 이어 적는다(&value=320명/210명/0명: 왼쪽, 오른쪽, 겹치는 수): 떨어진 것, 조금 겹친 것, 한쪽이 다 든 것을 본다
+    const [leftValue = '', rightValue = '', bothValue = ''] = (value ?? '').split('/')
+    const sample =
+      value == null
+        ? original
+        : type === 'ring' || type === 'number'
+          ? { ...original, fields: { ...original.fields, value } }
+          : type === 'overlap'
+            ? { ...original, fields: { ...original.fields, leftValue, rightValue, bothValue } }
+            : original
     // &fill=max: 항목을 가장 많이 넣었을 때, &fill=default: 새로 넣을 때의 수, &fill=3: 세 개. 예시 항목을 되풀이해 채운다
     const count = !spec.items
       ? 0

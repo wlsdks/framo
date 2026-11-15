@@ -1,0 +1,222 @@
+/* ---------- 겹침 ---------- */
+
+/* 소제목, 그림(양옆에 집단의 이름과 크기), 답(겹친 것의 이름과 수). 그림이 남는 높이를 다 쓴다 */
+.bk-ov {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.bk-ov > .bk-h {
+  margin-bottom: 18px;
+}
+
+/* 편집할 때만 보이는 알림(색과 굵기는 edit.css의 .ed-warn): 장의 글보다 작게. 소제목과 같은 검정 굵은 글씨로 두면 장의 내용처럼
+   보여 발표에 나가는 글로 읽혔다(검수) */
+.bk-ov-warn {
+  --fs: 22px;
+  margin: 0 0 12px;
+  line-height: 1.35;
+}
+
+/* 그림이 서는 자리: 왼쪽 집단의 이름표, 두 원, 오른쪽 집단의 이름표가 한 줄에 서고 원의 가운데 높이에 이름표의 가운데가 온다
+   (docs/VISUAL-RULES.md 5: 그림과 글이 나란하면 그림의 가운데와 글 묶음의 가운데). 원의 크기는 이 상자의 너비와 높이로 셈한다(cqw, cqh).
+   글자 크기(base.css의 --fs)는 이름과 같아서 em으로 잡는 자리(이름표의 폭, 원과의 사이)가 모두 이름 글자에 맞는다.
+   칸의 왼쪽 선에서 시작한다: 가운데에 두면 아래의 답(왼쪽 선에 선다)과 왼쪽 끝이 어긋났다 */
+.bk-ov-plot {
+  --fs: var(--t-small);
+  /* 원과 이름표 사이 */
+  --ov-gap: 0.7em;
+  /* Overlap.tsx의 NAME_EM */
+  --ov-name: 8em;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--ov-gap);
+  container-type: size;
+  min-height: 0;
+  line-height: 1.3;
+}
+
+/* 그림 상자는 두 원에 딱 맞는다: 높이는 큰 원의 지름, 너비는 그 --ov-ar배(Overlap.tsx가 두 원의 자리로 셈한다: 한쪽이 다 들어가면 1,
+   떨어져 서면 2 남짓). 지름은 칸 높이와, 칸 너비에서 양옆 이름표(--ov-lw: Overlap.tsx가 글자 수로 어림한 폭)를 뺀 자리 가운데 작은 쪽.
+   120px 밑으로는 줄이지 않는다: 그보다 작은 칸은 넘치게 두어 편집기가 그 자리에 넣지 않는다(blockHeights.ts).
+   520px보다 키우지도 않는다: 판을 혼자 쓰는 칸에서 칸 높이를 다 쓰면(지름 680px 남짓) 많이 겹친 그림의 겹친 부분이 장에서 가장 큰
+   쨍한 강조색 면이 되고, 26px 이름표가 원 옆에서 딸린 글처럼 작아 보였다 */
+.bk-ov-fig {
+  --ov-d: max(120px, min(520px, 100cqh, (100cqw - var(--ov-lw) * 1em - 2 * var(--ov-gap)) / var(--ov-ar)));
+  flex: none;
+  width: calc(var(--ov-d) * var(--ov-ar));
+  height: var(--ov-d);
+}
+
+/* 발표할 때 두 원이 그림 상자 밖에서 다가온다(engine.ts): 잘리지 않게 */
+.bk-ov-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* 두 원은 집단의 크기를 그린 데이터 면이라 칠한다: 둘 다 강조색의 옅은 농담 하나(시장 규모의 바깥 원과 같은 단계, tints.ts의 --ta-3:
+   검은 바탕에서는 더 진한 단계. 그보다 옅으면 밝은 회의실 화면에서 원의 가장자리가 바탕에 녹는다). 집단마다 색을 달리하지 않는다:
+   겹친 곳이 셋째 색이 되면 답이 색 셋 가운데 하나가 된다. 비치게 칠해서, 다가오는 동안에는 두 원이 포개진 만큼이 저절로 짙어진다 */
+.bk-ov-c {
+  fill: color-mix(in srgb, var(--accent) var(--ta-3, 28%), transparent);
+}
+
+/* 겹친 부분이 이 그림의 답이다: 진한 강조색은 여기에만(docs/VISUAL-RULES.md 4) */
+.bk-ov-lens {
+  fill: var(--accent);
+}
+
+/* 편집할 때 아직 적지 않은 값을 예시로 그린 그림은 옅게 */
+.bk-ov.is-demo :is(.bk-ov-c, .bk-ov-lens) {
+  opacity: 0.4;
+}
+
+/* 집단의 이름표: 이름 아래 크기. 왼쪽 집단은 오른쪽 끝을, 오른쪽 집단은 왼쪽 끝을 원에 댄다 */
+.bk-ov-g {
+  display: grid;
+  flex: none;
+  gap: 2px;
+  width: max-content;
+  max-width: calc(var(--ov-name) * 1.05 + 0.3em);
+}
+
+.bk-ov-g.is-a {
+  justify-items: end;
+  text-align: right;
+}
+
+/* 버금 글: 이름은 한 단계 옅은 글자색, 크기는 글자색의 숫자. 답(겹친 수)보다 세 단계 작다 */
+.bk-ov-n {
+  --fs: var(--t-small);
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.bk-ov-v {
+  --fs: 36px;
+  /* 한 줄로 줄이는 글(.one-line)은 칸 너비가 아니라 이름표의 폭에 맞춘다 */
+  --line-room: var(--ov-name);
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* 발표할 때 그릴 수 없으면(읽지 못한 값, 겹친 수가 집단보다 큰 것) 그림 없이 두 집단의 글이 왼쪽부터 나란히 선다.
+   편집할 때는 그림 자리를 옅은 그림으로 지킨다(Overlap.tsx) */
+.bk-ov.is-unknown .bk-ov-plot {
+  flex: none;
+  gap: var(--bk-col-gap);
+  container-type: normal;
+}
+
+.bk-ov.is-unknown .bk-ov-g.is-a {
+  justify-items: start;
+  text-align: left;
+}
+
+/* 답: 겹친 것의 이름(그림의 겹친 부분과 같은 강조색)과 그 수. 그림 아래에 이름과 수를 쌓고, 집단마다의 몫은 자리가 있으면 수 옆에
+   같은 글자선으로(없으면 아래로 내려간다): 셋을 다 쌓으면 그림이 쓸 높이를 답이 가져갔다 */
+.bk-ov-ans {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: last baseline;
+  gap: 6px 40px;
+  margin-top: 20px;
+}
+
+.bk-ov-a {
+  display: grid;
+  min-width: 0;
+}
+
+.bk-ov-k {
+  --fs: var(--t-body);
+  color: var(--accent);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* 큰 숫자는 크기로 답이 되므로 글자색에 보통 굵기.
+   아래 여백은 글자가 줄 상자 밖으로 나가는 몫이다: 답은 칸의 맨 아래에 서는데, 명조 제목 글꼴은 글자 상자가 줄 높이(1.15)보다 높아
+   아래로 9px 나가서 칸이 아무리 높아도 넘친 것으로 재어졌다(글자를 두 단계 줄였다) */
+.bk-ov-bv {
+  --fs: 62px;
+  padding-bottom: 0.14em;
+  color: var(--ink);
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* 집단마다의 몫('온라인 교육의 42%'): 셈해서 덧붙이는 글이라 버금 글자색, 몫만 글자색 */
+.bk-ov-r {
+  --fs: var(--t-small);
+  display: grid;
+  gap: 2px;
+  color: var(--ink-2);
+  line-height: 1.3;
+}
+
+.bk-ov-r b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* 넓고 낮은 칸(한 줄을 다 쓰는 칸): 그림은 높이가 정하는 만큼만 커서, 답을 그림 아래에 두면 그림이 작아지고 양옆이 통째로 빈다.
+   왼쪽 단에 소제목과 답을 쌓고 그림은 오른쪽에서 칸 높이를 다 쓴다(방사형 비교와 같은 짜임). 왼쪽 단의 글은 장의 왼쪽 끝 하나에 선다.
+   답이 없으면(발표할 때 겹친 것의 이름과 수를 모두 비운 때) 왼쪽 단이 비어서 그대로 둔다.
+   그릴 수 없을 때도 그대로 둔다: 그림 없이 두 집단의 글만 오른쪽 단 가운데에 떠서, 왼쪽의 답과 한 묶음으로 읽히지 않았다 */
+@container bk (min-aspect-ratio: 2 / 1) and (min-width: 900px) {
+  .bk-ov:not(.is-unknown):has(> .bk-ov-ans) {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    /* 왼쪽 단은 글이 쓰는 만큼만(길면 칸의 34%에서 꺾인다). 그림은 그 곁에서 시작한다: 글 끝에서 칸 끝까지의 가운데에 두던 때는
+       답과 그림 사이가 400px 가까이 비어, 겹친 자리를 본 눈이 그 값을 찾을 때 곁의 집단 크기(320명)를 먼저 읽었다(검수).
+       남는 너비는 오른쪽으로 간다(왼쪽 선에 맞춘 글처럼) */
+    grid-template-columns: fit-content(34%) minmax(0, 1fr);
+    column-gap: var(--bk-col-gap);
+  }
+
+  .bk-ov:not(.is-unknown):has(> .bk-ov-ans) > .bk-h {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .bk-ov:not(.is-unknown):has(> .bk-ov-ans) > .bk-ov-warn {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .bk-ov:not(.is-unknown) > .bk-ov-ans {
+    display: grid;
+    grid-row: 3;
+    grid-column: 1;
+    align-content: center;
+    justify-items: start;
+    gap: 6px;
+    min-width: 0;
+    margin-top: 0;
+  }
+
+  .bk-ov:not(.is-unknown):has(> .bk-ov-ans) > .bk-ov-plot {
+    grid-row: 1 / -1;
+    grid-column: 2;
+  }
+}
+
+/* 넓고 높은 칸(판을 혼자 쓰는 칸): 원은 지름 500px 남짓으로 컸는데 답의 숫자는 낮은 줄과 같은 크기라 답이 그림의 덧붙임처럼
+   보였다(검수). 숫자만 두 단계 키운다(지표 흐름표의 지금 값과 같은 규칙) */
+@container bk (min-aspect-ratio: 2 / 1) and (min-width: 900px) and (min-height: 520px) {
+  .bk-ov:not(.is-unknown):has(> .bk-ov-ans) .bk-ov-bv {
+    --fs: 90px;
+  }
+}
