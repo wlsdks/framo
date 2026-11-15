@@ -1147,6 +1147,9 @@ export function blockFitter() {
       rows.set(key, (rows.get(key) || []).concat(x))
     }
     const order = Array.from(rows.values()).sort((p, q) => Math.min(...p.map((x) => x.r.top)) - Math.min(...q.map((x) => x.r.top)))
+    // 둥근 그림과 가운데를 맞출 짝은 그림과 같은 높이의 칸(판의 줄 수가 같은)일 때만: 그림 옆에 둘을 쌓은 단의 위 칸은 그림과 윗선이 같아
+    // 짝으로 보였고, 그림의 가운데까지 내리면 제 칸을 나가 아래 칸의 글 위에 겹쳐 그려졌다(강조 상자 아래 목록, 옆에 모이고 퍼지기)
+    const sameRows = (p: HTMLElement, q: HTMLElement) => at(p, '--h') === at(q, '--h')
     // 줄마다 앞 줄 내용 아래 --bk-gap(소제목 아래는 headGap)에 쌓는다. 사이는 늘 같은 값이라 장마다, 묶음마다 같다
     // 같은 줄의 첫 글줄 윗선 (docs/VISUAL-RULES.md 5): 부품마다 첫 글 위의 빈 키(이름표, 소제목, 들여 쓰기의 위 여백)가 달라 한 줄의 윗선이
     // 4~20px 어긋났다. 같은 판의 줄(같은 묶음, 같은 --y)에서 글로 시작하는 칸끼리 쌓은 자리의 가장 낮은 윗선에 맞춰 내린다(칸마다 더 내리는 몫).
@@ -1171,7 +1174,7 @@ export function blockFitter() {
         if (row.length !== 2) continue
         const chart = row.find((x) => round.has(x.c.dataset.type ?? ''))
         const text = row.find((x) => besideRound(x.c))
-        if (!chart || !text) continue
+        if (!chart || !text || !sameRows(chart.c, text.c)) continue
         // 바탕 없는 칸끼리만 여기서 칸째 옮긴다. 바탕(들여 쓰기, 강조)을 고른 칸은 쌓은 뒤에 맞춘다(pack 끝): 여기서는 첫 글줄 윗선
         // 맞추기에서만 뺀다(빼지 않으면 그림이 들여 쓴 칸의 위 여백만큼 내려가 가운데가 다시 어긋났다)
         if (chart.c.classList.contains('bk-look-plain') && !text.c.classList.contains('bk-look-plain')) {
@@ -1272,7 +1275,7 @@ export function blockFitter() {
       if (row.length !== 2) continue
       const chart = row.find((x) => round.has(x.c.dataset.type ?? ''))
       const text = row.find((x) => besideRound(x.c))
-      if (!chart || !text || !chart.c.classList.contains('bk-look-plain') || text.c.classList.contains('bk-look-plain')) continue
+      if (!chart || !text || !sameRows(chart.c, text.c) || !chart.c.classList.contains('bk-look-plain') || text.c.classList.contains('bk-look-plain')) continue
       const inner = text.c.querySelector<HTMLElement>(':scope > .bk-in')
       if (!inner) continue
       const goal = (chart.ink!.t + chart.ink!.b) / 2 + dy.get(chart.c)!

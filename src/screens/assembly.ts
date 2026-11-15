@@ -975,13 +975,14 @@ const ROUND = new Set(['ring', 'radar', 'cycle', 'hub', 'market'])
 
 /**
  * 둥근 그림과 나란한 줄: 윗선이 아니라 보이는 묶음의 가운데를 맞춘다 (fitBlocks.ts의 alignTops와 pack 끝, besideRound).
- * 그림은 바탕 없는 칸일 때. 짝은 둥근 그림이 아닌 무엇이든(소제목과 주석은 빼고)
+ * 그림은 바탕 없는 칸일 때. 짝은 둥근 그림이 아닌 무엇이든(소제목과 주석은 빼고), 그림과 같은 높이의 칸
  */
 function centredPair(row: HTMLElement[]): boolean {
   if (row.length !== 2) return false
   const chart = row.find((c) => ROUND.has(c.dataset.type ?? ''))
   const other = row.find((c) => !ROUND.has(c.dataset.type ?? '') && c.dataset.type !== 'heading' && c.dataset.type !== 'note')
-  return !!chart && !!other && chart.classList.contains('bk-look-plain')
+  // 그림과 같은 높이의 칸일 때만 짝이다: 그림 옆에 둘을 쌓은 단의 위 칸은 맞추지 않는다(내리면 아래 칸의 글과 겹친다)
+  return !!chart && !!other && chart.classList.contains('bk-look-plain') && chart.style.getPropertyValue('--h') === other.style.getPropertyValue('--h')
 }
 
 /** 가운데를 견줄 때의 위아래: 바탕 있는 칸은 상자가 아니라 내용(글줄과 그림)으로 잰다(상자가 칸 높이 그대로일 때가 있다) */
