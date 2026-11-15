@@ -98,6 +98,8 @@ const SCENES: BlockType[][][] = [
   [['overlap'], ['callout', 'bullets', 'text']],
   // 분포와 읽은 것: 막대 옆에 기준 밖에 남은 것을 어떻게 할지
   [['dist'], ['callout', 'bullets', 'text']],
+  // 여정 곡선과 읽은 것: 곡선 옆에 가장 낮은 단계를 어떻게 고칠지
+  [['journey'], ['callout', 'bullets', 'text']],
   // 원인 캐기와 대책: 근본 원인 옆이나 아래에 고칠 것
   [['whys'], ['callout', 'bullets', 'checks']],
   // 도는 주기와 이번 차례: 고리 옆에 지금 하는 일이나 한마디

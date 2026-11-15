@@ -1491,6 +1491,40 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  journey: {
+    name: '여정 곡선',
+    description: '일이 지나가는 단계마다의 체감을 곡선의 높낮이로, 가장 낮은 곳을 강조색으로 (입사 첫 주, 민원 처리, 구매 절차, 장애 대응)',
+    motion: '곡선이 왼쪽부터 그어지며 단계가 차례로 나오고, 가장 낮은 곳에서 잠깐 멈춰 그 단계가 켜져요',
+    fields: [{ key: 'heading', label: '소제목', hint: '예: 신청부터 첫 사용까지의 만족도 (5점 만점)', optional: true }],
+    items: {
+      label: '단계',
+      // 둘이면 곡선이 아니라 비탈 하나다. 여섯을 넘으면 가장 좁은 칸(8칸)에서 단계 한 칸이 160px에 못 미쳐 이름이 두 글자마다 꺾인다
+      min: 3,
+      max: 6,
+      default: 5,
+      fields: [
+        { key: 'title', label: '단계', hint: '지나가는 차례대로', hints: ['신청', '서류 준비', '승인 대기', '안내 받기', '첫 사용', '익숙해지기'] },
+        // 숫자 칸의 안내는 예시 값이다: 비운 동안 이 값으로 곡선을 옅게 그린다(Journey.tsx). 높을수록 좋은 값
+        { key: 'value', label: '점수', hint: '4.2', hints: ['4.2', '3.4', '1.9', '3.7', '4.5', '4.1'] },
+        // 그 단계에서 있는 일은 이 그림의 절반이라 접지 않는다(비워 두면 발표할 때는 이름만 선다)
+        { key: 'meta', label: '덧붙임', hint: '여기서 겪는 일', optional: true, shown: true, multiline: true },
+      ],
+    },
+    // 반 칸에는 넣지 않는다: 단계 한 칸이 160px 남짓이라 덧붙임이 낱말마다 꺾여 세 줄 탑이 되고(3~5m에서 읽히지 않는다),
+    // 이름 셋이 골짜기 높이에 한 줄로 늘어서 어느 점의 글인지 흐려졌다
+    minSpan: 8,
+    prefSpan: 12,
+    sample: {
+      fields: { heading: '새로 온 사람이 느낀 첫 2주 (5점 만점)' },
+      items: [
+        { title: '입사 서류', value: '4.2', meta: '안내 메일 한 통으로 끝나요' },
+        { title: '장비 받기', value: '3.4', meta: '신청하고 이틀을 기다려요' },
+        { title: '계정 승인', value: '1.9', meta: '결재를 세 번 거쳐 엿새가 걸려요' },
+        { title: '업무 교육', value: '3.7', meta: '짝이 된 동료가 알려 줘요' },
+        { title: '첫 업무', value: '4.5', meta: '작은 일부터 맡아요' },
+      ],
+    },
+  },
   heading: {
     name: '소제목',
     description: '옆이나 아래 컴포넌트들을 묶는 짧은 제목 (지금 방식, 바꾸면)',

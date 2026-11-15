@@ -151,7 +151,9 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
               ? { ...original, fields: {}, items: original.items.map((it) => ({ ...it, title: '', value: '' })) }
               : type === 'dist'
                 ? { ...original, fields: { ...original.fields, ...(distCut != null ? { cut: distCut } : {}) }, items: original.items.map((it, i) => ({ ...it, value: distValues.split('/')[i] ?? it.value })) }
-                : original
+                : type === 'journey' && value === 'new'
+                  ? { ...original, fields: {}, items: original.items.map((it) => ({ ...it, title: '', value: '', meta: '' })) }
+                  : original
     // &fill=max: 항목을 가장 많이 넣었을 때, &fill=default: 새로 넣을 때의 수, &fill=3: 세 개. 예시 항목을 되풀이해 채운다
     const count = !spec.items
       ? 0
@@ -166,7 +168,15 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
         : sample.items
     // 분포는 예시보다 구간이 많아도 이름이 겹치지 않게 잇는다(6일, 7일 …): 같은 이름이 둘이면 기준이 어느 구간인지 몰라 기준선과 몫이 빠져서,
     // 구간이 여섯을 넘는 그림을 답 없이 재고 보게 된다
-    const filled = type === 'dist' ? repeated.map((it, i) => (i < sample.items.length ? it : { ...it, title: `${i + 1}일` })) : repeated
+    // 여정 곡선은 단계마다의 값을 빗금으로 잇는다(&value=4/4/4/4/4: 높낮이가 없는 것, &value=5/4/3/2/1: 내리막뿐인 것, &value=4/미정/2:
+    // 읽을 수 없는 값, 빈 자리는 예시 그대로). &value=new는 막 넣은 빈 것(안내의 예시 값으로 옅게 그린 곡선)
+    const journeyValues = type === 'journey' && value != null && value !== 'new' ? value.split('/') : null
+    const filled =
+      type === 'dist'
+        ? repeated.map((it, i) => (i < sample.items.length ? it : { ...it, title: `${i + 1}일` }))
+        : journeyValues
+          ? repeated.map((it, i) => ({ ...it, value: journeyValues[i] || it.value }))
+          : repeated
     // &lane=1: 진행 현황의 과제를 모두 한 단에(상태별 모양의 높이는 가장 많이 모인 단의 과제 수로 잰다, blocks/sizing.ts).
     // 지연 단이라 과제마다 사정 글이 이름 줄 끝에 선다: 단 너비가 가장 좁은 경우
     const states = [['100%', '완료'], ['60%', '지연 없이 진행 중'], ['30%', '2주 지연'], ['0%', '예정'], ['150%', '검토 중'], ['40%', '진행 중'], ['10건', '검토 중']]
