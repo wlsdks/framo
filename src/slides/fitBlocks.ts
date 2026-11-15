@@ -1979,13 +1979,30 @@ export function blockFitter() {
       const widths = inks.map((x) => x.r - x.l)
       const spare = a.width - widths.reduce((s, w) => s + w, 0)
       // 양 끝과 단 사이를 같은 폭으로: 가운데만 넓히면 양쪽 내용이 서로 멀어져 한 장으로 읽히지 않는다.
-      const unit = spare / (cols.length + (anchored ? 0 : 1))
+      // 다만 단은 오른쪽으로만 옮기므로 왼쪽 끝과 단 사이는 지금보다 좁아질 수 없다. 이미 고른 폭보다 넓은 사이는 그대로 두고 남는
+      // 너비를 나머지에 다시 고르게 나눈다: 그런 사이가 하나라도 있으면 통째로 그만두던 때는, 단 사이가 고른 폭보다 3px 넓을 뿐인
+      // 핵심 한 줄과 순위가 본문 왼쪽에 붙은 채 오른쪽 28%가 비었다
+      // 빈 곳의 차례: 왼쪽 끝, 단 사이들, 오른쪽 끝. 왼쪽 선에 선 줄(anchored)은 왼쪽 끝을 그대로 둔다
+      const floors = [inks[0].l - a.left, ...inks.slice(1).map((x, i) => x.l - inks[i].r), 0]
+      const held = floors.map((_, i) => anchored && i === 0)
+      let unit = 0
+      for (;;) {
+        const free = held.filter((h) => !h).length
+        unit = (spare - floors.reduce((sum, f, i) => sum + (held[i] ? f : 0), 0)) / free
+        const wide = floors.findIndex((f, i) => !held[i] && f > unit + 1)
+        if (wide < 0) break
+        held[wide] = true
+      }
+      const slots = floors.map((f, i) => (held[i] ? f : unit))
+      // 그대로 둔 사이가 있으면 묶음째 가운데로 옮기는 셈이라 첫 단이 장 제목의 왼쪽 선에서 벗어난다. 오른쪽이 본문의 4분의 1 넘게
+      // 빌 때만 한다(검사의 SIDE_EMPTY와 같다): 조금 비는 장까지 옮기면 장마다 왼쪽 선이 26~50px씩 들쭉날쭉했다
+      if (held.some((h, i) => h && !(anchored && i === 0)) && a.right - inks[inks.length - 1].r <= 0.25 * a.width) return
       // 오른쪽 끝이 이미 그만큼(과 캔버스 24px)보다 좁으면 그대로
-      if (a.right - inks[inks.length - 1].r <= unit + 24 * k) return
-      let at = anchored ? inks[0].l : a.left + unit
+      if (a.right - inks[inks.length - 1].r <= slots[slots.length - 1] + 24 * k) return
+      let at = a.left + slots[0]
       const dx = inks.map((x, i) => {
         const d = at - x.l
-        at += widths[i] + unit
+        at += widths[i] + slots[i + 1]
         return d
       })
       // 앞 단보다 덜 옮기는 단이 있으면(칸끼리 겹친다) 그대로

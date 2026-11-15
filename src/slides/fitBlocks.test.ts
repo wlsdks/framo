@@ -69,8 +69,17 @@ describe('부품 장 글자 맞추기', () => {
     const src = fit.blockFitter.toString()
     const balance = src.slice(src.indexOf('function balance'), src.indexOf('function gutters'))
     expect(balance).toMatch(/othersLeft\s*<=\s*a\.left/)
-    expect(balance).toMatch(/cols\.length\s*\+\s*\(anchored\s*\?\s*0\s*:\s*1\)/)
-    expect(balance).toMatch(/anchored\s*\?\s*inks\[0\]\.l\s*:\s*a\.left\s*\+\s*unit/)
+    expect(balance).toMatch(/held\s*=\s*floors\.map\(\(_,\s*i\)\s*=>\s*anchored\s*&&\s*i\s*===\s*0\)/)
+  })
+
+  it('단 사이가 고른 폭보다 이미 넓으면 그 사이는 두고 나머지만 나눈다: 오른쪽이 4분의 1 넘게 빌 때만', () => {
+    // 단은 오른쪽으로만 옮겨서 사이를 좁힐 수 없다. 그런 사이가 있으면 통째로 그만두던 때는 사이가 고른 폭보다 3px 넓을 뿐인 핵심 한 줄과
+    // 순위가 왼쪽에 붙고 오른쪽 28%가 비었다(갤러리 combos seed 15의 31번). 조금 비는 장까지 묶음째 옮기면 장마다 첫 단이 제목의
+    // 왼쪽 선에서 26~50px씩 벗어난다(seed 1~16의 110장)
+    const src = fit.blockFitter.toString()
+    const balance = src.slice(src.indexOf('function balance'), src.indexOf('function gutters'))
+    expect(balance).toMatch(/floors\.findIndex\(\(f,\s*i\)\s*=>\s*!held\[i\]\s*&&\s*f\s*>\s*unit\s*\+\s*1\)/)
+    expect(balance).toMatch(/a\.right\s*-\s*inks\[inks\.length\s*-\s*1\]\.r\s*<=\s*0?\.25\s*\*\s*a\.width/)
   })
 
   it('레이아웃 장을 맞추는 동안 편집 표시를 숨긴다: 편집 화면과 발표 화면의 글자 크기가 같다', () => {
