@@ -94,9 +94,11 @@
    이름표는 제목 한 단계 아래에 머물고 그림이 커진다. 목록은 fitBlocks.ts의 PICTURES와 같다.
    장 제목이 있는 장에서는 컴포넌트의 소제목(.bk-h)도 어느 컴포넌트에서나 같다: 목록, 글의 소제목 하나 때문에 내용이 적은 장(본문의
    60%를 못 채운)의 글과 그림이 모두 1.2배에 묶였다(조합 720장 가운데 99장). 소제목은 44px에 머물고 그림과 숫자가 커진다.
+   비율 원의 이름(.bk-rg-l)도 소제목 크기의 굵은 글이라 같다: 넓고 높은 칸에서 원 옆에 선 이름이 1.2배면 52.8px로 장 제목 ÷ 1.2를
+   넘었다(결정 요청 옆의 비율 원).
    장 제목이 없는 장은 다툴 제목이 없어 그대로 큰다. 컴포넌트마다 더 낮게 정한 상한(핵심 수치 36, 제목이 길 때의 목록 30)이 이기게
    :where로 가볍게 쓴다 */
-.l-compose:has(.s-title:not(.is-hint, .is-empty)) :where(.bk > .bk-in) .bk-h,
+.l-compose:has(.s-title:not(.is-hint, .is-empty)) :where(.bk > .bk-in) :is(.bk-h, .bk-rg-l),
 .bk:is([data-type='flow'], [data-type='network'], [data-type='merge'], [data-type='split'], [data-type='tiles'], [data-type='hub'], [data-type='gather'], [data-type='search'], [data-type='layers'], [data-type='gate'], [data-type='dupes'], [data-type='aliases'], [data-type='adoption'], [data-type='spread'], [data-type='rank'])
   :is(.bk-h, .bk-nw-t, .bk-hb-t, .bk-gt2-t, .bk-ly-t, .bk-dp-r, .bk-al-t, .bk-mg-name, .bk-mg-label, .bk-fw-t, .bk-gw-t, .bk-gw-in, .bk-gw-out, .bk-sr-t, .bk-ra-t, .bk-spr-t, .bk-ad-t, .bk-sg-name) {
   font-size: min(calc(44px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
