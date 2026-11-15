@@ -9,7 +9,7 @@ describe('부품 장 글자 맞추기', () => {
     // 이 파일이 내보내는 다른 이름을 안에서 부르면 내보낸 HTML에서는 없는 이름이라 맞추기가 멈춘다
     for (const name of Object.keys(fit).filter((k) => k !== 'blockFitter')) expect(src, name).not.toMatch(new RegExp(`\\b${name}\\b`))
     const rebuilt = new Function(`return (${src})`)() as typeof fit.blockFitter
-    expect(Object.keys(rebuilt())).toEqual(['fit', 'lines', 'over', 'labels', 'figures', 'drawn', 'edgeSeen'])
+    expect(Object.keys(rebuilt())).toEqual(['fit', 'lines', 'over', 'labels', 'figures', 'drawn', 'content', 'edgeSeen'])
   })
 
   it('테두리는 보이는 선만 그려진 것으로 센다 (줄 선 규칙이 지운 첫 항목 위, 끝 항목 아래의 선과 선 없는 쪽의 여백은 빼고)', () => {

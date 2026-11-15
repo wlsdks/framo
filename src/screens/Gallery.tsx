@@ -238,9 +238,9 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
   if (set === 'backdrops' || set === 'bdsheet') return { ...deck, theme: { id: theme }, slides: backdropSlides(params) }
   if (set === 'cine') return { ...deck, theme: { id: theme }, ...cineSlides(params) }
   if (set === 'combos') return { ...deck, theme: { id: theme }, slides: comboSlides(Number(params.get('seed')) || 1, Number(params.get('n')) || 40, look, params.get('mode') === 'edit', params.get('blank') === '1').map((c) => c.slide) }
-  // set=pairs&a=radar,bars&b=whys,checks: 고른 두 컴포넌트를 나란히(장면에 없는 짝). &untitled=1이면 제목 없이
+  // set=pairs&a=radar,bars&b=whys,checks: 고른 두 컴포넌트를 나란히(장면에 없는 짝). &untitled=1이면 제목 없이, &bl=card면 오른쪽 것의 바탕을 바꿔서
   if (set === 'pairs')
-    return { ...deck, theme: { id: theme }, slides: pairSlides((params.get('a') ?? 'radar').split(',') as BlockType[], (params.get('b') ?? 'whys').split(',') as BlockType[], look, params.get('mode') === 'edit', params.get('untitled') !== '1') }
+    return { ...deck, theme: { id: theme }, slides: pairSlides((params.get('a') ?? 'radar').split(',') as BlockType[], (params.get('b') ?? 'whys').split(',') as BlockType[], look, params.get('mode') === 'edit', params.get('untitled') !== '1', (params.get('bl') as BlockLook | null) ?? undefined) }
   // set=example: 홈의 '완성된 예시 보기'가 여는 예시 발표 그대로(모션 그래픽, 장면, 배경 모션까지)
   if (set === 'example') return { ...deck, theme: { id: theme } }
   return { ...deck, theme: { id: theme }, slides: showcaseSlides() }

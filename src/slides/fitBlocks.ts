@@ -14,7 +14,7 @@
  *
  * 3-3. 한 줄에 부품이 둘 이상이면 부품마다 위에서부터 그린다(소제목 윗선을 맞춘다, blocks.css). 이음표가 선 줄도 같다. 칸 높이를 다 쓰는
  *    부품(차트, 표) 옆의 숫자 부품은 한두 단계, 글 부품은 한 단계 키운다(lift). 짧은 부품을 가운데로 내리지 않는다: 남는 높이는 3-4가
- *    맨 아래에 모은다. 다만 둥근 그림(비율 원, 거미줄 차트 …)과 나란한 글 묶음은 그림의 가운데에 맞춘다(pack의 alignTops).
+ *    맨 아래에 모은다. 다만 둥근 그림(비율 원, 거미줄 차트 …)과 나란한 것은 그림의 가운데에 맞춘다(pack의 alignTops, 바탕 있는 칸은 --bk-drop).
  *
  * 3-4. 발표 화면과 편집 화면에서는 판을 위아래로 나눈 줄마다 그려진 내용을 앞 줄 내용 바로 아래(--bk-gap, 소제목 아래는 좁게)에 붙이고,
  *    남는 높이는 맨 아래 한곳에 모은다(--bk-shift, 캔버스 px, 칸째 옮긴다). 본문은 장 제목 아래 --body-gap에서 시작하고(docs/VISUAL-RULES.md 6),
@@ -106,6 +106,28 @@ export function blockFitter() {
       const r = el.getBoundingClientRect()
       return r.width > 0 && r.height > 0
     })
+  }
+
+  /**
+   * 칸 안 내용의 위아래(화면 px): 글줄과 그림. 바탕 있는 칸은 그려진 것(drawn)이 상자라, 내용의 가운데를 볼 때는 이것으로 잰다.
+   * 글 위에 얹는 관계선(.bk-wires)은 칸 높이를 다 덮는 틀이라 뺀다. 없으면 null
+   */
+  function content(c: HTMLElement): { t: number; b: number } | null {
+    const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
+    if (!inner) return null
+    let t = Infinity
+    let b = -Infinity
+    for (const q of linesNow(inner, false, false)) {
+      t = Math.min(t, q.t)
+      b = Math.max(b, q.b)
+    }
+    for (const el of figuresNow(inner)) {
+      if (el.classList.contains('bk-wires')) continue
+      const r = el.getBoundingClientRect()
+      t = Math.min(t, r.top)
+      b = Math.max(b, r.bottom)
+    }
+    return t === Infinity ? null : { t, b }
   }
 
   /** 이것을 움직이는 중인 요소(그 장, 또는 그 안의 부품 하나). 없으면 null */
@@ -724,11 +746,13 @@ export function blockFitter() {
   const boostable = new Set(['number', 'delta', 'goal'])
   // 자기 큰 숫자가 있는 그림(몇 중 몇, 비율 원) 옆에서는 키우지 않는다: 키우면 나란한 두 숫자가 한 장 안에서 크기가 달라진다
   const figured = new Set(['ratio', 'ring'])
-  // 글로 된 부품: 칸 높이를 다 쓰는 차트, 표 옆에서 한 단계 키우고(lift), 둥근 그림 옆에서는 묶음의 가운데를 그림의 가운데에 맞춘다(pack).
-  // screens/assembly.ts의 COPY와 같다
+  // 글로 된 부품: 칸 높이를 다 쓰는 차트, 표 옆에서 한 단계 키운다(lift)
   const copy = new Set(['message', 'text', 'bullets', 'quote', 'callout', 'faq', 'summary', 'points', 'checks', 'facts', 'risks', 'whys', 'agenda'])
-  // 가운데가 뚜렷한 둥근 그림: 옆의 글 묶음은 윗선이 아니라 가운데를 맞춘다(docs/VISUAL-RULES.md 5). screens/assembly.ts의 ROUND와 같다
+  // 가운데가 뚜렷한 둥근 그림: 옆의 것은 윗선이 아니라 가운데를 맞춘다(docs/VISUAL-RULES.md 5). screens/assembly.ts의 ROUND와 같다
   const round = new Set(['ring', 'radar', 'cycle', 'hub', 'market'])
+  // 둥근 그림과 가운데를 맞출 짝: 둥근 그림이 아닌 것은 무엇이든(글, 숫자, 다른 차트). 종류로만 정하고 내용의 길이로 가르지 않는다:
+  // 길이로 가르면 글을 한 줄 더 쓰는 순간 가운데에 있던 것이 위로 튄다. 소제목과 주석은 옆이 아니라 아래 것에 딸린 글이라 뺀다
+  const besideRound = (c: HTMLElement) => !round.has(c.dataset.type ?? '') && c.dataset.type !== 'heading' && c.dataset.type !== 'note'
   /** 내용(첫 보이는 자식)이 --bk-lift로 내려가는 부품인지 (blocks.css가 정한다) */
   function liftable(c: HTMLElement): boolean {
     const body = Array.from(c.querySelectorAll<HTMLElement>(':scope > .bk-in > *')).find((el) => el.offsetHeight > 0)
@@ -1144,10 +1168,18 @@ export function blockFitter() {
       // 원인 캐기는 위에 붙고 아래가 통째로 비었다
       const centered = new Set<HTMLElement>()
       for (const row of order) {
-        if (row.length !== 2 || !row.every((x) => x.c.classList.contains('bk-look-plain'))) continue
+        if (row.length !== 2) continue
         const chart = row.find((x) => round.has(x.c.dataset.type ?? ''))
-        const text = row.find((x) => copy.has(x.c.dataset.type ?? ''))
+        const text = row.find((x) => besideRound(x.c))
         if (!chart || !text) continue
+        // 바탕 없는 칸끼리만 여기서 칸째 옮긴다. 바탕(들여 쓰기, 강조)을 고른 칸은 쌓은 뒤에 맞춘다(pack 끝): 여기서는 첫 글줄 윗선
+        // 맞추기에서만 뺀다(빼지 않으면 그림이 들여 쓴 칸의 위 여백만큼 내려가 가운데가 다시 어긋났다)
+        if (chart.c.classList.contains('bk-look-plain') && !text.c.classList.contains('bk-look-plain')) {
+          centered.add(chart.c)
+          centered.add(text.c)
+          continue
+        }
+        if (!row.every((x) => x.c.classList.contains('bk-look-plain'))) continue
         const centers = row.map((x) => (x.ink!.t + x.ink!.b) / 2 + dy.get(x.c)!)
         const goal = Math.max(...centers)
         row.forEach((x, i) => {
@@ -1233,6 +1265,52 @@ export function blockFitter() {
     tail(items, settle(), k, base)
     tail(items, settle(), k, base)
     const dy = settle()
+    // 둥근 그림 옆의 바탕(들여 쓰기, 강조) 있는 칸은 내용만 내려 그림의 가운데에 맞춘다(--bk-drop, blocks/base.css). 바탕 있는 칸은
+    // 상자가 칸 높이 그대로라 위(alignTops)에서 칸째 옮기면 본문 아래로 나가고, 두 칸의 상자 가운데가 같아 옮길 것도 없었다:
+    // 목록의 바탕을 들여 쓰기로 바꾸자마자 가운데에 있던 목록이 위로 올라붙고 아래가 통째로 비었다
+    for (const row of order) {
+      if (row.length !== 2) continue
+      const chart = row.find((x) => round.has(x.c.dataset.type ?? ''))
+      const text = row.find((x) => besideRound(x.c))
+      if (!chart || !text || !chart.c.classList.contains('bk-look-plain') || text.c.classList.contains('bk-look-plain')) continue
+      const inner = text.c.querySelector<HTMLElement>(':scope > .bk-in')
+      if (!inner) continue
+      const goal = (chart.ink!.t + chart.ink!.b) / 2 + dy.get(chart.c)!
+      const gap = () => {
+        const span = content(text.c)
+        return span ? { need: goal - ((span.t + span.b) / 2 + dy.get(text.c)!), b: span.b } : null
+      }
+      let at = gap()
+      if (!at) continue
+      let need = at.need
+      if (need >= k) {
+        // 안쪽 아래 여백은 남긴다. 몇 번 다시 잰다: 칸 높이를 따라 늘어나는 내용(차트)은 안쪽 상자를 줄인 만큼의 절반만 내려간다
+        let drop = 0
+        for (let i = 0; i < 3 && at && at.need >= k; i++) {
+          const room = Math.max(0, text.r.bottom - parseFloat(getComputedStyle(inner).paddingBottom) * k - at.b)
+          const px = Math.round(Math.min(at.need, room) / k)
+          if (px < 1) break
+          drop += px
+          text.c.style.setProperty('--bk-drop', drop + 'px')
+          at = gap()
+        }
+        need = at ? at.need : 0
+        // 내용이 길어 칸 안에서 다 내릴 수 없으면 나머지는 칸째 내린다(그림 칸의 아래 끝까지만: 면을 줄인 칸은 그림 칸보다 낮다)
+        const down = Math.min(need, chart.r.bottom + dy.get(chart.c)! - (text.r.bottom + dy.get(text.c)!))
+        if (down >= k) {
+          dy.set(text.c, dy.get(text.c)! + down)
+          // 맞추느라 옮긴 것은 몇 px라도 적는다(아래의 '8px 밑이면 그대로'에 버려지지 않게)
+          lineUp.set(text.c, down)
+        }
+      } else if (need <= -k) {
+        // 글이 그림보다 길면 그림이 글 묶음의 가운데로 내려온다(글 칸의 아래 끝까지만)
+        const down = Math.min(-need, text.r.bottom + dy.get(text.c)! - (chart.ink!.b + dy.get(chart.c)!))
+        if (down >= k) {
+          dy.set(chart.c, dy.get(chart.c)! + down)
+          lineUp.set(chart.c, down)
+        }
+      }
+    }
     // 본문 아래가 꽉 차면 settle은 윗선 맞추기를 거둔다. 들여 쓴 칸은 선과 면이 없으므로, 안에 여유가 있으면 아래 끝을 유지한 채
     // 칸의 윗부분을 줄여 글줄을 맞출 수 있다. 글이 넘치거나 줄인 높이에서 글자 단계가 바뀌어 맞지 않으면 원래 자리로 되돌린다.
     if (!lineUp.size) {
@@ -1244,6 +1322,8 @@ export function blockFitter() {
       }
       for (const row of rows.values()) {
         if (row.length < 2) continue
+        // 둥근 그림과 글 묶음은 윗선이 아니라 가운데를 맞춘 줄이다(위)
+        if (row.length === 2 && row.some((x) => round.has(x.c.dataset.type ?? '')) && row.some((x) => besideRound(x.c))) continue
         const top = (c: HTMLElement) => {
           const inner = c.querySelector<HTMLElement>(':scope > .bk-in')
           const ls = inner ? lines(inner, true) : []
@@ -2040,6 +2120,7 @@ export function blockFitter() {
         if (!known.has(c)) c.style.removeProperty('--bk-fit')
         c.style.removeProperty('--bk-air')
         c.style.removeProperty('--bk-lift')
+        c.style.removeProperty('--bk-drop')
         c.style.removeProperty('--bk-shift')
         c.style.removeProperty('--bk-shift-x')
         c.style.removeProperty('--bk-trim')
@@ -2159,7 +2240,7 @@ export function blockFitter() {
           const spare = Math.floor(((1 - used) * a.height) / k)
           const inners = cells.map((c) => c.querySelector<HTMLElement>(':scope > .bk-in')).filter((el): el is HTMLElement => !!el)
           const reset = () => {
-            for (const c of cells) for (const v of ['--bk-lift', '--bk-shift', '--bk-shift-x', '--bk-trim']) c.style.removeProperty(v)
+            for (const c of cells) for (const v of ['--bk-lift', '--bk-drop', '--bk-shift', '--bk-shift-x', '--bk-trim']) c.style.removeProperty(v)
             // 한 단계 더 키울 수 있는지는 CSS가 정한 답 글 크기로 잰다(키운 답 글은 settle의 answers가 다시 맞춘다)
             for (const el of Array.from(area.querySelectorAll<HTMLElement>(ANSWER_TEXT))) el.style.removeProperty('--fs')
             for (const inner of inners) {
@@ -2691,7 +2772,7 @@ export function blockFitter() {
     }
   }
 
-  return { fit, lines, over, labels, figures, drawn, edgeSeen }
+  return { fit, lines, over, labels, figures, drawn, content, edgeSeen }
 }
 
 let fitter: ReturnType<typeof blockFitter> | null = null
@@ -2709,5 +2790,7 @@ export const blockOverflows = (inner: HTMLElement) => shared().over(inner)
 export const blockFigures = (inner: HTMLElement) => shared().figures(inner)
 /** 칸에서 그려진 것의 위아래 (쌓기와 개발용 검사 checkAssembly가 같이 본다) */
 export const blockDrawn = (cell: HTMLElement) => shared().drawn(cell)
+/** 칸 안 내용(글줄과 그림)의 위아래. 바탕 있는 칸의 가운데를 볼 때 (screens/assembly.ts) */
+export const blockContent = (cell: HTMLElement) => shared().content(cell)
 /** 보이는 테두리인지 (투명하게 지운 줄 선은 그려진 것이 아니다. 개발용 검사 checkAssembly도 쌓기와 같게 본다) */
 export const blockEdgeSeen = (cs: CSSStyleDeclaration, side: 'Top' | 'Bottom' | 'Left' | 'Right') => shared().edgeSeen(cs, side)

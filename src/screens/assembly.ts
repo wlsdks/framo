@@ -1,6 +1,6 @@
 import { isLink, linkFits } from '../deck/blocks'
 import type { BlockType } from '../deck/types'
-import { blockDrawn, blockEdgeSeen, blockFigures, blockTextLines } from '../slides/fitBlocks'
+import { blockContent, blockDrawn, blockEdgeSeen, blockFigures, blockTextLines } from '../slides/fitBlocks'
 
 /*
  * 개발용: 부품 장이 '사람이 짠 것처럼' 보이는지 보는 검사. checkCombos(combos.ts)는 잘리거나 겹치는 것만 봐서,
@@ -970,13 +970,23 @@ function paintedBoxes(area: HTMLElement, k: number): string[] {
   return [...new Set(out)]
 }
 
-/** 글로 된 부품과 가운데가 뚜렷한 둥근 그림 (slides/fitBlocks.ts의 copy, round와 같다) */
-const COPY = new Set(['message', 'text', 'bullets', 'quote', 'callout', 'faq', 'summary', 'points', 'checks', 'facts', 'risks', 'whys', 'agenda'])
+/** 가운데가 뚜렷한 둥근 그림 (slides/fitBlocks.ts의 round와 같다) */
 const ROUND = new Set(['ring', 'radar', 'cycle', 'hub', 'market'])
 
-/** 둥근 그림과 글 묶음이 나란한 줄: 윗선이 아니라 보이는 묶음의 가운데를 맞춘다 (fitBlocks.ts의 alignTops) */
+/**
+ * 둥근 그림과 나란한 줄: 윗선이 아니라 보이는 묶음의 가운데를 맞춘다 (fitBlocks.ts의 alignTops와 pack 끝, besideRound).
+ * 그림은 바탕 없는 칸일 때. 짝은 둥근 그림이 아닌 무엇이든(소제목과 주석은 빼고)
+ */
 function centredPair(row: HTMLElement[]): boolean {
-  return row.length === 2 && row.every((c) => c.classList.contains('bk-look-plain')) && row.some((c) => ROUND.has(c.dataset.type ?? '')) && row.some((c) => COPY.has(c.dataset.type ?? ''))
+  if (row.length !== 2) return false
+  const chart = row.find((c) => ROUND.has(c.dataset.type ?? ''))
+  const other = row.find((c) => !ROUND.has(c.dataset.type ?? '') && c.dataset.type !== 'heading' && c.dataset.type !== 'note')
+  return !!chart && !!other && chart.classList.contains('bk-look-plain')
+}
+
+/** 가운데를 견줄 때의 위아래: 바탕 있는 칸은 상자가 아니라 내용(글줄과 그림)으로 잰다(상자가 칸 높이 그대로일 때가 있다) */
+function centreSpan(cell: HTMLElement): Span | null {
+  return cell.classList.contains('bk-look-plain') ? inkSpan(cell) : blockContent(cell)
 }
 
 /**
@@ -994,11 +1004,15 @@ function rowTops(area: HTMLElement, k: number): string[] {
     if (row.length < 2) return
     // 원과 글의 짝은 첫 글줄 대신 보이는 묶음 전체의 중심으로 검수한다.
     if (centredPair(row)) {
-      const spans = row.map(inkSpan)
+      const spans = row.map(centreSpan)
       if (spans.every((s) => s !== null)) {
         const centers = spans.map((s) => (s!.t + s!.b) / 2)
         const d = Math.abs(centers[0] - centers[1]) / k
-        if (d > 4) out.push(`둥근 그림과 글 묶음의 가운데가 ${Math.round(d)}px 어긋나요`)
+        // 둘 다 칸 높이를 거의 다 쓰면(짧은 쪽이 긴 쪽의 85% 이상) 옮길 자리가 없다: 차트 둘이 나란한 줄
+        const hs = spans.map((s) => s!.b - s!.t)
+        // 본문이 아래까지 꽉 찬 장도 같다: 짧은 쪽을 내리면 그 아래에 쌓인 줄이 같이 내려가 본문 밖으로 나가서 쌓기가 맞추기를 거둔다
+        const full = Math.max(...[...area.querySelectorAll<HTMLElement>(':scope > .bk')].map((c) => inkSpan(c)?.b ?? -Infinity)) >= area.getBoundingClientRect().bottom - 8 * k
+        if (d > 4 && !full && Math.min(...hs) < Math.max(...hs) * 0.85) out.push(`둥근 그림과 글 묶음의 가운데가 ${Math.round(d)}px 어긋나요`)
       }
       return
     }
