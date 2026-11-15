@@ -100,6 +100,8 @@ const SCENES: BlockType[][][] = [
   [['dist'], ['callout', 'bullets', 'text']],
   // 여정 곡선과 읽은 것: 곡선 옆에 가장 낮은 단계를 어떻게 고칠지
   [['journey'], ['callout', 'bullets', 'text']],
+  // 저울과 읽은 것: 기운 저울 옆에 그래서 무엇을 할지
+  [['weigh'], ['callout', 'bullets', 'text']],
   // 원인 캐기와 대책: 근본 원인 옆이나 아래에 고칠 것
   [['whys'], ['callout', 'bullets', 'checks']],
   // 도는 주기와 이번 차례: 고리 옆에 지금 하는 일이나 한마디
