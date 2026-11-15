@@ -1175,14 +1175,24 @@ export function blockFitter() {
         const chart = row.find((x) => round.has(x.c.dataset.type ?? ''))
         const text = row.find((x) => besideRound(x.c))
         if (!chart || !text || !sameRows(chart.c, text.c)) continue
-        // 바탕 없는 칸끼리만 여기서 칸째 옮긴다. 바탕(들여 쓰기, 강조)을 고른 칸은 쌓은 뒤에 맞춘다(pack 끝): 여기서는 첫 글줄 윗선
-        // 맞추기에서만 뺀다(빼지 않으면 그림이 들여 쓴 칸의 위 여백만큼 내려가 가운데가 다시 어긋났다)
-        if (chart.c.classList.contains('bk-look-plain') && !text.c.classList.contains('bk-look-plain')) {
+        // 바탕 없는 칸끼리만 여기서 둘 다 칸째 옮긴다. 짝이 바탕(들여 쓰기, 강조)을 고른 칸이면 쌓은 뒤에 맞춘다(pack 끝): 여기서는 첫 글줄
+        // 윗선 맞추기에서만 뺀다(빼지 않으면 그림이 들여 쓴 칸의 위 여백만큼 내려가 가운데가 다시 어긋났다)
+        if (!text.c.classList.contains('bk-look-plain')) {
           centered.add(chart.c)
           centered.add(text.c)
           continue
         }
-        if (!row.every((x) => x.c.classList.contains('bk-look-plain'))) continue
+        // 그림이 바탕을 고른 칸이면 그림은 그대로 두고(상자가 칸 높이 그대로라 옮기면 본문 아래로 나간다) 짝만 그림 내용의 가운데로 내린다.
+        // 예전에는 그림이 바탕 없는 칸일 때만 맞춰서, 그림의 바탕을 들여 쓰기로 바꾸자마자(눈에는 같은 그림) 옆의 글이 위로 올라붙었다
+        if (!chart.c.classList.contains('bk-look-plain')) {
+          centered.add(chart.c)
+          centered.add(text.c)
+          const span = content(chart.c)
+          if (!span) continue
+          const need = (span.t + span.b) / 2 + dy.get(chart.c)! - ((text.ink!.t + text.ink!.b) / 2 + dy.get(text.c)!)
+          if (need >= 1) lineUp.set(text.c, need)
+          continue
+        }
         const centers = row.map((x) => (x.ink!.t + x.ink!.b) / 2 + dy.get(x.c)!)
         const goal = Math.max(...centers)
         row.forEach((x, i) => {
@@ -1275,10 +1285,14 @@ export function blockFitter() {
       if (row.length !== 2) continue
       const chart = row.find((x) => round.has(x.c.dataset.type ?? ''))
       const text = row.find((x) => besideRound(x.c))
-      if (!chart || !text || !sameRows(chart.c, text.c) || !chart.c.classList.contains('bk-look-plain') || text.c.classList.contains('bk-look-plain')) continue
+      if (!chart || !text || !sameRows(chart.c, text.c) || text.c.classList.contains('bk-look-plain')) continue
       const inner = text.c.querySelector<HTMLElement>(':scope > .bk-in')
       if (!inner) continue
-      const goal = (chart.ink!.t + chart.ink!.b) / 2 + dy.get(chart.c)!
+      // 그림의 가운데: 바탕 없는 칸은 그려진 것, 바탕을 고른 칸은 상자가 아니라 그 안의 내용(상자는 칸 높이 그대로다)
+      const bare = chart.c.classList.contains('bk-look-plain')
+      const fig = bare ? chart.ink! : content(chart.c)
+      if (!fig) continue
+      const goal = (fig.t + fig.b) / 2 + dy.get(chart.c)!
       const gap = () => {
         const span = content(text.c)
         return span ? { need: goal - ((span.t + span.b) / 2 + dy.get(text.c)!), b: span.b } : null
@@ -1305,8 +1319,8 @@ export function blockFitter() {
           // 맞추느라 옮긴 것은 몇 px라도 적는다(아래의 '8px 밑이면 그대로'에 버려지지 않게)
           lineUp.set(text.c, down)
         }
-      } else if (need <= -k) {
-        // 글이 그림보다 길면 그림이 글 묶음의 가운데로 내려온다(글 칸의 아래 끝까지만)
+      } else if (need <= -k && bare) {
+        // 글이 그림보다 길면 그림이 글 묶음의 가운데로 내려온다(글 칸의 아래 끝까지만). 바탕을 고른 그림 칸은 옮기지 않는다
         const down = Math.min(-need, text.r.bottom + dy.get(text.c)! - (chart.ink!.b + dy.get(chart.c)!))
         if (down >= k) {
           dy.set(chart.c, dy.get(chart.c)! + down)
