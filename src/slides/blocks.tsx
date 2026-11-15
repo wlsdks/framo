@@ -24,6 +24,7 @@ import { Dist } from './blocks/Dist'
 import { Diverge } from './blocks/Diverge'
 import { Facts } from './blocks/Facts'
 import { Flow } from './blocks/Flow'
+import { Journey } from './blocks/Journey'
 import { Hub } from './blocks/Hub'
 import { Overlap } from './blocks/Overlap'
 import { Radar } from './blocks/Radar'
@@ -113,6 +114,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   radar: Radar,
   overlap: Overlap,
   dist: Dist,
+  journey: Journey,
   spread: Spread,
   adoption: Adoption,
   aliases: Aliases,

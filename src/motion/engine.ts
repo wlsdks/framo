@@ -2525,6 +2525,82 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-ds-of'), light + sweep + 80, 420)
           break
         }
+        case 'journey': {
+          // 여정 곡선: 일이 지나가는 차례 그대로 곡선이 왼쪽에서 그어지고, 선이 닿는 단계마다 점과 값, 이름표가 제자리에서 맺힌다.
+          // 선은 가장 낮은 곳까지 느려지며 내려가 거기서 한 박자 멈춘다. 멈춘 사이에 강조색 점이 맺히고 그 단계의 값과 이름이 켜진 뒤,
+          // 나머지 선이 끝까지 이어진다(그 뒤로는 회복한다). 한 번에 끝까지 그으면 골짜기를 그냥 지나쳐, 다 그려진 뒤에야 강조색을
+          // 찾아 눈이 되돌아간다: 이 그림의 답은 '여기서 막힌다'라 선이 거기서 서야 한다.
+          // 선은 가림막을 왼쪽에서 걷어 긋는다(가로로 같은 몫씩 열려서, 닿는 때가 단계의 가로 자리와 맞는다). 글은 옮기지 않는다
+          lines(one('.bk-h'), 60)
+          const ink = one('.bk-jr-ink')
+          const stages = $('.bk-jr-st')
+          const n = stages.length
+          if (!ink || !n) break
+          const lively = levelName === 'lively'
+          const x = (i: number) => (i + 0.5) / n
+          const low = (st: Element) => st.classList.contains('is-low')
+          // 멈추는 곳은 선이 내려가 닿는 첫 골짜기다. 첫 단계가 가장 낮으면 내려온 것이 없어서, 거기서 멈추면 선의 토막만 두고 반 초를 서 있었다
+          const stop = stages.findIndex((st, i) => i > 0 && low(st))
+          const ease = curve(EASE.reveal)
+          /** 곡선(ease)이 몫 q에 닿는 때(0~1) */
+          const when = (q: number) => {
+            let lo = 0
+            let hi = 1
+            for (let k = 0; k < 20; k++) {
+              const mid = (lo + hi) / 2
+              if (ease(mid) < q) lo = mid
+              else hi = mid
+            }
+            return hi
+          }
+          const start = 140
+          const k = lively ? 1.15 : 1
+          // 멈출 곳이 없으면(값이 모두 같거나 읽을 수 없거나, 첫 단계만 가장 낮으면) 멈추지 않고 끝까지
+          const xs = stop < 0 ? 1 : x(stop)
+          const first = stop < 0 ? 820 * k : (300 + 700 * xs) * k
+          const beat = stop < 0 ? 0 : lively ? 240 : 200
+          const rest = stop < 0 ? 0 : (240 + 500 * (1 - xs)) * k
+          const total = first + beat + rest
+          const cut = (p: number) => `inset(0 ${((1 - p) * 100).toFixed(2)}% 0 0)`
+          const frames: Keyframe[] =
+            stop < 0
+              ? [{ clipPath: cut(0), easing: EASE.reveal }, { clipPath: cut(1) }]
+              : [
+                  { clipPath: cut(0), easing: EASE.reveal, offset: 0 },
+                  { clipPath: cut(xs), offset: first / total },
+                  { clipPath: cut(xs), easing: EASE.reveal, offset: (first + beat) / total },
+                  { clipPath: cut(1), offset: 1 },
+                ]
+          run(anims, ink, frames, s(start), { easing: 'linear', duration: d(total) })
+          /**
+           * 선이 단계 i의 점에 닿는 때. near면 눈에 닿아 보이는 때(가는 길의 97%): 선은 느려지며 닿아서 마지막 3%에 그 구간 시간의
+           * 3분의 1 넘게 쓴다. 다 닿기를 기다려 답을 켜면 그동안 선만 서 있는 빈 칸이 생겼다(생동감에서 0.3초 넘게)
+           */
+          const reach = (i: number, near = false) => {
+            const q = near ? 0.97 : 1
+            if (stop < 0) return start + when(x(i) * q) * first
+            if (i <= stop) return start + when((x(i) / xs) * q) * first
+            return start + first + beat + when(((x(i) - xs) / (1 - xs)) * q) * rest
+          }
+          stages.forEach((st, i) => {
+            const at = reach(i, low(st))
+            const dot = st.querySelector('.bk-jr-dot')
+            const val = st.querySelector('.bk-jr-val')
+            const lab = st.querySelector('.bk-jr-lab')
+            if (low(st)) {
+              // 선이 닿아 보이는 그 박자에 답이 맺힌다(가장 낮은 곳이 여럿이면 선이 닿는 차례로 하나씩). 점이 먼저, 값과 이름이 뒤따른다
+              pop(dot, at)
+              fade(val, at + 40, 360)
+              fade(lab, at + 80, 420)
+            } else {
+              // 점은 선 끝이 닿을 때 맺힌다(앞서 켜면 선보다 먼저 떠 있는 점이 보였다)
+              fade(dot, at, 240)
+              fade(val, at + 20, 300)
+              fade(lab, at + 60, 360)
+            }
+          })
+          break
+        }
         case 'heat': {
           // 칸이 왼쪽 위 모서리부터 비스듬한 물결로 물든다(줄 + 칸이 같은 칸이 함께). 칸이 많아도 1초 안에 다 물들게.
           // 다 물든 뒤 가장 높은 칸과 낮은 칸에 고리가 맺힌다

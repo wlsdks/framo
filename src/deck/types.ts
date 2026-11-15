@@ -306,6 +306,7 @@ export type NativeBlockType =
   | 'radar'
   | 'overlap'
   | 'dist'
+  | 'journey'
   | 'spread'
   | 'adoption'
   | 'aliases'
