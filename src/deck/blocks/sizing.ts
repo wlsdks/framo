@@ -11,7 +11,7 @@ import { BLOCK_GROUPS, BLOCKS } from './catalog'
 import { blockItems, mapBlock, variantOfBlock } from './cells'
 import { LINK_PAD } from './links'
 import type { NoRoom } from './place'
-import { BLOCK_COL_GAP, BLOCK_GAP, isSmall, lookIssue, shownLook, withLook } from './rules'
+import { BLOCK_COL_GAP, BLOCK_GAP, isSmall, isSolo, lookIssue, shownLook, withLook } from './rules'
 
 /** 부품 장 본문 상자의 너비 (장 너비에서 좌우 틀을 뺀 것) */
 export const AREA_W = 1920 - 2 * FRAME.x
@@ -95,6 +95,15 @@ export const roomyRows = (b: Pick<Block, 'type'>, span: number, areaH: number): 
 
 /** 항목이 셋 이상인 부품: 칸이 이보다 낮으면 줄 사이가 붙어 빽빽해진다. 로고는 그림이라 빼고 */
 const LIST_FLOOR = 240
+/**
+ * 넓게 눕는 목록: 한 줄을 다 쓸 때 잰 높이가 이 아래면 항목이 쌓이지 않고 소제목 아래에 옆으로 늘어선 짜임이다(점 목록 셋은 130px).
+ * 한 줄을 혼자 쓰는 컴포넌트(추진 일정, 표)가 있는 판에서는 이런 목록에 바닥(240) 대신 장의 글자를 한 단계 키울 자리(ENLARGE)만 남긴다.
+ * 그런 판은 목록을 그 아래 줄에 둘 수밖에 없는데, 바닥을 지키게 하면 들어갈 자리가 있어도 넣지 못했다: 본문 705px인 장에서 추진 일정(430)
+ * 아래에 208px이 남는데 140px이면 되는 점 목록이 '슬라이드 높이를 넘어요'였다. 다른 판에서는 바닥 그대로다: 거기까지 낮추면 그림 옆에
+ * 둘 수 있는 목록을 그림 아래의 띠로 보내고 그림을 낮은 줄에 누른 판을 골랐다(방사형 비교와 점 목록)
+ */
+const WIDE_LIST = 180
+const ENLARGE = 1.2
 
 /**
  * 잰 높이에 더하는 여유. 잰 높이는 글이 딱 들어가는 높이(10px 단위)라, 같은 부품을 다른 때 다른 창에서 다시 재면 10~20px씩 달랐다
@@ -141,9 +150,9 @@ function measuredAt(table: Partial<Record<number, number[]>> | undefined, span: 
 /**
  * 부품을 이 너비(12칸 중 몇 칸)에 놓을 때 잘리지 않는 가장 낮은 높이(캔버스 px).
  * 모양, 바탕(그대로 / 카드와 강조색 면), 항목 수, 너비마다 갤러리에서 잰 값(blockHeights.ts)에 보기 좋은 바닥을 더한다.
- * 그 너비로 안 되면 NO_FIT 이상
+ * 그 너비로 안 되면 NO_FIT 이상. low: 넓게 눕는 목록을 바닥 없이 낮게 둔다(WIDE_LIST, 판이 정한다: boardFit)
  */
-export function blockMinH(block: Block, span: number): number {
+export function blockMinH(block: Block, span: number, low = false): number {
   const spec = BLOCKS[block.type]
   const variant = variantOfBlock(block)
   const n = spec.items ? heightCount(block, variant) : 0
@@ -162,7 +171,9 @@ export function blockMinH(block: Block, span: number): number {
   // 항목이 옆으로 늘어서는 너비(항목 수가 늘어도 높이가 같은 너비)에서는 줄 사이가 붙을 일이 없어 바닥을 두지 않는다.
   // 한 줄을 다 쓰는 점 목록 셋은 한 줄로 100px인데 바닥 240을 받아 판에서 칸 높이의 절반을 가져갔다
   const sideways = (found ?? 400) <= (measuredAt(table, span, 1) ?? 0)
-  return Math.max(measured, floor, n >= 3 && block.type !== 'logos' && !sideways ? LIST_FLOOR : 0)
+  const list = n >= 3 && block.type !== 'logos' && !sideways
+  const wide = low && found !== undefined && found <= WIDE_LIST
+  return Math.max(measured, floor, list ? (wide ? Math.ceil(found * ENLARGE) + slack : LIST_FLOOR) : 0)
 }
 
 /**
@@ -240,6 +251,8 @@ export function boardFit(areaH: number, blocks: readonly Block[] = []): Fit {
   // 판 하나를 나누는 동안 같은 부품을 수백 번 물어서 부품마다 적어 둔다 (부품은 바뀌면 새 객체라 적어 둔 값이 낡지 않는다)
   const widths = new WeakMap<Block, number>()
   const heights = new WeakMap<Block, number[]>()
+  // 한 줄을 혼자 쓰는 컴포넌트가 있는 판: 한 줄을 다 쓰는 목록을 낮게 둘 수 있다 (WIDE_LIST)
+  const solo = blocks.some((b) => !!BLOCKS[b.type] && isSolo(b.type))
   const minW = (b: Block) => {
     if (!BLOCKS[b.type]) return 1
     let w = widths.get(b)
@@ -262,7 +275,7 @@ export function boardFit(areaH: number, blocks: readonly Block[] = []): Fit {
       let hs = heights.get(b)
       if (!hs) heights.set(b, (hs = []))
       if (hs[w] === undefined) {
-        const px = blockMinH(b, w)
+        const px = blockMinH(b, w, solo && w >= BOARD_COLS)
         hs[w] = px >= NO_FIT ? Infinity : rowsFor(px + linkRoom(b, blocks), areaH)
       }
       return hs[w]
