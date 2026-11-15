@@ -625,18 +625,19 @@ export function BlockLibrary({ deck, slide, blocks, toast, onClose }: { deck: De
           <p className="lib-why-p">{shownWhy.text.why}</p>
           <p className="lib-why-p is-fix">{shownWhy.text.fix}</p>
           <div className="lib-why-actions">
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setWhy(null)}>
-              닫기
-            </button>
+            {/* 채운 버튼은 해결(새 슬라이드에 넣기)에: 닫기가 채운 버튼이면 눈이 먼저 가는 것이 그만두기였다 */}
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
+              className="btn btn-primary btn-sm"
               onClick={() => {
                 blocks.insertNew(shownWhy.type)
                 setWhy(null)
               }}
             >
               새 슬라이드에 넣기
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setWhy(null)}>
+              닫기
             </button>
           </div>
         </div>

@@ -362,11 +362,11 @@ export function SavedParts({ deck, slide, blocks, toast, onNewCine }: { deck: De
           <p className="lib-why-p">{shownWhy.text.why}</p>
           <p className="lib-why-p is-fix">{shownWhy.text.fix}</p>
           <div className="lib-why-actions">
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setWhy(null)}>
-              닫기
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => insert(shownWhy.part, shownWhy.card, true)}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => insert(shownWhy.part, shownWhy.card, true)}>
               새 슬라이드에 넣기
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setWhy(null)}>
+              닫기
             </button>
           </div>
         </div>
