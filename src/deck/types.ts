@@ -307,6 +307,7 @@ export type NativeBlockType =
   | 'overlap'
   | 'dist'
   | 'journey'
+  | 'weigh'
   | 'spread'
   | 'adoption'
   | 'aliases'

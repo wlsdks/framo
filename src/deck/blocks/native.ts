@@ -1525,6 +1525,42 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  weigh: {
+    name: '저울',
+    description: '두 쪽에 무게를 올려 어느 쪽이 더 무거운지를 저울대의 기울기로 (드는 것과 얻는 것, 지금 방식과 새 방식, 걱정과 기대)',
+    motion: '왼쪽, 오른쪽 차례로 올라가며 저울대가 기울고, 한 번 출렁인 뒤 멈추면 무거운 쪽 숫자가 켜져요',
+    fields: [
+      { key: 'heading', label: '소제목', hint: '예: 바꾸면 드는 것과 얻는 것', optional: true },
+      // 비워 두면 두 값에서 셈한 차이('3.7배', '+500만 원')가 보인다(slides/weigh.ts의 weighGap). 직접 적으면 적은 글이 이긴다
+      { key: 'gap', label: '차이', hint: '예: 3배', optional: true, named: true },
+    ],
+    items: {
+      label: '쪽',
+      // 저울은 두 쪽이다: 더하지도 빼지도 않는다(끌어서 왼쪽과 오른쪽을 맞바꿀 수는 있다)
+      min: 2,
+      max: 2,
+      default: 2,
+      fields: [
+        // 그려지는 차례대로(이름, 근거, 숫자): 숫자가 저울대 바로 위에 앉는다
+        { key: 'title', label: '이름', hint: '무엇의 무게인지', hints: ['드는 것', '얻는 것'] },
+        // 근거는 이 쪽에 올린 것들이라 접지 않는다(비워 두면 발표할 때는 이름과 숫자만 선다). 한 줄에 하나씩
+        { key: 'body', label: '근거', hint: '이 쪽에 올릴 것을 한 줄씩', hints: ['처음 익히는 시간\n달마다 살피는 시간', '다시 정리하던 시간\n맞춰 보던 시간'], optional: true, shown: true, multiline: true },
+        // 숫자 칸의 안내는 예시 값이다: 비운 동안 이 값으로 저울을 옅게 기울여 보인다(Weigh.tsx)
+        { key: 'value', label: '무게', hint: '6시간', hints: ['6시간', '22시간'] },
+      ],
+    },
+    // 반 칸까지 넣는다: 저울대는 선 하나라 800px에서도 기울기가 읽히고, 한 쪽의 글(이름, 숫자, 근거 서너 줄)이 320px 단에 선다.
+    // 그보다 좁으면(세 칸 가운데 하나) 한 쪽이 200px 남짓이라 근거가 낱말마다 꺾이고 저울대가 글 사이의 짧은 빗금이 된다
+    minSpan: 6,
+    prefSpan: 12,
+    sample: {
+      fields: { heading: '주간 보고를 한곳에 모으면 (한 달 기준)' },
+      items: [
+        { title: '드는 것', value: '6시간', body: '양식을 처음 맞추는 시간\n달마다 한 번 살피는 시간' },
+        { title: '얻는 것', value: '22시간', body: '팀마다 다시 정리하던 시간\n숫자를 맞춰 보던 시간\n늦은 보고를 챙기던 시간' },
+      ],
+    },
+  },
   heading: {
     name: '소제목',
     description: '옆이나 아래 컴포넌트들을 묶는 짧은 제목 (지금 방식, 바꾸면)',

@@ -1,0 +1,218 @@
+/* ---------- 저울 ---------- */
+
+/* 소제목, 그림(두 쪽의 글 묶음, 그 아래의 저울대와 받침대, 받침대 아래의 차이). 그림은 내용만큼만 높다:
+   저울대가 오르내리는 높이는 너비가 정해서(기울기가 같다) 칸이 높다고 더 기울지 않는다 */
+.bk-wg {
+  /* 글자와 같이 크고 주는 배율(base.css의 글자 칸과 같은 식): 선의 굵기, 받침대, 글과 저울대 사이가 글자 단계를 따라간다 */
+  --wg-k: calc(var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1));
+  /* 끝까지 기울었을 때의 기울기(높이 ÷ 너비). slides/weigh.ts의 WEIGH_SLOPE와 같은 값 */
+  --wg-slope: 0.12;
+  /* 저울대의 굵기: 이 그림의 데이터라 힘 있게(여정 곡선의 선과 같은 무게) */
+  --wg-line: calc(5px * var(--wg-k));
+  /* 저울대의 농담: 가벼운 쪽 끝이 이만큼, 무거운 쪽 끝이 글자색 그대로 */
+  --wg-pale: 26%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  height: 100%;
+}
+
+/* 소제목과 그림 사이: 들린 쪽의 이름이 소제목 바로 아래에 오므로 글자와 같이 크는 사이를 둔다(둘이 한 묶음의 두 줄로 붙어 보이지 않게) */
+.bk-wg > .bk-h {
+  margin-bottom: max(26px, calc(36px * var(--wg-k)));
+}
+
+/* 편집할 때만 보이는 알림(색과 굵기는 edit.css의 .ed-warn): 장의 글보다 작게 */
+.bk-wg-warn {
+  --fs: 22px;
+  margin: 0 0 8px;
+  line-height: 1.35;
+}
+
+/* 그림: 두 쪽은 양 끝의 두 단(너비의 40%씩)에, 가운데 20%는 받침대의 자리로 비운다. 두 쪽의 가운데가 저울대 절반 길이의 6할에 선다:
+   더 안쪽이면 글이 덜 오르내려 기울기가 약해 보이고, 더 바깥이면 한 쪽의 글이 설 너비가 모자란다.
+   그림을 크기 컨테이너로 둔다: 100cqw가 저울대의 길이라, 글이 오르내리는 만큼과 저울대 끝이 내려가는 만큼을 CSS만으로 셈한다 */
+.bk-wg-plot {
+  /* 글 묶음이 오르내리는 높이: 저울대 절반(50cqw)의 6할 × 기울기. 그림 안에서만 쓴다 */
+  --wg-lift: calc(30cqw * var(--wg-slope));
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 2fr);
+  min-width: 0;
+  container-type: inline-size;
+}
+
+/* 한 쪽: 이름, 근거, 숫자를 가운데로 쌓는다(저울은 좌우가 같은 꼴이다). 숫자가 맨 아래, 저울대 바로 위에 앉는다: 근거가 몇 줄이든
+   두 숫자는 저울대에서 같은 거리라 숫자의 높낮이가 곧 기울기다. 두 쪽의 바닥이 한 줄에 놓였다가(수평) 제 자리 아래의
+   저울대를 따라 내려가고 올라간다. 올라간 쪽이 그림 위로 나가지 않게 그만큼 위를 비운다 */
+.bk-wg-side {
+  position: relative;
+  display: grid;
+  grid-row: 1;
+  align-self: end;
+  justify-self: center;
+  justify-items: center;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: calc(var(--wg-lift) * var(--wg-abs, 0));
+  text-align: center;
+  translate: 0 calc(var(--wg-lift) * var(--wg-t, 0) * var(--wg-s));
+}
+
+.bk-wg-side.is-a {
+  --wg-s: -1;
+  grid-column: 1;
+}
+
+.bk-wg-side.is-b {
+  --wg-s: 1;
+  grid-column: 3;
+}
+
+/* 이름: 무엇의 무게인지. 묶음의 머리지만 소제목보다 한 급 아래다(같은 굵기면 들린 쪽의 이름이 소제목의 둘째 줄로 읽혔다) */
+.bk-wg-n {
+  --fs: var(--t-body);
+  /* 긴 이름은 꺾는다: 한 줄로 두면 묶음이 단을 다 써서 가운데의 받침점까지 글이 닿는다 */
+  max-width: 14em;
+  color: var(--ink);
+  font-weight: 500;
+  line-height: 1.3;
+  text-wrap-style: balance;
+}
+
+/* 무게: 두 숫자는 같은 크기다(크기가 다르면 서로 다른 것을 재는 것처럼 보인다). 가벼운 쪽은 버금 글자색으로 물러나고
+   무거운 쪽만 강조색이다: 이 그림의 답(docs/VISUAL-RULES.md 4) */
+.bk-wg-v {
+  --fs: 74px;
+  /* 한 줄로 줄이는 글(.one-line)은 그림이 아니라 제 단의 너비에 맞춘다 */
+  --line-room: 40cqi;
+  max-width: 100%;
+  margin-top: calc(6px * var(--wg-k));
+  color: var(--ink);
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight);
+  letter-spacing: -0.02em;
+  /* 숫자가 저울대에 앉아 보이게 줄 상자를 글자에 바짝: 줄 사이가 넉넉하면 숫자가 저울대 위에 떠 보인다.
+     더 당기지는 않는다: 줄 상자 아래를 음수 여백으로 당겼을 때는 편집할 때의 밑줄(읽을 수 없는 값)이 저울대에 묻혔다 */
+  line-height: 1.05;
+}
+
+.bk-wg:is(.is-left, .is-right) .bk-wg-side:not(.is-heavy) .bk-wg-v {
+  color: var(--ink-2);
+}
+
+.bk-wg-side.is-heavy .bk-wg-v {
+  color: var(--accent);
+}
+
+/* 근거: 이 쪽에 올린 것들. 이름과 숫자 사이에 한 줄에 하나씩 적은 그대로 선다(이것들을 더한 무게가 아래의 숫자다).
+   줄 길이를 고르게 꺾어 가운데로 쌓은 글이 계단처럼 보이지 않게 */
+.bk-wg-m {
+  --fs: var(--t-small);
+  /* 긴 근거는 두 줄로 꺾는다(한글 열여덟 자 남짓): 묶음이 좁아야 저울 끝에 올린 것으로 읽히고, 저울대와의 사이도 덜 벌어진다 */
+  max-width: 18em;
+  margin-top: calc(6px * var(--wg-k));
+  color: var(--ink-2);
+  line-height: 1.4;
+  text-wrap-style: balance;
+}
+
+/* 글 묶음과 저울대 사이. 묶음은 제 가운데 아래의 저울대를 따라 움직이는데, 기운 저울대는 묶음의 한쪽 끝으로 갈수록 올라온다:
+   묶음 너비의 절반만큼 올라오는 높이(세로 여백의 %는 묶음의 너비가 기준이다)를 비워, 글이 아무리 넓어도 저울대에 닿지 않는다.
+   수평이면 글자 사이만큼만 남는다 */
+.bk-wg-gapper {
+  display: block;
+  width: 100%;
+  height: calc(6px * var(--wg-k));
+  padding-bottom: calc(50% * var(--wg-slope) * var(--wg-abs, 0));
+  box-sizing: content-box;
+}
+
+/* 저울대와 받침대, 그 아래의 차이. 내려간 끝이 설 높이를 지킨다 */
+.bk-wg-foot {
+  position: relative;
+  display: grid;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  align-content: start;
+  justify-items: center;
+  min-height: calc(50cqw * var(--wg-slope) * var(--wg-abs, 0) + var(--wg-line));
+}
+
+/* 저울대: 선 하나. 가운데를 축으로 기운다(옆으로는 그대로이고 위아래로만 민다: 양 끝이 그림의 양 끝에 그대로 선다).
+   어느 쪽도 무겁지 않으면 고른 농담 */
+.bk-wg-beam {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--wg-line);
+  background: color-mix(in srgb, var(--ink) 62%, var(--bg));
+  transform: skewY(var(--wg-a, 0deg));
+}
+
+/* 저울대의 농담: 무거운 쪽으로 갈수록 짙어진다. 고른 선 위에 한 겹으로 덮어 둔다: 발표할 때는 저울이 답을 찾은 뒤에야 덮여서,
+   올리는 동안에는 선의 농담이 답을 먼저 말하지 않는다(engine.ts) */
+.bk-wg-ink {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+.bk-wg.is-right .bk-wg-ink {
+  display: block;
+  background: linear-gradient(to right, color-mix(in srgb, var(--ink) var(--wg-pale), var(--bg)), var(--ink));
+}
+
+.bk-wg.is-left .bk-wg-ink {
+  display: block;
+  background: linear-gradient(to left, color-mix(in srgb, var(--ink) var(--wg-pale), var(--bg)), var(--ink));
+}
+
+/* 받침점: 저울대 가운데를 아래에서 받치는 낮은 세모 하나. 가는 줄기로 그렸을 때는 내려가는 선에 눈금 하나가 달린 것으로 보여
+   (추이의 선처럼) 저울로 읽히지 않았다: 가운데에서 받친다는 것이 보여야 양 끝이 오르내리는 것이 무게로 읽힌다.
+   낮고 넓게, 저울대와 같은 농담으로: 글자만 한 검은 세모는 아래의 차이와 붙어 '▲ 3.7배'(늘었다는 표시)로 읽혔다.
+   크기는 이 그림의 정체라 넉넉히: 폭 44px이던 때는 4분의 1 크기(3~5m)에서 점이 되어 저울이 비탈진 선으로 읽혔다(감성 검수) */
+.bk-wg-post {
+  width: calc(84px * var(--wg-k));
+  height: calc(36px * var(--wg-k));
+  margin-top: calc(var(--wg-line) + 3px * var(--wg-k));
+  background: color-mix(in srgb, var(--ink) 62%, var(--bg));
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+/* 차이: 저울이 읽은 값. 받침대 바로 아래에서 한 번 말한다. 답(무거운 쪽의 숫자)보다 두 단계 작은 글자색: 발표하는 사람이
+   말로 짚는 이 그림의 마침표라 숫자에 붙은 단위보다 작지 않게 */
+.bk-wg-gap {
+  --fs: 52px;
+  --line-room: 30cqi;
+  margin-top: calc(18px * var(--wg-k));
+  color: var(--ink);
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* 편집할 때 아직 적지 않은 값을 예시로 기울인 저울은 옅게. 그 값에서 셈한 차이도 안내 글의 색으로 */
+.bk-wg.is-demo :is(.bk-wg-beam, .bk-wg-post) {
+  opacity: 0.4;
+}
+
+.bk-wg.is-demo .bk-wg-gap {
+  color: var(--ink-3);
+}
+
+/* 넓고 높은 칸(판을 혼자 쓰거나 한 줄을 다 쓰는 칸): 저울대가 1,600px 넘게 길어지는데 숫자가 좁은 칸과 같은 크기면 답이 그림의
+   덧붙임처럼 작아 보인다. 숫자와 차이만 한 단계 키운다(겹침의 답과 같은 규칙). 높이의 문턱은 작은 숫자로 들어가는 가장 낮은
+   높이(520)보다 넉넉히 위다: 문턱이 낮으면 그 바로 위에서 큰 숫자가 넘쳐, 잰 높이가 문턱 위로 밀려 올라간다 */
+@container bk (min-width: 1200px) and (min-height: 640px) {
+  .bk-wg-v {
+    --fs: 90px;
+  }
+
+  .bk-wg-gap {
+    --fs: 62px;
+  }
+}

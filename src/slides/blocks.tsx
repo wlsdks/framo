@@ -72,6 +72,7 @@ import { Sparks } from './blocks/Sparks'
 import { Stack } from './blocks/Stack'
 import { Swot } from './blocks/Swot'
 import { Text } from './blocks/Text'
+import { Weigh } from './blocks/Weigh'
 import { SlideContext, useSlide, type SlideActions } from './context'
 import { T } from './fields'
 import { placeHandle } from './handleSpot'
@@ -115,6 +116,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   overlap: Overlap,
   dist: Dist,
   journey: Journey,
+  weigh: Weigh,
   spread: Spread,
   adoption: Adoption,
   aliases: Aliases,

@@ -122,6 +122,32 @@ function edgeSlides(): Slide[] {
 }
 
 /**
+ * 저울의 두 값을 빗금으로 잇는다(&value=6시간/22시간: 왼쪽, 오른쪽. 빈 자리는 예시 그대로): 크게 다른 것, 조금 다른 것(100/104), 같은 것(8/8),
+ * 왼쪽이 무거운 것(30/9), 읽을 수 없는 값(미정/9)을 본다. @ 뒤는 근거의 줄 수(@0: 근거 없이, @1, @5)이고 @long은 긴 이름과 긴 근거.
+ * &value=new는 막 넣은 빈 것(안내의 예시 값으로 옅게 기울인 저울)
+ */
+function weighSample(original: Block, value: string): Block {
+  if (value === 'new') return { ...original, fields: {}, items: original.items.map((it) => ({ ...it, title: '', value: '', body: '' })) }
+  const [pair = '', lines] = value.split('@')
+  const values = pair.split('/')
+  const reasons = ['처음 맞추는 시간', '달마다 살피는 시간', '새로 온 사람에게 알려 주는 시간', '양식을 고쳐 달라는 요청', '예전 자료를 옮기는 일']
+  return {
+    ...original,
+    items: original.items.map((it, i) => ({
+      ...it,
+      ...(lines === 'long' ? { title: i === 0 ? '지금처럼 팀마다 따로 정리할 때' : '한곳에 모아 같이 볼 때' } : {}),
+      value: values[i] || it.value,
+      body:
+        lines === 'long'
+          ? `${it.body}\n담당자가 바뀔 때마다 처음부터 다시 알려 줘야 하는 시간`
+          : lines != null && lines !== ''
+            ? reasons.slice(0, Math.max(0, Number(lines) || 0)).join('\n')
+            : it.body,
+    })),
+  }
+}
+
+/**
  * 부품마다 편집기에서 실제로 나올 수 있는 크기로: 혼자 판을 다 쓸 때, 가장 좁은 칸에 가장 낮게 끌어내렸을 때,
  * 장 너비를 다 쓰면서 가장 낮을 때, 셋이 나란히. 줄로 적어 판으로 옮긴다(boardFromRows). 낮은 줄은 높이 비중(grow)으로 만든다:
  * 다른 줄이 남는 높이를 다 가져가서 그 줄은 판이 허락하는 가장 낮은 높이(blockMinH)가 된다.
@@ -153,7 +179,9 @@ function blockSlides(fill: string | null, only?: string[], variant?: string | nu
                 ? { ...original, fields: { ...original.fields, ...(distCut != null ? { cut: distCut } : {}) }, items: original.items.map((it, i) => ({ ...it, value: distValues.split('/')[i] ?? it.value })) }
                 : type === 'journey' && value === 'new'
                   ? { ...original, fields: {}, items: original.items.map((it) => ({ ...it, title: '', value: '', meta: '' })) }
-                  : original
+                  : type === 'weigh'
+                    ? weighSample(original, value)
+                    : original
     // &fill=max: 항목을 가장 많이 넣었을 때, &fill=default: 새로 넣을 때의 수, &fill=3: 세 개. 예시 항목을 되풀이해 채운다
     const count = !spec.items
       ? 0

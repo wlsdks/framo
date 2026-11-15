@@ -2601,6 +2601,78 @@ export function motionEngine(): MotionEngine {
           })
           break
         }
+        case 'weigh': {
+          // 저울: 두 쪽을 차례로 올리면 저울대가 그때마다 기울고, 마지막에 무거운 쪽으로 넘어가 한 번 출렁인 뒤 멈춘다. 이 그림의 말은
+          // '올려 보니 이쪽이 더 무겁다'라, 처음부터 기운 채 나타나면 잰 것이 아니라 그려 둔 것이다.
+          // ① 빈 저울: 저울대가 가운데에서 양 끝으로 수평하게 그어지고 받침점이 맺힌다. ② 왼쪽을 올린다: 왼쪽 묶음이 제자리에서 맺히고
+          // 저울대가 왼쪽으로 내려앉는다(오른쪽이 비었으니 끝까지). ③ 오른쪽을 올린다: 오른쪽 묶음이 맺히고 저울대가 끝 기울기로
+          // 건너가(carry) 조금 넘쳤다가 돌아와 선다. ④ 저울대가 끝 기울기에 처음 닿을 때 무거운 쪽 숫자가 강조색으로 켜지고, 저울대가
+          // 그쪽으로 짙어지고, 차이가 맺힌다.
+          // 넘침은 여기 한 번뿐이다(기준은 넘치지 않는 것, MOTION.md): 저울이 제 자리를 찾는 흔들림은 꾸밈이 아니라 '쟀다'는 말이라
+          // 없으면 선이 각도만 바꾼 것으로 보인다. 크기는 끝 기울기의 몇 %(차분하게 7, 생동감 14)이고 되풀이하지 않는다.
+          // 글은 기울지 않는다: 묶음은 제 가운데 아래의 저울대를 따라 위아래로만 움직이고(원래 자리에 더한다), 기울기가 끝 모습보다 큰
+          // 동안에는 그만큼 더 떠서 저울대에 닿지 않는다. '하나씩 보이기'로 두면 오른쪽 묶음의 차례에서 멈춰 ②와 ③ 사이를 발표자가 누른다
+          lines(one('.bk-h'), 60)
+          const host = one('.bk-wg')
+          const plot = one('.bk-wg-plot')
+          const beam = one('.bk-wg-beam')
+          const sides = $('.bk-wg-side')
+          if (!host || !plot || !beam || sides.length !== 2) break
+          const lively = levelName === 'lively'
+          const slope = parseFloat(getComputedStyle(host).getPropertyValue('--wg-slope')) || 0
+          const end = Number(plot.dataset.tilt) || 0
+          const alone = Number(plot.dataset.first) || 0
+          // 왼쪽만 올렸을 때: 차분하게는 7할까지만 내려앉는다(짧은 거리). 왼쪽이 무거운 쪽이면 끝 기울기보다는 더 내려가 있어야
+          // 오른쪽을 올릴 때 저울대가 그만큼 되돌아온다(올렸는데 꿈쩍하지 않으면 오른쪽에는 무게가 없는 것으로 읽힌다)
+          const first = alone ? -Math.max(lively ? 1 : 0.7, end < 0 ? Math.min(1, -end + 0.2) : 0) : 0
+          // 오른쪽을 올리면 저울대는 늘 오른쪽으로 움직인다(first <= end). 왼쪽이 세 배 넘게 무거우면 끝 기울기가 왼쪽만 올린 것과 같아서
+          // 갈 거리가 없다: 그때는 오른쪽 무게만큼 들렸다가(끝 기울기의 3할) 도로 내려앉는다. '올렸지만 못 들었다'가 이 저울의 답이다
+          const swing = end - first
+          const still = first === 0 && end === 0
+          const nudge = swing < 0.3
+          const over = still ? 0 : end + Math.max(lively ? 0.14 : 0.07, 0.3 - swing)
+          const angle = (t: number) => `skewY(${((Math.atan(slope * t) * 180) / Math.PI).toFixed(3)}deg)`
+          const start = 140
+          // 빈 저울은 잠깐만: 왼쪽 묶음이 0.16초 뒤에 올라온다(빈 틀이 먼저 오래 서 있지 않게)
+          run(anims, beam, [{ scale: '0 1', opacity: 0 }, { scale: '1 1', opacity: 1 }], s(start), { easing: EASE.reveal, duration: d(420) })
+          fade(one('.bk-wg-post'), start + 120, 300)
+          const left = start + 160
+          const sink = 440
+          // 오른쪽 묶음은 저울대가 내려앉는 끝자락에 맺히기 시작한다: 다 내려앉기를 기다리면 왼쪽만 올린 그림이 0.3초 넘게 서 있었다
+          // (생동감, 감성 검수). 묶음이 또렷해질 때 저울대가 건너가기 시작한다
+          const right = left + 40 + sink - 140
+          const hold = 40
+          // 건너가는 시간: 조금 들렸다 마는 것은 거리가 짧아 짧게
+          const cross = nudge ? 300 : lively ? 660 : 620
+          const rock = still ? 0 : nudge ? 360 : lively ? 480 : 420
+          const total = sink + hold + cross + rock
+          const marks = [0, sink, sink + hold, sink + hold + cross, total].map((t) => t / total)
+          const tilts = [0, first, first, over, end]
+          const eases = [OUT, 'linear', nudge ? OUT : EASE.carry, EASE.breathe, 'linear']
+          const timing = { easing: 'linear', duration: d(total) }
+          run(anims, beam, tilts.map((t, i) => ({ transform: angle(t), easing: eases[i], offset: marks[i] })), s(left + 40), timing)
+          // 묶음이 오르내리는 만큼(weigh.css의 --wg-lift)과, 기운 저울대가 묶음의 끝에서 올라오는 만큼(.bk-wg-gapper)
+          const lift = 0.3 * plot.clientWidth * slope
+          sides.forEach((side, i) => {
+            const dir = i === 0 ? -1 : 1
+            const half = side.offsetWidth / 2
+            const y = (t: number) => lift * dir * (t - end) - half * slope * (Math.abs(t) - Math.abs(end))
+            fade(side, i === 0 ? left : right, 360)
+            run(anims, side, tilts.map((t, k) => ({ translate: `0 ${y(t).toFixed(2)}px`, composite: 'add' as const, easing: eases[k], offset: marks[k] })), s(left + 40), timing)
+          })
+          // 답은 저울대가 끝 기울기에 닿아 보일 때 켠다: 출렁임이 다 멎기를 기다리면 답이 1.2초를 넘고, 그동안 숫자 둘이 같은 무게로 서 있다
+          // (들렸다 마는 저울은 다 들리기 조금 전에: 도로 내려앉는 동안 색이 같이 켜진다)
+          const answer = left + 40 + sink + hold + cross * (nudge ? 0.7 : 0.8)
+          const heavy = one('.bk-wg-side.is-heavy .bk-wg-v')
+          // 켜지기 전에는 가벼운 쪽 숫자와 같은 색: 올리는 동안에는 어느 쪽이 답인지 색이 먼저 말하지 않는다
+          const other = one('.bk-wg-side:not(.is-heavy) .bk-wg-v')
+          const pale = other ? getComputedStyle(other).color : ''
+          if (heavy && pale) run(anims, heavy, [{ color: pale }], s(answer), { easing: OUT, duration: d(360) })
+          // 저울대의 농담도 답이다: 같은 때에 무거운 쪽으로 짙어진다
+          fade(one('.bk-wg-ink'), answer, 360)
+          fade(one('.bk-wg-gap'), answer + 120, 420)
+          break
+        }
         case 'heat': {
           // 칸이 왼쪽 위 모서리부터 비스듬한 물결로 물든다(줄 + 칸이 같은 칸이 함께). 칸이 많아도 1초 안에 다 물들게.
           // 다 물든 뒤 가장 높은 칸과 낮은 칸에 고리가 맺힌다
