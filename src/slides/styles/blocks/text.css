@@ -307,6 +307,15 @@
   }
 }
 
+/* 소제목이 있는 셋도 같다: 소제목이 옆에 서면 세 줄만 들면 되어(편집 화면의 손잡이까지 3 × 44 + 2 × 10 = 152px) 170px부터 한 단으로 세운다.
+   한 줄을 혼자 쓰는 그림(추진 일정, 표) 아래의 낮은 줄(190~210px, sizing.ts의 WIDE_LIST)에서 눕히면 소제목이 그림과 목록 사이에 혼자 뜨고
+   세 항목이 왼쪽에 몰려 오른쪽 4분의 1이 비었다(검수). 더 높은 줄과 같은 모습이라 줄 높이에 따라 목록의 말투가 바뀌지도 않는다 */
+@container bk (min-width: 1300px) and (min-height: 170px) {
+  .bk-look-plain > .bk-in:has(> .bk-bl > .bk-h + .bk-list[data-n='3']) {
+    --bl-one: 1;
+  }
+}
+
 @container bk (min-width: 1300px) and (min-height: 270px) {
   .bk-look-plain > .bk-in:has(> .bk-bl > .bk-list[data-n='4']) {
     --bl-one: 1;

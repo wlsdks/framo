@@ -3,7 +3,7 @@ import { sampleBlock } from '../blockSamples'
 import { makeSlide } from '../generate'
 import type { Block, BlockType } from '../types'
 import { allSpots, autoPlace, boardFit, composeAreaH, groupIssue, insertAt, insertParts, placeIssue, settle, validTargets, whyNot } from '../blocks'
-import { roomyRows } from './sizing'
+import { blockMinH, roomyRows } from './sizing'
 
 // 그림의 넉넉한 높이(sizing.ts의 ROOMY): 넣을 때만 지키고, 지킬 수 없으면 까닭(cramp)을 알리며 넣지 않는다
 const H = composeAreaH({ ...makeSlide('compose'), fields: { title: '가상의 제목' } })
@@ -80,5 +80,30 @@ describe('그림의 넉넉한 높이', () => {
 
   it('본문이 낮은 장에서도 그림 하나는 넣을 수 있다', () => {
     for (const h of [300, 420, 520]) for (const type of ['radar', 'hub'] as BlockType[]) expect(placeIssue([], part(type, 'only'), h)?.kind, `${type} ${h}`).not.toBe('cramp')
+  })
+
+  it('한 줄을 혼자 쓰는 컴포넌트 아래에는 넓게 눕는 목록이 낮은 띠로 들어간다', () => {
+    // 추진 일정(과제 넷, 430px) 아래에 남는 208px에 140px이면 되는 점 목록을 '슬라이드 높이를 넘어요'로 넣지 못했다
+    for (const [solo, list] of [['gantt', 'bullets'], ['gantt', 'faq'], ['scorecard', 'bullets']] as BlockType[][]) {
+      const bs = grow([solo, list])
+      expect(bs.map((b) => b.type), `${solo} + ${list}`).toEqual([solo, list])
+      const below = bs[1].at!
+      expect(below.w).toBe(12)
+      // 목록의 바닥(240px)보다 낮은 띠: 그 높이였으면 들어갈 줄이 모자랐다
+      expect(below.h).toBeLessThan(5)
+    }
+  })
+
+  it('그런 컴포넌트가 없는 판에서는 목록의 바닥 높이가 그대로다: 그림 옆에 둘 목록을 그림 아래의 띠로 보내지 않는다', () => {
+    const list = part('bullets', 'b')
+    expect(blockMinH(list, 12)).toBeGreaterThanOrEqual(240)
+    expect(blockMinH(list, 12, true)).toBeLessThan(240)
+    const bs = grow(['radar', 'bullets'])
+    const radar = bs.find((b) => b.type === 'radar')!.at!
+    const bullets = bs.find((b) => b.type === 'bullets')!.at!
+    // 나란히: 방사형 비교는 판 높이를 다 쓴다
+    expect(radar.h).toBe(12)
+    expect(bullets.y).toBe(0)
+    expect(radar.w + bullets.w).toBe(12)
   })
 })
