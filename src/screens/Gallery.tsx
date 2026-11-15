@@ -14,7 +14,7 @@ import { pageProps, ScaledSlide, SlideCanvas } from '../slides/SlideCanvas'
 import { fitBlocks } from '../slides/fitBlocks'
 import { motionEngine } from '../motion/engine'
 import { checkAssembly } from './assembly'
-import { checkCombos, comboSlides, pairSlides } from './combos'
+import { checkCombos, comboSlides, growSlides, pairSlides } from './combos'
 import { checkEdit } from './checkEdit'
 import { checkFrame, inkOf } from './checkFrame'
 import { clashes, failingHeights, heightsSource, measureAll, measureAllFonts, measureBlocks, mergeHeights, spanWidth } from './measureBlocks'
@@ -249,6 +249,9 @@ function galleryDeck(set: string, theme: ThemeId, params: URLSearchParams): Deck
   if (set === 'cine') return { ...deck, theme: { id: theme }, ...cineSlides(params) }
   if (set === 'combos') return { ...deck, theme: { id: theme }, slides: comboSlides(Number(params.get('seed')) || 1, Number(params.get('n')) || 40, look, params.get('mode') === 'edit', params.get('blank') === '1').map((c) => c.slide) }
   // set=pairs&a=radar,bars&b=whys,checks: 고른 두 컴포넌트를 나란히(장면에 없는 짝). &untitled=1이면 제목 없이, &bl=card면 오른쪽 것의 바탕을 바꿔서
+  // &seq=radar.bullets.number;hub.text.stat: 컴포넌트를 차례로 눌러 넣어 갈 때의 모습
+  if (set === 'grow')
+    return { ...deck, theme: { id: theme }, slides: growSlides((params.get('seq') ?? 'radar.bullets.number').split(';').map((q) => q.split('.') as BlockType[]), look, params.get('mode') === 'edit') }
   if (set === 'pairs')
     return { ...deck, theme: { id: theme }, slides: pairSlides((params.get('a') ?? 'radar').split(',') as BlockType[], (params.get('b') ?? 'whys').split(',') as BlockType[], look, params.get('mode') === 'edit', params.get('untitled') !== '1', (params.get('bl') as BlockLook | null) ?? undefined) }
   // set=example: 홈의 '완성된 예시 보기'가 여는 예시 발표 그대로(모션 그래픽, 장면, 배경 모션까지)
@@ -290,7 +293,7 @@ export function Gallery() {
   if (params.get('set') === 'blocks') Object.assign(window, { measureAll, measureAllFonts, measureBlocks, mergeHeights, heightsSource, clashes, failingHeights, spanWidth, fitBlocks })
   // 부품 조합 시험 (combos.ts). 콘솔에서 await checkCombos()
   // 프레임 잡기가 만드는 구성(set=blank, &filled=1이면 안내대로 채운 모습)의 부품 장도 같은 검사로
-  if (['combos', 'review', 'dirs', 'scenarios', 'blank', 'example', 'pairs'].includes(params.get('set') ?? '')) Object.assign(window, { checkCombos, comboSlides, checkAssembly })
+  if (['combos', 'review', 'dirs', 'scenarios', 'blank', 'example', 'pairs', 'grow'].includes(params.get('set') ?? '')) Object.assign(window, { checkCombos, comboSlides, checkAssembly })
   // 잘림과 짜임 검사는 레이아웃 장 갤러리에서도 (레이아웃 장은 잘림만 본다)
   else Object.assign(window, { checkAssembly })
   // 부품 하나를 항목 수와 칸 크기마다 재는 시험 (stress.ts). 콘솔에서 await checkStress()

@@ -322,6 +322,33 @@ export async function checkCombos(): Promise<{ slides: number; cells: number; pr
 }
 
 /**
+ * 컴포넌트를 하나씩 눌러 넣어 가는 장들: 차례(seq)마다 둘째부터 하나 넣을 때마다의 모습을 한 장씩. 쓰는 사람이 컴포넌트를 셋, 넷
+ * 넣어 갈 때 어디서부터 짜임이 무너지는지, 어디서 '넣을 수 없어요'가 되는지 본다. 넣을 수 없는 컴포넌트는 그 까닭을 제목에 적고
+ * 거기서 멈춘다(그 뒤의 것은 넣지 않는다)
+ */
+export function growSlides(seqs: BlockType[][], look?: Parameters<typeof composeAreaH>[1], edit?: boolean): Slide[] {
+  const out: Slide[] = []
+  seqs.forEach((seq, n) => {
+    let blocks: Block[] = []
+    for (let i = 0; i < seq.length; i++) {
+      const names = seq.slice(0, i + 1).map((t) => BLOCKS[t].name).join(' + ')
+      const base: Slide = { ...makeSlide('compose'), id: `grow-${n}-${i}`, fields: { title: names } }
+      const areaH = edit ? boardAreaH(base, look) : composeAreaH(base, look)
+      const block = { ...sampleBlock(seq[i]), id: `g-${n}-${i}` }
+      const next = autoPlace(blocks, block, areaH)
+      if (!next) {
+        const why = placeIssue(blocks, block, areaH)
+        out.push({ ...base, id: `grow-${n}-${i}-no`, fields: { title: `${BLOCKS[seq[i]].name}: 넣을 수 없음 (${why?.kind ?? '?'})` }, blocks })
+        break
+      }
+      blocks = settle(next, boardFit(areaH, next)) ?? next
+      if (i > 0) out.push({ ...base, blocks })
+    }
+  })
+  return out
+}
+
+/**
  * 고른 두 부품을 나란히 둔 장: as의 부품마다 bs의 부품을 오른쪽에 끌어다 놓는다. 장면(SCENES)은 흔한 짝만 뽑아서, 사람이 자유롭게
  * 만드는 짝(거미줄 차트 옆의 원인 찾기 같은)은 조합 수백 장에 한 번도 나오지 않았다. 높은 그림 옆의 낮은 글처럼 한 가지 짜임을
  * 부품을 바꿔 가며 볼 때 쓴다. 오른쪽에 놓을 수 없으면 '넣기'처럼 알아서 놓고, 그래도 안 되면 뺀다
