@@ -151,7 +151,7 @@ export function planDrop(s: Slide, d: DropState, where: DropAt): DropPlan {
       plan: result ? (compose ? 'place' : 'convert') : 'next',
       target: null,
       result,
-      blocked: result ? null : placeIssue(at.blocks, d.block, where.h),
+      blocked: result ? null : placeIssue(at.blocks, d.block, where.h, auto),
       composed: at.composed,
       base: at.blocks,
       room: where.h,
@@ -226,7 +226,7 @@ export function planDrop(s: Slide, d: DropState, where: DropAt): DropPlan {
             // 옮기다 다른 컴포넌트 가운데에 놓으면 맞바꾸려는 것: 맞바꿀 수 없으면 그렇다고 (말없이 제자리라 아무 일도 없는 것 같았다)
             const wanted = pointerTarget(base, p, size, shown, d.kind === 'move' ? d.block.id : undefined)
             blocked = !target
-              ? placeIssue(base, d.block, size.h)
+              ? placeIssue(base, d.block, size.h, false)
               : target.kind === 'swap' || sameEditTarget(wanted, target)
                 ? null
                 : wanted.kind === 'swap'

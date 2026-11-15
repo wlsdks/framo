@@ -1147,6 +1147,9 @@ export function blockFitter() {
       rows.set(key, (rows.get(key) || []).concat(x))
     }
     const order = Array.from(rows.values()).sort((p, q) => Math.min(...p.map((x) => x.r.top)) - Math.min(...q.map((x) => x.r.top)))
+    // 둥근 그림과 가운데를 맞출 짝은 그림과 같은 높이의 칸(판의 줄 수가 같은)일 때만: 그림 옆에 둘을 쌓은 단의 위 칸은 그림과 윗선이 같아
+    // 짝으로 보였고, 그림의 가운데까지 내리면 제 칸을 나가 아래 칸의 글 위에 겹쳐 그려졌다(강조 상자 아래 목록, 옆에 모이고 퍼지기)
+    const sameRows = (p: HTMLElement, q: HTMLElement) => at(p, '--h') === at(q, '--h')
     // 줄마다 앞 줄 내용 아래 --bk-gap(소제목 아래는 headGap)에 쌓는다. 사이는 늘 같은 값이라 장마다, 묶음마다 같다
     // 같은 줄의 첫 글줄 윗선 (docs/VISUAL-RULES.md 5): 부품마다 첫 글 위의 빈 키(이름표, 소제목, 들여 쓰기의 위 여백)가 달라 한 줄의 윗선이
     // 4~20px 어긋났다. 같은 판의 줄(같은 묶음, 같은 --y)에서 글로 시작하는 칸끼리 쌓은 자리의 가장 낮은 윗선에 맞춰 내린다(칸마다 더 내리는 몫).
@@ -1171,7 +1174,7 @@ export function blockFitter() {
         if (row.length !== 2) continue
         const chart = row.find((x) => round.has(x.c.dataset.type ?? ''))
         const text = row.find((x) => besideRound(x.c))
-        if (!chart || !text) continue
+        if (!chart || !text || !sameRows(chart.c, text.c)) continue
         // 바탕 없는 칸끼리만 여기서 칸째 옮긴다. 바탕(들여 쓰기, 강조)을 고른 칸은 쌓은 뒤에 맞춘다(pack 끝): 여기서는 첫 글줄 윗선
         // 맞추기에서만 뺀다(빼지 않으면 그림이 들여 쓴 칸의 위 여백만큼 내려가 가운데가 다시 어긋났다)
         if (chart.c.classList.contains('bk-look-plain') && !text.c.classList.contains('bk-look-plain')) {
@@ -1272,7 +1275,7 @@ export function blockFitter() {
       if (row.length !== 2) continue
       const chart = row.find((x) => round.has(x.c.dataset.type ?? ''))
       const text = row.find((x) => besideRound(x.c))
-      if (!chart || !text || !chart.c.classList.contains('bk-look-plain') || text.c.classList.contains('bk-look-plain')) continue
+      if (!chart || !text || !sameRows(chart.c, text.c) || !chart.c.classList.contains('bk-look-plain') || text.c.classList.contains('bk-look-plain')) continue
       const inner = text.c.querySelector<HTMLElement>(':scope > .bk-in')
       if (!inner) continue
       const goal = (chart.ink!.t + chart.ink!.b) / 2 + dy.get(chart.c)!
@@ -1333,30 +1336,39 @@ export function blockFitter() {
         const goal = Math.max(...ts)
         const diff = goal - Math.min(...ts)
         if (!Number.isFinite(diff) || diff <= 4 * k || diff > 32 * k) continue
-        const changes = row.flatMap((x, i) => {
-          const px = Math.round((goal - ts[i]) / k)
-          return px ? [{ x, px, was: x.c.style.getPropertyValue('--bk-trim') }] : []
-        })
-        if (!changes.length || changes.some(({ x }) => !x.c.classList.contains('bk-look-card'))) continue
-        for (const { x, px, was } of changes) {
-          x.c.style.setProperty('--bk-trim', (parseFloat(was) || 0) + px + 'px')
-          const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
-          if (inner) place(inner)
-        }
-        const fits = changes.every(({ x }) => {
-          const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
-          return !!inner && !over(inner)
-        })
-        const after = row.map((x) => top(x.c) + dy.get(x.c)! + (changes.find((c) => c.x === x)?.px ?? 0) * k)
-        if (!fits || Math.max(...after) - Math.min(...after) > 4 * k) {
+        // 다 맞출 만큼 줄여 보고, 그러면 글이 넘치는 칸(칸 높이를 다 쓰는 차트)은 어긋남이 허용(4px) 안에 들 만큼만 줄여 본다:
+        // 높이가 딱 맞는 차트 칸은 4px도 줄일 수 없어 통째로 되돌렸고, 큰 숫자와 소제목의 윗선이 4.2px 어긋난 채 남았다
+        const tries = [0, Math.max(0, 4 - Math.ceil((diff / k - 4) * 2) / 2)]
+        let done: { x: (typeof items)[number]; px: number }[] | null = null
+        for (const keep of tries) {
+          const changes = row.flatMap((x, i) => {
+            const px = Math.round(Math.max(0, (goal - ts[i]) / k - keep))
+            return px ? [{ x, px, was: x.c.style.getPropertyValue('--bk-trim') }] : []
+          })
+          if (!changes.length || changes.some(({ x }) => !x.c.classList.contains('bk-look-card'))) break
+          for (const { x, px, was } of changes) {
+            x.c.style.setProperty('--bk-trim', (parseFloat(was) || 0) + px + 'px')
+            const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
+            if (inner) place(inner)
+          }
+          const fits = changes.every(({ x }) => {
+            const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
+            return !!inner && !over(inner)
+          })
+          const after = row.map((x) => top(x.c) + dy.get(x.c)! + (changes.find((c) => c.x === x)?.px ?? 0) * k)
+          if (fits && Math.max(...after) - Math.min(...after) <= 4 * k) {
+            done = changes
+            break
+          }
           for (const { x, was } of changes) {
             if (was) x.c.style.setProperty('--bk-trim', was)
             else x.c.style.removeProperty('--bk-trim')
             const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
             if (inner) place(inner)
           }
-          continue
         }
+        if (!done) continue
+        const changes = done
         for (const { x, px } of changes) {
           x.r = x.c.getBoundingClientRect()
           x.ink = drawn(x.c)

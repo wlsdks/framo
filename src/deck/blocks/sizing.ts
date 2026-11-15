@@ -71,6 +71,26 @@ const FLOOR: Partial<Record<BlockType, (variant: string) => number>> = {
   // 지표 흐름표는 낮으면 줄마다의 선이 납작한 줄이 되어 오르내림이 보이지 않는다
   sparks: () => 280,
 }
+/**
+ * 넣을 때 지키는 넉넉한 높이(캔버스 px). 바닥(FLOOR)은 '더 낮으면 깨지는' 높이고, 이것은 '이만큼은 되어야 그림이 주인공으로 읽히는' 높이다.
+ * 둥근 그림은 높이가 곧 크기라서, 셋째·넷째 컴포넌트를 넣으며 칸이 눌리면 잘리지는 않아도 다각형과 원이 이름표 사이의 작은 점이 됐다
+ * (방사형 비교 옆에 목록과 숫자를 두고 강조 상자를 넣은 장: 칸 804×461, 다각형 지름 200px 남짓).
+ * 판은 모든 조합을 억지로 맞추지 않는다: 넣으면 이 높이를 지킬 수 없는 자리에는 넣지 않고 까닭을 알린다(place.ts의 cramp).
+ * 넣을 때만 본다. 바닥처럼 늘 지키게 하면 이미 만든 발표의 낮은 칸이 '슬라이드 높이를 넘었어요'로 잠긴다
+ */
+const ROOMY: Partial<Record<BlockType, (span: number) => number>> = {
+  // 한 줄을 다 쓰면 다각형 옆에 답(가장 낮은 기준)이 서서 소제목이 다각형 위를 차지하지 않는다: 숫자 한 줄 아래의 454px에서도 읽혔다
+  radar: (span) => (span >= BOARD_COLS ? 440 : 500),
+  // 가운데 원과 양쪽 이름표가 높이를 나눠 써서, 한 줄을 다 써도 낮으면 원 안의 글이 꺾이고 선이 눕는다
+  hub: () => 500,
+}
+
+/** 넣을 때 이 부품이 이 너비에서 지킬 넉넉한 높이 (칸 수). 그런 부품이 아니면 0. 본문이 낮은 장에서는 판 높이 전부 */
+export const roomyRows = (b: Pick<Block, 'type'>, span: number, areaH: number): number => {
+  const px = ROOMY[b.type]?.(span)
+  return px ? Math.min(BOARD_ROWS, rowsFor(px, areaH)) : 0
+}
+
 /** 항목이 셋 이상인 부품: 칸이 이보다 낮으면 줄 사이가 붙어 빽빽해진다. 로고는 그림이라 빼고 */
 const LIST_FLOOR = 240
 

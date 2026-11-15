@@ -746,7 +746,9 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
   function issueFor(what: BlockType | Block): NoRoom | null {
     const s = slideRef.current
     const at = dropBlocks(s)
-    return at && placeIssue(at.blocks, typeof what === 'string' ? makeBlock(what) : what, roomOf(s))
+    // 눌러서 넣기(insert)와 같은 값으로: 알아서 짠 판이면 판을 다시 짜서 넣을 수 있는 것까지 본다. 표시가 없는 장은 물을 때 견줘 본다
+    const auto = at && s.layout === 'compose' && s.arranged !== undefined ? autoArranged(at.blocks, s.arranged, roomOf(s)) : undefined
+    return at && placeIssue(at.blocks, typeof what === 'string' ? makeBlock(what) : what, roomOf(s), auto)
   }
 
   // ---------- 판을 나누는 선 ----------
@@ -932,7 +934,7 @@ export function useBlockEditing(deck: Deck, slide: Slide, toast: Toast): BlockEd
     const auto = autoArranged(s.blocks ?? [], s.arranged, area?.size.h)
     const next = autoPlace(s.blocks ?? [], copy, area?.size.h, auto)
     if (!next) {
-      const reason = placeIssue(s.blocks ?? [], copy, area?.size.h)
+      const reason = placeIssue(s.blocks ?? [], copy, area?.size.h, auto)
       const text = reason && noRoomText(reason, copy.type, 'slide')
       toast.show(text ? `${text.why} ${text.fix}` : '이 슬라이드에는 더 넣을 자리가 없어요. 컴포넌트를 지우거나 다음 슬라이드에 넣어 주세요.')
       return
