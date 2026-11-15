@@ -20,6 +20,7 @@ import { Delta } from './blocks/Delta'
 import { Decision } from './blocks/Decision'
 import { Whys } from './blocks/Whys'
 import { Cycle } from './blocks/Cycle'
+import { Dist } from './blocks/Dist'
 import { Diverge } from './blocks/Diverge'
 import { Facts } from './blocks/Facts'
 import { Flow } from './blocks/Flow'
@@ -111,6 +112,7 @@ const NATIVE_VIEWS: Record<NativeBlockType, () => ReactNode> = {
   rank: Rank,
   radar: Radar,
   overlap: Overlap,
+  dist: Dist,
   spread: Spread,
   adoption: Adoption,
   aliases: Aliases,
