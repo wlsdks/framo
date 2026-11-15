@@ -35,7 +35,7 @@
 .bk-hb-line {
   fill: none;
   stroke: var(--ink-3);
-  stroke-opacity: 0.55;
+  stroke-opacity: 0.9;
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
