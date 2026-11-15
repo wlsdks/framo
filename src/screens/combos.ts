@@ -324,7 +324,7 @@ export async function checkCombos(): Promise<{ slides: number; cells: number; pr
  * 만드는 짝(거미줄 차트 옆의 원인 찾기 같은)은 조합 수백 장에 한 번도 나오지 않았다. 높은 그림 옆의 낮은 글처럼 한 가지 짜임을
  * 부품을 바꿔 가며 볼 때 쓴다. 오른쪽에 놓을 수 없으면 '넣기'처럼 알아서 놓고, 그래도 안 되면 뺀다
  */
-export function pairSlides(as: BlockType[], bs: BlockType[], look?: Parameters<typeof composeAreaH>[1], edit?: boolean, titled = true): Slide[] {
+export function pairSlides(as: BlockType[], bs: BlockType[], look?: Parameters<typeof composeAreaH>[1], edit?: boolean, titled = true, face?: Block['look']): Slide[] {
   const out: Slide[] = []
   for (const a of as)
     for (const b of bs) {
@@ -332,7 +332,8 @@ export function pairSlides(as: BlockType[], bs: BlockType[], look?: Parameters<t
       const areaH = edit ? boardAreaH(base, look) : composeAreaH(base, look)
       const first = autoPlace([], { ...sampleBlock(a), id: `p-${a}-${b}-a` }, areaH)
       if (!first) continue
-      const second = { ...sampleBlock(b), id: `p-${a}-${b}-b` }
+      // face: 오른쪽 부품의 바탕(들여 쓰기, 강조)을 바꿔 본다
+      const second = { ...sampleBlock(b), id: `p-${a}-${b}-b`, ...(face ? { look: face } : {}) }
       const right = validTargets(first, second, areaH).find((v) => v.kind === 'spot' && v.spot.at === first[0].id && v.spot.side === 'right' && !v.spot.up)
       const blocks = (right?.kind === 'spot' ? insertAt(first, right.spot, second, areaH) : null) ?? autoPlace(first, second, areaH)
       if (blocks) out.push({ ...base, blocks: settle(blocks, boardFit(areaH, blocks)) ?? blocks })
