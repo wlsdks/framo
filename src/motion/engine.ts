@@ -2457,6 +2457,35 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-rdr-am'), answer + 420, 420)
           break
         }
+        case 'overlap': {
+          // 겹침: 두 집단이 만나 겹치는 것이 이 그림의 말이다. 두 원이 양쪽으로 물러난 자리(서로 떨어져 보일 만큼, Overlap.tsx의 data-from)에서
+          // 다가와 포개진다. 자리에서 자리로 옮기는 움직임이라 천천히 떠나 빠르게 건너고 천천히 닿는다(carry): 빠르게 다가와 길게 멈추는
+          // 곡선(out)으로는 첫 0.2초에 이미 거의 포개져, 다가오는 것이 아니라 포개진 채 나타나는 것으로 보였다(필름).
+          // 포개진 만큼이 짙어지는 동안 겹친 수가 같은 시간, 같은 곡선으로 함께 오른다(포개진 넓이와 숫자가 같은 값을 말한다).
+          // 원이 거의 다 닿았을 때 겹친 부분이 강조색으로 맺힌다: 처음부터 강조색이면 원이 만나기도 전에 답이 서 있고, 원이 아직 건너는
+          // 동안 켜면 끝 자리에 선 겹친 부분과 지나가는 두 원이 포개진 곳이 어긋나 겹친 모양이 둘로 보였다(생동감의 필름).
+          // 답이 내려앉는 박자(겹친 부분이 짙어지고 숫자가 맞춰진다)는 혼자 둔다: 집단의 이름과 크기는 원이 닿은 뒤에 제자리에서
+          // 맺히고(같은 박자에 켜면 답이 묻혔고, 원이 이름표 자리에서 출발해서 먼저 두면 원이 글을 덮고 지나간다),
+          // 집단마다의 몫은 그 뒤에 켜진다
+          lines(one('.bk-h'), 60)
+          const lively = levelName === 'lively'
+          // 차분하게가 0.6초였을 때는 다가와 겹친다기보다 툭 붙었다(필름): 0.72초, 생동감은 1.06초
+          const travel = lively ? 960 : 900
+          const meet = { easing: EASE.carry, duration: d(travel) }
+          // 생동감은 같은 안무를 더 먼 데서
+          const far = (Number(one('.bk-ov-svg')?.dataset.from) || 0) * (lively ? 1.3 : 1)
+          const start = 140
+          $('.bk-ov-c').forEach((c) => {
+            fade(c, start, 240)
+            run(anims, c, [{ translate: `${c.classList.contains('is-a') ? -far : far}px 0` }], s(start), meet)
+          })
+          fade(one('.bk-ov-lens'), start + travel * 0.72, 300)
+          fade(one('.bk-ov-k'), start, 420)
+          countIn(one('.bk-ov-bv'), start, meet)
+          $('.bk-ov-g').forEach((g) => fade(g, start + travel + 80, 360))
+          fade(one('.bk-ov-r'), start + travel + 360, 420)
+          break
+        }
         case 'heat': {
           // 칸이 왼쪽 위 모서리부터 비스듬한 물결로 물든다(줄 + 칸이 같은 칸이 함께). 칸이 많아도 1초 안에 다 물들게.
           // 다 물든 뒤 가장 높은 칸과 낮은 칸에 고리가 맺힌다

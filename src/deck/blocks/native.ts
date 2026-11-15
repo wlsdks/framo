@@ -1428,6 +1428,27 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       ],
     },
   },
+  overlap: {
+    name: '겹침',
+    description: '둘이 얼마나 겹치는지 원 둘로. 원의 크기와 겹친 넓이가 적은 값을 따라요 (벤 다이어그램, 중복)',
+    motion: '두 원이 양쪽에서 다가와 겹치고, 겹친 수가 맺혀요',
+    fields: [
+      { key: 'heading', label: '소제목', hint: '예: 올해 교육 수강 현황', optional: true },
+      { key: 'left', label: '왼쪽 이름', hint: '예: 온라인 교육' },
+      // 숫자 칸의 안내는 예시 값이다: 셋을 모두 비운 동안 이 값으로 그림을 옅게 그린다(Overlap.tsx)
+      { key: 'leftValue', label: '왼쪽 크기', hint: '320명' },
+      { key: 'right', label: '오른쪽 이름', hint: '예: 현장 실습' },
+      { key: 'rightValue', label: '오른쪽 크기', hint: '210명' },
+      { key: 'both', label: '겹치는 것', hint: '예: 둘 다 들은 사람' },
+      { key: 'bothValue', label: '겹치는 수', hint: '134명' },
+    ],
+    // 6칸부터: 그림 양옆에 집단의 이름과 크기가 서서, 그보다 좁으면 큰 원의 지름이 200px 밑으로 줄어 겹친 부분이 점이 된다
+    minSpan: 6,
+    prefSpan: 6,
+    sample: {
+      fields: { heading: '올해 교육 수강 현황', left: '온라인 교육', leftValue: '320명', right: '현장 실습', rightValue: '210명', both: '둘 다 들은 사람', bothValue: '134명' },
+    },
+  },
   heading: {
     name: '소제목',
     description: '옆이나 아래 컴포넌트들을 묶는 짧은 제목 (지금 방식, 바꾸면)',

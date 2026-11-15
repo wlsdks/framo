@@ -94,6 +94,8 @@ const SCENES: BlockType[][][] = [
   [['likert'], ['callout', 'bullets', 'text']],
   // 방사형 비교와 읽은 것: 그림 옆에 약한 곳을 어떻게 할지
   [['radar'], ['callout', 'bullets', 'text']],
+  // 겹침과 읽은 것: 두 원 옆에 겹친 사람들을 어떻게 할지
+  [['overlap'], ['callout', 'bullets', 'text']],
   // 원인 캐기와 대책: 근본 원인 옆이나 아래에 고칠 것
   [['whys'], ['callout', 'bullets', 'checks']],
   // 도는 주기와 이번 차례: 고리 옆에 지금 하는 일이나 한마디
