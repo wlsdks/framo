@@ -199,6 +199,13 @@
   text-decoration-thickness: max(var(--rule-hair), calc(1px / var(--vs, 0.5)));
 }
 
+/* 겹친 수고가 곡선으로 모이는 넓은 칸에서는 발표 모습처럼 취소선이 없다(styles/blocks/dupes.css) */
+@container bk (min-width: 1200px) {
+  .slide.m-edit .bk-dp-what.ed > .ed-input {
+    text-decoration: none;
+  }
+}
+
 .slide.m-edit :is(.bk-wp-old, .bk-dp-what, .bk-dl-from .bk-dl-v, .bk-mk-b, .bk-wy-m).ed > .ed-hint {
   color: var(--ink);
 }

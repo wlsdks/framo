@@ -841,6 +841,9 @@ export function blockFitter() {
       // 편집 표시(항목을 끄는 손잡이, 빼기 단추 같은)는 장의 내용이 아니다. 맞추는 동안(is-fitting)은 숨지만 검사(checkAssembly)는
       // 편집 화면 그대로 재서, 소제목 아래 항목의 단추를 그려진 것으로 알고 소제목과 겹친다고 했다
       if (el.closest('.ed-halo, .it-remove, .it-grip, .pn-tools, .img-tools, .bk-handle')) continue
+      // 관계선의 판(.bk-wires)은 칸을 덮는 투명한 판이고 곡선은 글과 글 사이에만 그어진다: 판의 상자를 그려진 것으로 세면
+      // 칸 높이를 다 쓰는 부품(겹친 수고)이 꽉 찼다고 보아 글자를 키우지도 눈높이로 내리지도 않았다
+      if (el.classList.contains('bk-wires')) continue
       const e = el.getBoundingClientRect()
       if (!e.width || !e.height) continue
       const tag = el.tagName.toLowerCase()
@@ -2228,6 +2231,8 @@ export function blockFitter() {
     }
     // 조건별 흐름의 갈래 곡선: 자리가 다 정해진 뒤에 잰다
     for (const dc of Array.from(root.querySelectorAll<HTMLElement>('.bk-dc'))) forks(dc)
+    // 겹친 수고의 모이는 곡선도
+    for (const dp of Array.from(root.querySelectorAll<HTMLElement>('.bk-dp'))) joins(dp)
     // 부품 장 밖(한 장을 다 쓰는 위치 비교, 추이)도
     for (const plot of Array.from(root.querySelectorAll<HTMLElement>('.pm-plot, .tn-canvas'))) if (!plot.closest('.bk-area')) labels(plot)
     // 레이아웃 장의 채움 (fitLayout)
@@ -2555,7 +2560,7 @@ export function blockFitter() {
         from = [x0, y0]
       }
       const p = document.createElementNS(NS, 'path')
-      p.setAttribute('class', 'bk-dc-fork')
+      p.setAttribute('class', 'bk-wire bk-dc-fork')
       p.setAttribute('d', d)
       // 길이를 1로: 모션이 곡선을 긋는 값(stroke-dashoffset)을 곡선마다 재지 않게
       p.setAttribute('pathLength', '1')
@@ -2564,11 +2569,61 @@ export function blockFitter() {
     // 점은 곡선 위에 그린다(곡선들이 떠나는 자리를 덮는다)
     if (from) {
       const c = document.createElementNS(NS, 'circle')
-      c.setAttribute('class', 'bk-dc-node')
+      c.setAttribute('class', 'bk-wire-node bk-dc-node')
       c.setAttribute('cx', String(r2(from[0])))
       c.setAttribute('cy', String(r2(from[1])))
       svg.append(c)
     }
+  }
+
+  /**
+   * 겹친 수고의 모임: 팀마다 따로 하던 일의 줄 끝에서 대신할 하나의 앞(마디)으로 곡선을 긋는다(svg.bk-dp-joins, 칸 안의 px). 갈래(forks)의
+   * 거울이다. 둘이 나란히 선 넓은 칸에서만: 위아래로 쌓인 좁은 칸은 긋지 않는다(가는 선 하나로 나눈다, dupes.css).
+   * 곡선은 모두 목록의 오른쪽 끝에서 같이 떠난다: 줄마다 글 끝에서 떠나면 글 길이만큼 들쭉날쭉했다
+   */
+  function joins(dp: HTMLElement): void {
+    const svg = dp.querySelector<SVGSVGElement>(':scope > .bk-dp-joins')
+    if (!svg) return
+    while (svg.firstChild) svg.firstChild.remove()
+    const list = dp.querySelector<HTMLElement>('.bk-dp-list')
+    const one = dp.querySelector<HTMLElement>('.bk-dp-one')
+    const answer = dp.querySelector<HTMLElement>('.bk-dp-r')
+    const rows = Array.from(dp.querySelectorAll<HTMLElement>('.bk-dp-row'))
+    const box = dp.getBoundingClientRect()
+    const k = dp.offsetWidth ? box.width / dp.offsetWidth : 1
+    if (!list || !one || !answer || !rows.length || !k) return
+    const lr = list.getBoundingClientRect()
+    const or = one.getBoundingClientRect()
+    // 나란히 섰을 때만(대신할 하나가 목록의 오른쪽)
+    if (or.left < lr.right - 1) return
+    const local = (x: number, y: number) => [(x - box.left) / k, (y - box.top) / k]
+    svg.setAttribute('viewBox', `0 0 ${dp.offsetWidth} ${dp.offsetHeight}`)
+    const NS = 'http://www.w3.org/2000/svg'
+    const r2 = (v: number) => Math.round(v * 10) / 10
+    const ar = answer.getBoundingClientRect()
+    // 마디는 대신할 하나의 글 앞, 그 글의 위아래 가운데
+    const [xe, ye] = local(or.left, (ar.top + ar.bottom) / 2)
+    const [x0] = local(lr.right, 0)
+    const from = x0 + 20
+    if (xe - from < 40) return
+    for (const row of rows) {
+      const what = row.querySelector<HTMLElement>('.bk-dp-what') ?? row
+      const wr = what.getBoundingClientRect()
+      // 줄의 위아래 가운데에서 떠난다(두 줄로 꺾인 일은 두 줄의 가운데)
+      const [, y0] = local(0, (wr.top + wr.bottom) / 2)
+      const c = (xe - from) * 0.55
+      const p = document.createElementNS(NS, 'path')
+      p.setAttribute('class', 'bk-wire bk-dp-join')
+      p.setAttribute('d', `M ${r2(from)} ${r2(y0)} C ${r2(from + c)} ${r2(y0)} ${r2(xe - c)} ${r2(ye)} ${r2(xe)} ${r2(ye)}`)
+      // 길이를 1로: 모션이 곡선을 긋는 값(stroke-dashoffset)을 곡선마다 재지 않게
+      p.setAttribute('pathLength', '1')
+      svg.append(p)
+    }
+    const node = document.createElementNS(NS, 'circle')
+    node.setAttribute('class', 'bk-wire-node bk-dp-node')
+    node.setAttribute('cx', String(r2(xe)))
+    node.setAttribute('cy', String(r2(ye)))
+    svg.append(node)
   }
 
   /** 이름표 자리 고르기의 바깥 입구: 움직이는 중인 판(점이 내려앉는 중이다)은 끝난 뒤에. 추이의 점 숫자도 같다 */

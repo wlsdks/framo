@@ -143,38 +143,12 @@
 }
 
 /* ---------- 갈래 곡선 ----------
-   괄호 선(가지, 줄기, 질문에서 오는 가로선)을 걷고, 쌓기가 잰 자리로 그은 곡선(fitBlocks.ts의 forks)만 둔다 */
+   괄호 선(가지, 줄기, 질문에서 오는 가로선)을 걷고, 쌓기가 잰 자리로 그은 곡선(fitBlocks.ts의 forks)만 둔다.
+   곡선과 마디의 모습은 관계선 공통(blocks/base.css의 .bk-wire) */
 .bk-dc-row::before,
 .bk-dc-row::after,
 .bk-dc-list::after {
   content: none;
-}
-
-.bk-dc-forks {
-  /* 선과 마디는 글자를 따라 크고 준다(좁은 칸의 줄인 단계, 내용이 적은 장의 키운 단계): 글만 줄면 마디가 글자만 해 보였다 */
-  --dc-k: calc(min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1));
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.bk-dc-fork {
-  fill: none;
-  /* 갈래 곡선은 이 그림의 데이터(조건과 결과의 관계)라 차트의 선처럼 긋는다: 강조색의 농담에 캔버스 3px(키운 단계에서 4px 남짓), 끝은 둥글게.
-     예전의 머리카락 선(회색 1px)은 3~5m에서 보이지 않아 그림이 아니라 글 두 줄로 읽혔다. 농담은 바탕과 2.5:1 남짓: 더 옅으면(45%)
-     밝은 회의실에서 다시 사라지고 진한 점에 옅은 실이 달린 것처럼 보였다(검수) */
-  stroke: color-mix(in srgb, var(--accent) 58%, var(--bg));
-  stroke-width: calc(3px * var(--dc-k));
-  stroke-linecap: round;
-}
-
-/* 갈라지는 마디 하나만 강조색 점: 어디서 갈라지는지가 멀리서도 보인다. 꽉 찬 강조색은 이 점 하나뿐이라 옆 컴포넌트의 답과 다투지 않는다 */
-.bk-dc-node {
-  r: calc(5.5px * var(--dc-k));
-  fill: var(--accent);
 }
 
 .bk-dc {
@@ -242,15 +216,6 @@
     --fs: var(--t-h);
     font-size: min(calc(44px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
   }
-}
-
-/* 짙은 면 위에서는 면 위의 강조색으로. 어두운 바탕에서는 밝은 점이 선을 이기기 쉬워 선을 한 단계 더 밝힌다 */
-.is-dark .bk-dc-fork {
-  stroke: color-mix(in srgb, var(--bold-accent, var(--accent)) 62%, var(--bg));
-}
-
-.is-dark .bk-dc-node {
-  fill: var(--bold-accent, var(--accent));
 }
 
 /* ---------- 넓고 낮은 칸 ----------
