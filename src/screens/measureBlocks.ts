@@ -94,6 +94,8 @@ const FIGURE_MIN: [string, number, number][] = [
   ['.bk-rdr-plot', 230, 190],
   // 겹침의 그림 상자: 높이가 큰 원의 지름이다. 220px 밑이면 3~5m 떨어진 화면에서 조금 겹친 부분(10% 안팎)이 선처럼 가늘어 읽히지 않는다
   ['.bk-ov-fig', 0, 220],
+  // 분포의 가장 긴 막대: 96px 밑이면 구간 사이의 키 차이가 몇 px라 3~5m 떨어진 화면에서 모두 같은 띠로 보인다
+  ['.bk-ds-col[style*="--p: 100."] .bk-ds-fill', 0, 96],
 ]
 
 function clashList(cell: HTMLElement, all: boolean): string[] {
@@ -101,8 +103,12 @@ function clashList(cell: HTMLElement, all: boolean): string[] {
   const lines = textLines(cell)
   const cache = new Map<Element, Box | null>()
   const out: string[] = []
+  // 글 줄이 여백에 걸쳐도 되는 틈은 맞출 때(fitBlocks의 over)와 같은 캔버스 2px이다. 화면 1px로 두면 높이를 재는 반 크기 장에서만 같고,
+  // 1920으로 그린 조합에서는 맞추기가 넘치지 않았다고 본 줄(1.5px 걸친 큰 숫자의 이름표)을 검사만 칸 밖이라고 했다
+  const el = inner(cell)
+  const slack = 2 * (el?.offsetWidth ? el.getBoundingClientRect().width / el.offsetWidth : 1)
   for (const { r, n } of lines) {
-    if (r.left < box.left - 1 || r.right > box.right + 1 || r.top < box.top - 1 || r.bottom > box.bottom + 1) {
+    if (r.left < box.left - slack || r.right > box.right + slack || r.top < box.top - slack || r.bottom > box.bottom + slack) {
       out.push(`칸 밖: ${name(n)}`)
       if (!all) return out
     } else if (clippedBy(n, r, cell, cache)) {
@@ -112,7 +118,6 @@ function clashList(cell: HTMLElement, all: boolean): string[] {
   }
   // 글이 없는 그림(몇 중 몇의 점, 차트)도 칸 안에 들어야 한다. 글만 보면 카드 안의 점 칸이 카드의 안쪽 여백을 지나
   // 칸 밖으로 46px 나가도 넘치지 않은 것으로 보아서, 카드의 높이를 낮게 잡았다
-  const el = inner(cell)
   for (const fig of el ? blockFigures(el) : []) {
     const r = fig.getBoundingClientRect()
     if (r.bottom > box.bottom + 1 || r.top < box.top - 1 || r.right > box.right + 1 || r.left < box.left - 1) {

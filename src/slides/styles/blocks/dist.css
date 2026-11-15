@@ -1,0 +1,282 @@
+/* ---------- 분포 ---------- */
+
+/* 소제목, 답(기준 안에 든 몫), 그림(구간마다 막대 하나, 기준선 하나). 그림이 남는 높이를 다 쓴다.
+   줄을 적어 둔다: 소제목과 알림은 없을 때가 있어서, 차례로 채우면 그림이 높이 없는 줄로 밀린다 */
+.bk-ds {
+  /* 기준 안의 막대만 강조색, 밖은 강조색의 옅은 농담 하나(겹침의 두 원, 시장 규모의 바깥 원과 같은 단계: 검은 바탕에서는 더 진한 단계).
+     회색으로 두면 안과 밖이 다른 데이터로 읽힌다: 같은 것을 센 막대이고 기준선이 가를 뿐이다. 비치게 칠해 면 위에서도 같은 농담이다 */
+  --ds-out: color-mix(in srgb, var(--accent) var(--ta-3, 28%), transparent);
+  /* 기준선: 글자색 검정이 아니라 옅은 무채색(차트들의 기준이 되는 선, columns.css의 --cc-ref와 같은 값) */
+  --ds-ref: color-mix(in srgb, var(--ink-3) 70%, var(--bg));
+  /* 막대 사이: 붙어 선 막대가 한 덩어리의 모양(어디에 몰렸는지)으로 읽히게 좁게. 기준선의 칸만 넓어 두 무리로 갈린다 */
+  --ds-gap: 6px;
+  --ds-split: 22px;
+  /* 가장 긴 막대 위에 남기는 숫자 자리 */
+  --ds-top: 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  height: 100%;
+}
+
+.bk-ds > .bk-h {
+  grid-row: 1;
+  margin-bottom: 18px;
+}
+
+/* 편집할 때만 보이는 알림(색과 굵기는 edit.css의 .ed-warn): 장의 글보다 작게 */
+.bk-ds-warn {
+  --fs: 22px;
+  grid-row: 2;
+  margin: 0 0 12px;
+  line-height: 1.35;
+}
+
+/* 답: 큰 몫 곁에 기준 이름과 셈의 바탕('160건 가운데 131건'). 좁은 칸은 그림 위에 한 줄로 눕힌다: 쌓으면 막대가 쓸 높이를 답이 가져간다 */
+.bk-ds-ans {
+  display: grid;
+  grid-row: 3;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: center;
+  margin-bottom: 20px;
+}
+
+/* 큰 숫자는 크기로 답이 되므로 글자색에 보통 굵기 */
+.bk-ds-v {
+  /* 좁은 칸에서도 장 제목보다 한 단계 크게: 62면 옆 칸의 소제목과 같은 무게라 답이 덧붙임 줄처럼 읽혔다(감성 검수) */
+  --fs: 74px;
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  align-self: center;
+  margin-right: 20px;
+  color: var(--ink);
+  font-family: var(--font-head);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+/* 기준 이름: 그림의 기준 안쪽 막대와 같은 강조색(겹침의 겹친 것 이름과 같은 말) */
+.bk-ds-k {
+  --fs: var(--t-body);
+  grid-column: 2;
+  align-self: end;
+  color: var(--accent);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* 셈의 바탕: 셈해서 덧붙이는 글이라 버금 글자색, 기준 안의 수만 글자색 */
+.bk-ds-r {
+  --fs: var(--t-small);
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 2;
+  align-self: start;
+  gap: 2px 24px;
+  color: var(--ink-2);
+  line-height: 1.3;
+}
+
+.bk-ds-r b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* 덧붙임이 없으면(값이 %일 때) 기준 이름이 숫자의 가운데 높이에 선다 */
+.bk-ds-ans:not(:has(.bk-ds-r)) .bk-ds-k {
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+/* 편집할 때만: 기준이 되는 구간을 적는 칸. '기준 3일까지'로 읽힌다(기준부터는 '기준 80점부터'). 셈해서 덧붙이는 글('160건 가운데
+   131건')과 같은 모습이면 고치는 칸인지 발표에 나오는 글인지 알 수 없어서(감성 검수), 이름은 굵은 버금색,
+   적는 구간은 글자색으로 가른다. 좁은 칸에서는 셈의 바탕 뒤에 선다(제 줄을 주면 답 곁이 세 줄이 되어 낮은 칸에서 글자가 줄었다) */
+.bk-ds-cut {
+  order: 1;
+  color: var(--ink-3);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bk-ds-cv {
+  display: inline-block;
+  min-width: 1em;
+  margin: 0 0.1em 0 0.3em;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* 그림: 구간마다 칸 하나가 막대 줄과 이름 줄을 같이 쓴다(subgrid): 이름이 두 줄로 꺾인 구간이 있어도 막대의 발이 한 줄에 선다.
+   칸의 수와 기준선이 끼는 자리는 Dist.tsx가 적는다(grid-template-columns).
+   막대가 널빤지처럼 넓어지지 않게 칸 너비를 묶는다: 답이 위에 누운 좁은 칸은 막대가 칸 높이의 3분의 1쯤만 쓰므로 칸 높이의 4할까지.
+   구간 셋을 칸 너비대로 펴면 막대가 키의 두 배로 눕는다. 남는 너비는 오른쪽으로 간다(왼쪽 선에 맞춘 글처럼) */
+.bk-ds-plot {
+  --ds-col: clamp(96px, 40cqh, 240px);
+  display: grid;
+  grid-row: 4;
+  grid-template-rows: minmax(0, 1fr) auto;
+  column-gap: var(--ds-gap);
+  width: 100%;
+  max-width: calc(var(--n) * (var(--ds-col) + var(--ds-gap)) + var(--ds-split));
+  min-height: 0;
+}
+
+.bk-ds-col {
+  position: relative;
+  display: grid;
+  grid-row: 1 / -1;
+  grid-template-rows: subgrid;
+  min-width: 0;
+}
+
+/* 막대 칸의 너비가 숫자(.one-line의 100cqi)의 기준: 숫자가 칸보다 넓으면 칸에 맞게 작아진다 */
+.bk-ds-bar {
+  display: flex;
+  flex-direction: column;
+  grid-row: 1 / -2;
+  align-items: stretch;
+  justify-content: flex-end;
+  min-height: 0;
+  container-type: inline-size;
+}
+
+.bk-ds-num {
+  --fs: var(--t-small);
+  display: block;
+  margin-bottom: 10px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-align: center;
+}
+
+/* 막대는 칸 너비를 다 쓴다. 0인 구간도 실 같은 발은 남긴다: 아무것도 없으면 그 구간이 빠진 것처럼 이름만 떠 있다 */
+.bk-ds-fill {
+  flex: none;
+  height: max(2px, calc((100% - var(--ds-top)) * var(--p, 0) / 100));
+  border-radius: var(--r-mark) var(--r-mark) 0 0;
+  background: var(--ds-out);
+}
+
+.bk-ds-col.is-in .bk-ds-fill {
+  background: var(--accent);
+}
+
+.bk-ds-name {
+  --fs: var(--t-small);
+  grid-row: -2 / -1;
+  padding: 14px 2px 0;
+  color: var(--ink-2);
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+}
+
+/* 기준이 되는 구간의 이름만 글자색으로 굵게: 기준선이 어느 구간에 붙은 것인지 이름으로도 읽힌다 */
+.bk-ds-col.is-cut .bk-ds-name {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* 기준선: 이 그림에서 긋는 선은 이것 하나다. 막대의 발에서 숫자 자리 위까지 선다 */
+.bk-ds-line {
+  grid-row: 1 / -2;
+  justify-self: center;
+  width: 2px;
+  background: var(--ds-ref);
+}
+
+/* 편집할 때 예시 값이나 어림으로 그린 그림은 옅게. 그 값으로 셈한 몫도 같이 */
+.bk-ds.is-demo :is(.bk-ds-fill, .bk-ds-line, .bk-ds-v) {
+  opacity: 0.4;
+}
+
+/* 발표할 때 그릴 수 없으면(읽지 못한 값) 막대 없이 적은 값과 이름만 선다: 그림 자리를 남기면 값들이 빈 칸 바닥에 가라앉는다 */
+.bk-ds.is-unknown .bk-ds-plot {
+  align-self: start;
+}
+
+/* 답이 없으면(발표할 때 기준도 기준 이름도 없는 때) 그림이 답의 줄까지 쓴다 */
+.bk-ds.is-bare .bk-ds-plot {
+  grid-row: 3 / -1;
+}
+
+/* 넓은 칸: 답을 그림 왼쪽 단에 세운다. 큰 숫자는 막대와 같은 바닥에 선다: 왼쪽 단의 줄(소제목, 알림, 빈 자리, 기준 이름, 몫, 이름 줄)을
+   그림이 같이 써서(subgrid) 몫의 아랫선이 곧 막대의 발이고, 셈의 바탕은 구간 이름과 한 줄에 선다. 답을 그림 위에 두면 한 줄을 다 쓰는
+   칸에서 답의 오른쪽이 통째로 비고, 그림은 답의 높이만큼 낮아진다. 왼쪽 단은 글이 쓰는 만큼만(길면 칸의 32%에서 꺾인다) */
+@container bk (min-width: 900px) {
+  .bk-ds:not(.is-bare, .is-unknown) {
+    grid-template-columns: fit-content(32%) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+    column-gap: var(--bk-col-gap);
+  }
+
+  .bk-ds:not(.is-bare, .is-unknown) > :is(.bk-h, .bk-ds-warn) {
+    grid-column: 1;
+  }
+
+  .bk-ds:not(.is-bare, .is-unknown) > .bk-ds-ans {
+    display: contents;
+  }
+
+  .bk-ds:not(.is-bare, .is-unknown) .bk-ds-k {
+    grid-row: 4;
+    grid-column: 1;
+    align-self: end;
+    margin-bottom: 2px;
+  }
+
+  /* 숫자의 글자선이 막대의 발에 닿게: 줄 상자의 아래 빈 몫만큼 내린다 */
+  .bk-ds:not(.is-bare, .is-unknown) .bk-ds-v {
+    --fs: 108px;
+    grid-row: 5;
+    grid-column: 1;
+    align-self: end;
+    margin: 0 0 -0.1em;
+    line-height: 1;
+  }
+
+  /* 셈의 바탕은 구간 이름과 같은 줄, 같은 윗선. 편집할 때만 보이는 기준 칸은 소제목 아래 빈 자리에 선다: 셈의 바탕 곁에 두면 왼쪽 단이
+     넓어져 그림이 발표할 때와 다른 자리에 선다 */
+  .bk-ds:not(.is-bare, .is-unknown) .bk-ds-r {
+    display: contents;
+  }
+
+  .bk-ds:not(.is-bare, .is-unknown) .bk-ds-of {
+    grid-row: 6;
+    grid-column: 1;
+    padding-top: 14px;
+  }
+
+  /* 기준 칸은 답 묶음 바로 위: 소제목 아래에 두면 부제처럼 읽히고, 기준을 바꾸면 달라지는 답과 멀다 */
+  .bk-ds:not(.is-bare, .is-unknown) .bk-ds-cut {
+    grid-row: 3;
+    grid-column: 1;
+    align-self: end;
+    margin-bottom: 10px;
+  }
+
+  /* 그림이 칸의 높이를 거의 다 쓰므로 막대는 가장 긴 것의 키만큼까지 넓어진다(칸 높이의 4분의 3). 다만 구간이 다섯을 넘으면
+     200px에서 멈춘다: 구간 다섯에 248px씩이면 강조색 막대 셋이 장 넓이의 6분의 1을 덮는 넓적한 판이 되어, 눈이 답(몫)보다 파란
+     면에 먼저 갔다(감성 검수). 구간이 적으면 그림 전체가 1040px쯤 되게 넓어진다(가장 넓어도 320px): 셋을 200px로 묶으면 그림이
+     왼쪽에 몰려 본문의 오른쪽 3분의 1이 빈다 */
+  .bk-ds:not(.is-bare, .is-unknown) > .bk-ds-plot {
+    --ds-col: clamp(120px, 75cqh, min(320px, max(200px, 1040px / var(--n))));
+    grid-row: 1 / -1;
+    grid-column: 2;
+    grid-template-rows: subgrid;
+  }
+}
+
+/* 넓고 높은 칸(판을 혼자 쓰거나 위아래를 다 쓰는 칸): 막대가 400px 넘게 서는데 몫이 낮은 줄과 같은 크기면 답이 그림의 덧붙임처럼
+   보인다. 숫자만 한 단계 키운다 */
+@container bk (min-width: 900px) and (min-height: 520px) {
+  .bk-ds:not(.is-bare, .is-unknown) .bk-ds-v {
+    --fs: 128px;
+  }
+}

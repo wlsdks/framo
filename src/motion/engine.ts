@@ -2486,6 +2486,45 @@ export function motionEngine(): MotionEngine {
           fade(one('.bk-ov-r'), start + travel + 360, 420)
           break
         }
+        case 'dist': {
+          // 분포: 세 박자다. ① 어디에 몰렸는지: 막대가 읽는 차례로 발에서 자란다. 이때는 모두 같은 옅은 농담이다(아직 가르지 않았다).
+          // ② 어디서 가르는지: 마지막 막대가 서 가는 동안 기준선이 발에서 위로 그어진다. ③ 그 안이 얼마인지: 기준 안의 막대가 읽는
+          // 차례로 강조색으로 켜지고, 켜지는 동안 몫이 같은 시간에 함께 오른다(켜진 막대를 더한 것이 그 숫자다).
+          // 처음부터 강조색으로 자라면 기준선이 그어지기 전에 답이 서 있어, 선이 그림을 가르는 것이 아니라 가른 그림에 선을 얹는 것이
+          // 된다. 막대 위의 값은 굴리지 않고 제자리에서 맺힌다: 굴러가는 숫자는 답 하나뿐이어야 눈이 갈리지 않는다(MOTION.md 기준 2).
+          // 셈의 바탕('160건 가운데 131건')은 몫이 선 뒤에 켜진다
+          lines(one('.bk-h'), 60)
+          const lively = levelName === 'lively'
+          const cols = $('.bk-ds-col')
+          const gap = stagger(cols.length, lively ? 70 : 60)
+          const start = 140
+          cols.forEach((col, i) => {
+            const at = start + i * gap
+            grow(col.querySelector('.bk-ds-fill'), at, 'up')
+            fade(col.querySelector('.bk-ds-name'), at, 360)
+            // 값은 막대가 거의 다 선 뒤에 머리 위에서 맺힌다: 막대가 자라는 동안 켜지면 끝자리에 먼저 선 값이 막대 위 허공에 뜬다
+            fade(col.querySelector('.bk-ds-num'), at + 320, 280)
+          })
+          const cutAt = start + (cols.length - 1) * gap + 260
+          grow(one('.bk-ds-line'), cutAt, 'up')
+          const light = cutAt + 160
+          // 켜지는 데 반 초 남짓: 더 짧으면 막대 셋이 한꺼번에 바뀐 것으로 보여 '차례로 더해진다'가 읽히지 않는다
+          const sweep = lively ? 660 : 540
+          const each = 280
+          const inside = cols.filter((col) => col.classList.contains('is-in'))
+          const host = one('.bk-ds')
+          const pale = host ? getComputedStyle(host).getPropertyValue('--ds-out').trim() : ''
+          const step = inside.length > 1 ? (sweep - each) / (inside.length - 1) : 0
+          inside.forEach((col, k) => {
+            const fill = col.querySelector('.bk-ds-fill')
+            if (fill && pale) run(anims, fill, [{ backgroundColor: pale }], s(light + k * step), { easing: EASE.reveal, duration: d(each) })
+          })
+          fade(one('.bk-ds-k'), light, 360)
+          countIn(one('.bk-ds-v'), light, { easing: EASE.reveal, duration: d(sweep) })
+          // 넓은 칸에서는 .bk-ds-r이 상자 없이(display: contents) 서서 그 안의 글을 직접 켠다
+          fade(one('.bk-ds-of'), light + sweep + 80, 420)
+          break
+        }
         case 'heat': {
           // 칸이 왼쪽 위 모서리부터 비스듬한 물결로 물든다(줄 + 칸이 같은 칸이 함께). 칸이 많아도 1초 안에 다 물들게.
           // 다 물든 뒤 가장 높은 칸과 낮은 칸에 고리가 맺힌다

@@ -1449,6 +1449,48 @@ export const NATIVE: Record<NativeBlockType, Omit<BlockSpec, 'type'>> = {
       fields: { heading: '올해 교육 수강 현황', left: '온라인 교육', leftValue: '320명', right: '현장 실습', rightValue: '210명', both: '둘 다 들은 사람', bothValue: '134명' },
     },
   },
+  dist: {
+    name: '분포',
+    description: '값이 어느 구간에 몰렸는지 막대로, 기준 안에 든 몫을 셈해서 크게 (히스토그램, 걸린 기간, 점수대)',
+    motion: '막대가 차례로 자라고, 기준선이 그어지며 기준 안쪽이 켜지고 몫이 맺혀요',
+    // 기준부터: 그 구간부터 끝까지가 기준 안('80점 이상', '3년 차부터'). 걸린 날처럼 작을수록 좋은 값은 기준까지
+    variants: [
+      { id: 'base', name: '기준까지' },
+      { id: 'from', name: '기준부터' },
+    ],
+    fields: [
+      { key: 'heading', label: '소제목', hint: '예: 요청 처리에 걸린 날', optional: true },
+      // 기준은 구간 이름으로 적는다(slides/dist.ts의 cutIndex). 구간을 옮기거나 지워도 이름을 따라간다.
+      // 안내는 구간 안내의 이름 하나 그대로다: 비운 동안 이 이름으로 기준선을 옅게 그어 보인다(Dist.tsx). 칸은 '기준 3일까지'로 읽히게 앞뒤에 말이 붙는다
+      { key: 'cut', label: '기준', hint: '3일' },
+      // 비워 두면 기준 구간의 이름으로 '3일까지'처럼 보인다
+      { key: 'label', label: '기준 이름', hint: '예: 약속한 3일 안', optional: true, named: true },
+    ],
+    items: {
+      label: '구간',
+      // 둘이면 분포가 아니라 두 값 비교다. 여덟을 넘으면 반 칸에서 막대가 실처럼 가늘다
+      min: 3,
+      max: 8,
+      default: 5,
+      fields: [
+        { key: 'title', label: '구간', hint: '차례대로', hints: ['1일', '2일', '3일', '4일', '5일', '6일', '7일', '8일'] },
+        // 숫자 칸의 안내는 예시 값이다: 비운 동안 이 값으로 그림을 옅게 그린다(Dist.tsx)
+        { key: 'value', label: '수', hint: '58건', hints: ['58건', '46건', '27건', '12건', '9건', '5건', '2건', '1건'] },
+      ],
+    },
+    minSpan: 6,
+    prefSpan: 8,
+    sample: {
+      fields: { heading: '요청 처리에 걸린 날', cut: '3일', label: '약속한 3일 안' },
+      items: [
+        { title: '1일', value: '58건' },
+        { title: '2일', value: '46건' },
+        { title: '3일', value: '27건' },
+        { title: '4일', value: '12건' },
+        { title: '5일 이상', value: '17건' },
+      ],
+    },
+  },
   heading: {
     name: '소제목',
     description: '옆이나 아래 컴포넌트들을 묶는 짧은 제목 (지금 방식, 바꾸면)',
