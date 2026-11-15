@@ -37,13 +37,43 @@ function lineEm(text: string): number {
   return w
 }
 
+/** 두 줄까지 꺾이는 글의 줄마다 너비(px). 낱말 사이에서만 꺾이므로(keep-all) 긴 쪽이 가장 짧아지는 낱말 사이를 고른다. 짧으면(6em까지) 한 줄 */
+function wrapped(text: string, px: number): number[] {
+  const words = text.split(/\s+/).filter(Boolean)
+  if (!words.length) return []
+  if (lineEm(text) <= 6 || words.length < 2) return [lineEm(text) * px]
+  let best = [Infinity, 0]
+  for (let i = 1; i < words.length; i++) {
+    const pair = [lineEm(words.slice(0, i).join(' ')) * px, lineEm(words.slice(i).join(' ')) * px]
+    // 같으면 윗줄이 긴 쪽: 브라우저는 윗줄에 들어가는 만큼 채우고 꺾는다('공통 고객 / 정보')
+    if (Math.max(...pair) <= Math.max(...best)) best = pair
+  }
+  return best
+}
+
 /**
  * 가운데 원 안의 글(이름과 메모)이 들어가는 지름(캔버스 px, 키우기 전). 이름(36)과 메모(26)가 두 줄까지 꺾여도 원 안쪽 글 자리
- * (지름의 0.6쯤)에 들게 어림한다. 재지 않고 어림하는 것은 원 크기에 따라 글이 꺾이고 꺾인 글에 따라 원이 커져 서로를 따라 움직이기 때문
+ * (지름의 0.6쯤)에 들게 어림한다. 재지 않고 어림하는 것은 원 크기에 따라 글이 꺾이고 꺾인 글에 따라 원이 커져 서로를 따라 움직이기 때문.
+ * 너비만 보면 이름도 메모도 두 줄로 꺾인 글(네 줄)은 묶음의 모서리가 원 밖으로 나간다('공통 고객 / 정보'의 윗줄이 테를 넘었다):
+ * 줄마다 그 줄의 끝이 원 안에 들게(가운데에서 줄 끝까지의 거리) 한 번 더 어림해 큰 쪽을 쓴다
  */
 function hubCoreNeed(center: string, note: string): number {
   const line = (t: string, px: number) => (lineEm(t) * px) / (lineEm(t) > 6 ? 2 : 1)
-  return Math.round(Math.max(line(center, 36), line(note, 26)) / 0.6)
+  const wide = Math.max(line(center, 36), line(note, 26)) / 0.6
+  // 줄 높이는 hub.css의 글(이름 1.15, 메모 1.3, 사이 6px)
+  const rows = [...wrapped(center, 36).map((w) => ({ w, h: 36 * 1.15 })), ...wrapped(note, 26).map((w) => ({ w, h: 26 * 1.3 }))]
+  const gap = center.trim() && note.trim() ? 6 : 0
+  const total = rows.reduce((sum, q) => sum + q.h, 0) + gap
+  let top = -total / 2
+  let reach = 0
+  rows.forEach((q, i) => {
+    if (i === wrapped(center, 36).length) top += gap
+    const far = Math.max(Math.abs(top), Math.abs(top + q.h))
+    reach = Math.max(reach, Math.hypot(q.w / 2, far))
+    top += q.h
+  })
+  // 테와 글 사이의 숨(16px)
+  return Math.round(Math.max(wide, reach * 2 + 16))
 }
 
 export function hubSpots(n: number, out: boolean): { center: { x: number; y: number }; spots: HubSpot[] } {
