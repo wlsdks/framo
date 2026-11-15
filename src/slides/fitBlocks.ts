@@ -1336,30 +1336,39 @@ export function blockFitter() {
         const goal = Math.max(...ts)
         const diff = goal - Math.min(...ts)
         if (!Number.isFinite(diff) || diff <= 4 * k || diff > 32 * k) continue
-        const changes = row.flatMap((x, i) => {
-          const px = Math.round((goal - ts[i]) / k)
-          return px ? [{ x, px, was: x.c.style.getPropertyValue('--bk-trim') }] : []
-        })
-        if (!changes.length || changes.some(({ x }) => !x.c.classList.contains('bk-look-card'))) continue
-        for (const { x, px, was } of changes) {
-          x.c.style.setProperty('--bk-trim', (parseFloat(was) || 0) + px + 'px')
-          const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
-          if (inner) place(inner)
-        }
-        const fits = changes.every(({ x }) => {
-          const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
-          return !!inner && !over(inner)
-        })
-        const after = row.map((x) => top(x.c) + dy.get(x.c)! + (changes.find((c) => c.x === x)?.px ?? 0) * k)
-        if (!fits || Math.max(...after) - Math.min(...after) > 4 * k) {
+        // 다 맞출 만큼 줄여 보고, 그러면 글이 넘치는 칸(칸 높이를 다 쓰는 차트)은 어긋남이 허용(4px) 안에 들 만큼만 줄여 본다:
+        // 높이가 딱 맞는 차트 칸은 4px도 줄일 수 없어 통째로 되돌렸고, 큰 숫자와 소제목의 윗선이 4.2px 어긋난 채 남았다
+        const tries = [0, Math.max(0, 4 - Math.ceil((diff / k - 4) * 2) / 2)]
+        let done: { x: (typeof items)[number]; px: number }[] | null = null
+        for (const keep of tries) {
+          const changes = row.flatMap((x, i) => {
+            const px = Math.round(Math.max(0, (goal - ts[i]) / k - keep))
+            return px ? [{ x, px, was: x.c.style.getPropertyValue('--bk-trim') }] : []
+          })
+          if (!changes.length || changes.some(({ x }) => !x.c.classList.contains('bk-look-card'))) break
+          for (const { x, px, was } of changes) {
+            x.c.style.setProperty('--bk-trim', (parseFloat(was) || 0) + px + 'px')
+            const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
+            if (inner) place(inner)
+          }
+          const fits = changes.every(({ x }) => {
+            const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
+            return !!inner && !over(inner)
+          })
+          const after = row.map((x) => top(x.c) + dy.get(x.c)! + (changes.find((c) => c.x === x)?.px ?? 0) * k)
+          if (fits && Math.max(...after) - Math.min(...after) <= 4 * k) {
+            done = changes
+            break
+          }
           for (const { x, was } of changes) {
             if (was) x.c.style.setProperty('--bk-trim', was)
             else x.c.style.removeProperty('--bk-trim')
             const inner = x.c.querySelector<HTMLElement>(':scope > .bk-in')
             if (inner) place(inner)
           }
-          continue
         }
+        if (!done) continue
+        const changes = done
         for (const { x, px } of changes) {
           x.r = x.c.getBoundingClientRect()
           x.ink = drawn(x.c)
