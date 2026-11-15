@@ -77,6 +77,18 @@ export function noRoomText(r: NoRoom, type: BlockType, where: 'here' | 'move' | 
             : r.why === 'no-bold'
               ? { why: '강조는 숫자나 강조할 말 하나에만 써요. 목록이나 그림까지 강조하면 어디가 결론인지 흐려져요.', fix: '들여 쓰기를 골라 보세요.' }
               : { why: '이 컴포넌트는 바탕 없이 써요. 안에 이미 칸과 줄이 있어요.', fix: '강조할 것은 큰 숫자나 강조 상자에 강조를 골라 보세요.' }
+    case 'cramp': {
+      // 둥근 그림은 높이가 곧 크기다: 잘리지는 않아도 눌리면 다각형과 원이 이름표 사이의 작은 점이 된다 (deck/blocks/sizing.ts의 ROOMY).
+      // 이름을 따옴표로 묶고 '그림'을 붙인다: '모이고 퍼지기가 너무 작아져'는 이름이 풀이말처럼 생겨 '넣으면 모이고, 퍼지기가…'로 읽혔다
+      const figure = `‘${BLOCKS[r.type].name}’ 그림`
+      return {
+        why:
+          r.type === type
+            ? `${figure}은 크게 보여야 알아볼 수 있어요. ${where === 'here' ? '여기에는' : '이 슬라이드에는'} 그만한 높이가 남아 있지 않아요.`
+            : `${josa(name, '을', '를')} ${where === 'here' ? '여기에 ' : ''}넣으면 ${figure}이 너무 작아져 알아보기 어려워요.`,
+        fix: where === 'here' ? '다른 자리에 놓거나 새 슬라이드에 넣어 주세요.' : '이 슬라이드의 컴포넌트를 줄이거나 새 슬라이드에 넣어 주세요.',
+      }
+    }
     case 'swap': {
       // 같은 컴포넌트끼리면 '큰 숫자와 큰 숫자'가 아니라 '두 큰 숫자'
       const other = BLOCKS[r.type].name

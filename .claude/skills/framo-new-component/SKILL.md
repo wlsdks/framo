@@ -41,6 +41,7 @@ description: Framo에 새 컴포넌트(부품 장의 부품, BlockType)를 더�
 
 - 기능: `npm run typecheck && npm test`, `npm run look -- check`와 `--large`(seed 1~4 × 세 테마)가 빈 목록.
 - 감성: 정지 화면을 두 테마, 명조, 강조색 두셋, 좁은 칸·넓은 칸, 혼자일 때와 옆에 다른 부품이 있을 때 찍고, 모션은 `npm run look -- film "http://localhost:5199/#/gallery?set=blocks&types=foo" --slide 0`으로 필름 띠를 만든다. 이 그림들을 `framo-reviewer`에게 맡겨 사람의 눈으로 본다.
+- 여럿과 함께: `#/gallery?set=grow&seq=foo.bullets.number.callout`로 둘째, 셋째, 넷째를 넣어 가는 모습을 본다. 높이가 곧 크기인 그림이 눌려 읽히지 않으면 `src/deck/blocks/sizing.ts`의 `ROOMY`에 넉넉한 높이를 더한다(넣을 때만 지키고, 못 지키면 '넣으면 ○○가 너무 작아져요'로 알린다. docs/VISUAL-RULES.md 6).
 - 예전 버전 호환: 새 부품은 `src/deck/compat.ts`의 검사가 알아서 잡는다(예전 버전은 열지 않고 알림). 새 칸 같은 다른 것을 더하면 `unknownParts`가 세게 한다.
 - AI에게 보이는 꼴: 새 값은 enum, 숫자, 불리언, 해시 id, 카탈로그 말만. AI op로 부품 안의 글을 쓰게 만들지 않는다(AGENTS.md '꼭 지킬 것' 2, 3).
 

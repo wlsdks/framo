@@ -97,6 +97,7 @@ function rowsNoRoomText(r: NoRoom, part: SavedPart, slide: Slide): NoRoomText {
   if (r.kind === 'height' && r.noBody) return noRoomText(r, part.blocks[0]?.type ?? 'number', 'slide')
   if (r.kind === 'full') return { why: `이 슬라이드의 컴포넌트 ${blocks.length}개에 ${part.blocks.length}개를 더하면 슬라이드 하나에 넣는 ${MAX_BLOCKS}개를 넘어요.`, fix }
   if (r.kind === 'large') return { why: `차트나 표 같은 큰 컴포넌트는 슬라이드 하나에 ${MAX_LARGE}개까지 넣어요.`, fix }
+  if (r.kind === 'cramp') return { why: `넣으면 ‘${BLOCKS[r.type].name}’ 그림이 너무 작아져 알아보기 어려워요.`, fix }
   return { why: '넣으면 컴포넌트들이 슬라이드보다 높아져서 글이 잘려요.', fix }
 }
 

@@ -33,7 +33,7 @@ import { ARRANGE_MAX, arrangeBest, arrangeOrder, boardCost, isArranged } from '.
 import { aspectOf, fitImage, fitPlaced, misfit } from './images'
 import { across, dropBlock, isLinkCompanion, keepLinkEnds, linkAt, linkIssue, linkTargets, tidyLinks } from './links'
 import { BLOCK_COL_GAP, BLOCK_GAP, isSmall, isSolo, largeCount, MAX_BLOCKS, MAX_LARGE, settleLook } from './rules'
-import { AREA_W, atRect, boardFit, heightIssue, overAlready, type Rect } from './sizing'
+import { AREA_W, atRect, boardFit, heightIssue, overAlready, type Rect, roomyRows } from './sizing'
 
 /** 놓을 자리: 판의 한 자리(spot)에 넣기, 또는 옮기는 부품을 다른 부품(with)과 맞바꾸기 */
 export type DropTarget = { kind: 'spot'; spot: Spot } | { kind: 'swap'; with: string }
@@ -68,6 +68,8 @@ export type NoRoom =
   | { kind: 'link' }
   /** 옮기는 부품을 이 부품(type)과 맞바꾸면 한쪽이 상대 자리에 들어가지 않을 때 */
   | { kind: 'swap'; type: BlockType }
+  /** 넣으면 잘리지는 않아도 그림(type)이 넉넉한 높이 아래로 눌릴 때 (sizing.ts의 ROOMY). 넣는 부품이 그 그림일 수도 있다 */
+  | { kind: 'cramp'; type: BlockType }
 
 /** 부품 수가 넘치는지: 모든 부품(MAX_BLOCKS), 작은 부품이 아니면 큰 부품(MAX_LARGE)도 */
 function crowdIssue(blocks: readonly Block[], adding: readonly Block[]): NoRoom | null {
@@ -84,6 +86,44 @@ const fitFor = (blocks: readonly Block[], areaH?: number): Fit => (areaH === und
 /** 너비만 따질 때 너비 규칙을 읽어 오는 높이 (너비 규칙은 높이와 상관없다) */
 const WIDTH_ONLY_H = 1000
 
+/**
+ * 넣을 때 넉넉한 높이를 지킬 그림들: 넣는 부품, 그리고 지금 판에서 그 높이를 이미 받고 있는 부품 (id).
+ * 이미 그보다 낮은 칸에 있는 그림(예전에 만든 장, 사람이 선을 끌어 낮춘 칸)은 지키지 않는다: 지키게 하면 그 장에는 아무것도 넣지 못한다
+ */
+function roomyOf(blocks: readonly Block[], adding: readonly Block[], areaH: number): Set<string> {
+  const out = new Set<string>()
+  for (const b of adding) if (roomyRows(b, BOARD_COLS, areaH)) out.add(b.id)
+  for (const b of blocks) {
+    const rows = b.at ? roomyRows(b, b.at.w, areaH) : 0
+    if (rows && b.at!.h >= rows) out.add(b.id)
+  }
+  return out
+}
+
+/** 넣은 판에서 넉넉한 높이 아래로 눌린 그림 */
+const cramped = (after: readonly Block[], roomy: ReadonlySet<string>, areaH: number) =>
+  after.find((b) => roomy.has(b.id) && !!b.at && b.at.h < roomyRows(b, b.at.w, areaH))
+
+/**
+ * 부품을 넣을 때의 크기 규칙: 판의 규칙(fitFor)에 그림의 넉넉한 높이를 더한 것. 넣기(눌러서, 끌어서, 내 컴포넌트, AI 제안)만 이것을 쓰고
+ * 옮기기, 선 끌기, 글 고치기는 판의 규칙 그대로다: 사람이 손으로 정한 크기는 막지 않는다
+ */
+function addFit(blocks: readonly Block[], adding: readonly Block[], areaH?: number): Fit {
+  const fit = fitFor([...blocks, ...adding], areaH)
+  if (areaH === undefined) return fit
+  const roomy = roomyOf(blocks, adding, areaH)
+  return roomy.size ? { ...fit, minH: (b, w) => Math.max(fit.minH(b, w), roomy.has(b.id) ? roomyRows(b, w, areaH) : 0) } : fit
+}
+
+/** 판의 규칙으로는 들어가는데 넉넉한 높이 때문에 넣지 않은 자리면, 눌리게 될 그림 */
+function crampIssue(blocks: Block[], spot: Spot, block: Block, areaH: number): NoRoom | null {
+  const roomy = roomyOf(blocks, [block], areaH)
+  if (!roomy.size) return null
+  const loose = insertBlock(blocks, block, spot, fitFor([...blocks, block], areaH))
+  if (!loose) return null
+  return { kind: 'cramp', type: (cramped(loose, roomy, areaH) ?? loose.find((b) => roomy.has(b.id)) ?? block).type }
+}
+
 /** 부품을 넣은 뒤의 판 정리: 설 자리가 없어진 이음표를 빼고, 넣은 부품의 면을 장에 맞추고, 이미지는 비율에 맞춘다 */
 const settled = (blocks: Block[], added: readonly Block[], areaH?: number): Block[] => {
   let out = tidyLinks(blocks)
@@ -99,7 +139,7 @@ const settled = (blocks: Block[], added: readonly Block[], areaH?: number): Bloc
 export function insertAt(blocks: Block[], spot: Spot, block: Block, areaH?: number): Block[] | null {
   return remember(INSERTED, blocks, block, spot, areaH, () => {
     if (crowdIssue(blocks, [block])) return null
-    const next = insertBlock(blocks, block, spot, fitFor([...blocks, block], areaH))
+    const next = insertBlock(blocks, block, spot, addFit(blocks, [block], areaH))
     return next && settled(next, [block], areaH)
   })
 }
@@ -132,7 +172,7 @@ function remember<T>(memo: Memo<T>, blocks: Block[], block: Block, spot: Spot, a
  */
 export function insertParts(blocks: Block[], spot: Spot, add: Block[], areaH?: number): Block[] | null {
   if (!add.length || crowdIssue(blocks, add)) return null
-  const next = insertGroup(blocks, add, spot, fitFor([...blocks, ...add], areaH))
+  const next = insertGroup(blocks, add, spot, addFit(blocks, add, areaH))
   return next && settled(next, add, areaH)
 }
 
@@ -141,7 +181,12 @@ export function groupIssue(blocks: Block[], add: Block[], areaH?: number): NoRoo
   const crowd = crowdIssue(blocks, add)
   if (crowd) return crowd
   if (insertParts(blocks, { at: null, side: 'below' }, add, areaH)) return null
-  return areaH === undefined ? { kind: 'full' } : heightIssue([...blocks, ...add], areaH, blocks)
+  if (areaH === undefined) return { kind: 'full' }
+  // 판의 규칙으로는 들어가는 묶음: 높이가 아니라 그림이 눌려서 넣지 않은 것이다
+  const roomy = roomyOf(blocks, add, areaH)
+  const loose = roomy.size ? insertGroup(blocks, add, { at: null, side: 'below' }, fitFor([...blocks, ...add], areaH)) : null
+  if (loose) return { kind: 'cramp', type: (cramped(loose, roomy, areaH) ?? loose.find((b) => roomy.has(b.id)) ?? add[0]).type }
+  return heightIssue([...blocks, ...add], areaH, blocks)
 }
 
 /**
@@ -207,6 +252,8 @@ function spotIssue(blocks: Block[], spot: Spot, block: Block, areaH?: number): N
   // 제목과 부제가 본문을 다 차지하면 너비가 아니라 높이가 없는 것이다.
   if (areaH !== undefined && Number.isFinite(areaH) && areaH <= 0) return { kind: 'height', need: 1, room: 0, noBody: true, ...(blocks.length ? { already: true } : {}) }
   if (insertAt(blocks, spot, block, areaH)) return null
+  const cramp = areaH === undefined ? null : crampIssue(blocks, spot, block, areaH)
+  if (cramp) return cramp
   const solo = blocks.length ? soloBeside(blocks, spot, block) : null
   if (solo) return { kind: 'solo', type: solo }
   if (areaH === undefined) return { kind: 'narrow', span: boardFit(1000).minW(block) }
@@ -228,9 +275,10 @@ export function validTargets(blocks: Block[], block: Block, areaH?: number): Dro
 
 /**
  * 이 장 어디에도 넣을 수 없을 때 그 까닭 하나. 넣을 수 있으면 null.
- * 높이만 모자란 자리가 있으면 그 가운데 가장 덜 모자란 것(무엇을 줄이면 되는지 알려 줄 수 있어서), 아니면 너비
+ * 높이만 모자란 자리가 있으면 그 가운데 가장 덜 모자란 것(무엇을 줄이면 되는지 알려 줄 수 있어서), 아니면 너비.
+ * auto: 눌러서 넣기(autoPlace)에 주는 것과 같은 값. 끌어서 놓을 때는 판을 다시 짜지 않으니 false
  */
-export function placeIssue(blocks: Block[], block: Block, areaH?: number): NoRoom | null {
+export function placeIssue(blocks: Block[], block: Block, areaH?: number, auto?: boolean): NoRoom | null {
   const crowd = crowdIssue(blocks, [block])
   if (crowd) return crowd
   // 들어가는 자리를 하나 찾으면 나머지는 재지 않는다 (부품 고르기는 카드마다 이것을 재서, 거의 모든 카드가 들어가는 장이 가장 흔하다)
@@ -248,6 +296,9 @@ export function placeIssue(blocks: Block[], block: Block, areaH?: number): NoRoo
     all.push(w)
   }
   if (breaksLink) return { kind: 'link' }
+  // 그림이 눌려서 넣지 않은 자리가 있으면 그것부터: 판의 규칙으로는 들어가는 장이라 '높이를 넘어요'라고 하면 틀린 말이 된다
+  const cramp = all.find((w) => w.kind === 'cramp')
+  if (cramp) return areaH !== undefined && arrangedWith(blocks, block, areaH, auto) ? null : cramp
   const tall = all.filter((w) => w.kind === 'height').sort((a, b) => a.need - b.need)[0]
   return tall ?? all.find((w) => w.kind === 'narrow') ?? all[0] ?? { kind: 'full' }
 }
@@ -277,9 +328,31 @@ export function autoPlace(blocks: Block[], block: Block, areaH?: number, auto?: 
   }
   return remember(auto === undefined ? AUTO : auto ? AUTO_ARRANGED : AUTO_MANUAL, blocks, block, { at: null, side: 'below' }, areaH, () => {
     const next = slotIn(blocks, block, areaH)
-    return next && areaH !== undefined ? arranged(blocks, next, areaH, block, auto) : next
+    if (!next) return areaH === undefined ? null : arrangedWith(blocks, block, areaH, auto)
+    return areaH !== undefined ? arranged(blocks, next, areaH, block, auto) : next
   })
 }
+
+/**
+ * 끼울 자리는 없어도 판을 다시 짜면 들어가는 판. 그림의 넉넉한 높이(addFit) 때문에 끼우지 못했을 때만 본다: 목록과 숫자를 먼저 넣고
+ * 방사형 비교를 넣으면 아래 새 줄은 낮아서 안 되지만, 목록과 숫자를 한 단에 쌓고 그 옆에 세우면 들어간다. 다시 짜지 않으면 같은 셋을
+ * 넣는 차례만 달라도 '넣을 수 없어요'가 됐다. 알아서 짠 판이고 컴포넌트가 넷까지일 때만(arranged와 같은 조건), 틀이 깨지지 않을 때만
+ */
+function arrangedWith(blocks: Block[], block: Block, areaH: number, auto?: boolean): Block[] | null {
+  if (!blocks.length || blocks.length + 1 > ARRANGE_MAX || crowdIssue(blocks, [block]) || aspectOf(block)) return null
+  if (!roomyOf(blocks, [block], areaH).size || !(auto ?? autoArranged(blocks, undefined, areaH))) return null
+  // 새 부품은 읽는 차례의 맨 뒤에. 장의 첫 결론(핵심 한 줄, 강조 상자)이면 맨 앞에 (arranged와 같이)
+  const added = { ...block, at: { x: 0, y: BOARD_ROWS, w: BOARD_COLS, h: 1 } }
+  const lead = LEADS.has(block.type) && !blocks.some((b) => LEADS.has(b.type))
+  const order = arrangeOrder([...blocks, added])
+  const best = arrangeBest(lead ? [added, ...order.filter((b) => b !== added)] : order, addFit(blocks, [block], areaH), areaH, aspectOf)
+  if (!best || best.cost >= BROKEN) return null
+  const byId = new Map(best.blocks.map((b) => [b.id, b]))
+  return settled([...blocks, added].map((b) => byId.get(b.id) ?? b), [block], areaH)
+}
+
+/** 틀이 깨진 판의 점수 (arrange.ts: 판 너비를 혼자 쓰는 부품을 좁힌 것 같은) */
+const BROKEN = 1000
 
 // 알아서 짠 판인지에 따라 결과가 달라서 따로 기억한다
 const AUTO: Memo<Block[] | null> = new WeakMap()
@@ -332,7 +405,8 @@ export function arrangeRequest(blocks: Block[], mark: string | undefined, areaH:
  */
 function arranged(blocks: Block[], next: Block[], areaH: number, added: Block, auto?: boolean): Block[] {
   if (next.length > ARRANGE_MAX || !(auto ?? autoArranged(blocks, undefined, areaH))) return next
-  const fit = fitFor(next, areaH)
+  // 틀을 다시 고를 때도 넣을 때의 규칙으로: 판의 규칙으로 고르면 끼운 판에서 지킨 그림의 높이를 틀이 다시 눌렀다
+  const fit = addFit(blocks, [added], areaH)
   const lead = LEADS.has(added.type) && !blocks.some((b) => LEADS.has(b.type)) && byReading(next)[0].id !== added.id ? next.find((b) => b.id === added.id) : undefined
   const order = arrangeOrder(next)
   const best = arrangeBest(lead ? [lead, ...order.filter((b) => b !== lead)] : order, fit, areaH, aspectOf)
@@ -391,7 +465,7 @@ function keepsLinkEnds(before: Block[], after: Block[]): boolean {
 
 /** 판이 알아서 고른 자리 (slotIn의 첫 고르기) */
 function slotFirst(blocks: Block[], block: Block, areaH?: number): Block[] | null {
-  const fit = fitFor([...blocks, block], areaH)
+  const fit = addFit(blocks, [block], areaH)
   // 소제목 바로 다음에 넣는 부품은 그 소제목 아래에: 소제목은 아래 부품들의 이름이다. 판이 알아서 고르면(autoInsert) 마지막 줄의
   // 옆이나 판 오른쪽에 들어가, 소제목이 묶을 것 없이 맨 아래에 혼자 남았다(소제목, 목록, 소제목, 할 일 차례로 넣은 장)
   // 마지막에 넣은 부품 (blocks는 넣은 차례다. 읽는 차례로는 나란한 묶음에서 왼쪽 단의 아래 부품이 마지막이 된다)

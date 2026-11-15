@@ -25,6 +25,16 @@ describe('넣을 수 없는 까닭의 말', () => {
     expect(noRoomText({ kind: 'height', need: 900, room: 700, already: true }, 'bullets', 'change').fix).toBe('항목을 줄이거나 컴포넌트를 지우면 바꿀 수 있어요.')
   })
 
+  it('그림이 눌릴 때: 무엇을 넣으면 무엇이 작아지는지, 넣는 것이 그 그림이면 자리가 없다고', () => {
+    const squeezed = noRoomText({ kind: 'cramp', type: 'radar' }, 'callout', 'slide')
+    expect(squeezed.why).toBe('강조 상자를 넣으면 ‘방사형 비교’ 그림이 너무 작아져 알아보기 어려워요.')
+    expect(squeezed.fix).toBe('이 슬라이드의 컴포넌트를 줄이거나 새 슬라이드에 넣어 주세요.')
+    expect(noRoomText({ kind: 'cramp', type: 'hub' }, 'number', 'here').why).toBe('큰 숫자를 여기에 넣으면 ‘모이고 퍼지기’ 그림이 너무 작아져 알아보기 어려워요.')
+    const self = noRoomText({ kind: 'cramp', type: 'radar' }, 'radar', 'here')
+    expect(self.why).toBe('‘방사형 비교’ 그림은 크게 보여야 알아볼 수 있어요. 여기에는 그만한 높이가 남아 있지 않아요.')
+    expect(self.fix).toBe('다른 자리에 놓거나 새 슬라이드에 넣어 주세요.')
+  })
+
   it('맞바꾸기: 두 컴포넌트를 이름으로, 같은 컴포넌트끼리면 두', () => {
     expect(noRoomText({ kind: 'swap', type: 'table' }, 'number', 'move').why).toBe('큰 숫자와 표는 크기가 맞지 않아 자리를 맞바꿀 수 없어요.')
     expect(noRoomText({ kind: 'swap', type: 'number' }, 'number', 'move').why).toBe('두 큰 숫자는 크기가 맞지 않아 자리를 맞바꿀 수 없어요.')
