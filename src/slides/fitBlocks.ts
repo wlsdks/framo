@@ -13,7 +13,8 @@
  *    레이아웃 장도 같다(fitLayout: 본문 .s-body의 --bk-fit, --fill-air. 사례 장은 두 단의 .cs-story, .cs-results).
  *
  * 3-3. 한 줄에 부품이 둘 이상이면 부품마다 위에서부터 그린다(소제목 윗선을 맞춘다, blocks.css). 이음표가 선 줄도 같다. 칸 높이를 다 쓰는
- *    부품(차트, 표) 옆의 숫자 부품만 한두 단계 키운다. 짧은 부품을 가운데로 내리지 않는다: 남는 높이는 3-4가 맨 아래에 모은다.
+ *    부품(차트, 표) 옆의 숫자 부품은 한두 단계, 글 부품은 한 단계 키운다(lift). 짧은 부품을 가운데로 내리지 않는다: 남는 높이는 3-4가
+ *    맨 아래에 모은다. 다만 둥근 그림(비율 원, 거미줄 차트 …)과 나란한 글 묶음은 그림의 가운데에 맞춘다(pack의 alignTops).
  *
  * 3-4. 발표 화면과 편집 화면에서는 판을 위아래로 나눈 줄마다 그려진 내용을 앞 줄 내용 바로 아래(--bk-gap, 소제목 아래는 좁게)에 붙이고,
  *    남는 높이는 맨 아래 한곳에 모은다(--bk-shift, 캔버스 px, 칸째 옮긴다). 본문은 장 제목 아래 --body-gap에서 시작하고(docs/VISUAL-RULES.md 6),
@@ -723,6 +724,11 @@ export function blockFitter() {
   const boostable = new Set(['number', 'delta', 'goal'])
   // 자기 큰 숫자가 있는 그림(몇 중 몇, 비율 원) 옆에서는 키우지 않는다: 키우면 나란한 두 숫자가 한 장 안에서 크기가 달라진다
   const figured = new Set(['ratio', 'ring'])
+  // 글로 된 부품: 칸 높이를 다 쓰는 차트, 표 옆에서 한 단계 키우고(lift), 둥근 그림 옆에서는 묶음의 가운데를 그림의 가운데에 맞춘다(pack).
+  // screens/assembly.ts의 COPY와 같다
+  const copy = new Set(['message', 'text', 'bullets', 'quote', 'callout', 'faq', 'summary', 'points', 'checks', 'facts', 'risks', 'whys', 'agenda'])
+  // 가운데가 뚜렷한 둥근 그림: 옆의 글 묶음은 윗선이 아니라 가운데를 맞춘다(docs/VISUAL-RULES.md 5). screens/assembly.ts의 ROUND와 같다
+  const round = new Set(['ring', 'radar', 'cycle', 'hub', 'market'])
   /** 내용(첫 보이는 자식)이 --bk-lift로 내려가는 부품인지 (blocks.css가 정한다) */
   function liftable(c: HTMLElement): boolean {
     const body = Array.from(c.querySelectorAll<HTMLElement>(':scope > .bk-in > *')).find((el) => el.offsetHeight > 0)
@@ -747,6 +753,47 @@ export function blockFitter() {
       return m && m.room > 0 ? m.used / m.room : 0
     }
     rows.forEach((row) => {
+      // 칸 높이를 다 쓰는 차트, 표 옆의 글 부품은 한 단계 키운다: 거미줄 차트가 본문 높이를 다 쓰는데 옆의 원인 캐기는 장 전체의
+      // 단계(1.2)에 묶여 칸의 57%만 쓰고 아래 43%가 통째로 비었다(사용자: 오른쪽은 아래 공백이 심하다, 크기 조절이 안 된 것 같다).
+      // 장 전체를 같이 키우는 단계(3-1, 3-2)는 차트가 본문을 이미 채워 더 오르지 않는다. 숫자 부품(아래)과 달리 한 단계만, 장 제목과
+      // 다투지 않을 때만(rivals), 그리고 장의 글 부품이 모두 이 줄에 있을 때만 키운다: 다른 줄의 글과 크기가 달라지면 한 장의 글이
+      // 두 말투가 된다. 글자 크기의 상한(본문 36, 소제목 44)은 CSS가 그대로 지킨다
+      // 그림이 칸 높이를 실제로 다 쓸 때만(그려진 것이 칸의 80% 이상): 막대 넷처럼 칸 위쪽에만 그려진 차트 옆에서 키우면 글이 차트보다
+      // 커져 주객이 바뀐다
+      const tallInk = (c: HTMLElement) => {
+        const d = drawn(c)
+        return !!d && d.b - d.t >= c.getBoundingClientRect().height * 0.8
+      }
+      if (row.some((c) => !copy.has(c.dataset.type || '') && !liftable(c) && fills(c) && tallInk(c))) {
+        const texts = row.filter((c) => copy.has(c.dataset.type || ''))
+        const inners = texts.map((c) => c.querySelector<HTMLElement>(':scope > .bk-in'))
+        const elsewhere = cells.some((c) => copy.has(c.dataset.type || '') && !texts.includes(c))
+        if (texts.length && !elsewhere && inners.every((el) => !!el) && texts.every((c) => share(c) < 0.75)) {
+          const was = texts.map((c) => c.style.getPropertyValue('--bk-fit'))
+          const now = Math.max(...was.map((w) => Number(w || 1)))
+          const f = [1.2, 1.44].find((b) => b > now)
+          if (f) {
+            const shapes = inners.map((el) => shapesOf(el!))
+            // 키워서 줄이 더 꺾이면 키우지 않는다: 좁은 칸의 목록이 항목마다 두 줄이 되면 커진 만큼 읽기는 더 나빠진다
+            const rowsWas = inners.map((el) => linesNow(el!, false, false).length)
+            texts.forEach((c, i) => {
+              c.style.setProperty('--bk-fit', String(f))
+              place(inners[i]!)
+            })
+            const ok =
+              texts.every((c, i) => {
+                const m = used(c)
+                return !!m && m.used <= m.room && !crowded(inners[i]!, shapes[i]) && !over(inners[i]!) && linesNow(inners[i]!, false, false).length <= rowsWas[i]
+              }) && !rivals(row[0].closest('.bk-area')?.parentElement ?? null, inners as HTMLElement[])
+            if (!ok)
+              texts.forEach((c, i) => {
+                if (was[i]) c.style.setProperty('--bk-fit', was[i])
+                else c.style.removeProperty('--bk-fit')
+                place(inners[i]!)
+              })
+          }
+        }
+      }
       const all = row.filter(liftable)
       if (!all.length) return
       // 칸 높이를 거의 다(80%) 쓰는 부품. 내릴 수 없는 차트, 표는 칸 높이를 다 쓸 때(fills)만 기준이 된다
@@ -1091,14 +1138,16 @@ export function blockFitter() {
     const lineUp = new Map<HTMLElement, number>()
     const alignTops = (dy: Map<HTMLElement, number>) => {
       lineUp.clear()
-      // 원형 그래프와 글 묶음은 보이는 전체의 가운데를 맞춘다. 윗선만 맞추면
-      // 세 줄 목록이 원의 위쪽 절반에 붙어, 서로 다른 줄처럼 보였다.
+      // 둥근 그림(비율 원, 거미줄 차트, 순환, 모이고 퍼지기, 시장 규모)과 글 묶음은 보이는 전체의 가운데를 맞춘다. 윗선만 맞추면
+      // 세 줄 목록이 원의 위쪽 절반에 붙어, 서로 다른 줄처럼 보였다. 둥근 그림은 가운데가 가장 센 축이라 글 묶음이 그 축에 서야
+      // 한 짝으로 읽힌다(네모난 차트는 소제목의 윗선이 축이라 그대로 위에서 맞춘다). 예전에는 비율 원에만 맞춰, 거미줄 차트 옆의
+      // 원인 캐기는 위에 붙고 아래가 통째로 비었다
       const centered = new Set<HTMLElement>()
       for (const row of order) {
         if (row.length !== 2 || !row.every((x) => x.c.classList.contains('bk-look-plain'))) continue
-        const chart = row.find((x) => x.c.dataset.type === 'ring')
-        const copy = row.find((x) => ['bullets', 'text', 'facts', 'checks'].includes(x.c.dataset.type ?? ''))
-        if (!chart || !copy) continue
+        const chart = row.find((x) => round.has(x.c.dataset.type ?? ''))
+        const text = row.find((x) => copy.has(x.c.dataset.type ?? ''))
+        if (!chart || !text) continue
         const centers = row.map((x) => (x.ink!.t + x.ink!.b) / 2 + dy.get(x.c)!)
         const goal = Math.max(...centers)
         row.forEach((x, i) => {

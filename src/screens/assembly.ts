@@ -548,6 +548,8 @@ function floating(area: HTMLElement, k: number): string[] {
     if (!ink) continue
     const r = cell.getBoundingClientRect()
     if (r.height / k < 200 || ink.b - ink.t >= r.height / 2) continue
+    // 둥근 그림 옆의 글 묶음은 그림의 가운데에 맞춰 내린 것이다(rowTops가 가운데를 본다)
+    if (centredPair(cells.filter((o) => o.classList.contains('is-shared') && !o.classList.contains('lk-row') && o.dataset.band === cell.dataset.band && o.style.getPropertyValue('--y') === cell.style.getPropertyValue('--y')))) continue
     const tops = cells
       .filter((o) => o !== cell && o.dataset.band === cell.dataset.band)
       .filter((o) => {
@@ -968,6 +970,15 @@ function paintedBoxes(area: HTMLElement, k: number): string[] {
   return [...new Set(out)]
 }
 
+/** 글로 된 부품과 가운데가 뚜렷한 둥근 그림 (slides/fitBlocks.ts의 copy, round와 같다) */
+const COPY = new Set(['message', 'text', 'bullets', 'quote', 'callout', 'faq', 'summary', 'points', 'checks', 'facts', 'risks', 'whys', 'agenda'])
+const ROUND = new Set(['ring', 'radar', 'cycle', 'hub', 'market'])
+
+/** 둥근 그림과 글 묶음이 나란한 줄: 윗선이 아니라 보이는 묶음의 가운데를 맞춘다 (fitBlocks.ts의 alignTops) */
+function centredPair(row: HTMLElement[]): boolean {
+  return row.length === 2 && row.every((c) => c.classList.contains('bk-look-plain')) && row.some((c) => ROUND.has(c.dataset.type ?? '')) && row.some((c) => COPY.has(c.dataset.type ?? ''))
+}
+
 /**
  * 한 축 정렬(docs/VISUAL-RULES.md 5): 같은 줄(같은 묶음, 같은 판의 줄)에 나란한 칸 가운데 글로 시작하는 칸끼리 첫 글줄의 윗선이
  * 4px 넘게 어긋난 것. 32px 넘게 다르면 짜임이 다른 것(그림 옆의 글)이라 쌓기도 맞추지 않아 보지 않는다
@@ -982,12 +993,12 @@ function rowTops(area: HTMLElement, k: number): string[] {
   rows.forEach((row) => {
     if (row.length < 2) return
     // 원과 글의 짝은 첫 글줄 대신 보이는 묶음 전체의 중심으로 검수한다.
-    if (row.length === 2 && row.every((c) => c.classList.contains('bk-look-plain')) && row.some((c) => c.dataset.type === 'ring') && row.some((c) => ['bullets', 'text', 'facts', 'checks'].includes(c.dataset.type ?? ''))) {
+    if (centredPair(row)) {
       const spans = row.map(inkSpan)
       if (spans.every((s) => s !== null)) {
         const centers = spans.map((s) => (s!.t + s!.b) / 2)
         const d = Math.abs(centers[0] - centers[1]) / k
-        if (d > 4) out.push(`원형 그래프와 글 묶음의 중심이 ${Math.round(d)}px 어긋나요`)
+        if (d > 4) out.push(`둥근 그림과 글 묶음의 가운데가 ${Math.round(d)}px 어긋나요`)
       }
       return
     }
