@@ -241,3 +241,41 @@
   letter-spacing: 0.06em;
 }
 
+/* ---------- 관계선 ----------
+   도식의 관계선(조건별 흐름의 갈래, 겹친 수고의 모임)은 그 그림의 데이터라 차트의 선처럼 긋는다(docs/VISUAL-RULES.md 2):
+   강조색의 농담 하나에 캔버스 3px(키운 단계에서 4px 남짓), 끝은 둥글게. 회색 머리카락 선(1px)은 3~5m에서 보이지 않아 그림이 아니라
+   글 몇 줄로 읽혔다. 농담은 바탕과 2.5:1 남짓: 더 옅으면(45%) 밝은 회의실에서 다시 사라지고 진한 점에 옅은 실이 달린 것처럼 보였다(검수).
+   곡선은 자리가 정해진 뒤 쌓기가 칸 안의 px로 긋는다(fitBlocks.ts의 forks, joins) */
+.bk-wires {
+  /* 선과 마디는 글자를 따라 크고 준다(좁은 칸의 줄인 단계, 내용이 적은 장의 키운 단계): 글만 줄면 마디가 글자만 해 보였다 */
+  --wire-k: calc(min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1));
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.bk-wire {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 58%, var(--bg));
+  stroke-width: calc(3px * var(--wire-k));
+  stroke-linecap: round;
+}
+
+/* 갈라지거나 모이는 마디 하나만 강조색 점: 어디서 갈라지고 어디로 모이는지가 멀리서도 보인다. 꽉 찬 강조색은 이 점 하나뿐이라
+   옆 컴포넌트의 답과 다투지 않는다. 선 끝에는 고리나 화살촉을 달지 않는다 */
+.bk-wire-node {
+  r: calc(5.5px * var(--wire-k));
+  fill: var(--accent);
+}
+
+/* 짙은 면 위에서는 면 위의 강조색으로. 어두운 바탕에서는 밝은 점이 선을 이기기 쉬워 선을 한 단계 더 밝힌다 */
+.is-dark .bk-wire {
+  stroke: color-mix(in srgb, var(--bold-accent, var(--accent)) 62%, var(--bg));
+}
+
+.is-dark .bk-wire-node {
+  fill: var(--bold-accent, var(--accent));
+}

@@ -3186,39 +3186,49 @@ export function motionEngine(): MotionEngine {
           break
         }
         case 'dupes': {
-          // 따로 하던 같은 일: 팀 줄이 차례로 나오고(한 일은 아직 지우지 않은 글자색), 다 나오면 한 일들이 동시에 강조색으로 밝아졌다가
-          // (다 같은 일) 한꺼번에 줄이 그어지며 옅어진다. 그다음 아래의 하나가 올라온다. 한 일의 움직임은 한 애니메이션으로: 둘로
-          // 나누면 그 사이에 끝 모습(지운 모습)이 잠깐 보였다
-          lines(one('.bk-h'), 60)
+          // 따로 하던 같은 일: 팀 줄이 차례로 맺히고, 다 나오면 한 일들에 강조색이 한 번 실렸다가(다 같은 일) 곧장 옅어진다(지운다).
+          // 강조색은 글에서 곡선으로 건너간다: 글이 옅어지는 동안 곡선이 한꺼번에 떠나 한 점으로 모이고(여럿이 하나로), 닿는 자리에
+          // 마디가 맺히며 대신할 하나가 머리말과 함께 올라온다. 곡선이 없는 좁은 칸(쌓은 짜임)은 옅어지며 줄이 그어진 뒤 바로 올라온다.
+          // 예전에는 글이 먹 → 강조색 → 먹 → 회색으로 세 번 바뀌어 멀리서는 깜빡임이었고, 답이 1.8초에야 와서 넘기고 말을 시작해도
+          // 오른쪽 절반이 비어 있었다(검수). 한 일의 움직임은 한 애니메이션으로: 둘로 나누면 그 사이에 끝 모습이 잠깐 보였다
+          lines(one('.bk-h'), 0)
           const rows = $('.bk-dp-row')
           const accent = getComputedStyle(scope).getPropertyValue('--accent').trim()
           const ink = getComputedStyle(scope).getPropertyValue('--ink-2').trim()
-          const step = levelName === 'lively' ? 200 : 170
-          const flash = 120 + rows.length * step + 260
-          const strike = flash + 520
+          const step = levelName === 'lively' ? 130 : 110
+          const flash = 60 + rows.length * step + 200
+          // 강조색이 다 실린 때. 여기서부터 글은 끝 모습(옅은 글자색, 쌓은 짜임은 취소선)으로 간다
+          const lit = flash + 160
+          const fadeOut = 380
           rows.forEach((row, k) => {
-            const at = 120 + k * step
+            const at = 60 + k * step
             fade(row.querySelector('.bk-dp-who'), at, 300)
             const what = row.querySelector<HTMLElement>('.bk-dp-what')
             if (!what || still) return
-            const total = strike + 420 - at
+            const total = lit + fadeOut - at
             const o = (t: number) => Math.min(1, Math.max(0, (t - at) / total))
             run(
               anims,
               what,
               [
                 { opacity: 0, translate: `0 ${L.y * 0.4}px`, color: ink, textDecorationColor: 'transparent', offset: 0, easing: OUT },
-                { opacity: 1, translate: '0 0', color: ink, textDecorationColor: 'transparent', offset: o(at + 380) },
+                { opacity: 1, translate: '0 0', color: ink, textDecorationColor: 'transparent', offset: o(at + 300) },
                 { opacity: 1, translate: '0 0', color: ink, textDecorationColor: 'transparent', offset: o(flash) },
-                { opacity: 1, translate: '0 0', color: accent, textDecorationColor: 'transparent', offset: o(flash + 180) },
-                { opacity: 1, translate: '0 0', color: ink, textDecorationColor: 'transparent', offset: o(strike) },
+                // 꽉 찬 강조색보다 한 톤 낮게: 가장 센 색은 없어질 쪽이 아니라 답 쪽(곡선과 마디)에 남는다
+                { opacity: 1, translate: '0 0', color: `color-mix(in srgb, ${accent} 75%, ${ink})`, textDecorationColor: 'transparent', offset: o(lit) },
               ],
               s(at),
               { easing: 'linear', duration: d(total) },
             )
           })
-          fade(one('.bk-dp-l'), strike + 260, 400)
-          rise(one('.bk-dp-r'), strike + 320, L.y * 0.5)
+          const joinEls = $('.bk-dp-join')
+          const drawn = joinEls.length && !still
+          if (drawn) for (const j of joinEls) run(anims, j, [{ strokeDasharray: '1 1', strokeDashoffset: '1' }, { strokeDasharray: '1 1', strokeDashoffset: '0' }], s(lit + 40), { easing: OUT, duration: d(520) })
+          // 답은 곡선이 닿을 때(곡선이 없으면 줄이 그어진 뒤)
+          const land = drawn ? lit + 40 + 440 : lit + fadeOut - 80
+          fade(one('.bk-dp-node'), land - 60, 220)
+          fade(one('.bk-dp-l'), land, 360)
+          rise(one('.bk-dp-r'), land, L.y * 0.5)
           break
         }
         case 'aliases': {

@@ -7,10 +7,11 @@ import { useSlide } from '../context'
 import { IT, ItemTools, T } from '../fields'
 
 /**
- * 겹친 수고: 여러 팀이 따로 하던 같은 일을 하나로 합쳐 같이 쓰는 모습. 위에는 팀마다 따로 하던 일(옅게, 가는 취소선), 맨 아래에는
- * 그것을 대신할 하나(강조색 이름과 굵은 글). 다 보인 모습도 '따로 하던 것은 지우고, 하나로'로 읽힌다.
- * 발표할 때는 팀 줄이 차례로 나온 뒤 같은 일들이 동시에 밝아졌다가(다 같은 일), 한꺼번에 줄이 그어지며 옅어지고 아래의 하나가
- * 올라온다(engine.ts)
+ * 겹친 수고: 여러 팀이 따로 하던 같은 일을 하나로 합쳐 같이 쓰는 모습. 팀마다 따로 하던 일(옅게, 가는 취소선)과 그것을 대신할
+ * 하나(강조색 이름과 굵은 글). 넓은 칸에서는 둘을 나란히 두고 따로 하던 일마다 곡선이 대신할 하나로 모인다(여럿이 하나로):
+ * 다 보인 모습도 '따로 하던 것은 지우고, 하나로'가 글을 읽기 전에 그림으로 보인다. 좁은 칸에서는 위아래로 쌓는다.
+ * 발표할 때는 팀 줄이 차례로 나온 뒤 같은 일들이 동시에 밝아졌다가(다 같은 일), 한꺼번에 줄이 그어지며 옅어지고, 곡선이 모여들어
+ * 닿는 자리에서 대신할 하나가 올라온다(engine.ts)
  */
 export function Dupes() {
   const { slide, mode } = useSlide()
@@ -18,6 +19,8 @@ export function Dupes() {
   const shown = mode === 'final' ? all.filter(({ it }) => !isBlankItem(it)) : all
   return (
     <div className="bk-dp" data-n={shown.length}>
+      {/* 따로 하던 일들이 하나로 모이는 곡선: 자리가 정해진 뒤 쌓기가 긋는다(fitBlocks.ts의 joins). 나란히 서는 넓은 칸에서만 */}
+      <svg className="bk-wires bk-dp-joins" aria-hidden="true" />
       <T k="heading" as="h3" className="bk-h" fit={[18, 32]} multiline />
       <ol className="bk-dp-list">
         {shown.map(({ it, i }, k) => (

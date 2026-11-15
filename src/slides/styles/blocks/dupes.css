@@ -2,6 +2,8 @@
    팀마다 따로 하던 일: 이름(작게, --ink-3)과 한 일(옅게, 가는 취소선). 줄 사이는 여백으로만.
    맨 아래 하나: 머리말(강조색 작은 이름)과 대신할 것(크게, 굵게). 위 목록과는 가는 선 하나(--line-strong)로 나눈다 */
 .bk-dp {
+  /* 모이는 곡선(.bk-dp-joins)을 이 안에 얹는다 */
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -43,8 +45,10 @@
   color: var(--ink-3);
   line-height: 1.35;
   text-decoration: line-through;
-  text-decoration-color: color-mix(in srgb, var(--ink-3) 70%, transparent);
-  text-decoration-thickness: var(--rule-hair);
+  /* 취소선은 글자를 따라 굵어진다(본문 30px에 2px 남짓): 머리카락 선(1px)은 3~5m에서 보이지 않아, 쌓은 짜임에서는 '지웠다'는 하나뿐인
+     신호가 사라졌다(검수) */
+  text-decoration-color: var(--ink-3);
+  text-decoration-thickness: max(var(--rule-hair), 0.07em);
   text-wrap: pretty;
 }
 
@@ -85,52 +89,99 @@
   }
 }
 
-/* 판을 혼자 쓰는 넓은 칸: 팀마다 따로 하던 일(왼쪽)과 대신할 하나(오른쪽)를 나란히. 위아래로 쌓으면 판을 혼자 써도
-   본문 가운데에 좁은 단 하나(본문 너비의 3분의 1)만 서고 양옆이 통째로 비었다(사용자). 둘 사이는 여백으로 나누고(가로선은 걷는다),
-   대신할 하나는 목록의 위아래 가운데에 선다. 줄 사이도 넉넉히. 다른 컴포넌트와 같이 있으면 쌓은 그대로: 나란히 두면 묶음째
-   왼쪽 끝에 서서 본문 오른쪽이 38% 비었다(checkAssembly). 쌓으면 아래의 가는 선이 칸 너비를 잇는다.
-   묶음은 장 제목 축(왼쪽 끝)에서 시작해 오른쪽으로 넓힌다: 예전에는 묶음째 가운데에 두어 머리말이 제목 축에서 떨어졌다(검수).
+/* ---------- 넓은 칸: 나란히, 곡선으로 모은다 ----------
+   팀마다 따로 하던 일(왼쪽)과 대신할 하나(오른쪽)를 나란히 두고, 따로 하던 일마다 곡선이 대신할 하나의 앞으로 모인다(fitBlocks.ts의
+   joins, 선의 모습은 blocks/base.css의 관계선). 위아래로 쌓으면 한 줄을 다 쓰는 칸에서도 왼쪽 3분의 1에 글 몇 줄만 서고 오른쪽이
+   통째로 비었고(조합 720장을 재니 그려진 끝이 칸의 35%), '여럿이 하나로'가 글을 다 읽어야 보였다. 곡선의 자리는 칸 너비를 따라
+   넓어져 그림이 제목 축(왼쪽 끝)에서 오른쪽으로 커진다. 가로선은 걷는다(둘 사이는 곡선이 잇는다).
+   한 줄을 다 쓰는 칸(1200px부터)에서만: 3분의 2 칸(1096px)에서는 따로 하던 일이 두 줄로 꺾이고 곡선 자리가 140px뿐이라 곡선이
+   갈고리처럼 가파르게 접혔다. 그 칸은 쌓은 그대로 둔다.
    머리말(지금은 팀마다 따로)은 이름표처럼 한 단계 작게 버금 글자색으로 두어 오른쪽의 답이 먼저 읽힌다: 둘이 같은 크기, 같은
    굵기라 답이 앞서지 않았다(검수) */
-@container bk (min-width: 1200px) and (min-height: 420px) {
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp {
+@container bk (min-width: 1200px) {
+  .bk-dp {
     display: grid;
-    grid-template-columns: max-content minmax(0, max-content);
+    /* 글 두 단은 제 글 너비만큼(아래의 max-width까지), 남는 너비는 곡선의 자리가 칸 너비의 26%까지만 받는다. 글 단을 fit-content로
+       두면 남는 너비를 세 단이 똑같이 나눠 가져, 곡선 자리는 넉넉한데 답이 세 줄로 꺾였다 */
+    grid-template-columns: max-content minmax(140px, 26cqw) max-content;
     grid-template-rows: auto auto;
-    column-gap: max(160px, 20cqw);
     align-content: start;
   }
 
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp > .bk-h {
+  /* 소제목 아래 사이는 소제목이 진다(목록의 위 여백이 아니라): 목록의 상자가 곧 줄들의 높이여야 답이 줄들의 한가운데에 선다.
+     목록이 위 여백을 지니면 답과 모이는 점이 줄들의 가운데보다 그 절반(17px)만큼 위에 서서 위 가닥은 눕고 아래 가닥만 가팔랐다(검수) */
+  .bk-dp > .bk-h {
     --fs: var(--t-small);
     grid-column: 1;
     grid-row: 1;
+    margin-bottom: calc(24px * var(--bk-fit, 1));
     color: var(--ink-2);
   }
 
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp-list {
-    grid-column: 1;
-    grid-row: 2;
-    row-gap: calc(36px * var(--bk-fit, 1));
-    margin-top: calc(32px * var(--bk-fit, 1));
+  /* 이름표(머리말 둘, 팀 이름)는 키워도 30까지: 따로 하던 일(36까지)보다 한 단계 아래에 머문다. 상한이 없으면 작은 글자(26)가
+     1.44배로 37이 되어, 36에서 멈춘 한 일보다 굵은 이름표가 더 컸다. 사다리는 답 52 > 한 일 36 > 이름표 30.
+     그림 이름표의 상한(blocks/base.css, 44)보다 앞서게 선택자를 한 겹 더 쓴다(아래의 답도) */
+  .bk[data-type='dupes'] .bk-dp :is(.bk-h, .bk-dp-who, .bk-dp-l) {
+    font-size: min(calc(30px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
   }
 
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp-one {
-    grid-column: 2;
-    grid-row: 1 / -1;
+  .bk-dp-list {
+    grid-column: 1;
+    grid-row: 2;
     align-self: center;
-    max-width: 14em;
+    max-width: 46cqw;
     margin-top: 0;
-    padding-top: 0;
+  }
+
+  /* 따로 하던 일은 본문 단계(키워도 36까지)에 취소선 없이: 답(52까지)이 두 단계 위에 서야 먼저 읽힌다. 키운 단계에서 44 : 52라
+     지운 줄과 답이 거의 같은 크기였다(검수). 곡선이 '이것들이 저것으로'를 말하므로 취소선은 걷는다: 선 높이가 곡선이 떠나는 높이와 같아
+     줄 하나가 글을 긋고 곡선으로 이어지는 것처럼 붐볐다 */
+  .bk-dp-what {
+    font-size: min(calc(36px * var(--scale, 1)), max(var(--fs-min, 0px), calc(var(--fs) * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-up, 1) * var(--bk-fit, 1))));
+    text-decoration: none;
+  }
+
+  /* 대신할 하나는 목록의 위아래 가운데에: 답의 글이 한가운데에 오게 머리말(같이 쓰면)만큼의 빈 줄을 답 아래에도 둔다(1fr 두 줄은
+     높이가 같다). 머리말과 한 묶음으로 가운데에 맞추면 곡선이 닿는 답은 그보다 아래라 그림이 아래로 기울었다 */
+  .bk-dp-one {
+    display: grid;
+    grid-column: 3;
+    grid-row: 2;
+    grid-template-rows: 1fr auto 1fr;
+    align-self: center;
+    max-width: 48cqw;
+    margin-top: 0;
+    /* 마디(곡선이 모이는 점)가 설 자리: 조건별 흐름의 마디와 글 사이(20px 남짓)와 같게 */
+    padding: 0 0 0 calc(20px * var(--bk-fit, 1));
     border-top: 0;
   }
 
-  /* 답은 지운 줄보다 한 단계 크게(52까지), 굵기는 중간(500)이라 장 제목과 다투지 않는다: 지운 줄과 같은 크기라 답이 앞서지
-     않았다(검수). 그림 이름표의 상한(44, blocks/base.css)보다 앞선다 */
-  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp-r {
+  /* 머리말(같이 쓰면)은 이름표처럼 버금 글자색: 강조색은 곡선과 마디가 지고 있다(조건별 흐름의 '확인할 조건'과 같은 말투).
+     쌓은 짜임에서는 곡선이 없어 강조색 그대로 */
+  .bk-dp-l {
+    align-self: end;
+    color: var(--ink-2);
+  }
+
+  /* 답은 지운 줄보다 두 단계 위(52까지), 굵기는 중간(500)이라 장 제목과 다투지 않는다. 그림 이름표의 상한(44, blocks/base.css)보다
+     앞선다 */
+  .bk[data-type='dupes'] .bk-dp .bk-dp-r {
     --fs: var(--t-h);
-    margin-top: 14px;
+    grid-row: 2;
+    max-width: 16em;
+    margin-top: 10px;
     font-size: min(calc(52px * var(--scale, 1)), max(var(--fs-min, 0px), calc(44px * var(--fit, 1) * var(--scale, 1) * min(var(--bk-w, 1), var(--bk-h, 1)) * var(--bk-fit, 1))));
     font-weight: 500;
+  }
+}
+
+/* 판을 혼자 쓰는 넓고 높은 칸: 줄 사이를 넉넉히 */
+@container bk (min-width: 1200px) and (min-height: 420px) {
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp-list {
+    row-gap: calc(36px * var(--bk-fit, 1));
+  }
+
+  .bk-area:not(:has(> .bk ~ .bk)) .bk-dp > .bk-h {
+    margin-bottom: calc(32px * var(--bk-fit, 1));
   }
 }
